@@ -1014,8 +1014,9 @@ function renderTchr(){
   em.style.display='none';
   const schRows=data.map((r,i)=>{const tot=r.cc.reduce((s,x)=>s+(x.count||0),0);
     return'<tr><td>'+(i+1)+'</td><td><span class="badge b0">'+r.course+'</span></td>'+
-      '<td style="max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en)+'</td>'+
+      '<td style="max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en)+'</td>'+
       '<td><span class="badge '+(TB[r.type]||'b4')+'">'+r.type+'</span></td>'+
+      '<td style="font-size:11px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
       '<td>'+r.cls+'</td><td><span class="badge b4">'+r.sem+'</span></td>'+
       '<td>'+halfBadge(r.half)+'</td><td>'+(tot||'—')+'</td>'+
       '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td></tr>';}).join('');
