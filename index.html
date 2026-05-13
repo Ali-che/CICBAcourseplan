@@ -149,7 +149,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <select id="s-sem"><option>2569-1</option><option>2569-2</option><option>2569-3</option></select>
       </div>
       <div class="fg"><label>上下半学期</label>
-        <select id="s-half"><option>全学期</option><option>上半学期</option><option>下半学期</option></select>
+        <select id="s-half"><option value="">— 待定 —</option><option>全学期</option><option>上半学期</option><option>下半学期</option></select>
       </div>
     </div>
     <div class="g4">
@@ -736,7 +736,7 @@ function renderSch(){
     const tot=r.cc.reduce((s,x)=>s+(x.count||0),0);
     if(r.editing){
       const cO=SEMS.map(s=>'<option'+(s===r.sem?' selected':'')+'>'+s+'</option>').join('');
-      const hO=['全学期','上半学期','下半学期'].map(s=>'<option'+(s===r.half?' selected':'')+'>'+s+'</option>').join('');
+      const hO='<option value=""'+(''===r.half?' selected':'')+'>— 待定 —</option>'+['全学期','上半学期','下半学期'].map(s=>'<option'+(s===r.half?' selected':'')+'>'+s+'</option>').join('');
       const ttO=['正常','英文','实习','SG','Capstone'].map(t=>'<option value="'+t+'"'+(t===r.type?' selected':'')+'>'+t+'</option>').join('');
       const ccO=CLSS.map(s=>'<option'+(s===r.cls?' selected':'')+'>'+s+'</option>').join('');
       const tccO='<option value="">'+(r.tc?'— 更改老师 —':'— 选择老师 —')+'</option>'+tchrDrop().map(t=>'<option value="'+eh(t.n)+'"'+(t.n===r.tc?' selected':'')+'>'+eh(t.n)+' ('+t.d+')</option>').join('');
@@ -756,7 +756,7 @@ function renderSch(){
     return'<tr><td>'+(i+1)+'</td><td><span class="badge b0">'+r.course+'</span></td>'+
       '<td style="max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+eh(r.en)+'">'+eh(r.en)+'</td>'+
       '<td><span class="badge '+(TB[r.type]||'b4')+'">'+r.type+'</span></td>'+
-      '<td><span class="badge b4">'+r.sem+'</span></td><td style="font-size:11px">'+r.half+'</td>'+
+      '<td><span class="badge b4">'+r.sem+'</span></td><td style="font-size:11px">'+(r.half?r.half:'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
       '<td>'+r.cls+'</td><td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
       '<td>'+tags+'</td><td><strong>'+tot+'</strong></td>'+
       '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td>'+
@@ -766,7 +766,7 @@ function renderSch(){
 function clearSchF(){
   document.getElementById('s-co').value='';document.getElementById('s-en').value='';
   document.getElementById('s-tp').value='正常';document.getElementById('s-sem').value='2569-1';
-  document.getElementById('s-half').value='全学期';document.getElementById('s-cls').value='';
+  document.getElementById('s-half').value='';document.getElementById('s-cls').value='';
   document.getElementById('s-tc').value='';document.getElementById('s-nt').value='';
   document.querySelectorAll('#s-eg input[type=checkbox]').forEach(cb=>{cb.checked=false;const n=document.getElementById('cnt-'+sk(cb.value));if(n){n.value='';n.disabled=true;}});
 }
@@ -856,7 +856,7 @@ function renderTchr(){
       '<td style="max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en)+'</td>'+
       '<td><span class="badge '+(TB[r.type]||'b4')+'">'+r.type+'</span></td>'+
       '<td>'+r.cls+'</td><td><span class="badge b4">'+r.sem+'</span></td>'+
-      '<td style="font-size:11px">'+r.half+'</td><td>'+(tot||'—')+'</td>'+
+      '<td style="font-size:11px">'+(r.half?r.half:'<span style="color:#bbb;font-style:italic">待定</span>')+'</td><td>'+(tot||'—')+'</td>'+
       '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td></tr>';}).join('');
 }
 function renderCoh(){
@@ -870,7 +870,7 @@ function renderCoh(){
     '<td style="max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en)+'</td>'+
     '<td><span class="badge '+(TB[r.type]||'b4')+'">'+r.type+'</span></td>'+
     '<td>'+r.cls+'</td><td><span class="badge b4">'+r.sem+'</span></td>'+
-    '<td style="font-size:11px">'+r.half+'</td><td style="font-size:12px">'+eh(r.tc)+'</td></tr>').join('');
+    '<td style="font-size:11px">'+(r.half?r.half:'<span style="color:#bbb;font-style:italic">待定</span>')+'</td><td style="font-size:12px">'+eh(r.tc)+'</td></tr>').join('');
 }
 function renderSpStu(){
   const q=(document.getElementById('f-stu').value||'').toLowerCase(),mj=document.getElementById('f-sm').value;
