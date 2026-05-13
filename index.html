@@ -287,6 +287,8 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   </div>
   <div id="sub-sco" class="spanel">
     <div class="fbar">
+      <label>专业</label>
+      <select id="f-co-d" onchange="filterCohByDept()"><option value="">全部</option></select>
       <label>届别</label><select id="f-co" onchange="renderCoh()"><option value="">请选择</option></select>
       <label>学期</label>
       <select id="f-co-s" onchange="renderCoh()"><option value="">全部</option><option>2569-1</option><option>2569-2</option><option>2569-3</option></select>
@@ -332,40 +334,40 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 <!-- ══ 教学统计 ════════════════════════════ -->
 <div id="panel-sta" class="panel">
   <div class="mgrid" id="sta-m"></div>
-  <div class="fbar">
-    <label>筛选学期</label>
-    <select id="sta-sf" onchange="renderSta()"><option value="">全三学期汇总</option><option>2569-1</option><option>2569-2</option><option>2569-3</option></select>
-  </div>
   <div class="card">
     <div class="sechdr">
       <span class="ct" style="margin:0">各授课老师工作量 · 按专业分组（主任老师优先）</span>
-      <button class="btn btn-sm" onclick="renderSta()">↻ 刷新</button>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="font-size:11px;color:#888">BTEC/LA500 可直接在表格内填写，自动同步</span>
+        <button class="btn btn-sm" onclick="renderSta()">↻ 刷新</button>
+      </div>
     </div>
     <div class="tbl-wrap">
       <table>
         <thead>
           <tr>
-            <th rowspan="2">#</th><th rowspan="2">老师</th><th rowspan="2">职位</th>
-            <th colspan="3" style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">2569-1</th>
-            <th colspan="3" style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">2569-2</th>
-            <th colspan="3" style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">2569-3</th>
-            <th colspan="3" style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">总计</th>
+            <th rowspan="2">#</th>
+            <th rowspan="2">老师</th>
+            <th rowspan="2">职位</th>
+            <th colspan="6" style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">2569-1</th>
+            <th colspan="6" style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">2569-2</th>
+            <th colspan="6" style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">2569-3</th>
+            <th rowspan="2" style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">教学<br>总数</th>
+            <th rowspan="2" style="text-align:center;background:#3C3489">BTEC/<br>LA500</th>
+            <th rowspan="2" style="text-align:center">学年<br>规定</th>
+            <th rowspan="2" style="text-align:center">学年<br>总数</th>
+            <th rowspan="2" style="text-align:center">%</th>
           </tr>
           <tr>
-            <th style="border-left:1px solid rgba(255,255,255,.3)">课数</th><th>加权</th><th>类型</th>
-            <th style="border-left:1px solid rgba(255,255,255,.3)">课数</th><th>加权</th><th>类型</th>
-            <th style="border-left:1px solid rgba(255,255,255,.3)">课数</th><th>加权</th><th>类型</th>
-            <th style="border-left:1px solid rgba(255,255,255,.3)">课数</th><th>加权</th><th>% / 限额</th>
+            <th style="border-left:1px solid rgba(255,255,255,.3)">总量</th><th>正常</th><th>英文</th><th>实习</th><th>SG</th><th>Cap</th>
+            <th style="border-left:1px solid rgba(255,255,255,.3)">总量</th><th>正常</th><th>英文</th><th>实习</th><th>SG</th><th>Cap</th>
+            <th style="border-left:1px solid rgba(255,255,255,.3)">总量</th><th>正常</th><th>英文</th><th>实习</th><th>SG</th><th>Cap</th>
           </tr>
         </thead>
         <tbody id="sta-tb"></tbody>
       </table>
     </div>
     <div class="empty" id="sta-em">暂无数据</div>
-  </div>
-  <div class="card">
-    <div class="ct">特别排课 · 各老师汇总（SG ×0.167）</div>
-    <div id="sta-sp"></div>
   </div>
 </div>
 </div><!-- /.app -->
@@ -374,7 +376,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 // ╔══════════════════════════════════════════════════════════╗
 // ║  配置区 — 修改 SHEETS_URL 即可启用 Google Sheets 同步     ║
 // ╚══════════════════════════════════════════════════════════╝
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwTVBSCHuYMyYNnJxJC0QDjhcZir0oldpZsYY0v2OLtZVUeX_r23mvQUBsSKJk_pX81/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxVyCxwfGSjAd5suCqoKdRpazIjthm1IcxrzsKXne3bMySSEJTG24f3A6xlq-pzlhTG/exec';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║  内建预设参考数据（SHEETS_URL 空白时自动使用）              ║
@@ -592,7 +594,7 @@ const RO={'主任老师':0,'副主任老师':1,'副院长':2,'支援活动科研
 const TB={正常:'b0',英文:'b6',实习:'b2',SG:'b3',Capstone:'b5'};
 const CLSS=['601','602','603','604','605','Capstone-971','Capstone-972','Capstone-973','Capstone-974','Capstone-975','Capstone-976','Capstone-977','Capstone-978','实习-331','实习-332','实习-333'];
 const SEMS=['2569-1','2569-2','2569-3'];
-let schD=[],spD=[],selDpts=new Set();
+let schD=[],spD=[],selDpts=new Set(),btecD={};
 let schSK=null,schSD=1,spSK='tc',spSD=1;
 
 // ── 辅助 ──────────────────────────────────
@@ -622,6 +624,9 @@ function rebuildUI(){
     Object.keys(bd).sort().forEach(d=>{const g=document.createElement('optgroup');g.label=d;bd[d].forEach(t=>{const o=document.createElement('option');o.value=t.n;o.textContent=t.n;g.appendChild(o);});el.appendChild(g);});
     el.value=cur;
   });
+  const fcd=document.getElementById('f-co-d');
+  if(fcd){const cur=fcd.value;fcd.innerHTML='<option value="">全部</option>';
+    Object.keys(CBD).sort().forEach(d=>{const o=document.createElement('option');o.value=d;o.textContent=d;fcd.appendChild(o);});fcd.value=cur;}
   const fc=document.getElementById('f-co');
   if(fc){const cur=fc.value;fc.innerHTML='<option value="">请选择</option>';
     Object.entries(CBD).forEach(([d,list])=>{const g=document.createElement('optgroup');g.label=d;list.forEach(co=>{const o=document.createElement('option');o.value=co;o.textContent=co;g.appendChild(o);});fc.appendChild(g);});fc.value=cur;}
@@ -859,6 +864,20 @@ function renderTchr(){
       '<td style="font-size:11px">'+(r.half?r.half:'<span style="color:#bbb;font-style:italic">待定</span>')+'</td><td>'+(tot||'—')+'</td>'+
       '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td></tr>';}).join('');
 }
+function filterCohByDept(){
+  const dept=document.getElementById('f-co-d').value;
+  const fc=document.getElementById('f-co');
+  const cur=fc.value;
+  fc.innerHTML='<option value="">请选择</option>';
+  Object.entries(CBD).forEach(([d,list])=>{
+    if(dept&&d!==dept)return;
+    const g=document.createElement('optgroup');g.label=d;
+    list.forEach(co=>{const o=document.createElement('option');o.value=co;o.textContent=co;g.appendChild(o);});
+    fc.appendChild(g);
+  });
+  if([...fc.options].some(o=>o.value===cur))fc.value=cur;
+  renderCoh();
+}
 function renderCoh(){
   const co=document.getElementById('f-co').value,sem=document.getElementById('f-co-s').value;
   const tb=document.getElementById('co-tb'),em=document.getElementById('co-em');
@@ -902,62 +921,113 @@ function renderSpTchr(){
 function renderAllSum(){renderTchr();renderCoh();renderSpStu();renderSpTchr();}
 
 // ── 教学统计 ──────────────────────────────
-function semStat(tc,sem){
-  const sch=schD.filter(r=>r.tc===tc&&r.sem===sem),sp=spD.filter(r=>r.tc===tc&&r.sem===sem);
-  const n=sch.length+sp.length,wt=Math.round((sch.reduce((s,r)=>s+(WTS[r.type]||1),0)+sp.length*WTS.SG)*100)/100;
-  const cnt={正常:0,英文:0,实习:0,SG:sp.length,Capstone:0};sch.forEach(r=>cnt[r.type]=(cnt[r.type]||0)+1);
-  const badges=Object.entries(cnt).filter(([,v])=>v>0).map(([k,v])=>'<span class="badge '+(TB[k]||'b4')+'" style="margin:1px;font-size:10px">'+k+' '+v+'</span>').join('');
-  return{n,wt,badges};
+function semDetail(tc,sem){
+  const sch=schD.filter(r=>r.tc===tc&&r.sem===sem);
+  const sp=spD.filter(r=>r.tc===tc&&r.sem===sem);
+  const cnt={正常:0,英文:0,实习:0,SG:sp.length,Capstone:0};
+  sch.forEach(r=>cnt[r.type]=(cnt[r.type]||0)+1);
+  const wt=Math.round((cnt.正常*WTS.正常+cnt.英文*WTS.英文+cnt.实习*WTS.实习+cnt.SG*WTS.SG+cnt.Capstone*WTS.Capstone)*100)/100;
+  return{wt,cnt};
+}
+function sdCells(d,bl){
+  const s=bl?'border-left:1px solid #eee;':'';
+  const v=(x)=>x?x:'<span style="color:#ddd">—</span>';
+  return'<td style="text-align:center;'+s+'">'+v(d.wt)+'</td>'+
+    '<td style="text-align:center">'+v(d.cnt.正常)+'</td>'+
+    '<td style="text-align:center">'+v(d.cnt.英文)+'</td>'+
+    '<td style="text-align:center">'+v(d.cnt.实习)+'</td>'+
+    '<td style="text-align:center">'+v(d.cnt.SG)+'</td>'+
+    '<td style="text-align:center">'+v(d.cnt.Capstone)+'</td>';
+}
+function saveBtec(name,val){
+  btecD[name]=parseFloat(val)||0;
+  // 更新学年总数显示（不重绘整表，只更新该行的相关 td）
+  const t=T.find(x=>x.n===name);
+  const k=name.replace(/[^a-zA-Z0-9]/g,'_');
+  const d1=semDetail(name,'2569-1'),d2=semDetail(name,'2569-2'),d3=semDetail(name,'2569-3');
+  const totalWt=Math.round((d1.wt+d2.wt+d3.wt)*100)/100;
+  const btec=btecD[name]||0;
+  const yearTotal=Math.round((totalWt+btec)*100)/100;
+  const pct=t&&t.l>0?Math.round(yearTotal/t.l*100):0;
+  const over=t&&t.l>0&&yearTotal>t.l;
+  const ytEl=document.getElementById('yt-'+k);if(ytEl)ytEl.textContent=yearTotal;
+  const pEl=document.getElementById('pct-'+k);
+  if(pEl){pEl.textContent=pct+'% / '+(t?t.l:'—');pEl.className='badge '+(over?'b3':'b1');}
+  autoSyncBtec();
+}
+let btecSyncTimer=null;
+function autoSyncBtec(){
+  if(!SHEETS_URL)return;
+  clearTimeout(btecSyncTimer);
+  btecSyncTimer=setTimeout(async()=>{
+    try{
+      const payload=encodeURIComponent(JSON.stringify(btecD));
+      await fetch(SHEETS_URL+'?action=write&type=btec&payload='+payload,{cache:'no-store'});
+      setSyncStatus('✅ BTEC 已同步 '+new Date().toLocaleTimeString(),true);
+    }catch(e){setSyncStatus('❌ BTEC 同步失败',false);}
+  },1500);
 }
 function renderSta(){
-  const sf=document.getElementById('sta-sf').value;
   const actT=[...new Set([...schD.map(r=>r.tc),...spD.map(r=>r.tc)])].filter(Boolean).length;
   document.getElementById('sta-m').innerHTML=[
     [schD.length,'排课记录'],[spD.length,'特别排课'],
     [schD.reduce((s,r)=>s+r.cc.length,0),'届别课次'],
     [actT,'参与老师'],[schD.filter(r=>r.type==='Capstone').length,'Capstone课程']
   ].map(([v,l])=>'<div class="mc"><div class="mv">'+v+'</div><div class="ml">'+l+'</div></div>').join('');
+
   const depts=[...new Set(T.filter(t=>t.l>0).map(t=>t.d))].sort();
   let rows='';let hasData=false;
+
   depts.forEach(dept=>{
     const dTchrs=T.filter(t=>t.d===dept&&t.l>0).sort((a,b)=>(RO[a.r]||9)-(RO[b.r]||9)||a.n.localeCompare(b.n));
-    rows+='<tr class="dh"><td colspan="15">▸ '+dept+' · '+dTchrs.length+'位老师</td></tr>';
-    let dN=0,dW=0;let idx=0;
+    // colspan = 3 + 6*3 + 5 = 26
+    rows+='<tr class="dh"><td colspan="26">▸ '+dept+' · '+dTchrs.length+'位老师</td></tr>';
+    let dWt=0;let idx=0;
+
     dTchrs.forEach(t=>{
       idx++;hasData=true;
-      const allSems=SEMS.map(s=>{if(sf&&s!==sf)return{n:0,wt:0,badges:''};return semStat(t.n,s);});
-      const s1=allSems[0],s2=allSems[1],s3=allSems[2];
-      const totN=s1.n+s2.n+s3.n,totWt=Math.round((s1.wt+s2.wt+s3.wt)*100)/100;
-      dN+=totN;dW=Math.round((dW+totWt)*100)/100;
-      const pct=t.l>0?Math.round(totWt/t.l*100):0,over=t.l>0&&totWt>t.l;
-      rows+='<tr><td style="color:#bbb;font-size:11px">'+idx+'</td>'+
+      const k=t.n.replace(/[^a-zA-Z0-9]/g,'_');
+      const d1=semDetail(t.n,'2569-1'),d2=semDetail(t.n,'2569-2'),d3=semDetail(t.n,'2569-3');
+      const totalWt=Math.round((d1.wt+d2.wt+d3.wt)*100)/100;
+      const btec=btecD[t.n]||0;
+      const yearTotal=Math.round((totalWt+btec)*100)/100;
+      dWt+=yearTotal;
+      const pct=t.l>0?Math.round(yearTotal/t.l*100):0;
+      const over=t.l>0&&yearTotal>t.l;
+
+      rows+='<tr>'+
+        '<td style="color:#bbb;font-size:11px">'+idx+'</td>'+
         '<td style="font-size:12px;white-space:nowrap">'+eh(t.n)+'</td>'+
         '<td style="font-size:11px;color:#888;white-space:nowrap">'+t.r+'</td>'+
-        '<td style="text-align:center;border-left:1px solid #eee">'+(s1.n||'—')+'</td><td style="text-align:center">'+(s1.wt||'—')+'</td><td style="font-size:10px;min-width:80px">'+s1.badges+'</td>'+
-        '<td style="text-align:center;border-left:1px solid #eee">'+(s2.n||'—')+'</td><td style="text-align:center">'+(s2.wt||'—')+'</td><td style="font-size:10px;min-width:80px">'+s2.badges+'</td>'+
-        '<td style="text-align:center;border-left:1px solid #eee">'+(s3.n||'—')+'</td><td style="text-align:center">'+(s3.wt||'—')+'</td><td style="font-size:10px;min-width:80px">'+s3.badges+'</td>'+
-        '<td style="text-align:center;border-left:1px solid #eee"><strong>'+totN+'</strong></td>'+
-        '<td style="text-align:center"><strong>'+totWt+'</strong></td>'+
-        '<td><span class="badge '+(over?'b3':'b1')+'">'+pct+'% / '+t.l+'</span></td></tr>';
+        sdCells(d1,true)+sdCells(d2,true)+sdCells(d3,true)+
+        // 教学总数
+        '<td style="text-align:center;border-left:1px solid #eee;font-weight:500">'+totalWt+'</td>'+
+        // BTEC/LA500 输入框
+        '<td style="text-align:center;background:#F5F4FE;padding:3px">'+
+          '<input type="number" id="btec-'+k+'" value="'+(btec||'')+'" min="0" step="0.5" '+
+          'style="width:58px;font-size:12px;padding:2px 4px;text-align:center;background:#fff;border:0.5px solid #AFA9EC;border-radius:5px" '+
+          'onchange="saveBtec(''+eh(t.n)+'',this.value)" placeholder="0">'+
+        '</td>'+
+        // 学年规定
+        '<td style="text-align:center;color:#888;font-size:11px">'+t.l+'</td>'+
+        // 学年总数
+        '<td style="text-align:center"><strong id="yt-'+k+'">'+yearTotal+'</strong></td>'+
+        // %
+        '<td><span class="badge '+(over?'b3':'b1')+'" id="pct-'+k+'">'+pct+'% / '+t.l+'</span></td>'+
+        '</tr>';
     });
-    rows+='<tr class="dt"><td colspan="3" style="text-align:right;padding-right:12px">'+dept+' 小计</td>'+
-      '<td colspan="9"></td><td style="text-align:center;border-left:1px solid #eee"><strong>'+dN+'</strong></td>'+
-      '<td style="text-align:center"><strong>'+dW+'</strong></td><td></td></tr>';
+
+    // 专业小计
+    rows+='<tr class="dt">'+
+      '<td colspan="3" style="text-align:right;padding-right:12px">'+dept+' 小计</td>'+
+      '<td colspan="18"></td>'+
+      '<td style="text-align:center;border-left:1px solid #eee"><strong>'+Math.round(dWt*100)/100+'</strong></td>'+
+      '<td colspan="3"></td></tr>';
   });
+
   if(!hasData){document.getElementById('sta-em').style.display='block';document.getElementById('sta-tb').innerHTML='';return;}
-  document.getElementById('sta-em').style.display='none';document.getElementById('sta-tb').innerHTML=rows;
-  const spm={};
-  spD.forEach(r=>{if(!r.tc)return;if(!spm[r.tc])spm[r.tc]={tc:r.tc,cs:{},total:0};if(!spm[r.tc].cs[r.co])spm[r.tc].cs[r.co]={co:r.co,en:r.en,n:0,sems:new Set()};spm[r.tc].cs[r.co].n++;spm[r.tc].cs[r.co].sems.add(r.sem);spm[r.tc].total++;});
-  const spEl=document.getElementById('sta-sp');
-  if(!Object.keys(spm).length){spEl.innerHTML='<div class="empty">暂无特别排课数据</div>';return;}
-  spEl.innerHTML='<table><thead><tr><th>#</th><th>老师</th><th>专业</th><th>课程 · 学期 · 人数</th><th>学生总数</th><th>加权合计</th></tr></thead><tbody>'+
-    Object.values(spm).sort((a,b)=>{const ta=T.find(x=>x.n===a.tc),tb2=T.find(x=>x.n===b.tc);return(ta?ta.d:'ZZ').localeCompare(tb2?tb2.d:'ZZ')||a.tc.localeCompare(b.tc);})
-    .map((x,i)=>{const ta=T.find(q=>q.n===x.tc),wt=Math.round(x.total*WTS.SG*100)/100;
-      return'<tr><td>'+(i+1)+'</td><td style="font-size:12px;white-space:nowrap">'+eh(x.tc)+'</td>'+
-        '<td><span class="badge b4">'+(ta?ta.d:'—')+'</span></td>'+
-        '<td>'+Object.values(x.cs).map(c=>'<div style="font-size:11px;margin:1px 0"><span class="badge b0">'+c.co+'</span> '+eh(c.en)+' '+[...c.sems].map(s=>'<span class="badge b4" style="font-size:10px">'+s+'</span>').join('')+' — '+c.n+'人</div>').join('')+'</td>'+
-        '<td><strong>'+x.total+'</strong></td><td><span class="badge b3">'+wt+'</span></td></tr>';
-    }).join('')+'</tbody></table>';
+  document.getElementById('sta-em').style.display='none';
+  document.getElementById('sta-tb').innerHTML=rows;
 }
 
 // ── JSON 导出/导入 ────────────────────────
@@ -1065,12 +1135,14 @@ async function loadDataFromSheets(){
   if(!SHEETS_URL)return;
   setSyncStatus('⏳ 正在载入排课数据…','');
   try{
-    const [r1,r2]=await Promise.all([
+    const [r1,r2,r3]=await Promise.all([
       fetch(SHEETS_URL+'?action=read&type=schedule',{cache:'no-store'}).then(r=>r.json()),
-      fetch(SHEETS_URL+'?action=read&type=special',{cache:'no-store'}).then(r=>r.json())
+      fetch(SHEETS_URL+'?action=read&type=special',{cache:'no-store'}).then(r=>r.json()),
+      fetch(SHEETS_URL+'?action=read&type=btec',{cache:'no-store'}).then(r=>r.json())
     ]);
     if(r1.success&&r1.data.length){schD=r1.data;}
     if(r2.success&&r2.data.length){spD=r2.data;}
+    if(r3.success&&r3.data){btecD=r3.data;}
     const t=new Date().toLocaleTimeString();
     setSyncStatus('✅ 数据已载入 '+t,true);
   }catch(e){
