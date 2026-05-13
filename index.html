@@ -713,6 +713,12 @@ function addSch(){
   const type=document.getElementById('s-tp').value,cls=document.getElementById('s-cls').value;
   const tc=document.getElementById('s-tc').value,nt=document.getElementById('s-nt').value,cc=getEG();
   if(!course||!cls||!cc.length){alert('请填写：课程代码、班级，并至少勾选一个届别');return;}
+  // 重复检查：同课程 + 同班级 + 同学期
+  const dup=schD.find(r=>r.course===course&&r.cls===cls&&r.sem===sem);
+  if(dup){
+    const go=confirm('⚠️ 重复提醒\n\n「'+course+'」已在 '+sem+' 学期 '+cls+' 班级新增过一次。\n\n确定要继续新增吗？（如不同老师或不同届别可忽略此提醒）');
+    if(!go)return;
+  }
   schD.push({id:Date.now(),course,en,sem,half,type,cls,tc,cc,nt,editing:false});
   renderSch();renderAllSum();renderSta();clearSchF();autoSync('schedule');
 }
