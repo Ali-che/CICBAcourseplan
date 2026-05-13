@@ -154,7 +154,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <div class="fg"><label>课程类型（自动检测）</label>
         <select id="s-tp">
           <option value="正常">正常 ×1.0</option><option value="英文">英文 ×0.5</option>
-          <option value="实习">实习 ×1.0</option><option value="SG">SG ×0.167</option><option value="Capstone">Capstone ×0.75</option>
+          <option value="实习">实习 ×1.0</option><option value="SG">SG/IS ×0.167</option><option value="Capstone">Capstone ×0.75</option>
         </select>
       </div>
       <div class="fg"><label>班级代码</label>
@@ -257,7 +257,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <th>备注</th><th>操作</th>
       </tr></thead><tbody id="sp-tb"></tbody></table>
     </div>
-    <div class="empty" id="sp-em">暂无特别排课记录</div>
+    <div class="empty" id="sp-em">暂无 SG/IS 排课记录</div>
   </div>
 </div>
 
@@ -266,11 +266,13 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   <div class="stabs">
     <button class="stab active" onclick="switchSub('stc')">任课老师总表</button>
     <button class="stab" onclick="switchSub('sco')">班级总表</button>
-    <button class="stab" onclick="switchSub('sss')">特别课·学生</button>
-    <button class="stab" onclick="switchSub('sst')">特别课·老师</button>
+    <button class="stab" onclick="switchSub('sss')">SG/IS·学生</button>
+    <button class="stab" onclick="switchSub('sst')">SG/IS·老师</button>
   </div>
   <div id="sub-stc" class="spanel active">
     <div class="fbar">
+      <label>专业</label>
+      <select id="f-tc-d" onchange="filterTchrByDept()"><option value="">全部</option></select>
       <label>任课老师</label><select id="f-tc" onchange="renderTchr()"><option value="">请选择</option></select>
       <label>学期</label>
       <select id="f-tc-s" onchange="renderTchr()"><option value="">全部</option><option>2569-1</option><option>2569-2</option><option>2569-3</option></select>
@@ -311,7 +313,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <select id="f-sp-sem" onchange="renderSpStu()"><option value="">全部</option><option>2569-1</option><option>2569-2</option><option>2569-3</option></select>
     </div>
     <div class="card">
-      <div class="ct">特别排课总表 · 学生维度</div>
+      <div class="ct">SG/IS 排课总表 · 学生维度</div>
       <div class="tbl-wrap">
         <table><thead><tr><th>#</th><th>学号</th><th>称谓</th><th>学生姓名</th><th>学生专业</th><th>特别课数</th><th>课程代码</th><th>课程英文名</th><th>备注</th></tr></thead>
         <tbody id="ss-tb"></tbody></table>
@@ -324,7 +326,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <label>授课老师</label><select id="f-st" onchange="renderSpTchr()"><option value="">请选择</option></select>
     </div>
     <div class="card">
-      <div class="ct">特别排课总表 · 老师维度</div>
+      <div class="ct">SG/IS 排课总表 · 老师维度</div>
       <div class="tbl-wrap">
         <table><thead><tr><th>#</th><th>课程代码</th><th>课程英文名</th><th>学生名单</th><th>学期</th><th>课程总人数</th></tr></thead>
         <tbody id="st-tb"></tbody></table>
@@ -339,7 +341,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   <div class="mgrid" id="sta-m"></div>
   <div class="card">
     <div class="sechdr">
-      <span class="ct" style="margin:0">各授课老师工作量 · 按专业分组（主任老师优先）</span>
+      <span class="ct" style="margin:0">各授课老师工作量</span>
       <div style="display:flex;gap:6px;align-items:center">
         <span style="font-size:11px;color:#888">BTEC/LA500 可直接在表格内填写，自动同步</span>
         <button class="btn btn-sm" onclick="renderSta()">↻ 刷新</button>
@@ -629,6 +631,10 @@ function rebuildUI(){
     Object.keys(bd).sort().forEach(d=>{const g=document.createElement('optgroup');g.label=d;bd[d].forEach(t=>{const o=document.createElement('option');o.value=t.n;o.textContent=t.n;g.appendChild(o);});el.appendChild(g);});
     el.value=cur;
   });
+  // f-tc-d 专业筛选重建
+  const ftcd=document.getElementById('f-tc-d');
+  if(ftcd){const cur=ftcd.value;ftcd.innerHTML='<option value="">全部</option>';
+    [...new Set(T.filter(t=>t.l>0).map(t=>t.d))].sort().forEach(d=>{const o=document.createElement('option');o.value=d;o.textContent=d;ftcd.appendChild(o);});ftcd.value=cur;}
   ['f-tc','f-st'].forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
     const cur=el.value;el.innerHTML='<option value="">请选择</option>';
@@ -874,21 +880,61 @@ function clearSpF(){
 }
 
 // ── 学期总表 ──────────────────────────────
+function filterTchrByDept(){
+  const dept=document.getElementById('f-tc-d').value;
+  const el=document.getElementById('f-tc');
+  const cur=el.value;
+  el.innerHTML='<option value="">请选择</option>';
+  const bd={};
+  tchrDrop().filter(t=>t.l>0).forEach(t=>{
+    if(dept&&t.d!==dept)return;
+    if(!bd[t.d])bd[t.d]=[];bd[t.d].push(t);
+  });
+  Object.keys(bd).sort().forEach(d=>{
+    const g=document.createElement('optgroup');g.label=d;
+    bd[d].forEach(t=>{const o=document.createElement('option');o.value=t.n;o.textContent=t.n;g.appendChild(o);});
+    el.appendChild(g);
+  });
+  if([...el.options].some(o=>o.value===cur))el.value=cur;
+  renderTchr();
+}
 function renderTchr(){
   const tc=document.getElementById('f-tc').value,sem=document.getElementById('f-tc-s').value,tp=document.getElementById('f-tc-t').value;
   const tb=document.getElementById('tc-tb'),em=document.getElementById('tc-em');
   if(!tc){tb.innerHTML='';em.style.display='block';return;}
   document.getElementById('tc-ttl').textContent='任课老师课程总表 · '+tc+(sem?' · '+sem:'');
   let data=schD.filter(r=>r.tc===tc);if(sem)data=data.filter(r=>r.sem===sem);if(tp)data=data.filter(r=>r.type===tp);
-  if(!data.length){tb.innerHTML='';em.textContent='该老师暂无符合条件的排课记录';em.style.display='block';return;}
+  // 加入 SG/IS 排课
+  let spRows=[];
+  if(!tp||tp==='SG'){
+    let spData=spD.filter(r=>r.tc===tc);
+    if(sem)spData=spData.filter(r=>r.sem===sem);
+    const spMap={};
+    spData.forEach(r=>{
+      const k=r.co+'|'+r.sem;
+      if(!spMap[k])spMap[k]={co:r.co,en:r.en,sem:r.sem,cls:r.cls,stus:[]};
+      spMap[k].stus.push(r.mr+' '+r.nm);
+    });
+    spRows=Object.values(spMap);
+  }
+  if(!data.length&&!spRows.length){tb.innerHTML='';em.textContent='该老师暂无符合条件的排课记录';em.style.display='block';return;}
   em.style.display='none';
-  tb.innerHTML=data.map((r,i)=>{const tot=r.cc.reduce((s,x)=>s+(x.count||0),0);
+  const schRows=data.map((r,i)=>{const tot=r.cc.reduce((s,x)=>s+(x.count||0),0);
     return'<tr><td>'+(i+1)+'</td><td><span class="badge b0">'+r.course+'</span></td>'+
       '<td style="max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en)+'</td>'+
       '<td><span class="badge '+(TB[r.type]||'b4')+'">'+r.type+'</span></td>'+
       '<td>'+r.cls+'</td><td><span class="badge b4">'+r.sem+'</span></td>'+
       '<td>'+halfBadge(r.half)+'</td><td>'+(tot||'—')+'</td>'+
       '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td></tr>';}).join('');
+  const sgRows=spRows.map((r,i)=>
+    '<tr style="background:#FFF8F0"><td>'+(data.length+i+1)+'</td>'+
+    '<td><span class="badge b0">'+r.co+'</span></td>'+
+    '<td style="max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en)+'</td>'+
+    '<td><span class="badge b3">SG/IS</span></td>'+
+    '<td>'+r.cls+'</td><td><span class="badge b4">'+r.sem+'</span></td>'+
+    '<td>—</td><td>'+r.stus.length+'</td>'+
+    '<td style="font-size:11px;color:#888">'+r.stus.map(s=>eh(s)).join('、')+'</td></tr>').join('');
+  tb.innerHTML=schRows+sgRows;
 }
 function filterCohByDept(){
   const dept=document.getElementById('f-co-d').value;
@@ -941,7 +987,7 @@ function renderSpTchr(){
   const tc=document.getElementById('f-st').value,tb=document.getElementById('st-tb'),em=document.getElementById('st-em');
   if(!tc){tb.innerHTML='';em.style.display='block';return;}
   const data=spD.filter(r=>r.tc===tc);
-  if(!data.length){tb.innerHTML='';em.textContent='该老师暂无特别排课记录';em.style.display='block';return;}
+  if(!data.length){tb.innerHTML='';em.textContent='该老师暂无 SG/IS 排课记录';em.style.display='block';return;}
   em.style.display='none';
   const cm={};data.forEach(r=>{if(!cm[r.co])cm[r.co]={co:r.co,en:r.en,stus:[],sems:new Set()};cm[r.co].stus.push(r.mr+' '+r.nm);cm[r.co].sems.add(r.sem);});
   tb.innerHTML=Object.values(cm).map((x,i)=>'<tr><td>'+(i+1)+'</td><td><span class="badge b0">'+x.co+'</span></td><td>'+eh(x.en)+'</td>'+
