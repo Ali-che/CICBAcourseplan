@@ -117,15 +117,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 </div>
 
 <!-- ══ 权重说明 ════════════════════════════ -->
-<div class="tleg">
-  <span style="font-size:11px;font-weight:600;color:#666;margin-right:4px">课程类型权重：</span>
-  <span class="tleg-i"><span class="badge b0">正常</span> ×1.0</span>
-  <span class="tleg-i"><span class="badge b6">英文</span> ×0.5</span>
-  <span class="tleg-i"><span class="badge b2">实习</span> ×1.0</span>
-  <span class="tleg-i"><span class="badge b3">SG</span> ×0.167</span>
-  <span class="tleg-i"><span class="badge b5">Capstone</span> ×0.75</span>
-  <span style="margin-left:auto;font-size:11px;color:#aaa">KB=专业基础课（正常）　KE/LA/KH=英文（×0.5）</span>
-</div>
+
 
 <!-- ══ 主标签 ═════════════════════════════ -->
 <div class="tabs">
@@ -341,6 +333,15 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <span style="font-size:11px;color:#888">BTEC/LA500 可直接在表格内填写，自动同步</span>
         <button class="btn btn-sm" onclick="renderSta()">↻ 刷新</button>
       </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:.5rem .75rem;background:#f9f9f9;border-radius:8px;margin-bottom:.75rem;border:0.5px solid #eee">
+      <span style="font-size:11px;font-weight:600;color:#666;margin-right:2px">课程类型权重：</span>
+      <span style="display:flex;align-items:center;gap:4px;font-size:11px"><span class="badge b0">正常</span> ×1.0</span>
+      <span style="display:flex;align-items:center;gap:4px;font-size:11px"><span class="badge b6">英文</span> ×0.5</span>
+      <span style="display:flex;align-items:center;gap:4px;font-size:11px"><span class="badge b2">实习</span> ×1.0</span>
+      <span style="display:flex;align-items:center;gap:4px;font-size:11px"><span class="badge b3">SG</span> ×0.167</span>
+      <span style="display:flex;align-items:center;gap:4px;font-size:11px"><span class="badge b5">Capstone</span> ×0.75</span>
+      <span style="margin-left:auto;font-size:11px;color:#aaa">KB = 专业基础课（正常）　KE / LA / KH = 英文（×0.5）</span>
     </div>
     <div class="tbl-wrap">
       <table>
@@ -981,7 +982,7 @@ function renderSta(){
   let rows='';let hasData=false;
 
   depts.forEach(dept=>{
-    const dTchrs=T.filter(t=>t.d===dept&&t.l>0).sort((a,b)=>(RO[a.r]||9)-(RO[b.r]||9)||a.n.localeCompare(b.n));
+    const dTchrs=T.filter(t=>t.d===dept&&t.l>0).sort((a,b)=>a.n.localeCompare(b.n));
     // colspan = 3 + 6*3 + 5 = 26
     rows+='<tr class="dh"><td colspan="26">▸ '+dept+' · '+dTchrs.length+'位老师</td></tr>';
     let dWt=0;let idx=0;
