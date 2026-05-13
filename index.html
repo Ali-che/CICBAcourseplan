@@ -318,7 +318,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     <div class="card">
       <div class="ct">SG/IS 排课总表 · 学生维度</div>
       <div class="tbl-wrap">
-        <table><thead><tr><th>#</th><th>学号</th><th>称谓</th><th>学生姓名</th><th>学生专业</th><th>特别课数</th><th>课程代码</th><th>课程英文名</th><th>学期</th><th>备注</th></tr></thead>
+        <table><thead><tr><th>#</th><th>学号</th><th>称谓</th><th>学生姓名</th><th>学生专业</th><th>特别课数</th><th>课程代码（班级）</th><th>课程英文名</th><th>学期</th><th>备注</th></tr></thead>
         <tbody id="ss-tb"></tbody></table>
       </div>
       <div class="empty" id="ss-em">暂无数据</div>
@@ -992,7 +992,7 @@ function renderSpStu(){
     return'<tr><td>'+idx+'</td><td><code style="font-size:11px">'+eh(s.sid)+'</code></td>'+
       '<td>'+s.mr+'</td><td>'+eh(s.nm)+'</td><td><span class="badge b4">'+s.mj+'</span></td>'+
       '<td><strong>'+s.rows.length+'</strong></td>'+
-      '<td>'+s.rows.map(r=>'<span class="badge b0" style="margin:1px">'+r.co+'</span>').join('')+'</td>'+
+      '<td>'+s.rows.map(r=>'<span class="badge b0" style="margin:1px">'+r.co+'</span><span class="tag" style="margin:1px">'+r.cls+'</span>').join('<br>')+'</td>'+
       '<td>'+s.rows.map(r=>'<span style="font-size:11px">'+eh(r.en)+'</span>').join('<br>')+'</td>'+
       '<td>'+s.rows.map(r=>'<span class="badge b4" style="margin:1px">'+r.sem+'</span>').join('<br>')+'</td>'+
       '<td style="font-size:11px;color:#888">'+(s.rows.filter(r=>r.nt).map(r=>r.nt).join('；')||'—')+'</td></tr>';}).join('');
@@ -1041,20 +1041,21 @@ function renderSpTchr(){
   });
   let idx=0;
   tb.innerHTML=Object.values(cm).map(x=>{
+    const n=x.stus.length;
     return x.stus.map((s,si)=>{
       idx++;
       return'<tr>'+
         (si===0?
-          '<td rowspan="'+x.stus.length+'"><span class="badge b0">'+x.co+'</span></td>'+
-          '<td rowspan="'+x.stus.length+'" style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(x.en)+'</td>'+
-          '<td rowspan="'+x.stus.length+'" style="font-size:12px;white-space:nowrap">'+eh(x.tc)+'</td>'
-        :'')+ 
+          '<td rowspan="'+n+'"><span class="badge b0">'+x.co+'</span></td>'+
+          '<td rowspan="'+n+'" style="max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(x.en)+'</td>'+
+          '<td rowspan="'+n+'" style="font-size:12px;white-space:nowrap">'+eh(x.tc)+'</td>'
+        :'')+
         '<td><code style="font-size:11px">'+eh(s.sid||'—')+'</code></td>'+
-        '<td><span class="badge b4">'+s.mr+'</span></td>'+
-        '<td>'+eh(s.nm)+'</td>'+
-        '<td><span class="badge b4">'+s.mj+'</span></td>'+
-        '<td><span class="badge b4">'+s.sem+'</span></td>'+
-        (si===0?'<td rowspan="'+x.stus.length+'"><strong>'+x.stus.length+'</strong></td>':'')+
+        '<td><span class="badge b4" style="font-size:10px">'+eh(s.mr)+'</span></td>'+
+        '<td style="white-space:nowrap">'+eh(s.nm)+'</td>'+
+        '<td><span class="badge b4">'+eh(s.mj)+'</span></td>'+
+        '<td><span class="badge b4">'+eh(s.sem)+'</span></td>'+
+        (si===0?'<td rowspan="'+n+'"><strong>'+n+'</strong></td>':'')+
         '</tr>';
     }).join('');
   }).join('');
