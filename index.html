@@ -335,7 +335,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     <div class="card">
       <div class="ct">SG/IS 排课总表 · 老师维度</div>
       <div class="tbl-wrap">
-        <table><thead><tr><th>#</th><th>课程代码</th><th>课程英文名</th><th>学号</th><th>学生称谓</th><th>学生姓名</th><th>学生专业</th><th>学期</th><th>课程总人数</th></tr></thead>
+        <table><thead><tr><th>#</th><th>课程代码</th><th>课程英文名</th><th>授课老师</th><th>学号</th><th>学生称谓</th><th>学生姓名</th><th>学生专业</th><th>学期</th><th>课程总人数</th></tr></thead>
         <tbody id="st-tb"></tbody></table>
       </div>
       <div class="empty" id="st-em">请选择老师</div>
@@ -1018,26 +1018,37 @@ function filterSpTchrByDept(){
 function renderSpTchr(){
   const tc=document.getElementById('f-st').value;
   const sem=document.getElementById('f-st-s')?document.getElementById('f-st-s').value:'';
+  const dept=document.getElementById('f-st-d')?document.getElementById('f-st-d').value:'';
   const tb=document.getElementById('st-tb'),em=document.getElementById('st-em');
-  if(!tc){tb.innerHTML='';em.style.display='block';return;}
-  let data=spD.filter(r=>r.tc===tc);
+  // 老师或学期任一有值才显示
+  if(!tc&&!sem){tb.innerHTML='';em.style.display='block';em.textContent='请选择老师或学期';return;}
+  let data=[...spD];
+  if(tc)data=data.filter(r=>r.tc===tc);
   if(sem)data=data.filter(r=>r.sem===sem);
-  if(!data.length){tb.innerHTML='';em.textContent='该老师暂无 SG/IS 排课记录';em.style.display='block';return;}
+  if(dept&&!tc){
+    // 只选专业时，筛选该专业老师的记录
+    const deptTchrs=T.filter(t=>t.d===dept).map(t=>t.n);
+    data=data.filter(r=>deptTchrs.includes(r.tc));
+  }
+  if(!data.length){tb.innerHTML='';em.textContent='暂无符合条件的 SG/IS 排课记录';em.style.display='block';return;}
   em.style.display='none';
-  // 按课程分组，每门课展开所有学生
+  // 按课程+老师分组
   const cm={};
   data.forEach(r=>{
-    if(!cm[r.co])cm[r.co]={co:r.co,en:r.en,stus:[],sems:new Set()};
-    cm[r.co].stus.push({sid:r.sid,mr:r.mr,nm:r.nm,mj:r.mj,sem:r.sem});
-    cm[r.co].sems.add(r.sem);
+    const k=r.co+'|'+r.tc;
+    if(!cm[k])cm[k]={co:r.co,en:r.en,tc:r.tc,stus:[]};
+    cm[k].stus.push({sid:r.sid,mr:r.mr,nm:r.nm,mj:r.mj,sem:r.sem});
   });
   let idx=0;
   tb.innerHTML=Object.values(cm).map(x=>{
-    const rows=x.stus.map((s,si)=>{
+    return x.stus.map((s,si)=>{
       idx++;
       return'<tr>'+
-        (si===0?'<td rowspan="'+x.stus.length+'"><span class="badge b0">'+x.co+'</span></td>'+
-          '<td rowspan="'+x.stus.length+'" style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(x.en)+'</td>':'')+ 
+        (si===0?
+          '<td rowspan="'+x.stus.length+'"><span class="badge b0">'+x.co+'</span></td>'+
+          '<td rowspan="'+x.stus.length+'" style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(x.en)+'</td>'+
+          '<td rowspan="'+x.stus.length+'" style="font-size:12px;white-space:nowrap">'+eh(x.tc)+'</td>'
+        :'')+ 
         '<td><code style="font-size:11px">'+eh(s.sid||'—')+'</code></td>'+
         '<td><span class="badge b4">'+s.mr+'</span></td>'+
         '<td>'+eh(s.nm)+'</td>'+
@@ -1046,7 +1057,6 @@ function renderSpTchr(){
         (si===0?'<td rowspan="'+x.stus.length+'"><strong>'+x.stus.length+'</strong></td>':'')+
         '</tr>';
     }).join('');
-    return rows;
   }).join('');
 }
 function renderAllSum(){renderTchr();renderCoh();renderSpStu();renderSpTchr();}
