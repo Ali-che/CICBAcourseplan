@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>2569学年 CIC 本科排课管理系统</title>
+<title>CIC 本科排课管理系统</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#f5f5f7;color:#111;font-size:13px}
@@ -154,7 +154,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   /* 页眉页脚 */
   @page{
     margin:15mm 12mm 15mm 12mm;
-    @top-center{content:'2569学年 CIC 本科排课管理系统'}
+    @top-center{content:'CIC 本科排课管理系统'}
     @bottom-right{content:'第 ' counter(page) ' 页，共 ' counter(pages) ' 页'}
   }
 }
@@ -173,7 +173,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 <div class="pin-overlay" id="pin-overlay">
   <div class="pin-box">
     <div class="pin-logo">CIC 本科排课管理系统</div>
-    <div class="pin-sub">2569学年 · 管理系统</div>
+    <div class="pin-sub">管理系统</div>
     <input class="pin-input" id="pin-input" type="password" placeholder="••••••••"
       maxlength="20" onkeydown="if(event.key==='Enter')checkPin()">
     <button class="pin-btn" onclick="checkPin()">进入系统</button>
@@ -1479,7 +1479,7 @@ function printPanel(id){
   const now=new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
   const hdr=document.getElementById('print-header');
   if(hdr){
-    hdr.innerHTML='<h1>2569学年 CIC 本科排课管理系统 · '+titles[id]+'</h1>'+
+    hdr.innerHTML='<h1>CIC 本科排课管理系统 · '+titles[id]+'</h1>'+
       '<p>'+subtitles[id]+'　｜　列印日期：'+now+'　｜　数据来源：Google Sheets</p>';
   }
   setTimeout(()=>window.print(), 300);
