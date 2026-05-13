@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>2569学年 CIC 本科排课管理系统</title>
+<title>2569学年 CIC 本科排课管理计划系统</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#f5f5f7;color:#111;font-size:13px}
@@ -87,7 +87,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 <!-- ══ 标题栏 ══════════════════════════════ -->
 <div class="header">
   <div>
-    <div style="font-size:17px;font-weight:600">2569学年 CIC 本科排课管理系统</div>
+    <div style="font-size:17px;font-weight:600">2569学年 CIC 本科排课管理计划系统</div>
     <div style="font-size:11px;color:#888;margin-top:3px">数据储存于浏览器；导出 JSON 可备份；配置 SHEETS_URL 可双向同步</div>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -374,7 +374,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 // ╔══════════════════════════════════════════════════════════╗
 // ║  配置区 — 修改 SHEETS_URL 即可启用 Google Sheets 同步     ║
 // ╚══════════════════════════════════════════════════════════╝
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzXCsdVQ6xmBwVixxdZ3L04by5eBucV1yNoRlAQRvkbHx4VnKkuX1199scPwp2Rcq8o/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwTVBSCHuYMyYNnJxJC0QDjhcZir0oldpZsYY0v2OLtZVUeX_r23mvQUBsSKJk_pX81/exec';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║  内建预设参考数据（SHEETS_URL 空白时自动使用）              ║
@@ -987,7 +987,7 @@ function setSyncStatus(msg,ok){
   if(el){el.textContent=msg;el.style.color=ok===true?'#3B6D11':ok===false?'#a32d2d':'#888';}
 }
 
-// 自动同步（静默，防抖 2 秒）
+// 自动同步（静默，防抖 2 秒，使用 GET 避免 CORS）
 function autoSync(type){
   if(!SHEETS_URL)return;
   clearTimeout(syncTimer);
@@ -995,7 +995,9 @@ function autoSync(type){
   syncTimer=setTimeout(async()=>{
     try{
       const data=type==='schedule'?schD:spD;
-      const res=await fetch(SHEETS_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'write',type,data})});
+      const payload=encodeURIComponent(JSON.stringify(data));
+      const url=SHEETS_URL+'?action=write&type='+type+'&payload='+payload;
+      const res=await fetch(url,{cache:'no-store'});
       const r=await res.json();
       const t=new Date().toLocaleTimeString();
       setSyncStatus(r.success?'✅ 已同步 '+t:'❌ 同步失败',r.success);
@@ -1003,7 +1005,7 @@ function autoSync(type){
   },2000);
 }
 
-// 手动全部同步（有提示）
+// 手动全部同步（有提示，使用 GET）
 async function syncAll(){
   if(!SHEETS_URL){alert('请先配置 SHEETS_URL');return;}
   setSyncStatus('⏳ 正在同步…','');
@@ -1011,26 +1013,27 @@ async function syncAll(){
     const r1=await fetchWrite('schedule',schD);
     const r2=await fetchWrite('special',spD);
     const t=new Date().toLocaleTimeString();
-    const msg=(r1&&r2)?'✅ 已同步 '+t:'❌ 部分同步失败';
-    setSyncStatus(msg,r1&&r2);
+    setSyncStatus((r1&&r2)?'✅ 已同步 '+t:'❌ 部分失败',r1&&r2);
     alert(r1&&r2?'✅ 两份数据已同步至 Google Sheets！':'❌ 同步失败，请检查连线');
   }catch(e){setSyncStatus('❌ 连线失败',false);alert('❌ 连线失败');}
 }
 async function fetchWrite(type,data){
-  const res=await fetch(SHEETS_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'write',type,data})});
+  const payload=encodeURIComponent(JSON.stringify(data));
+  const url=SHEETS_URL+'?action=write&type='+type+'&payload='+payload;
+  const res=await fetch(url,{cache:'no-store'});
   const r=await res.json();return r.success;
 }
 
-// 手动上传（有提示）
+// 手动上传（有提示，使用 GET）
 async function syncToSheets(type){
   if(!SHEETS_URL){alert('请先配置 SHEETS_URL');return;}
   const data=type==='schedule'?schD:spD;
   setSyncStatus('⏳ 正在同步…','');
-  try{const res=await fetch(SHEETS_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'write',type,data})});
-    const r=await res.json();
+  try{
+    const ok=await fetchWrite(type,data);
     const t=new Date().toLocaleTimeString();
-    setSyncStatus(r.success?'✅ 已同步 '+t:'❌ 同步失败',r.success);
-    r.success?alert('✅ 上传成功！'):alert('❌ 上传失败：'+r.error);
+    setSyncStatus(ok?'✅ 已同步 '+t:'❌ 同步失败',ok);
+    ok?alert('✅ 上传成功！'):alert('❌ 上传失败');
   }catch(e){setSyncStatus('❌ 连线失败',false);alert('❌ 连线失败');}
 }
 async function syncFromSheets(type){
