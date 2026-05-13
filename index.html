@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CIC 本科排课管理系统</title>
+<title>2569学年 CIC 本科排课管理系统</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#f5f5f7;color:#111;font-size:13px}
@@ -78,6 +78,22 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 .sem-val{font-size:15px;font-weight:600;color:#534AB7}
 .sem-zero{font-size:13px;color:#ccc}
 .tip-row{display:flex;gap:8px;align-items:center;margin-top:5px;font-size:12px}
+/* ── PIN 码锁定画面 ── */
+.pin-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#534AB7 0%,#3C3489 100%);
+  display:flex;align-items:center;justify-content:center;z-index:9999}
+.pin-box{background:#fff;border-radius:16px;padding:2.5rem 2rem;width:320px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.pin-logo{font-size:28px;font-weight:700;color:#534AB7;margin-bottom:.25rem}
+.pin-sub{font-size:12px;color:#999;margin-bottom:1.5rem}
+.pin-input{width:100%;font-size:18px;padding:10px 14px;border:2px solid #ddd;border-radius:10px;
+  text-align:center;letter-spacing:4px;font-family:monospace;outline:none;margin-bottom:.75rem;
+  transition:border-color .15s}
+.pin-input:focus{border-color:#534AB7}
+.pin-btn{width:100%;padding:11px;background:#534AB7;color:#fff;border:none;border-radius:10px;
+  font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;font-family:inherit}
+.pin-btn:hover{background:#3C3489}
+.pin-err{font-size:12px;color:#e53e3e;margin-top:.5rem;min-height:18px}
+.pin-shake{animation:shake .4s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 /* ── 列印样式 ── */
 @media print{
   /* 隐藏所有非内容元素 */
@@ -138,7 +154,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   /* 页眉页脚 */
   @page{
     margin:15mm 12mm 15mm 12mm;
-    @top-center{content:'CIC 本科排课管理系统'}
+    @top-center{content:'2569学年 CIC 本科排课管理系统'}
     @bottom-right{content:'第 ' counter(page) ' 页，共 ' counter(pages) ' 页'}
   }
 }
@@ -154,13 +170,23 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 </style>
 </head>
 <body>
-<div class="app">
+<div class="pin-overlay" id="pin-overlay">
+  <div class="pin-box">
+    <div class="pin-logo">CIC 本科排课</div>
+    <div class="pin-sub">2569学年 · 管理系统</div>
+    <input class="pin-input" id="pin-input" type="password" placeholder="••••••••"
+      maxlength="20" onkeydown="if(event.key==='Enter')checkPin()">
+    <button class="pin-btn" onclick="checkPin()">进入系统</button>
+    <div class="pin-err" id="pin-err"></div>
+  </div>
+</div>
+<div class="app" id="main-app" style="display:none">
 
 <!-- ══ 标题栏 ══════════════════════════════ -->
 <div class="sticky-top">
 <div class="header">
   <div>
-    <div style="font-size:17px;font-weight:600;cursor:pointer" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="点击回到顶部">CIC 本科排课管理系统</div>
+    <div style="font-size:17px;font-weight:600;cursor:pointer" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="点击回到顶部">2569学年 CIC 本科排课管理系统</div>
     <div class="print-header" id="print-header"></div>
     <div style="font-size:11px;color:#888;margin-top:3px">数据储存于浏览器；导出 JSON 可备份；配置 SHEETS_URL 可双向同步</div>
   </div>
@@ -213,7 +239,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       </div>
       <div class="fg"><label>课程英文名（自动）</label><input id="s-en" readonly placeholder="自动显示"></div>
       <div class="fg"><label>学期</label>
-        <select id="s-sem"><option>2569-1</option><option>2569-2</option><option>2569-3</option></select>
+        <select id="s-sem"><optgroup label="2569"><option>2569-1</option><option>2569-2</option><option>2569-3</option></optgroup><optgroup label="2570"><option>2570-1</option><option>2570-2</option><option>2570-3</option></optgroup></select>
       </div>
       <div class="fg"><label>上下半学期</label>
         <select id="s-half"><option value="">— 待定 —</option><option value="全学期">全学期</option><option value="上半学期">上半</option><option value="下半学期">下半</option></select>
@@ -296,7 +322,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <select id="p-cls"><option value="IS-222">IS-222</option><option value="SG-222">SG-222</option></select>
       </div>
       <div class="fg"><label>学期</label>
-        <select id="p-sem"><option>2569-1</option><option>2569-2</option><option>2569-3</option></select>
+        <select id="p-sem"><optgroup label="2569"><option>2569-1</option><option>2569-2</option><option>2569-3</option></optgroup><optgroup label="2570"><option>2570-1</option><option>2570-2</option><option>2570-3</option></optgroup></select>
       </div>
     </div>
     <div class="g3">
@@ -352,7 +378,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <select id="f-tc-d" onchange="filterTchrByDept()"><option value="">全部</option></select>
       <label>任课老师</label><select id="f-tc" onchange="renderTchr()"><option value="">请选择</option></select>
       <label>学期</label>
-      <select id="f-tc-s" onchange="renderTchr()"><option value="">全部</option><option>2569-1</option><option>2569-2</option><option>2569-3</option></select>
+      <select id="f-tc-s" onchange="renderTchr()"><option value="">全部</option><optgroup label="2569"><option>2569-1</option><option>2569-2</option><option>2569-3</option></optgroup><optgroup label="2570"><option>2570-1</option><option>2570-2</option><option>2570-3</option></optgroup></select>
       <label>课程类型</label>
       <select id="f-tc-t" onchange="renderTchr()"><option value="">全部</option><option>正常</option><option>英文</option><option>实习</option><option>SG</option><option>Capstone</option></select>
     </div>
@@ -371,7 +397,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <select id="f-co-d" onchange="filterCohByDept()"><option value="">全部</option></select>
       <label>届别</label><select id="f-co" onchange="renderCoh()"><option value="">请选择</option></select>
       <label>学期</label>
-      <select id="f-co-s" onchange="renderCoh()"><option value="">全部</option><option>2569-1</option><option>2569-2</option><option>2569-3</option></select>
+      <select id="f-co-s" onchange="renderCoh()"><option value="">全部</option><optgroup label="2569"><option>2569-1</option><option>2569-2</option><option>2569-3</option></optgroup><optgroup label="2570"><option>2570-1</option><option>2570-2</option><option>2570-3</option></optgroup></select>
     </div>
     <div class="card">
       <div class="ct" id="co-ttl">班级课程总表</div>
@@ -387,7 +413,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <label>搜索</label><input id="f-stu" placeholder="姓名/学号" style="width:150px" oninput="renderSpStu()">
       <label>学生专业</label><select id="f-sm" onchange="renderSpStu()"><option value="">全部</option></select>
       <label>学期</label>
-      <select id="f-sp-sem" onchange="renderSpStu()"><option value="">全部</option><option>2569-1</option><option>2569-2</option><option>2569-3</option></select>
+      <select id="f-sp-sem" onchange="renderSpStu()"><option value="">全部</option><optgroup label="2569"><option>2569-1</option><option>2569-2</option><option>2569-3</option></optgroup><optgroup label="2570"><option>2570-1</option><option>2570-2</option><option>2570-3</option></optgroup></select>
     </div>
     <div class="card">
       <div class="ct">SG/IS 排课总表 · 学生维度</div>
@@ -404,7 +430,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <select id="f-st-d" onchange="filterSpTchrByDept()"><option value="">全部</option></select>
       <label>授课老师</label><select id="f-st" onchange="renderSpTchr()"><option value="">请选择</option></select>
       <label>学期</label>
-      <select id="f-st-s" onchange="renderSpTchr()"><option value="">全部</option><option>2569-1</option><option>2569-2</option><option>2569-3</option></select>
+      <select id="f-st-s" onchange="renderSpTchr()"><option value="">全部</option><optgroup label="2569"><option>2569-1</option><option>2569-2</option><option>2569-3</option></optgroup><optgroup label="2570"><option>2570-1</option><option>2570-2</option><option>2570-3</option></optgroup></select>
     </div>
     <div class="card">
       <div class="ct">SG/IS 排课总表 · 老师维度</div>
@@ -420,6 +446,14 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 <!-- ══ 教学统计 ════════════════════════════ -->
 <div id="panel-sta" class="panel">
   <div class="mgrid" id="sta-m"></div>
+  <div class="fbar" style="margin-bottom:.875rem">
+    <label>学年筛选</label>
+    <select id="sta-yr" onchange="renderSta()" style="width:auto;font-size:12px;padding:5px 8px">
+      <option value="">全部学年</option>
+      <option value="2569">2569 学年</option>
+      <option value="2570">2570 学年</option>
+    </select>
+  </div>
   <div class="card">
     <div class="sechdr">
       <span class="ct" style="margin:0">各授课老师工作量</span>
@@ -469,6 +503,47 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 </div><!-- /.app -->
 
 <script>
+// ── PIN 码验证 ──────────────────────────────
+const PIN = 'CICBA2569';
+const PIN_KEY = 'cic_auth';
+const PIN_TTL = 24 * 60 * 60 * 1000; // 24小时
+
+function checkPin(){
+  const val = document.getElementById('pin-input').value;
+  if(val === PIN){
+    localStorage.setItem(PIN_KEY, Date.now());
+    unlockApp();
+  } else {
+    const box = document.querySelector('.pin-box');
+    const err = document.getElementById('pin-err');
+    err.textContent = '密码错误，请再试一次';
+    box.classList.remove('pin-shake');
+    void box.offsetWidth;
+    box.classList.add('pin-shake');
+    document.getElementById('pin-input').value = '';
+  }
+}
+
+function unlockApp(){
+  document.getElementById('pin-overlay').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  init();
+}
+
+function checkAuth(){
+  const ts = localStorage.getItem(PIN_KEY);
+  if(ts && Date.now() - parseInt(ts) < PIN_TTL){
+    unlockApp();
+  } else {
+    document.getElementById('pin-overlay').style.display = 'flex';
+    document.getElementById('main-app').style.display = 'none';
+    setTimeout(()=>document.getElementById('pin-input').focus(), 100);
+  }
+}
+
+// 页面载入时检查
+window.addEventListener('DOMContentLoaded', checkAuth);
+
 // ╔══════════════════════════════════════════════════════════╗
 // ║  配置区 — 修改 SHEETS_URL 即可启用 Google Sheets 同步     ║
 // ╚══════════════════════════════════════════════════════════╝
@@ -689,7 +764,7 @@ const WTS={正常:1,英文:.5,实习:1,SG:.167,Capstone:.75};
 const RO={'主任老师':0,'副主任老师':1,'副院长':2,'支援活动科研老师':3,'一般老师':4,'兼市场部老师':5,'兼HR行政老师':5,'外聘':6};
 const TB={正常:'b0',英文:'b6',实习:'b2',SG:'b3',Capstone:'b5'};
 const CLSS=['601','602','603','604','605','331','332','333','Capstone-971','Capstone-972','Capstone-973','Capstone-974','Capstone-975','Capstone-976','Capstone-977','Capstone-978'];
-const SEMS=['2569-1','2569-2','2569-3'];
+const SEMS=['2569-1','2569-2','2569-3','2570-1','2570-2','2570-3'];
 let schD=[],spD=[],selDpts=new Set(),btecD={};
 let schSK=null,schSD=1,spSK='tc',spSD=1;
 
@@ -1207,6 +1282,25 @@ function autoSyncBtec(){
   },1500);
 }
 function renderSta(){
+  const yr=document.getElementById('sta-yr')?document.getElementById('sta-yr').value:'';
+  // 根据学年决定显示哪三个学期
+  const activeSems=yr?['1','2','3'].map(s=>yr+'-'+s):['2569-1','2569-2','2569-3'];
+  // 动态产生表头
+  const semHdrRow=document.getElementById('sta-thead-sems');
+  const semSubRow=document.getElementById('sta-thead-sub');
+  if(semHdrRow&&semSubRow){
+    // 移除旧的动态th（保留前3个固定th）
+    [...semHdrRow.querySelectorAll('th.dyn')].forEach(el=>el.remove());
+    [...semSubRow.querySelectorAll('th')].forEach(el=>el.remove());
+    activeSems.forEach(s=>{
+      const th=document.createElement('th');
+      th.className='dyn';th.colSpan=1;th.style.cssText='text-align:center;border-left:1px solid rgba(255,255,255,.3)';
+      th.textContent=s;semHdrRow.insertBefore(th,semHdrRow.children[3]);
+      const th2=document.createElement('th');
+      th2.style.cssText='border-left:1px solid rgba(255,255,255,.3);font-size:9px';
+      th2.innerHTML='加权总量<br><span style="opacity:.7">hover 细项</span>';semSubRow.appendChild(th2);
+    });
+  }
   const actT=[...new Set([...schD.map(r=>r.tc),...spD.map(r=>r.tc)])].filter(Boolean).length;
   document.getElementById('sta-m').innerHTML=[
     [schD.length,'排课记录'],[spD.length,'特别排课'],
@@ -1220,14 +1314,15 @@ function renderSta(){
   depts.forEach(dept=>{
     const dTchrs=T.filter(t=>t.d===dept&&t.l>0).sort((a,b)=>a.n.localeCompare(b.n));
     // colspan = 3 + 6*3 + 5 = 26
-    rows+='<tr class="dh"><td colspan="26">▸ '+dept+' · '+dTchrs.length+'位老师</td></tr>';
+    rows+='<tr class="dh"><td colspan="'+(8+activeSems.length)+'">▸ '+dept+' · '+dTchrs.length+'位老师</td></tr>';
     let dWt=0;let idx=0;
 
     dTchrs.forEach(t=>{
       idx++;hasData=true;
       const k=t.n.replace(/[^a-zA-Z0-9]/g,'_');
-      const d1=semDetail(t.n,'2569-1'),d2=semDetail(t.n,'2569-2'),d3=semDetail(t.n,'2569-3');
-      const totalWt=Math.round((d1.wt+d2.wt+d3.wt)*100)/100;
+      const semDetails=activeSems.map(s=>semDetail(t.n,s));
+      const d1=semDetails[0],d2=semDetails[1],d3=semDetails[2];
+      const totalWt=Math.round(semDetails.reduce((s,d)=>s+d.wt,0)*100)/100;
       const btec=btecD[t.n]||0;
       const yearTotal=Math.round((totalWt+btec)*100)/100;
       dWt+=yearTotal;
@@ -1259,7 +1354,7 @@ function renderSta(){
     // 专业小计
     rows+='<tr class="dt">'+
       '<td colspan="3" style="text-align:right;padding-right:12px">'+dept+' 小计</td>'+
-      '<td colspan="3"></td>'+
+      '<td colspan="'+activeSems.length+'"></td>'+
       '<td style="text-align:center;border-left:1px solid #eee"><strong>'+Math.round(dWt*100)/100+'</strong></td>'+
       '<td colspan="3"></td></tr>';
   });
@@ -1373,7 +1468,7 @@ function printPanel(id){
   const now=new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
   const hdr=document.getElementById('print-header');
   if(hdr){
-    hdr.innerHTML='<h1>CIC 本科排课管理系统 · '+titles[id]+'</h1>'+
+    hdr.innerHTML='<h1>2569学年 CIC 本科排课管理系统 · '+titles[id]+'</h1>'+
       '<p>'+subtitles[id]+'　｜　列印日期：'+now+'　｜　数据来源：Google Sheets</p>';
   }
   setTimeout(()=>window.print(), 300);
@@ -1418,7 +1513,7 @@ async function init(){
   await loadDataFromSheets(); // 4. 载入排课记录 + 特别排课
   renderSch();renderSp();renderSta(); // 5. 渲染画面
 }
-init();
+// init() 由 unlockApp() 触发
 </script>
 </body>
 </html>
