@@ -1057,11 +1057,30 @@ function switchSub(id){
 }
 
 // ── 启动 ──────────────────────────────────
+// ── 启动时从 Sheets 载入主数据 ──────────────
+async function loadDataFromSheets(){
+  if(!SHEETS_URL)return;
+  setSyncStatus('⏳ 正在载入排课数据…','');
+  try{
+    const [r1,r2]=await Promise.all([
+      fetch(SHEETS_URL+'?action=read&type=schedule',{cache:'no-store'}).then(r=>r.json()),
+      fetch(SHEETS_URL+'?action=read&type=special',{cache:'no-store'}).then(r=>r.json())
+    ]);
+    if(r1.success&&r1.data.length){schD=r1.data;}
+    if(r2.success&&r2.data.length){spD=r2.data;}
+    const t=new Date().toLocaleTimeString();
+    setSyncStatus('✅ 数据已载入 '+t,true);
+  }catch(e){
+    setSyncStatus('❌ 载入失败，请手动下载',false);
+  }
+}
+
 async function init(){
-  await loadRefFromSheets();  // 尝试从 Sheets 加载，失败自动回退到预设
-  rebuildUI();                // 用最新 C/T/CBD 重建所有下拉和届别网格
-  updateRefBar();             // 更新顶部状态栏
-  renderSch();renderSp();renderSta();
+  await loadRefFromSheets();  // 1. 载入参考数据（课程/老师/届别）
+  rebuildUI();                // 2. 重建下拉选单
+  updateRefBar();             // 3. 更新状态栏
+  await loadDataFromSheets(); // 4. 载入排课记录 + 特别排课
+  renderSch();renderSp();renderSta(); // 5. 渲染画面
 }
 init();
 </script>
