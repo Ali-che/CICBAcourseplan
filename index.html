@@ -77,6 +77,22 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 .sem-val{font-size:15px;font-weight:600;color:#534AB7}
 .sem-zero{font-size:13px;color:#ccc}
 .tip-row{display:flex;gap:8px;align-items:center;margin-top:5px;font-size:12px}
+/* ── 列印样式 ── */
+@media print{
+  .no-print{display:none!important}
+  .print-only{display:block!important}
+  body{background:#fff;font-size:11px}
+  .app{max-width:100%;padding:.5rem}
+  .header,.ref-bar,.tabs,.stabs,.fbar,.sechdr .btn,.sechdr button,
+  .btn,.btn-sm,.btn-p,.btn-e,.btn-ok,.btn-d,
+  #dc-wrap,.es-sec,.empty{display:none!important}
+  .panel{display:block!important}
+  .card{box-shadow:none;border:0.5px solid #ccc;page-break-inside:avoid}
+  th{background:#534AB7!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  tr.dh td{background:#534AB7!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .print-title{display:block!important;font-size:15px;font-weight:600;margin-bottom:.5rem}
+}
+.print-title{display:none}
 /* ── 动态加载 ── */
 .load-banner{display:none;align-items:center;gap:10px;padding:.75rem 1rem;background:#EEEDFE;border:0.5px solid #AFA9EC;border-radius:10px;margin-bottom:.875rem;font-size:13px;color:#3C3489;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .load-dot{width:9px;height:9px;border-radius:50%;background:#534AB7;flex-shrink:0;animation:blink .7s infinite alternate}
@@ -94,6 +110,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 <div class="header">
   <div>
     <div style="font-size:17px;font-weight:600">2569学年 CIC 本科排课管理系统</div>
+    <div class="print-title" id="print-title"></div>
     <div style="font-size:11px;color:#888;margin-top:3px">数据储存于浏览器；导出 JSON 可备份；配置 SHEETS_URL 可双向同步</div>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -190,6 +207,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         </select>
         <button class="btn btn-sm" onclick="syncToSheets('schedule')">↑ 上传</button>
         <button class="btn btn-sm" onclick="syncFromSheets('schedule')">↓ 下载</button>
+        <button class="btn btn-sm no-print" onclick="printPanel('sch')">🖨️ 列印</button>
       </div>
     </div>
     <div class="tbl-wrap">
@@ -248,6 +266,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         </select>
         <button class="btn btn-sm" onclick="syncToSheets('special')">↑ 上传</button>
         <button class="btn btn-sm" onclick="syncFromSheets('special')">↓ 下载</button>
+        <button class="btn btn-sm no-print" onclick="printPanel('sp')">🖨️ 列印</button>
       </div>
     </div>
     <div class="tbl-wrap">
@@ -266,11 +285,14 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 
 <!-- ══ 学期总表 ════════════════════════════ -->
 <div id="panel-sum" class="panel">
-  <div class="stabs">
-    <button class="stab active" onclick="switchSub('stc')">任课老师总表</button>
-    <button class="stab" onclick="switchSub('sco')">班级总表</button>
-    <button class="stab" onclick="switchSub('sss')">SG/IS·学生</button>
-    <button class="stab" onclick="switchSub('sst')">SG/IS·老师</button>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.875rem;flex-wrap:wrap;gap:8px">
+    <div class="stabs" style="margin-bottom:0">
+      <button class="stab active" onclick="switchSub('stc')">任课老师总表</button>
+      <button class="stab" onclick="switchSub('sco')">班级总表</button>
+      <button class="stab" onclick="switchSub('sss')">SG/IS·学生</button>
+      <button class="stab" onclick="switchSub('sst')">SG/IS·老师</button>
+    </div>
+    <button class="btn btn-sm no-print" onclick="printPanel('sum')">🖨️ 列印</button>
   </div>
   <div id="sub-stc" class="spanel active">
     <div class="fbar">
@@ -352,6 +374,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <div style="display:flex;gap:6px;align-items:center">
         <span style="font-size:11px;color:#888">BTEC/LA500 可直接在表格内填写，自动同步</span>
         <button class="btn btn-sm" onclick="renderSta()">↻ 刷新</button>
+        <button class="btn btn-sm no-print" onclick="printPanel('sta')">🖨️ 列印</button>
       </div>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:.5rem .75rem;background:#f9f9f9;border-radius:8px;margin-bottom:.75rem;border:0.5px solid #eee">
@@ -1266,6 +1289,15 @@ async function syncFromSheets(type){
 }
 
 // ── 标签切换 ──────────────────────────────
+function printPanel(id){
+  // 切换到指定分页
+  switchTab(id);
+  // 加列印标题
+  const titles={'sch':'排课记录','sp':'IS/SG 排课记录','sum':'学期总表','sta':'教学统计'};
+  const titleEl=document.getElementById('print-title');
+  if(titleEl)titleEl.textContent='2569学年 CIC 本科排课管理系统 · '+titles[id];
+  setTimeout(()=>window.print(), 300);
+}
 function switchTab(id){
   ['sch','sp','sum','sta'].forEach((x,i)=>{document.querySelectorAll('.tab')[i].classList.toggle('active',x===id);});
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
