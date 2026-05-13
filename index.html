@@ -213,7 +213,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <select id="s-sem"><option>2569-1</option><option>2569-2</option><option>2569-3</option></select>
       </div>
       <div class="fg"><label>上下半学期</label>
-        <select id="s-half"><option value="">— 待定 —</option><option>全学期</option><option>上半学期</option><option>下半学期</option></select>
+        <select id="s-half"><option value="">— 待定 —</option><option value="全学期">全学期</option><option value="上半学期">上半</option><option value="下半学期">下半</option></select>
       </div>
     </div>
     <div class="g4">
@@ -835,8 +835,8 @@ function saveES(id){
   r.cc=collectEC(id);r.editing=false;renderSch();renderAllSum();renderSta();autoSync('schedule');
 }
 function halfBadge(h){
-  if(h==='上半学期')return'<span class="badge b0">上半学期</span>';
-  if(h==='下半学期')return'<span class="badge b2">下半学期</span>';
+  if(h==='上半学期'||h==='上半')return'<span class="badge b0">上半</span>';
+  if(h==='下半学期'||h==='下半')return'<span class="badge b2">下半</span>';
   if(h==='全学期')return'<span class="badge b6">全学期</span>';
   return'<span style="color:#bbb;font-style:italic">待定</span>';
 }
@@ -851,12 +851,12 @@ function renderSch(){
   let disp=[...schD];
   if(semF&&semF.value)disp=disp.filter(r=>r.sem===semF.value);
   if(schSK==='course')disp.sort((a,b)=>schSD*a.course.localeCompare(b.course));
-  if(schSK==='half'){const ho={'上半学期':0,'下半学期':1,'全学期':2};disp.sort((a,b)=>schSD*((ho[a.half]??2)-(ho[b.half]??2)));}
+  if(schSK==='half'){const ho={'上半学期':0,'上半':0,'下半学期':1,'下半':1,'全学期':2};disp.sort((a,b)=>schSD*((ho[a.half]??2)-(ho[b.half]??2)));}
   tb.innerHTML=disp.map((r,i)=>{
     const tot=r.cc.reduce((s,x)=>s+(x.count||0),0);
     if(r.editing){
       const cO=SEMS.map(s=>'<option'+(s===r.sem?' selected':'')+'>'+s+'</option>').join('');
-      const hO='<option value=""'+(''===r.half?' selected':'')+'>— 待定 —</option>'+['全学期','上半学期','下半学期'].map(s=>'<option'+(s===r.half?' selected':'')+'>'+s+'</option>').join('');
+      const hO='<option value=""'+(''===r.half?' selected':'')+'>— 待定 —</option>'+[['全学期','全学期'],['上半学期','上半'],['下半学期','下半']].map(([v,t])=>'<option value="'+v+'"'+(v===r.half?' selected':'')+'>'+t+'</option>').join('');
       const ttO=['正常','英文','实习','SG','Capstone'].map(t=>'<option value="'+t+'"'+(t===r.type?' selected':'')+'>'+t+'</option>').join('');
       const ccO=CLSS.map(s=>'<option'+(s===r.cls?' selected':'')+'>'+s+'</option>').join('');
       const tccO='<option value="">'+(r.tc?'— 更改老师 —':'— 选择老师 —')+'</option>'+tchrDrop().map(t=>'<option value="'+eh(t.n)+'"'+(t.n===r.tc?' selected':'')+'>'+eh(t.n)+' ('+t.d+')</option>').join('');
