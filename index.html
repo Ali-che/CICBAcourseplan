@@ -731,10 +731,10 @@ function addSch(){
   schD.push({id:Date.now(),course,en,sem,half,type,cls,tc,cc,nt,editing:false});
   renderSch();renderAllSum();renderSta();clearSchF();autoSync('schedule');
 }
-function delSch(id){if(!confirm('确认删除？'))return;schD=schD.filter(r=>r.id!==id);renderSch();renderAllSum();renderSta();autoSync('schedule');}
-function startES(id){schD.forEach(r=>r.editing=(r.id===id));renderSch();}
+function delSch(id){if(!confirm('确认删除？'))return;id=String(id);schD=schD.filter(r=>String(r.id)!==id);renderSch();renderAllSum();renderSta();autoSync('schedule');}
+function startES(id){id=String(id);schD.forEach(r=>r.editing=(String(r.id)===id));renderSch();}
 function saveES(id){
-  const r=schD.find(x=>x.id===id);if(!r)return;
+  id=String(id);const r=schD.find(x=>String(x.id)===id);if(!r)return;
   const g=(p)=>{const el=document.getElementById(p+id);return el?el.value:null;};
   if(g('esc-'))r.course=g('esc-').toUpperCase();
   const f=C.find(x=>x.c===r.course);if(f)r.en=f.en;
@@ -812,10 +812,10 @@ function addSp(){
   spD.push({id:Date.now(),sid,mr,nm,mj,co,en,cls,sem,tc,nt,type:'SG',editing:false});
   renderSp();renderAllSum();renderSta();clearSpF();autoSync('special');
 }
-function delSp(id){if(!confirm('确认删除？'))return;spD=spD.filter(r=>r.id!==id);renderSp();renderAllSum();renderSta();autoSync('special');}
-function startESp(id){spD.forEach(r=>r.editing=(r.id===id));renderSp();}
+function delSp(id){if(!confirm('确认删除？'))return;id=String(id);spD=spD.filter(r=>String(r.id)!==id);renderSp();renderAllSum();renderSta();autoSync('special');}
+function startESp(id){id=String(id);spD.forEach(r=>r.editing=(String(r.id)===id));renderSp();}
 function saveESp(id){
-  const r=spD.find(x=>x.id===id);if(!r)return;
+  id=String(id);const r=spD.find(x=>String(x.id)===id);if(!r)return;
   const g=(p)=>{const el=document.getElementById(p+id);return el?el.value:null;};
   if(g('epid-'))r.sid=g('epid-');if(g('epmr-'))r.mr=g('epmr-');
   if(g('epnm-')){r.nm=g('epnm-');if(/[^\x00-\x7F]/.test(r.nm)){alert('学生姓名请只填写英文字');return;}}
