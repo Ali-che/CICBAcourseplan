@@ -409,7 +409,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <table><thead><tr><th>#</th><th>课程代码</th><th>课程英文名</th><th>授课老师</th><th>学号</th><th>学生称谓</th><th>学生姓名</th><th>学生专业</th><th>学期</th><th>课程总人数</th></tr></thead>
         <tbody id="st-tb"></tbody></table>
       </div>
-      <div class="empty" id="st-em">请选择老师</div>
+      <div class="empty" id="st-em"></div>
     </div>
   </div>
 </div>
@@ -1005,7 +1005,7 @@ function renderTchr(){
     const spMap={};
     spData.forEach(r=>{
       const k=r.co+'|'+r.sem;
-      if(!spMap[k])spMap[k]={co:r.co,en:r.en,sem:r.sem,cls:r.cls,stus:[]};
+      if(!spMap[k])spMap[k]={co:r.co,en:r.en,sem:r.sem,cls:r.cls,tc:r.tc,stus:[]};
       spMap[k].stus.push(r.mr+' '+r.nm);
     });
     spRows=Object.values(spMap);
@@ -1022,8 +1022,9 @@ function renderTchr(){
   const sgRows=spRows.map((r,i)=>
     '<tr style="background:#FFF8F0"><td>'+(data.length+i+1)+'</td>'+
     '<td><span class="badge b0">'+r.co+'</span></td>'+
-    '<td style="max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en)+'</td>'+
+    '<td style="max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en)+'</td>'+
     '<td><span class="badge b3">SG/IS</span></td>'+
+    '<td style="font-size:11px;white-space:nowrap">'+eh(r.tc||'—')+'</td>'+
     '<td>'+r.cls+'</td><td><span class="badge b4">'+r.sem+'</span></td>'+
     '<td>—</td><td>'+r.stus.length+'</td>'+
     '<td style="font-size:11px;color:#888">'+r.stus.map(s=>eh(s)).join('、')+'</td></tr>').join('');
@@ -1104,8 +1105,7 @@ function renderSpTchr(){
   const sem=document.getElementById('f-st-s')?document.getElementById('f-st-s').value:'';
   const dept=document.getElementById('f-st-d')?document.getElementById('f-st-d').value:'';
   const tb=document.getElementById('st-tb'),em=document.getElementById('st-em');
-  // 老师或学期任一有值才显示
-  if(!tc&&!sem){tb.innerHTML='';em.style.display='block';em.textContent='请选择老师或学期';return;}
+  // 预设显示全部，筛选缩小
   let data=[...spD];
   if(tc)data=data.filter(r=>r.tc===tc);
   if(sem)data=data.filter(r=>r.sem===sem);
