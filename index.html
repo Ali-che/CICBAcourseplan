@@ -546,7 +546,7 @@ window.addEventListener('DOMContentLoaded', checkAuth);
 // ╔══════════════════════════════════════════════════════════╗
 // ║  配置区 — 修改 SHEETS_URL 即可启用 Google Sheets 同步     ║
 // ╚══════════════════════════════════════════════════════════╝
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwacCxXH_UPJRpbU7hHkL0TCiFEbV242bowZa7TAPp0Zia1U5EhacbqGNBTX4a76OZH/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzTsWr0lTrUTTJEXRoIvJUiHDJjLcu92_9Yuk91I6uM44R4r8aCFAEttqwDcruDNFp9/exec';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║  内建预设参考数据（SHEETS_URL 空白时自动使用）              ║
@@ -1299,8 +1299,11 @@ function autoSyncBtec(){
   clearTimeout(btecSyncTimer);
   btecSyncTimer=setTimeout(async()=>{
     try{
-      const payload=encodeURIComponent(JSON.stringify(btecD));
-      await fetch(SHEETS_URL+'?action=write&type=btec&payload='+payload,{cache:'no-store'});
+      await fetch(SHEETS_URL,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'write',type:'btec',data:btecD})
+      });
       setSyncStatus('✅ BTEC 已同步 '+new Date().toLocaleTimeString(),true);
     }catch(e){setSyncStatus('❌ BTEC 同步失败',false);}
   },1500);
@@ -1417,13 +1420,25 @@ async function syncNow(type){
   setSyncStatus('⏳ 正在同步…','');
   try{
     const data=type==='schedule'?schD:spD;
-    const payload=encodeURIComponent(JSON.stringify(data));
-    const url=SHEETS_URL+'?action=write&type='+type+'&payload='+payload;
-    const res=await fetch(url,{cache:'no-store'});
+    const res=await fetch(SHEETS_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'write',type,data})
+    });
     const r=await res.json();
     const t=new Date().toLocaleTimeString();
     setSyncStatus(r.success?'✅ 已同步 '+t:'❌ 同步失败',r.success);
-  }catch(e){setSyncStatus('❌ 连线失败',false);}
+  }catch(e){
+    // POST 失败时 fallback 到 GET
+    try{
+      const data=type==='schedule'?schD:spD;
+      const payload=encodeURIComponent(JSON.stringify(data));
+      const res=await fetch(SHEETS_URL+'?action=write&type='+type+'&payload='+payload,{cache:'no-store'});
+      const r=await res.json();
+      const t=new Date().toLocaleTimeString();
+      setSyncStatus(r.success?'✅ 已同步(GET) '+t:'❌ 同步失败',r.success);
+    }catch(e2){setSyncStatus('❌ 连线失败',false);}
+  }
 }
 function autoSync(type){
   if(!SHEETS_URL)return;
@@ -1445,10 +1460,18 @@ async function syncAll(){
   }catch(e){setSyncStatus('❌ 连线失败',false);alert('❌ 连线失败');}
 }
 async function fetchWrite(type,data){
-  const payload=encodeURIComponent(JSON.stringify(data));
-  const url=SHEETS_URL+'?action=write&type='+type+'&payload='+payload;
-  const res=await fetch(url,{cache:'no-store'});
-  const r=await res.json();return r.success;
+  try{
+    const res=await fetch(SHEETS_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'write',type,data})
+    });
+    const r=await res.json();return r.success;
+  }catch(e){
+    const payload=encodeURIComponent(JSON.stringify(data));
+    const res=await fetch(SHEETS_URL+'?action=write&type='+type+'&payload='+payload,{cache:'no-store'});
+    const r=await res.json();return r.success;
+  }
 }
 
 // 手动上传（有提示，使用 GET）
