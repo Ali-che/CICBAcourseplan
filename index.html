@@ -481,11 +481,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
             <th rowspan="2" style="text-align:center">学年<br>总数</th>
             <th rowspan="2" style="text-align:center">%</th>
           </tr>
-          <tr>
-            <th style="border-left:1px solid rgba(255,255,255,.3);font-size:9px;text-align:center" id="sta-s1-lbl">—</th>
-            <th style="border-left:1px solid rgba(255,255,255,.3);font-size:9px;text-align:center" id="sta-s2-lbl">—</th>
-            <th style="border-left:1px solid rgba(255,255,255,.3);font-size:9px;text-align:center" id="sta-s3-lbl">—</th>
-          </tr>
+          <tr></tr>
         </thead>
         <tbody id="sta-tb"></tbody>
       </table>
@@ -1314,11 +1310,7 @@ function renderSta(){
   // 根据学年决定显示哪三个学期
   const activeSems=yr?['1','2','3'].map(s=>yr+'-'+s):[];
   // 动态产生表头
-  // 更新副标题显示实际学期代码
-  ['sta-s1-lbl','sta-s2-lbl','sta-s3-lbl'].forEach((id,i)=>{
-    const el=document.getElementById(id);
-    if(el)el.textContent=activeSems[i]||'—';
-  });
+  // 学年筛选标题已在左上角显示，不需要副标签
   const actT=[...new Set([...schD.map(r=>r.tc),...spD.map(r=>r.tc)])].filter(Boolean).length;
   document.getElementById('sta-m').innerHTML=[
     [schD.length,'排课记录'],[spD.length,'特别排课'],
