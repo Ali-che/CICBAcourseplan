@@ -777,6 +777,18 @@ function eh(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')
 function enOnly(el){el.value=el.value.replace(/[^\x00-\x7F]/g,'');}
 function siIcon(k,ck,d){if(k!==ck)return'<span style="opacity:.35;font-size:10px">⇅</span>';return'<span style="font-size:10px">'+(d>0?'▲':'▼')+'</span>';}
 function tchrDrop(){return[...T].sort((a,b)=>a.d.localeCompare(b.d)||a.n.localeCompare(b.n));}
+function tchrOptHTML(selectedName,placeholder){
+  const label=selectedName?'— 更改老师 —':'— 选择老师 —';
+  let html='<option value="">'+(placeholder||label)+'</option>';
+  const bd={};
+  tchrDrop().forEach(t=>{if(!bd[t.d])bd[t.d]=[];bd[t.d].push(t);});
+  Object.keys(bd).sort().forEach(d=>{
+    html+='<optgroup label="'+d+'">';
+    bd[d].forEach(t=>{html+='<option value="'+eh(t.n)+'"'+(t.n===selectedName?' selected':'')+'>'+eh(t.n)+'</option>';});
+    html+='</optgroup>';
+  });
+  return html;
+}
 function sortSch(k){if(schSK===k)schSD=-schSD;else{schSK=k;schSD=1;}renderSch();}
 function sortSp(k){if(spSK===k)spSD=-spSD;else{spSK=k;spSD=1;}renderSp();}
 
@@ -941,7 +953,7 @@ function renderSch(){
       const hO='<option value=""'+(''===r.half?' selected':'')+'>— 待定 —</option>'+[['全学期','全学期'],['上半学期','上半'],['下半学期','下半']].map(([v,t])=>'<option value="'+v+'"'+(v===r.half?' selected':'')+'>'+t+'</option>').join('');
       const ttO=['正常','英文','实习','SG','Capstone'].map(t=>'<option value="'+t+'"'+(t===r.type?' selected':'')+'>'+t+'</option>').join('');
       const ccO=CLSS.map(s=>'<option'+(s===r.cls?' selected':'')+'>'+s+'</option>').join('');
-      const tccO='<option value="">'+(r.tc?'— 更改老师 —':'— 选择老师 —')+'</option>'+tchrDrop().map(t=>'<option value="'+eh(t.n)+'"'+(t.n===r.tc?' selected':'')+'>'+eh(t.n)+' ('+t.d+')</option>').join('');
+      const tccO=tchrOptHTML(r.tc);
       return'<tr class="ed"><td>'+(i+1)+'</td>'+
         '<td><input id="esc-'+r.id+'" value="'+eh(r.course)+'" style="width:80px;text-transform:uppercase"></td>'+
         '<td style="font-size:11px;color:#534AB7">'+eh(r.en)+'</td>'+
@@ -1027,7 +1039,7 @@ function renderSp(){
       const mjO=dpts.map(m=>'<option'+(m===r.mj?' selected':'')+'>'+m+'</option>').join('');
       const smO=SEMS.map(s=>'<option'+(s===r.sem?' selected':'')+'>'+s+'</option>').join('');
       const clO=['IS-222','SG-222'].map(c=>'<option'+(c===r.cls?' selected':'')+'>'+c+'</option>').join('');
-      const tO='<option value="">'+(r.tc?'— 更改老师 —':'— 选择老师 —')+'</option>'+tchrDrop().map(t=>'<option value="'+eh(t.n)+'"'+(t.n===r.tc?' selected':'')+'>'+eh(t.n)+' ('+t.d+')</option>').join('');
+      const tO=tchrOptHTML(r.tc);
       return'<tr class="ed"><td>'+(i+1)+'</td>'+
         '<td><input id="epid-'+r.id+'" value="'+eh(r.sid)+'" style="width:80px"></td>'+
         '<td><select id="epmr-'+r.id+'" style="width:55px">'+mrO+'</select></td>'+
