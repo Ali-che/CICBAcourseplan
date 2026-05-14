@@ -1359,9 +1359,9 @@ function renderSta(){
         sdCells(d1,true)+sdCells(d2,true)+sdCells(d3,true)+
         // 教学总数
         '<td style="text-align:center;border-left:1px solid #eee;font-weight:500">'+totalWt+'</td>'+
-        // BTEC 栏（显示门数）
+        // BTEC 栏（显示加权值 门数×0.5）
         '<td style="text-align:center;background:#F5F4FE;padding:3px">'+
-          (btecCount>0?'<span style="font-size:13px;font-weight:600;color:#534AB7">'+btecCount+'</span>':'<span style="color:#ddd">—</span>')+
+          (btecCount>0?'<span style="font-size:13px;font-weight:600;color:#534AB7">'+btecWt+'</span>':'<span style="color:#ddd">—</span>')+
         '</td>'+
         // LA500 手填
         '<td style="text-align:center;background:#F5F4FE;padding:3px">'+
