@@ -913,7 +913,13 @@ function addSch(){
   clearSchF();
   renderSch();renderAllSum();renderSta();syncNow('schedule');
 }
-function delSch(id){if(!confirm('确认删除？'))return;id=String(id);schD=schD.filter(r=>String(r.id)!==id);renderSch();renderAllSum();renderSta();syncNow('schedule');}
+function delSch(id){
+  id=String(id);
+  const r=schD.find(x=>String(x.id)===id);
+  if(!r)return;
+  const msg='确认删除以下排课？\n\n课程代码：'+r.course+'\n班级：'+r.cls+'\n授课老师：'+(r.tc||'待定');
+  if(!confirm(msg))return;
+  schD=schD.filter(r=>String(r.id)!==id);renderSch();renderAllSum();renderSta();syncNow('schedule');}
 function startES(id){id=String(id);schD.forEach(r=>r.editing=(String(r.id)===id));renderSch();}
 function saveES(id){
   id=String(id);const r=schD.find(x=>String(x.id)===id);if(!r)return;
@@ -1005,7 +1011,13 @@ function addSp(){
   clearSpF();
   renderSp();renderAllSum();renderSta();syncNow('special');
 }
-function delSp(id){if(!confirm('确认删除？'))return;id=String(id);spD=spD.filter(r=>String(r.id)!==id);renderSp();renderAllSum();renderSta();syncNow('special');}
+function delSp(id){
+  id=String(id);
+  const r=spD.find(x=>String(x.id)===id);
+  if(!r)return;
+  const msg='确认删除以下 IS/SG 排课？\n\n学生：'+(r.mr||'')+' '+r.nm+'\n课程：'+r.co+'\n授课老师：'+(r.tc||'待定');
+  if(!confirm(msg))return;
+  spD=spD.filter(r=>String(r.id)!==id);renderSp();renderAllSum();renderSta();syncNow('special');}
 function startESp(id){id=String(id);spD.forEach(r=>r.editing=(String(r.id)===id));renderSp();}
 function saveESp(id){
   id=String(id);const r=spD.find(x=>String(x.id)===id);if(!r)return;
