@@ -911,9 +911,9 @@ function addSch(){
   }
   schD.push({id:Date.now(),course,en,sem,half,type,cls,tc,cc,nt,btec,editing:false});
   clearSchF();
-  renderSch();renderAllSum();renderSta();autoSync('schedule');
+  renderSch();renderAllSum();renderSta();syncNow('schedule');
 }
-function delSch(id){if(!confirm('确认删除？'))return;id=String(id);schD=schD.filter(r=>String(r.id)!==id);renderSch();renderAllSum();renderSta();autoSync('schedule');}
+function delSch(id){if(!confirm('确认删除？'))return;id=String(id);schD=schD.filter(r=>String(r.id)!==id);renderSch();renderAllSum();renderSta();syncNow('schedule');}
 function startES(id){id=String(id);schD.forEach(r=>r.editing=(String(r.id)===id));renderSch();}
 function saveES(id){
   id=String(id);const r=schD.find(x=>String(x.id)===id);if(!r)return;
@@ -923,7 +923,7 @@ function saveES(id){
   if(g('ess-'))r.sem=g('ess-');if(g('esh-'))r.half=g('esh-');
   if(g('est-'))r.type=g('est-');if(g('escl-'))r.cls=g('escl-');
   if(g('estc-'))r.tc=g('estc-');if(g('esnt-')!==null)r.nt=g('esnt-');
-  r.cc=collectEC(id);r.editing=false;renderSch();renderAllSum();renderSta();autoSync('schedule');
+  r.cc=collectEC(id);r.editing=false;renderSch();renderAllSum();renderSta();syncNow('schedule');
 }
 function halfBadge(h){
   if(h==='上半学期'||h==='上半')return'<span class="badge b0">上半</span>';
@@ -1003,9 +1003,9 @@ function addSp(){
   if(/[^\x00-\x7F]/.test(nm)){alert('学生姓名请只填写英文字');return;}
   spD.push({id:Date.now(),sid,mr,nm,mj,co,en,cls,sem,tc,nt,type:'SG',editing:false});
   clearSpF();
-  renderSp();renderAllSum();renderSta();autoSync('special');
+  renderSp();renderAllSum();renderSta();syncNow('special');
 }
-function delSp(id){if(!confirm('确认删除？'))return;id=String(id);spD=spD.filter(r=>String(r.id)!==id);renderSp();renderAllSum();renderSta();autoSync('special');}
+function delSp(id){if(!confirm('确认删除？'))return;id=String(id);spD=spD.filter(r=>String(r.id)!==id);renderSp();renderAllSum();renderSta();syncNow('special');}
 function startESp(id){id=String(id);spD.forEach(r=>r.editing=(String(r.id)===id));renderSp();}
 function saveESp(id){
   id=String(id);const r=spD.find(x=>String(x.id)===id);if(!r)return;
@@ -1016,7 +1016,7 @@ function saveESp(id){
   if(g('epco-')){r.co=g('epco-').toUpperCase();const f=C.find(x=>x.c===r.co);if(f)r.en=f.en;}
   if(g('epcl-'))r.cls=g('epcl-');if(g('epsm-'))r.sem=g('epsm-');
   if(g('eptc-'))r.tc=g('eptc-');if(g('epnt-')!==null)r.nt=g('epnt-');
-  r.editing=false;renderSp();renderAllSum();renderSta();autoSync('special');
+  r.editing=false;renderSp();renderAllSum();renderSta();syncNow('special');
 }
 function renderSp(){
   const tb=document.getElementById('sp-tb'),em=document.getElementById('sp-em');
@@ -1412,21 +1412,24 @@ function setSyncStatus(msg,ok){
 }
 
 // 自动同步（静默，防抖 2 秒，使用 GET 避免 CORS）
+async function syncNow(type){
+  if(!SHEETS_URL)return;
+  setSyncStatus('⏳ 正在同步…','');
+  try{
+    const data=type==='schedule'?schD:spD;
+    const payload=encodeURIComponent(JSON.stringify(data));
+    const url=SHEETS_URL+'?action=write&type='+type+'&payload='+payload;
+    const res=await fetch(url,{cache:'no-store'});
+    const r=await res.json();
+    const t=new Date().toLocaleTimeString();
+    setSyncStatus(r.success?'✅ 已同步 '+t:'❌ 同步失败',r.success);
+  }catch(e){setSyncStatus('❌ 连线失败',false);}
+}
 function autoSync(type){
   if(!SHEETS_URL)return;
   clearTimeout(syncTimer);
   setSyncStatus('⏳ 正在同步…','');
-  syncTimer=setTimeout(async()=>{
-    try{
-      const data=type==='schedule'?schD:spD;
-      const payload=encodeURIComponent(JSON.stringify(data));
-      const url=SHEETS_URL+'?action=write&type='+type+'&payload='+payload;
-      const res=await fetch(url,{cache:'no-store'});
-      const r=await res.json();
-      const t=new Date().toLocaleTimeString();
-      setSyncStatus(r.success?'✅ 已同步 '+t:'❌ 同步失败',r.success);
-    }catch(e){setSyncStatus('❌ 连线失败',false);}
-  },2000);
+  syncTimer=setTimeout(()=>syncNow(type),500);
 }
 
 // 手动全部同步（有提示，使用 GET）
