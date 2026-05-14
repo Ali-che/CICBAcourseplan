@@ -267,7 +267,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:6px 10px;border:0.5px solid #ddd;border-radius:8px;background:#fafafa">
         <input type="checkbox" id="s-btec" style="width:auto;cursor:pointer">
-        <span>📋 BTEC 课程 <span style="color:#888;font-size:11px"></span></span>
+        <span>📋 BTEC 课程</span>
       </label>
       <button class="btn btn-p" onclick="addSch()">＋ 添加排课</button>
     </div>
@@ -450,7 +450,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   <div class="fbar" style="margin-bottom:.875rem">
     <label>学年筛选</label>
     <select id="sta-yr" onchange="renderSta()" style="width:auto;font-size:12px;padding:5px 8px">
-      <option value="">全部学年</option>
+      <option value="">— 请选择学年 —</option>
       <option value="2569">2569 学年</option>
       <option value="2570">2570 学年</option>
     </select>
@@ -464,16 +464,6 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <button class="btn btn-sm no-print" onclick="printPanel('sta')">🖨️ 列印</button>
       </div>
     </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:.5rem .75rem;background:#f9f9f9;border-radius:8px;margin-bottom:.75rem;border:0.5px solid #eee">
-      <span style="font-size:11px;font-weight:600;color:#666;margin-right:2px">课程类型权重：</span>
-      <span style="display:flex;align-items:center;gap:4px;font-size:11px"><span class="badge b0">正常</span> ×1.0</span>
-      <span style="display:flex;align-items:center;gap:4px;font-size:11px"><span class="badge b6">英文</span> ×0.5</span>
-      <span style="display:flex;align-items:center;gap:4px;font-size:11px"><span class="badge b2">实习</span> ×1.0</span>
-      <span style="display:flex;align-items:center;gap:4px;font-size:11px"><span class="badge b3">SG</span> ×0.167</span>
-      <span style="display:flex;align-items:center;gap:4px;font-size:11px"><span class="badge b5">Capstone</span> ×0.75</span>
-      <span style="display:flex;align-items:center;gap:4px;font-size:11px"><span class="badge b4">BTEC</span> ×0.5／门</span>
-      <span style="margin-left:auto;font-size:11px;color:#aaa">KB = 专业基础课（正常）　KE / LA / KH = 英文（×0.5）</span>
-    </div>
     <div class="tbl-wrap">
       <table>
         <thead>
@@ -481,9 +471,9 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
             <th rowspan="2">#</th>
             <th rowspan="2">老师</th>
             <th rowspan="2">职位</th>
-            <th colspan="1" style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">2569-1</th>
-            <th colspan="1" style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">2569-2</th>
-            <th colspan="1" style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">2569-3</th>
+            <th style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">第一学期</th>
+            <th style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">第二学期</th>
+            <th style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">第三学期</th>
             <th rowspan="2" style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">教学<br>总数</th>
             <th rowspan="2" style="text-align:center;background:#3C3489">BTEC<br>×0.5</th>
             <th rowspan="2" style="text-align:center;background:#3C3489">LA500<br>手填</th>
@@ -492,9 +482,9 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
             <th rowspan="2" style="text-align:center">%</th>
           </tr>
           <tr>
-            <th style="border-left:1px solid rgba(255,255,255,.3);text-align:center">加权总量<br><span style="font-size:9px;opacity:.7">hover 查看细项</span></th>
-            <th style="border-left:1px solid rgba(255,255,255,.3);text-align:center">加权总量<br><span style="font-size:9px;opacity:.7">hover 查看细项</span></th>
-            <th style="border-left:1px solid rgba(255,255,255,.3);text-align:center">加权总量<br><span style="font-size:9px;opacity:.7">hover 查看细项</span></th>
+            <th style="border-left:1px solid rgba(255,255,255,.3);font-size:9px;text-align:center" id="sta-s1-lbl">—</th>
+            <th style="border-left:1px solid rgba(255,255,255,.3);font-size:9px;text-align:center" id="sta-s2-lbl">—</th>
+            <th style="border-left:1px solid rgba(255,255,255,.3);font-size:9px;text-align:center" id="sta-s3-lbl">—</th>
           </tr>
         </thead>
         <tbody id="sta-tb"></tbody>
@@ -560,7 +550,7 @@ window.addEventListener('DOMContentLoaded', checkAuth);
 // ╔══════════════════════════════════════════════════════════╗
 // ║  配置区 — 修改 SHEETS_URL 即可启用 Google Sheets 同步     ║
 // ╚══════════════════════════════════════════════════════════╝
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxVyCxwfGSjAd5suCqoKdRpazIjthm1IcxrzsKXne3bMySSEJTG24f3A6xlq-pzlhTG/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbw_-ifGbVTrlKCOhEX9OdiYhpWlmlL-9hjko1OV-OpNknUEzUZLitgMBbPo5TRmcLwo/exec';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║  内建预设参考数据（SHEETS_URL 空白时自动使用）              ║
@@ -1301,27 +1291,13 @@ function autoSyncBtec(){
 function renderSta(){
   const yr=document.getElementById('sta-yr')?document.getElementById('sta-yr').value:'';
   // 根据学年决定显示哪三个学期
-  const activeSems=yr?['1','2','3'].map(s=>yr+'-'+s):['2569-1','2569-2','2569-3'];
+  const activeSems=yr?['1','2','3'].map(s=>yr+'-'+s):[];
   // 动态产生表头
-  const semHdrRow=document.getElementById('sta-thead-sems');
-  const semSubRow=document.getElementById('sta-thead-sub');
-  if(semHdrRow&&semSubRow){
-    [...semHdrRow.querySelectorAll('th.dyn')].forEach(el=>el.remove());
-    [...semSubRow.querySelectorAll('th')].forEach(el=>el.remove());
-    // 在第3个固定th后插入动态学期标题
-    const anchor=semHdrRow.children[3]; // 教学总数 th
-    activeSems.forEach(s=>{
-      const th=document.createElement('th');
-      th.className='dyn';
-      th.style.cssText='text-align:center;border-left:1px solid rgba(255,255,255,.3)';
-      th.textContent=s;
-      semHdrRow.insertBefore(th,anchor);
-      const th2=document.createElement('th');
-      th2.style.cssText='border-left:1px solid rgba(255,255,255,.3);font-size:9px;text-align:center';
-      th2.innerHTML='加权<br><span style="opacity:.7;font-size:8px">hover细项</span>';
-      semSubRow.appendChild(th2);
-    });
-  }
+  // 更新副标题显示实际学期代码
+  ['sta-s1-lbl','sta-s2-lbl','sta-s3-lbl'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    if(el)el.textContent=activeSems[i]||'—';
+  });
   const actT=[...new Set([...schD.map(r=>r.tc),...spD.map(r=>r.tc)])].filter(Boolean).length;
   document.getElementById('sta-m').innerHTML=[
     [schD.length,'排课记录'],[spD.length,'特别排课'],
@@ -1389,6 +1365,7 @@ function renderSta(){
       '<td colspan="3"></td></tr>';
   });
 
+  if(!yr){document.getElementById('sta-em').textContent='请先选择学年';document.getElementById('sta-em').style.display='block';document.getElementById('sta-tb').innerHTML='';return;}
   if(!hasData){document.getElementById('sta-em').style.display='block';document.getElementById('sta-tb').innerHTML='';return;}
   document.getElementById('sta-em').style.display='none';
   document.getElementById('sta-tb').innerHTML=rows;
