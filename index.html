@@ -264,7 +264,11 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <div class="fg"><label>授课老师</label><select id="s-tc"><option value="">请选择</option></select></div>
       <div class="fg"><label>备注</label><input id="s-nt" placeholder="选填"></div>
     </div>
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:6px 10px;border:0.5px solid #ddd;border-radius:8px;background:#fafafa">
+        <input type="checkbox" id="s-btec" style="width:auto;cursor:pointer">
+        <span>📋 BTEC 课程 <span style="color:#888;font-size:11px">（此课计入 BTEC 加权 ×0.5）</span></span>
+      </label>
       <button class="btn btn-p" onclick="addSch()">＋ 添加排课</button>
     </div>
     <div class="es-sec">
@@ -293,7 +297,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <th class="sort" onclick="sortSch('course')">课程代码 <span id="si-co">⇅</span></th>
         <th>课程英文名</th><th>类型</th><th>学期</th>
         <th class="sort" onclick="sortSch('half')">上下半 <span id="si-hl">⇅</span></th>
-        <th>班级</th><th>授课老师</th><th>届别（人数）</th><th>总人数</th><th>备注</th><th>操作</th>
+        <th>班级</th><th>授课老师</th><th>届别（人数）</th><th>总人数</th><th>备注</th><th>BTEC</th><th>操作</th>
       </tr></thead><tbody id="sch-tb"></tbody></table>
     </div>
     <div class="empty" id="sch-em">暂无排课记录</div>
@@ -467,6 +471,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <span style="display:flex;align-items:center;gap:4px;font-size:11px"><span class="badge b2">实习</span> ×1.0</span>
       <span style="display:flex;align-items:center;gap:4px;font-size:11px"><span class="badge b3">SG</span> ×0.167</span>
       <span style="display:flex;align-items:center;gap:4px;font-size:11px"><span class="badge b5">Capstone</span> ×0.75</span>
+      <span style="display:flex;align-items:center;gap:4px;font-size:11px"><span class="badge b4">BTEC</span> ×0.5／门</span>
       <span style="margin-left:auto;font-size:11px;color:#aaa">KB = 专业基础课（正常）　KE / LA / KH = 英文（×0.5）</span>
     </div>
     <div class="tbl-wrap">
@@ -480,7 +485,8 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
             <th colspan="1" style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">2569-2</th>
             <th colspan="1" style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">2569-3</th>
             <th rowspan="2" style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">教学<br>总数</th>
-            <th rowspan="2" style="text-align:center;background:#3C3489">BTEC/<br>LA500</th>
+            <th rowspan="2" style="text-align:center;background:#3C3489">BTEC<br>×0.5</th>
+            <th rowspan="2" style="text-align:center;background:#3C3489">LA500<br>手填</th>
             <th rowspan="2" style="text-align:center">学年<br>规定</th>
             <th rowspan="2" style="text-align:center">学年<br>总数</th>
             <th rowspan="2" style="text-align:center">%</th>
@@ -897,6 +903,7 @@ function addSch(){
   const sem=document.getElementById('s-sem').value,half=document.getElementById('s-half').value;
   const type=document.getElementById('s-tp').value,cls=document.getElementById('s-cls').value;
   const tc=document.getElementById('s-tc').value,nt=document.getElementById('s-nt').value,cc=getEG();
+  const btec=document.getElementById('s-btec')?document.getElementById('s-btec').checked:false;
   if(!course||!cls||!cc.length){alert('请填写：课程代码、班级，并至少勾选一个届别');return;}
   // 重复检查：同课程 + 同班级 + 同学期
   const dup=schD.find(r=>r.course===course&&r.cls===cls&&r.sem===sem&&r.half===half);
@@ -904,7 +911,7 @@ function addSch(){
     const go=confirm('⚠️ 重复提醒\n\n「'+course+'」已在 '+sem+' '+half+' '+cls+' 班级新增过一次。\n\n确定要继续新增吗？（如不同老师或不同届别可忽略此提醒）');
     if(!go)return;
   }
-  schD.push({id:Date.now(),course,en,sem,half,type,cls,tc,cc,nt,editing:false});
+  schD.push({id:Date.now(),course,en,sem,half,type,cls,tc,cc,nt,btec,editing:false});
   renderSch();renderAllSum();renderSta();clearSchF();autoSync('schedule');
 }
 function delSch(id){if(!confirm('确认删除？'))return;id=String(id);schD=schD.filter(r=>String(r.id)!==id);renderSch();renderAllSum();renderSta();autoSync('schedule');}
@@ -955,6 +962,7 @@ function renderSch(){
         '<td><select id="estc-'+r.id+'" style="width:150px">'+tccO+'</select></td>'+
         '<td>'+cohEditHTML(r.id,r.cc)+'</td><td><strong>'+tot+'</strong></td>'+
         '<td><input id="esnt-'+r.id+'" value="'+eh(r.nt||'')+'" style="width:80px"></td>'+
+        '<td><input type="checkbox" id="esbt-'+r.id+'"'+(r.btec?' checked':'')+' style="width:auto"></td>'+
         '<td style="white-space:nowrap"><button class="btn btn-ok" onclick="saveES('+r.id+')">确定</button> <button class="btn btn-d" onclick="delSch('+r.id+')">删除</button></td></tr>';
     }
     const tags=r.cc.map(cc=>'<span class="tag">'+eh(cc.cohort)+(cc.count?' · '+cc.count+'人':'')+'</span>').join('');
@@ -965,6 +973,7 @@ function renderSch(){
       '<td>'+r.cls+'</td><td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
       '<td>'+tags+'</td><td><strong>'+tot+'</strong></td>'+
       '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td>'+
+      '<td>'+(r.btec?'<span class="badge b4" style="font-size:10px">BTEC</span>':'—')+'</td>'+
       '<td style="white-space:nowrap"><button class="btn btn-e" onclick="startES('+r.id+')">更动</button> <button class="btn btn-d" onclick="delSch('+r.id+')">删除</button></td></tr>';
   }).join('');
 }
@@ -973,6 +982,7 @@ function clearSchF(){
   document.getElementById('s-tp').value='正常';document.getElementById('s-sem').value='2569-1';
   document.getElementById('s-half').value='';document.getElementById('s-cls').value='';
   document.getElementById('s-tc').value='';document.getElementById('s-nt').value='';
+  const btecCb=document.getElementById('s-btec');if(btecCb)btecCb.checked=false;
   document.querySelectorAll('#s-eg input[type=checkbox]').forEach(cb=>{cb.checked=false;const n=document.getElementById('cnt-'+sk(cb.value));if(n){n.value='';n.disabled=true;}});
 }
 
@@ -1296,16 +1306,20 @@ function renderSta(){
   const semHdrRow=document.getElementById('sta-thead-sems');
   const semSubRow=document.getElementById('sta-thead-sub');
   if(semHdrRow&&semSubRow){
-    // 移除旧的动态th（保留前3个固定th）
     [...semHdrRow.querySelectorAll('th.dyn')].forEach(el=>el.remove());
     [...semSubRow.querySelectorAll('th')].forEach(el=>el.remove());
+    // 在第3个固定th后插入动态学期标题
+    const anchor=semHdrRow.children[3]; // 教学总数 th
     activeSems.forEach(s=>{
       const th=document.createElement('th');
-      th.className='dyn';th.colSpan=1;th.style.cssText='text-align:center;border-left:1px solid rgba(255,255,255,.3)';
-      th.textContent=s;semHdrRow.insertBefore(th,semHdrRow.children[3]);
+      th.className='dyn';
+      th.style.cssText='text-align:center;border-left:1px solid rgba(255,255,255,.3)';
+      th.textContent=s;
+      semHdrRow.insertBefore(th,anchor);
       const th2=document.createElement('th');
-      th2.style.cssText='border-left:1px solid rgba(255,255,255,.3);font-size:9px';
-      th2.innerHTML='加权总量<br><span style="opacity:.7">hover 细项</span>';semSubRow.appendChild(th2);
+      th2.style.cssText='border-left:1px solid rgba(255,255,255,.3);font-size:9px;text-align:center';
+      th2.innerHTML='加权<br><span style="opacity:.7;font-size:8px">hover细项</span>';
+      semSubRow.appendChild(th2);
     });
   }
   const actT=[...new Set([...schD.map(r=>r.tc),...spD.map(r=>r.tc)])].filter(Boolean).length;
@@ -1333,7 +1347,10 @@ function renderSta(){
       const totalSems=yr?activeSems:['2569-1','2569-2','2569-3','2570-1','2570-2','2570-3'];
       const totalWt=Math.round(totalSems.reduce((s,sem)=>{const d=semDetail(t.n,sem);return s+d.wt;},0)*100)/100;
       const btec=btecD[t.n]||0;
-      const yearTotal=Math.round((totalWt+btec)*100)/100;
+      // 统计该老师在选定学期内的 BTEC 课程数
+      const btecCount=totalSems.reduce((s,sem)=>s+schD.filter(r=>r.tc===t.n&&r.sem===sem&&r.btec).length,0);
+      const btecWt=Math.round(btecCount*0.5*100)/100;
+      const yearTotal=Math.round((totalWt+btecWt+btec)*100)/100;
       dWt+=yearTotal;
       const pct=t.l>0?Math.round(yearTotal/t.l*100):0;
       const over=t.l>0&&yearTotal>t.l;
@@ -1345,7 +1362,11 @@ function renderSta(){
         sdCells(d1,true)+sdCells(d2,true)+sdCells(d3,true)+
         // 教学总数
         '<td style="text-align:center;border-left:1px solid #eee;font-weight:500">'+totalWt+'</td>'+
-        // BTEC/LA500 输入框
+        // BTEC 栏（自动从排课记录计算 BTEC 门数 × 0.5）
+        '<td style="text-align:center;background:#F5F4FE;padding:3px">'+
+          '<span style="font-size:13px;font-weight:500;color:#534AB7">'+(btecCount>0?btecCount+'门 = '+(Math.round(btecCount*0.5*100)/100):'—')+'</span>'+
+        '</td>'+
+        // LA500 手填
         '<td style="text-align:center;background:#F5F4FE;padding:3px">'+
           '<input type="number" id="btec-'+k+'" value="'+(btec||'')+'" min="0" step="0.5" '+
           'style="width:58px;font-size:12px;padding:2px 4px;text-align:center;background:#fff;border:0.5px solid #AFA9EC;border-radius:5px" '+
