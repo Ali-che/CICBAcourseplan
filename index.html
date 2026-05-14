@@ -914,7 +914,8 @@ function addSch(){
     if(!go)return;
   }
   schD.push({id:Date.now(),course,en,sem,half,type,cls,tc,cc,nt,btec,editing:false});
-  renderSch();renderAllSum();renderSta();clearSchF();autoSync('schedule');
+  clearSchF();
+  renderSch();renderAllSum();renderSta();autoSync('schedule');
 }
 function delSch(id){if(!confirm('确认删除？'))return;id=String(id);schD=schD.filter(r=>String(r.id)!==id);renderSch();renderAllSum();renderSta();autoSync('schedule');}
 function startES(id){id=String(id);schD.forEach(r=>r.editing=(String(r.id)===id));renderSch();}
@@ -1005,7 +1006,8 @@ function addSp(){
   if(!sid||!nm||!mj||!co){alert('请填写：学号、学生姓名、学生专业、课程代码');return;}
   if(/[^\x00-\x7F]/.test(nm)){alert('学生姓名请只填写英文字');return;}
   spD.push({id:Date.now(),sid,mr,nm,mj,co,en,cls,sem,tc,nt,type:'SG',editing:false});
-  renderSp();renderAllSum();renderSta();clearSpF();autoSync('special');
+  clearSpF();
+  renderSp();renderAllSum();renderSta();autoSync('special');
 }
 function delSp(id){if(!confirm('确认删除？'))return;id=String(id);spD=spD.filter(r=>String(r.id)!==id);renderSp();renderAllSum();renderSta();autoSync('special');}
 function startESp(id){id=String(id);spD.forEach(r=>r.editing=(String(r.id)===id));renderSp();}
