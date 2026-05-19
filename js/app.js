@@ -2961,8 +2961,8 @@ function renderClassTable(){
   let h=`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);margin-bottom:14px;min-height:36px;">
     <span style="font-size:11px;color:var(--ink3);font-family:var(--mono);">班级课表 · 按学期查看</span>
     <span style="width:1px;height:14px;background:var(--line2);margin:0 4px;flex-shrink:0;"></span>
-    <select onchange="window._ctClass=this.value;renderClassTable()" style="padding:2px 7px;border:1px solid var(--line2);border-radius:5px;background:var(--card);color:var(--ink);font-family:var(--mono);font-size:11px;cursor:pointer;height:24px;"><option value="all" ${selClass==='all'?'selected':''}>全部班级</option>${codes.map(c=>`<option value="${c}" ${c===selClass?'selected':''}>${c}</option>`).join('')}</select>
-    <select onchange="window._ctSem=this.value;renderClassTable()" style="padding:2px 7px;border:1px solid var(--line2);border-radius:5px;background:var(--card);color:var(--ink);font-family:var(--mono);font-size:11px;cursor:pointer;height:24px;">
+    <select onchange="window._ctClass=this.value;window._ctClass2='';renderClassTable()" style="padding:2px 7px;border:1px solid var(--line2);border-radius:5px;background:var(--card);color:var(--ink);font-family:var(--mono);font-size:11px;cursor:pointer;height:24px;"><option value="all" ${selClass==='all'?'selected':''}>全部班级</option>${codes.map(c=>`<option value="${c}" ${c===selClass?'selected':''}>${c}</option>`).join('')}</select>
+    <select onchange="window._ctSem=this.value;window._ctClass2='';renderClassTable()" style="padding:2px 7px;border:1px solid var(--line2);border-radius:5px;background:var(--card);color:var(--ink);font-family:var(--mono);font-size:11px;cursor:pointer;height:24px;">
       <option value="${NOW_SEM}" ${selSem===NOW_SEM?'selected':''}>📅 ${NOW_SEM}（当前）</option>
       ${(()=>{
         const opts=semOpts.filter(s=>s!==NOW_SEM);
@@ -3000,7 +3000,12 @@ function renderClassTable(){
     <div style="flex:1"></div>
     ${(()=>{
       const allCC=[...new Set(studs.flatMap(s=>Object.entries(s.courses||{}).filter(([,v])=>v===selSem).map(()=>s.classCode||autoClassCode(s.cohort,s.type))))].sort();
-      return allCC.map(cc=>{const pal=getClassColor(cc);return `<span style="font-family:var(--mono);font-size:10px;font-weight:600;color:${pal.fg};background:${pal.bg};border:0.5px solid ${pal.bd};padding:2px 8px;border-radius:20px;">${cc}</span>`;}).join('');
+      const _selCC=window._ctClass2||'';
+      return allCC.map(cc=>{
+        const pal=getClassColor(cc);
+        const isActive=_selCC===cc;
+        return `<span onclick="window._ctClass2=(window._ctClass2==='${cc}'?'':('${cc}'));renderClassTable()" style="display:inline-flex;align-items:center;justify-content:center;height:22px;font-family:var(--mono);font-size:10px;font-weight:600;color:${pal.fg};background:${isActive?pal.bd:pal.bg};border:${isActive?'1.5px':'0.5px'} solid ${pal.bd};padding:0 10px;border-radius:20px;cursor:pointer;transition:all .12s;user-select:none;white-space:nowrap;" title="${isActive?'取消筛选':'只看 '+cc}">${cc}</span>`;
+      }).join('');
     })()}
   </div>`;
   h+=`<div style="border:1px solid var(--line);border-radius:10px;overflow:hidden"><table style="width:100%;border-collapse:collapse;font-size:13px">
