@@ -40,7 +40,7 @@ input[readonly]{color:#888;background:#f2f2f2}
 table{width:100%;border-collapse:collapse;font-size:12px;border-spacing:0}
 th{text-align:left;padding:7px 9px;font-size:11px;font-weight:600;color:#fff;white-space:nowrap;background:#534AB7}
 th.sort{cursor:pointer;user-select:none}th.sort:hover{background:#3C3489}
-td{padding:6px 9px;border-bottom:0.5px solid #eee;vertical-align:middle}
+td{padding:5px 7px;border-bottom:0.5px solid #eee;vertical-align:middle;white-space:nowrap}
 tr:last-child td{border-bottom:none}
 tr.ed td{background:#EEEDFE}
 tr:not(.ed):not(.dh):not(.dt):hover td{background:#fafafa}
@@ -934,10 +934,10 @@ function saveES(id){
   r.cc=collectEC(id);r.editing=false;renderSch();renderAllSum();renderSta();syncNow('schedule');
 }
 function halfBadge(h){
-  if(h==='上半学期'||h==='上半')return'<span class="badge b0">上半</span>';
-  if(h==='下半学期'||h==='下半')return'<span class="badge b2">下半</span>';
-  if(h==='全学期')return'<span class="badge b6">全学期</span>';
-  return'<span style="color:#bbb;font-style:italic">待定</span>';
+  if(h==='上半学期'||h==='上半')return'<span class="badge b0" style="font-size:10px">上半</span>';
+  if(h==='下半学期'||h==='下半')return'<span class="badge b2" style="font-size:10px">下半</span>';
+  if(h==='全学期')return'<span class="badge b6" style="font-size:10px">全学期</span>';
+  return'<span style="color:#bbb;font-style:italic;font-size:10px">待定</span>';
 }
 function renderSch(){
   const tb=document.getElementById('sch-tb'),em=document.getElementById('sch-em');
@@ -974,11 +974,11 @@ function renderSch(){
     }
     const tags=r.cc.map(cc=>'<span class="tag">'+eh(cc.cohort)+(cc.count?' · '+cc.count+'人':'')+'</span>').join('');
     return'<tr><td>'+(i+1)+'</td><td><span class="badge b0">'+r.course+'</span></td>'+
-      '<td style="max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+eh(r.en)+'">'+eh(r.en)+'</td>'+
+      '<td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+eh(r.en)+'">'+eh(r.en)+'</td>'+
       '<td><span class="badge '+(TB[r.type]||'b4')+'">'+r.type+'</span></td>'+
       '<td><span class="badge b4">'+r.sem+'</span></td><td>'+halfBadge(r.half)+'</td>'+
       '<td>'+r.cls+'</td><td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
-      '<td>'+tags+'</td><td><strong>'+tot+'</strong></td>'+
+      '<td style="white-space:normal;min-width:120px">'+tags+'</td><td><strong>'+tot+'</strong></td>'+
       '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td>'+
       '<td>'+(r.btec===true||r.btec==='TRUE'||r.btec==='true'?'<span class="badge b4" style="font-size:10px">✓</span>':'—')+'</td>'+
       '<td style="white-space:nowrap"><button class="btn btn-e" onclick="startES('+r.id+')">更动</button> <button class="btn btn-d" onclick="delSch('+r.id+')">删除</button></td></tr>';
@@ -1315,11 +1315,8 @@ function autoSyncBtec(){
   clearTimeout(btecSyncTimer);
   btecSyncTimer=setTimeout(async()=>{
     try{
-      await fetch(SHEETS_URL,{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({action:'write',type:'btec',data:btecD})
-      });
+      const btecPayload=encodeURIComponent(JSON.stringify(btecD));
+      await fetch(SHEETS_URL+'?action=write&type=btec&payload='+btecPayload,{cache:'no-store'});
       setSyncStatus('✅ BTEC 已同步 '+new Date().toLocaleTimeString(),true);
     }catch(e){setSyncStatus('❌ BTEC 同步失败',false);}
   },1500);
@@ -1436,26 +1433,12 @@ async function syncNow(type){
   setSyncStatus('⏳ 正在同步…','');
   try{
     const data=type==='schedule'?schD:spD;
-    const res=await fetch(SHEETS_URL,{
-      method:'POST',
-      headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({action:'write',type,data}),
-      redirect:'follow'
-    });
+    const payload=encodeURIComponent(JSON.stringify(data));
+    const res=await fetch(SHEETS_URL+'?action=write&type='+type+'&payload='+payload,{cache:'no-store'});
     const r=await res.json();
     const t=new Date().toLocaleTimeString();
     setSyncStatus(r.success?'✅ 已同步 '+t:'❌ 同步失败',r.success);
-  }catch(e){
-    // POST 失败时 fallback 到 GET
-    try{
-      const data=type==='schedule'?schD:spD;
-      const payload=encodeURIComponent(JSON.stringify(data));
-      const res=await fetch(SHEETS_URL+'?action=write&type='+type+'&payload='+payload,{cache:'no-store'});
-      const r=await res.json();
-      const t=new Date().toLocaleTimeString();
-      setSyncStatus(r.success?'✅ 已同步(GET) '+t:'❌ 同步失败',r.success);
-    }catch(e2){setSyncStatus('❌ 连线失败',false);}
-  }
+  }catch(e){setSyncStatus('❌ 连线失败',false);}
 }
 function autoSync(type){
   if(!SHEETS_URL)return;
@@ -1477,19 +1460,9 @@ async function syncAll(){
   }catch(e){setSyncStatus('❌ 连线失败',false);alert('❌ 连线失败');}
 }
 async function fetchWrite(type,data){
-  try{
-    const res=await fetch(SHEETS_URL,{
-      method:'POST',
-      headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({action:'write',type,data}),
-      redirect:'follow'
-    });
-    const r=await res.json();return r.success;
-  }catch(e){
-    const payload=encodeURIComponent(JSON.stringify(data));
-    const res=await fetch(SHEETS_URL+'?action=write&type='+type+'&payload='+payload,{cache:'no-store'});
-    const r=await res.json();return r.success;
-  }
+  const payload=encodeURIComponent(JSON.stringify(data));
+  const res=await fetch(SHEETS_URL+'?action=write&type='+type+'&payload='+payload,{cache:'no-store'});
+  const r=await res.json();return r.success;
 }
 
 // 手动上传（有提示，使用 GET）
