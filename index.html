@@ -167,6 +167,13 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 .src-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 10px;border-radius:20px;border:0.5px solid #ddd;font-weight:500}
 .src-sheets{background:#E1F5EE;color:#0F6E56;border-color:#9ADDC5}
 .src-local{background:#F1EFE8;color:#6B5E4E;border-color:#D4C8B8}
+/* ── 同步进度条 ── */
+.sync-bar{height:3px;background:#eee;border-radius:2px;overflow:hidden;margin-top:4px;transition:opacity .3s}
+.sync-bar-inner{height:100%;width:0%;background:linear-gradient(90deg,#534AB7,#AFA9EC);border-radius:2px;transition:width .3s ease}
+.sync-bar-inner.running{animation:syncrun 1.5s infinite ease-in-out}
+.sync-bar-inner.done{background:#3B6D11;width:100%}
+.sync-bar-inner.fail{background:#a32d2d;width:100%}
+@keyframes syncrun{0%{width:0%;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0%;margin-left:100%}}
 </style>
 </head>
 <body>
@@ -216,6 +223,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   <span id="sync-status-bar" style="font-size:11px;color:#888;margin-left:4px"></span>
   <button class="btn btn-sm" onclick="syncAll()" style="font-size:10px;padding:3px 8px;color:#534AB7;border-color:#AFA9EC;margin-left:4px">↑↓ 同步</button>
 </div>
+<div class="sync-bar" id="sync-bar"><div class="sync-bar-inner" id="sync-bar-inner"></div></div>
 
 <!-- ══ 权重说明 ════════════════════════════ -->
 
@@ -1425,6 +1433,12 @@ let syncTimer=null;
 function setSyncStatus(msg,ok){
   const el=document.getElementById('sync-status-bar');
   if(el){el.textContent=msg;el.style.color=ok===true?'#3B6D11':ok===false?'#a32d2d':'#888';}
+  const bar=document.getElementById('sync-bar-inner');
+  if(!bar)return;
+  bar.classList.remove('running','done','fail');
+  if(ok===''){bar.classList.add('running');}
+  else if(ok===true){bar.classList.add('done');setTimeout(()=>{bar.style.width='0%';},2000);}
+  else if(ok===false){bar.classList.add('fail');setTimeout(()=>{bar.style.width='0%';},3000);}
 }
 
 // 自动同步（静默，防抖 2 秒，使用 GET 避免 CORS）
