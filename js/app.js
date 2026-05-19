@@ -742,14 +742,14 @@ function renderCards() {
       <div style="flex:1;"></div>
       <button onclick="batchDelete()" style="padding:3px 14px;border-radius:5px;border:none;background:#dc2626;color:#fff;cursor:pointer;font-size:11px;font-weight:600;font-family:var(--font);">🗑 删除所选 (${selectedIds.size})</button>
       <button onclick="toggleSelectMode()" style="padding:3px 10px;border-radius:5px;border:1px solid var(--line2);background:#fff;color:var(--ink2);cursor:pointer;font-size:11px;font-family:var(--font);">✕ 取消</button>
-    </div>`+studs.map(s=>cardHTML(s)).join('');
+    </div>`+studs.map((s,i)=>cardHTML(s,i+1)).join('');
   } else {
-    grid.innerHTML=studs.map(s=>cardHTML(s)).join('');
+    grid.innerHTML=studs.map((s,i)=>cardHTML(s,i+1)).join('');
   }
   if(currentView==='list') grid.classList.add('list-view');
 }
 
-function cardHTML(s) {
+function cardHTML(s, idx) {
   const prog=getProg(s.prog||'TM'),total=prog.totalCr||123;
   const TOTAL_C=38; // 38课（不含实习）
   const _p=calcProgress(s,progCourses(s.prog||'TM')),d=_p.doneCr,rem=_p.remCr,pct=Math.round(d/total*100);
@@ -796,7 +796,7 @@ function cardHTML(s) {
     <div class="sc-top" style="${currentView==='list'?'cursor:pointer;':''}" onclick="${currentView==='list'?`event.stopPropagation();jumpToCard('${s.id}')`:''}" title="${currentView==='list'?'点击查看卡片详情':''}">
       <div style="display:flex;flex-direction:column;gap:2px;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;">
-          <div style="font-size:13px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.name}${isComplete?' <span style="font-size:10px;color:var(--g6)">✓</span>':''}</div>
+          <div style="font-size:13px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${idx!=null?`<span style="display:inline-block;font-size:9px;font-weight:700;color:var(--ink3);background:var(--line);border-radius:4px;padding:1px 5px;margin-right:5px;vertical-align:middle;font-family:var(--mono);letter-spacing:-.3px;line-height:1.4">${idx}</span>`:''}${s.name}${isComplete?' <span style="font-size:10px;color:var(--g6)">✓</span>':''}</div>
           <div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">
 ${(()=>{const _cc=s.classCode||autoClassCode(s.cohort,s.type);const _pal=getClassColor(_cc);return `<span style="font-family:var(--mono);font-size:9px;background:${_pal.bg};color:${_pal.fg};border:0.5px solid ${_pal.bd};padding:1px 6px;border-radius:20px;font-weight:600">${_cc}</span>`;})()}
             <button class="ib" onclick="event.stopPropagation();openEditStudent('${s.id}')" title="编辑">✏️</button>
@@ -2961,8 +2961,8 @@ function renderClassTable(){
   let h=`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);margin-bottom:14px;min-height:36px;">
     <span style="font-size:11px;color:var(--ink3);font-family:var(--mono);">班级课表 · 按学期查看</span>
     <span style="width:1px;height:14px;background:var(--line2);margin:0 4px;flex-shrink:0;"></span>
-    <select onchange="window._ctClass=this.value;window._ctClass2='';renderClassTable()" style="padding:2px 7px;border:1px solid var(--line2);border-radius:5px;background:var(--card);color:var(--ink);font-family:var(--mono);font-size:11px;cursor:pointer;height:24px;"><option value="all" ${selClass==='all'?'selected':''}>全部班级</option>${codes.map(c=>`<option value="${c}" ${c===selClass?'selected':''}>${c}</option>`).join('')}</select>
-    <select onchange="window._ctSem=this.value;window._ctClass2='';renderClassTable()" style="padding:2px 7px;border:1px solid var(--line2);border-radius:5px;background:var(--card);color:var(--ink);font-family:var(--mono);font-size:11px;cursor:pointer;height:24px;">
+    <select onchange="window._ctClass=this.value;renderClassTable()" style="padding:2px 7px;border:1px solid var(--line2);border-radius:5px;background:var(--card);color:var(--ink);font-family:var(--mono);font-size:11px;cursor:pointer;height:24px;"><option value="all" ${selClass==='all'?'selected':''}>全部班级</option>${codes.map(c=>`<option value="${c}" ${c===selClass?'selected':''}>${c}</option>`).join('')}</select>
+    <select onchange="window._ctSem=this.value;renderClassTable()" style="padding:2px 7px;border:1px solid var(--line2);border-radius:5px;background:var(--card);color:var(--ink);font-family:var(--mono);font-size:11px;cursor:pointer;height:24px;">
       <option value="${NOW_SEM}" ${selSem===NOW_SEM?'selected':''}>📅 ${NOW_SEM}（当前）</option>
       ${(()=>{
         const opts=semOpts.filter(s=>s!==NOW_SEM);
@@ -3000,12 +3000,7 @@ function renderClassTable(){
     <div style="flex:1"></div>
     ${(()=>{
       const allCC=[...new Set(studs.flatMap(s=>Object.entries(s.courses||{}).filter(([,v])=>v===selSem).map(()=>s.classCode||autoClassCode(s.cohort,s.type))))].sort();
-      const _selCC=window._ctClass2||'';
-      return allCC.map(cc=>{
-        const pal=getClassColor(cc);
-        const isActive=_selCC===cc;
-        return `<span onclick="window._ctClass2=(window._ctClass2==='${cc}'?'':('${cc}'));renderClassTable()" style="font-family:var(--mono);font-size:10px;font-weight:600;color:${pal.fg};background:${isActive?pal.bd:pal.bg};border:${isActive?'1.5px':'0.5px'} solid ${pal.bd};padding:2px 8px;border-radius:20px;cursor:pointer;transition:all .12s;user-select:none;" title="${isActive?'取消筛选':'只看 '+cc}">${cc}</span>`;
-      }).join('');
+      return allCC.map(cc=>{const pal=getClassColor(cc);return `<span style="font-family:var(--mono);font-size:10px;font-weight:600;color:${pal.fg};background:${pal.bg};border:0.5px solid ${pal.bd};padding:2px 8px;border-radius:20px;">${cc}</span>`;}).join('');
     })()}
   </div>`;
   h+=`<div style="border:1px solid var(--line);border-radius:10px;overflow:hidden"><table style="width:100%;border-collapse:collapse;font-size:13px">
