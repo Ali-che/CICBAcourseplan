@@ -303,7 +303,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <table><thead><tr>
         <th>#</th>
         <th class="sort" onclick="sortSch('course')">课程代码 <span id="si-co">⇅</span></th>
-        <th>课程英文名</th><th>类型</th><th>学期</th>
+        <th>课程英文名</th><th>类型</th><th class="sort" onclick="sortSch('sem')">学期 <span id="si-sem">⇅</span></th>
         <th class="sort" onclick="sortSch('half')">上下半 <span id="si-hl">⇅</span></th>
         <th>班级</th><th>授课老师</th><th>届别（人数）</th><th>总人数</th><th>备注</th><th>BTEC</th><th>操作</th>
       </tr></thead><tbody id="sch-tb"></tbody></table>
@@ -951,6 +951,7 @@ function renderSch(){
   const tb=document.getElementById('sch-tb'),em=document.getElementById('sch-em');
   document.getElementById('sch-n').textContent='('+schD.length+'条)';
   const el_co=document.getElementById('si-co');if(el_co)el_co.innerHTML=siIcon('course',schSK,schSD);
+  const el_sem=document.getElementById('si-sem');if(el_sem)el_sem.innerHTML=siIcon('sem',schSK,schSD);
   const el_hl=document.getElementById('si-hl');if(el_hl)el_hl.innerHTML=siIcon('half',schSK,schSD);
   if(!schD.length){tb.innerHTML='';em.style.display='block';return;}
   em.style.display='none';
@@ -958,6 +959,7 @@ function renderSch(){
   let disp=[...schD];
   if(semF&&semF.value)disp=disp.filter(r=>r.sem===semF.value);
   if(schSK==='course')disp.sort((a,b)=>schSD*a.course.localeCompare(b.course));
+  if(schSK==='sem')disp.sort((a,b)=>schSD*a.sem.localeCompare(b.sem));
   if(schSK==='half'){const ho={'上半学期':0,'上半':0,'下半学期':1,'下半':1,'全学期':2};disp.sort((a,b)=>schSD*((ho[a.half]??2)-(ho[b.half]??2)));}
   tb.innerHTML=disp.map((r,i)=>{
     const tot=r.cc.reduce((s,x)=>s+(x.count||0),0);
