@@ -751,8 +751,23 @@ async function loadRefFromSheets(){
 }
 async function reloadRef(){
   const ok=await loadRefFromSheets();rebuildUI();updateRefBar();
-  if(ok)alert('✅ 参考数据已刷新！\n课程：'+C.length+'条　老师：'+T.length+'位　届别：'+Object.values(CBD).flat().length+'条');
-  else alert('⚠ 未配置 SHEETS_URL 或连线失败，目前使用内建预设数据。');
+  if(ok){
+    // 同步更新现有排课记录里的课程英文名
+    let updated=0;
+    schD.forEach(r=>{
+      const f=C.find(x=>x.c===r.course);
+      if(f&&f.en&&f.en!==r.en){r.en=f.en;updated++;}
+    });
+    spD.forEach(r=>{
+      const f=C.find(x=>x.c===r.co);
+      if(f&&f.en&&f.en!==r.co){r.en=f.en;updated++;}
+    });
+    if(updated>0){
+      renderSch();renderSp();renderAllSum();
+      syncNow('schedule');syncNow('special');
+    }
+    alert('✅ 参考数据已刷新！\n课程：'+C.length+'条　老师：'+T.length+'位　届别：'+Object.values(CBD).flat().length+'条'+(updated>0?'\n\n已更新 '+updated+' 笔排课记录的课程英文名':''));
+  }else alert('⚠ 未配置 SHEETS_URL 或连线失败，目前使用内建预设数据。');
 }
 function updateRefBar(){
   const totalCoh=Object.values(CBD).flat().length,depts=[...new Set(T.map(t=>t.d))].length;
