@@ -800,6 +800,7 @@ function semDetail(tc,sem){
   return{wt,cnt};
 }
 function sdCells(d,bl){
+  if(!d)return '<td class="sem-cell" style="text-align:center;'+(bl?'border-left:1px solid #eee;':'')+'"><span class="sem-zero">—</span></td>';
   const s=bl?'border-left:1px solid #eee;':'';
   const hasData=d.wt>0;
   // 细项 tooltip
@@ -838,12 +839,10 @@ function autoSyncBtec(){
   clearTimeout(btecSyncTimer);
   btecSyncTimer=setTimeout(async()=>{
     try{
-      const res=await fetchWithRetry(SHEETS_URL,{method:'POST',cache:'no-store',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({action:'write',type:'btec',payload:btecD})});
-      const r=await res.json();
-      setSyncStatus(r.success?'✅ BTEC 已同步 '+new Date().toLocaleTimeString():'❌ BTEC 同步失败',r.success);
-    }catch(e){setSyncStatus('❌ BTEC 同步失败（已重试）',false);}
+      const btecPayload=encodeURIComponent(JSON.stringify(btecD));
+      const br=await (await fetchWithRetry(SHEETS_URL+'?action=write&type=btec&payload='+btecPayload,{cache:'no-store'})).json();
+      setSyncStatus(br.success?'✅ BTEC 已同步 '+new Date().toLocaleTimeString():'❌ BTEC 同步失败',br.success);
+    }catch(e){setSyncStatus('❌ BTEC 同步失败',false);}
   },1500);
 }
 function renderSta(){
@@ -958,28 +957,22 @@ function setSyncStatus(msg,ok){
   else if(ok===false){bar.classList.add('fail');setTimeout(()=>{bar.style.width='0%';},3000);}
 }
 
-// 通用重试 fetch（最多 retry 次，间隔 delayMs）
-async function fetchWithRetry(url,options,retry=2,delayMs=2000){
-  for(let i=0;i<=retry;i++){
-    try{return await fetch(url,options);}
-    catch(e){if(i===retry)throw e;await new Promise(r=>setTimeout(r,delayMs));}
-  }
+// 通用重试（最多 2 次，间隔 2 秒）
+async function fetchWithRetry(url,opts={},retry=2,delay=2000){
+  for(let i=0;i<=retry;i++){try{return await fetch(url,opts);}catch(e){if(i===retry)throw e;await new Promise(r=>setTimeout(r,delay));}}
 }
-
-// 自动同步（静默，防抖 500ms，POST + 自动重试）
+// 自动同步（静默，防抖 500ms，GET + 自动重试）
 async function syncNow(type){
   if(!SHEETS_URL)return;
   setSyncStatus('⏳ 正在同步…','');
   try{
     const data=type==='schedule'?schD:spD;
-    const res=await fetchWithRetry(SHEETS_URL,{method:'POST',cache:'no-store',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'write',type,payload:data})});
+    const payload=encodeURIComponent(JSON.stringify(data));
+    const res=await fetchWithRetry(SHEETS_URL+'?action=write&type='+type+'&payload='+payload,{cache:'no-store'});
     const r=await res.json();
     const t=new Date().toLocaleTimeString();
     setSyncStatus(r.success?'✅ 已同步 '+t:'❌ 同步失败',r.success);
-  }catch(e){setSyncStatus('❌ 连线失败（已重试 2 次）',false);}
-}
+  }catch(e){setSyncStatus('❌ 连线失败（已重试）',false);}}
 function autoSync(type){
   if(!SHEETS_URL)return;
   clearTimeout(syncTimer);
@@ -987,7 +980,7 @@ function autoSync(type){
   syncTimer=setTimeout(()=>syncNow(type),500);
 }
 
-// 手动全部同步
+// 手动全部同步（有提示，使用 GET）
 async function syncAll(){
   if(!SHEETS_URL){alert('请先配置 SHEETS_URL');return;}
   setSyncStatus('⏳ 正在同步…','');
@@ -1000,13 +993,12 @@ async function syncAll(){
   }catch(e){setSyncStatus('❌ 连线失败',false);alert('❌ 连线失败');}
 }
 async function fetchWrite(type,data){
-  const res=await fetchWithRetry(SHEETS_URL,{method:'POST',cache:'no-store',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({action:'write',type,payload:data})});
+  const payload=encodeURIComponent(JSON.stringify(data));
+  const res=await fetchWithRetry(SHEETS_URL+'?action=write&type='+type+'&payload='+payload,{cache:'no-store'});
   const r=await res.json();return r.success;
 }
 
-// 手动上传
+// 手动上传（有提示，使用 GET）
 async function syncToSheets(type){
   if(!SHEETS_URL){alert('请先配置 SHEETS_URL');return;}
   const data=type==='schedule'?schD:spD;
@@ -1025,7 +1017,7 @@ async function syncFromSheets(type){
     if(r.success){if(type==='schedule')schD=r.data;else spD=r.data;
       renderSch();renderSp();renderAllSum();renderSta();alert('✅ 下载成功！'+r.data.length+'条记录');
     }else alert('❌ 下载失败：'+r.error);
-  }catch(e){alert('❌ 连线失败，已自动重试 2 次，请检查网络');}
+  }catch(e){alert('❌ 连线失败');}
 }
 
 // ── 标签切换 ──────────────────────────────
