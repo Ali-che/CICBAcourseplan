@@ -131,9 +131,10 @@
     </div>
     <div class="tbl-wrap">
       <table><thead><tr>
-        <th>#</th>
-        <th class="sort" onclick="sortSch('course')">课程代码 <span id="si-co">⇅</span></th>
-        <th>课程英文名</th><th>类型</th><th class="sort" onclick="sortSch('sem')">学期 <span id="si-sem">⇅</span></th>
+        <th class="tbl-fixed-th" style="left:0;min-width:36px">#</th>
+        <th class="sort tbl-fixed-th" onclick="sortSch('course')" style="left:36px;min-width:90px">课程代码 <span id="si-co">⇅</span></th>
+        <th class="tbl-fixed-th tbl-fixed-th-last" style="left:126px;min-width:56px">类型</th>
+        <th>课程英文名</th><th class="sort" onclick="sortSch('sem')">学期 <span id="si-sem">⇅</span></th>
         <th class="sort" onclick="sortSch('half')">上下半 <span id="si-hl">⇅</span></th>
         <th>班级</th><th>授课老师</th><th>届别（人数）</th><th>总人数</th><th>备注</th><th>BTEC</th><th>操作</th>
       </tr></thead><tbody id="sch-tb"></tbody></table>
