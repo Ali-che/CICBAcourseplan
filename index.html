@@ -1563,7 +1563,9 @@ function saveBtec(el){
   if(pEl){pEl.textContent=pct+'% / '+(t?t.l:'—');pEl.className='badge '+(over?'b3':'b1');}
   autoSyncBtec();
 }
-// ══ 核心同步：全部 GET，彻底避免 CORS preflight ══
+// ══ 核心同步函数 ══
+// 读取：GET（无 preflight）
+// 写入：POST + text/plain（简单请求，无 preflight，GAS doPost 原生支持）
 
 async function gasGet(params){
   const qs=Object.entries(params)
@@ -1573,10 +1575,16 @@ async function gasGet(params){
   return res.json();
 }
 
+// text/plain POST：不触发 preflight，数据量不受 URL 长度限制
 async function fetchWrite(type,data){
   if(!SHEETS_URL)return false;
   try{
-    const r=await gasGet({action:'write',type:type,payload:data});
+    const res=await fetch(SHEETS_URL,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'write',type:type,payload:data})
+    });
+    const r=await res.json();
     return r.success===true;
   }catch(e){return false;}
 }
