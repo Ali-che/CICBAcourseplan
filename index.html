@@ -138,65 +138,41 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   .spanel{display:none!important}
   .spanel.active{display:block!important}
 
-  /* ── A4 直式基础 ── */
-  html,body{
-    margin:0!important;padding:0!important;
-    background:#fff!important;
-    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
-    font-size:9.5pt;color:#111;
-    width:210mm;
-  }
+  /* ── 基础 ── */
+  html,body{margin:0!important;padding:0!important;background:#fff!important;font-size:9pt;color:#111;}
 
-  /* ── 内容居中在 A4 正中 ── */
-  .app{
-    width:176mm;          /* A4 宽 210mm 减去左右各 17mm */
-    margin:0 auto!important;
-    padding:0!important;
-    max-width:176mm!important;
-  }
+  /* ── 内容居中 ── */
+  .app{margin:0 auto!important;padding:0!important;width:100%!important;max-width:100%!important;}
 
-  /* ── 列印标题 ── */
+  /* ── 列印标题（所有 tab 共用）── */
   .print-header{
     display:block!important;
     margin-bottom:10pt;
     padding-bottom:6pt;
     border-bottom:1.5pt solid #534AB7;
     text-align:center;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
   }
-  .print-header h1{font-size:13pt;font-weight:700;color:#111;margin-bottom:3pt}
-  .print-header p{font-size:8.5pt;color:#666}
+  .print-header h1{font-size:14pt;font-weight:700;color:#111;margin-bottom:4pt}
+  .print-header .ph-meta{font-size:8.5pt;color:#555;display:flex;justify-content:center;gap:20pt;flex-wrap:wrap;margin-top:3pt}
+  .print-header .ph-meta span{display:inline-flex;align-items:center;gap:4pt}
+  .print-header .ph-label{color:#888;font-weight:500}
 
   /* ── 卡片 ── */
-  .card{
-    box-shadow:none!important;
-    border:0.5pt solid #ccc!important;
-    margin-bottom:8pt;
-    padding:6pt 8pt;
-    page-break-inside:avoid;
-    border-radius:0!important;
-  }
+  .card{box-shadow:none!important;border:0.5pt solid #ccc!important;margin-bottom:8pt;padding:6pt 8pt;border-radius:0!important;}
   .ct{font-size:8pt;margin-bottom:5pt}
 
   /* ── 表格 ── */
   table{width:100%;font-size:8pt;border-collapse:collapse}
-  th{
-    background:#534AB7!important;color:#fff!important;
-    padding:4pt 6pt!important;font-size:8pt!important;font-weight:600;
-    -webkit-print-color-adjust:exact;print-color-adjust:exact;
-    white-space:nowrap;
-  }
-  td{padding:3pt 5pt!important;border-bottom:0.5pt solid #eee;vertical-align:middle}
+  th{background:#534AB7!important;color:#fff!important;padding:4pt 5pt!important;font-size:7.5pt!important;font-weight:600;-webkit-print-color-adjust:exact;print-color-adjust:exact;white-space:nowrap;}
+  td{padding:3pt 4pt!important;border-bottom:0.5pt solid #eee;vertical-align:middle}
   tr:last-child td{border-bottom:none}
-  tr.dh td{
-    background:#534AB7!important;color:#fff!important;font-weight:600;
-    padding:5pt 6pt!important;
-    -webkit-print-color-adjust:exact;print-color-adjust:exact;
-  }
+  tr.dh td{background:#534AB7!important;color:#fff!important;font-weight:600;padding:4pt 5pt!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   tr.dt td{background:#F5F4FE!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   tr.ed td{display:none}
 
-  /* ── Badge 保色 ── */
-  .badge{-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:1pt 4pt;font-size:7.5pt;border-radius:10pt}
+  /* ── Badge ── */
+  .badge{-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:1pt 4pt;font-size:7pt;border-radius:8pt}
   .b0{background:#E6F1FB!important;color:#0C447C!important}
   .b1{background:#EAF3DE!important;color:#3B6D11!important}
   .b2{background:#FAEEDA!important;color:#854F0B!important}
@@ -204,7 +180,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   .b4{background:#F1EFE8!important;color:#444441!important}
   .b5{background:#EEEDFE!important;color:#3C3489!important}
   .b6{background:#E1F5EE!important;color:#0F6E56!important}
-  .tag{font-size:7.5pt;padding:0 4pt}
+  .tag{font-size:7pt;padding:0 3pt}
 
   /* ── 统计卡片 ── */
   .mgrid{display:flex!important;gap:5pt;flex-wrap:wrap;margin-bottom:6pt}
@@ -212,29 +188,32 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   .mv{font-size:13pt!important;color:#534AB7!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .ml{font-size:7.5pt!important;color:#888!important}
 
-  /* ── 分页控制 ── */
+  /* ── 分页 ── */
   .card{page-break-inside:avoid}
   tr.dh{page-break-after:avoid}
 
-  /* ── A4 直式页面设置 ── */
+  /* ── 预设：A4 直式（其他 tab）── */
   @page{
     size:A4 portrait;
-    margin:17mm 17mm 20mm 17mm;
-    @top-center{
-      content:'CIC 本科排课管理系统 · 2569 学年';
-      font-size:8pt;color:#888;
-    }
-    @bottom-left{
-      content:'列印日期：' date(now,'YYYY-MM-DD');
-      font-size:7.5pt;color:#aaa;
-    }
-    @bottom-right{
-      content:'第 ' counter(page) ' 页，共 ' counter(pages) ' 页';
-      font-size:7.5pt;color:#aaa;
-    }
+    margin:15mm 15mm 18mm 15mm;
+    @top-center{content:'CIC 本科排课管理系统';font-size:8pt;color:#999;}
+    @bottom-right{content:'第 ' counter(page) ' 页，共 ' counter(pages) ' 页';font-size:7.5pt;color:#aaa;}
+  }
+
+  /* ── 排课表专用：A4 横向 ── */
+  @page :first {}
+  body.print-sch @page{
+    size:A4 landscape;
+    margin:12mm 12mm 15mm 12mm;
+    @top-center{content:'CIC 本科排课管理系统 · 排课记录';font-size:8pt;color:#999;}
+    @bottom-right{content:'第 ' counter(page) ' 页，共 ' counter(pages) ' 页';font-size:7.5pt;color:#aaa;}
   }
 }
 .print-header{display:none}
+/* 排课表横向列印 */
+@media print{
+  body.print-sch @page{size:A4 landscape;margin:10mm 12mm 14mm 12mm;}
+}
 /* ── 动态加载 ── */
 .load-banner{display:none;align-items:center;gap:10px;padding:.75rem 1rem;background:#EEEDFE;border:0.5px solid #AFA9EC;border-radius:10px;margin-bottom:.875rem;font-size:13px;color:#3C3489;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .load-dot{width:9px;height:9px;border-radius:50%;background:#534AB7;flex-shrink:0;animation:blink .7s infinite alternate}
@@ -369,6 +348,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <select id="sch-sem-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto"><option value="">全部学期</option><optgroup label="─ 2569 ─"><option>2569-1</option><option>2569-2</option><option>2569-3</option></optgroup><optgroup label="─ 2570 ─"><option>2570-1</option><option>2570-2</option><option>2570-3</option></optgroup></select>
         <button class="btn btn-sm" onclick="syncToSheets('schedule')">↑ 上传</button>
         <button class="btn btn-sm" onclick="syncFromSheets('schedule')">↓ 下载</button>
+        <button class="btn btn-sm no-print" onclick="exportSchExcel()" style="color:#1a6b2f;border-color:#9ed4ae">📊 Excel</button>
         <button class="btn btn-sm no-print" onclick="printPanel('sch')">🖨️ 列印</button>
       </div>
     </div>
@@ -1737,9 +1717,100 @@ function printPanel(id){
   const titles={sch:'排课记录',sp:'IS/SG 排课记录',sum:'学期总表',sta:'教学统计 · 各授课老师工作量'};
   const subtitles={sch:'课程安排总览',sp:'IS/SG 特别排课学生名单',sum:'学期课程综合总表',sta:'专业分组工作量统计（含BTEC/LA500）'};
   const now=new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
+  // 取目前筛选的学期
+  const semSelMap={sch:'sch-sem-f',sp:'sp-sem-f',sum:'f-tc-s',sta:'sta-yr'};
+  const semEl=document.getElementById(semSelMap[id]);
+  const semVal=semEl?semEl.value:'';
+  const semTxt=semVal||(id==='sta'?'全部学年':'全部学期');
   const hdr=document.getElementById('print-header');
-  if(hdr){hdr.innerHTML='<h1>2569学年 CIC 本科排课管理系统 · '+titles[id]+'</h1><p>'+subtitles[id]+'　｜　列印日期：'+now+'　｜　数据来源：Google Sheets</p>';}
-  setTimeout(()=>window.print(),300);
+  if(hdr){
+    hdr.innerHTML=
+      '<h1>CIC 本科排课管理系统 · '+titles[id]+'</h1>'+
+      '<div class="ph-meta">'+
+        '<span><span class="ph-label">文件说明</span>'+subtitles[id]+'</span>'+
+        '<span><span class="ph-label">学期</span>'+semTxt+'</span>'+
+        '<span><span class="ph-label">列印日期</span>'+now+'</span>'+
+      '</div>';
+  }
+  // 排课表：横向
+  if(id==='sch'){
+    document.body.classList.add('print-sch');
+  } else {
+    document.body.classList.remove('print-sch');
+  }
+  setTimeout(()=>{
+    window.print();
+    document.body.classList.remove('print-sch');
+  },300);
+}
+
+// ── Excel 输出（排课记录）────────────────
+function exportSchExcel(){
+  const now=new Date();
+  const dateStr=now.toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
+  const semEl=document.getElementById('sch-sem-f');
+  const semVal=semEl?semEl.value:'';
+  const semTxt=semVal||'全部学期';
+
+  // 筛选同 renderSch 逻辑
+  let data=[...schD];
+  if(semVal)data=data.filter(r=>r.sem===semVal);
+
+  // 表头
+  const headers=['#','课程代码','课程英文名','类型','学期','上下半学期','班级代码','授课老师','届别（人数）','总人数','备注','BTEC'];
+
+  // 届别栏格式化
+  function fmtCC(cc){return(cc||[]).map(x=>x.cohort+(x.count?'·'+x.count+'人':'')).join(' / ');}
+
+  // 组装行数据
+  const rows=data.map((r,i)=>[
+    i+1,
+    r.course,
+    r.en||'',
+    r.type||'',
+    r.sem||'',
+    r.half||'待定',
+    r.cls||'',
+    r.tc||'待定',
+    fmtCC(r.cc),
+    r.cc?r.cc.reduce((s,x)=>s+(x.count||0),0):0,
+    r.nt||'',
+    (r.btec===true||r.btec==='TRUE'||r.btec==='true')?'✓':''
+  ]);
+
+  // 生成 HTML 表格包在 Excel XML 里（兼容性最好）
+  let html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+  html+='<head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>';
+  html+='<x:Name>排课记录</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>';
+  html+='</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>';
+  html+='<table border="1" style="border-collapse:collapse;font-size:11pt;font-family:Arial">';
+
+  // 标题行
+  html+='<tr><td colspan="'+headers.length+'" style="background:#534AB7;color:#fff;font-size:14pt;font-weight:bold;text-align:center;padding:8px">CIC 本科排课管理系统 · 排课记录</td></tr>';
+  html+='<tr><td colspan="'+headers.length+'" style="font-size:9pt;color:#666;text-align:center;padding:4px">学期：'+semTxt+'　｜　列印日期：'+dateStr+'　｜　共 '+data.length+' 条记录</td></tr>';
+  html+='<tr><td colspan="'+headers.length+'" style="padding:2px"></td></tr>';
+
+  // 表头
+  html+='<tr>'+headers.map(h=>'<td style="background:#534AB7;color:#fff;font-weight:bold;padding:6px 8px;white-space:nowrap">'+h+'</td>').join('')+'</tr>';
+
+  // 数据行
+  rows.forEach((row,ri)=>{
+    const bg=ri%2===0?'#ffffff':'#f5f4fe';
+    html+='<tr>'+row.map((cell,ci)=>{
+      const align=ci===0||ci===9?'center':'left';
+      return'<td style="background:'+bg+';padding:4px 7px;text-align:'+align+';white-space:nowrap">'+String(cell||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</td>';
+    }).join('')+'</tr>';
+  });
+
+  html+='</table></body></html>';
+
+  const blob=new Blob(['\uFEFF'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  const fn='排课记录_'+(semVal||'全学期')+'_'+now.toISOString().slice(0,10)+'.xls';
+  a.download=fn;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 function switchTab(id){
   ['sch','sp','sum','sta'].forEach((x,i)=>{document.querySelectorAll('.tab')[i].classList.toggle('active',x===id);});
