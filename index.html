@@ -37,6 +37,8 @@ input[readonly]{color:#888;background:#f2f2f2}
 .btn-d{color:#a32d2d;border-color:#f7c1c1;font-size:11px;padding:3px 8px}.btn-d:hover{background:#FCEBEB}
 .sechdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem}
 .tbl-wrap{overflow-x:auto}
+/* 表头锁定：top 由 JS 动态注入 */
+thead th{position:sticky;z-index:10;background:#534AB7;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 table{width:100%;border-collapse:collapse;font-size:12px;border-spacing:0}
 th{text-align:left;padding:7px 9px;font-size:11px;font-weight:600;color:#fff;white-space:nowrap;background:#534AB7}
 th.sort{cursor:pointer;user-select:none}th.sort:hover{background:#3C3489}
@@ -252,7 +254,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 <div class="app" id="main-app" style="display:none">
 
 <!-- ══ 标题栏 ══════════════════════════════ -->
-<div class="sticky-top">
+<div class="sticky-top" id="sticky-bar">
 <div class="header">
   <div>
     <div style="font-size:17px;font-weight:600;cursor:pointer" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="点击回到顶部">CIC 本科排课管理系统</div>
@@ -1250,6 +1252,7 @@ function renderSch(){
       '<td>'+(r.btec===true||r.btec==='TRUE'||r.btec==='true'?'<span class="badge b4" style="font-size:10px">✓</span>':'—')+'</td>'+
       '<td style="white-space:nowrap"><button class="btn btn-e" onclick="startES('+r.id+')">更动</button> <button class="btn btn-d" onclick="delSch('+r.id+')">删除</button></td></tr>';
   }).join('');
+  if(typeof syncTheadTop==='function')syncTheadTop();
 }
 function clearSchF(){
   document.getElementById('s-co').value='';document.getElementById('s-en').value='';
@@ -1766,6 +1769,13 @@ async function init(){
   document.addEventListener('keydown',e=>{
     if(e.key==='Escape'){closeSchModal();closeSpModal();}
   });
+  // 表头 sticky top = sticky-top 高度
+  function syncTheadTop(){
+    const h=document.getElementById('sticky-bar')?.offsetHeight||0;
+    document.querySelectorAll('thead th').forEach(th=>th.style.top=h+'px');
+  }
+  syncTheadTop();
+  window.addEventListener('resize',syncTheadTop);
 }
 </script>
 </body>
