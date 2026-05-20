@@ -36,9 +36,19 @@ input[readonly]{color:#888;background:#f2f2f2}
 .btn-ok{color:#3B6D11;border-color:#C0DD97;font-size:11px;padding:3px 8px}.btn-ok:hover{background:#EAF3DE}
 .btn-d{color:#a32d2d;border-color:#f7c1c1;font-size:11px;padding:3px 8px}.btn-d:hover{background:#FCEBEB}
 .sechdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem}
-.tbl-wrap{overflow-x:auto}
-/* 表头锁定：top 由 JS 动态注入 */
-thead th{position:sticky;z-index:10;background:#534AB7;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+/* ── 表格双向滚动容器 ── */
+.tbl-wrap{
+  overflow-x:auto;
+  overflow-y:auto;
+  max-height:calc(100vh - 260px);
+  border-radius:0 0 8px 8px;
+}
+/* 表头在纵向滚动容器内锁定 top:0 */
+thead th{
+  position:sticky;top:0;z-index:10;
+  background:#534AB7;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact;
+}
 table{width:100%;border-collapse:collapse;font-size:12px;border-spacing:0}
 th{text-align:left;padding:7px 9px;font-size:11px;font-weight:600;color:#fff;white-space:nowrap;background:#534AB7}
 th.sort{cursor:pointer;user-select:none}th.sort:hover{background:#3C3489}
@@ -121,6 +131,8 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   .btn,.btn-sm,.btn-p,.btn-e,.btn-ok,.btn-d,
   .es-sec,.empty,.sem-tip,
   .modal-overlay{display:none!important}
+  /* 列印时取消表格高度限制，完整展开 */
+  .tbl-wrap{max-height:none!important;overflow:visible!important}
   .panel{display:none!important}
   .panel.active{display:block!important}
   .spanel{display:none!important}
@@ -1252,7 +1264,7 @@ function renderSch(){
       '<td>'+(r.btec===true||r.btec==='TRUE'||r.btec==='true'?'<span class="badge b4" style="font-size:10px">✓</span>':'—')+'</td>'+
       '<td style="white-space:nowrap"><button class="btn btn-e" onclick="startES('+r.id+')">更动</button> <button class="btn btn-d" onclick="delSch('+r.id+')">删除</button></td></tr>';
   }).join('');
-  if(typeof syncTheadTop==='function')syncTheadTop();
+  if(typeof syncTblHeight==='function')syncTblHeight();
 }
 function clearSchF(){
   document.getElementById('s-co').value='';document.getElementById('s-en').value='';
@@ -1734,11 +1746,13 @@ function switchTab(id){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+id).classList.add('active');
   if(id==='sta')renderSta();if(id==='sum')renderAllSum();
+  setTimeout(syncTblHeight,50); // 等 panel 显示后再算高度
 }
 function switchSub(id){
   document.querySelectorAll('.stab').forEach(t=>t.classList.toggle('active',t.getAttribute('onclick').includes(id)));
   document.querySelectorAll('.spanel').forEach(p=>p.classList.remove('active'));
   document.getElementById('sub-'+id).classList.add('active');
+  setTimeout(syncTblHeight,50);
 }
 
 // ── 启动 ──────────────────────────────────
@@ -1769,13 +1783,22 @@ async function init(){
   document.addEventListener('keydown',e=>{
     if(e.key==='Escape'){closeSchModal();closeSpModal();}
   });
-  syncTheadTop();
-  window.addEventListener('resize',syncTheadTop);
+  syncTblHeight();
+  window.addEventListener('resize',syncTblHeight);
 }
-// ── 表头 sticky 高度同步（全局）────────────
-function syncTheadTop(){
-  const h=document.getElementById('sticky-bar')?document.getElementById('sticky-bar').offsetHeight:0;
-  document.querySelectorAll('thead th').forEach(function(th){th.style.top=h+'px';});
+
+// ── 表格区高度动态计算（全局）──────────────
+// 让每个 .tbl-wrap 的 max-height = 视窗高度 - 它自身距顶部的距离 - 底部留白
+function syncTblHeight(){
+  var pad=24; // 底部留白 px
+  document.querySelectorAll('.tbl-wrap').forEach(function(wrap){
+    var top=wrap.getBoundingClientRect().top+window.scrollY;
+    // 用 position:fixed 模拟「相对视窗」距离
+    var topFromViewport=wrap.getBoundingClientRect().top;
+    var h=window.innerHeight-topFromViewport-pad;
+    if(h<180)h=180; // 最小高度
+    wrap.style.maxHeight=h+'px';
+  });
 }
 </script>
 </body>
