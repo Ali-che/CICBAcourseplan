@@ -96,33 +96,23 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 /* ── 列印样式 ── */
 @media print{
-  /* 隐藏所有非内容元素 */
   .no-print,
   .header,.ref-bar,.tabs,.stabs,.fbar,
   .sechdr button,.sechdr .btn,.sechdr select,
   .btn,.btn-sm,.btn-p,.btn-e,.btn-ok,.btn-d,
   .es-sec,.empty,
   .sem-tip{display:none!important}
-
-  /* 只显示当前 active 分页 */
   .panel{display:none!important}
   .panel.active{display:block!important}
   .spanel{display:none!important}
   .spanel.active{display:block!important}
-
   body{background:#fff;font-size:10.5px;color:#111;margin:0}
   .app{max-width:100%;padding:0;margin:0}
-
-  /* 列印标题区 */
   .print-header{display:block!important;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #534AB7}
   .print-header h1{font-size:16px;font-weight:700;color:#111}
   .print-header p{font-size:11px;color:#666;margin-top:3px}
-
-  /* 卡片 */
   .card{box-shadow:none!important;border:0.5px solid #ccc!important;margin-bottom:10px;padding:8px 10px;page-break-inside:avoid}
   .ct{font-size:10px;margin-bottom:6px}
-
-  /* 表格 */
   table{width:100%;font-size:10px;border-collapse:collapse}
   th{background:#534AB7!important;color:#fff!important;padding:5px 7px!important;font-size:10px!important;
     -webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -131,8 +121,6 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     -webkit-print-color-adjust:exact;print-color-adjust:exact}
   tr.dt td{background:#F5F4FE!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   tr.ed td{display:none}
-
-  /* Badge 保留颜色 */
   .badge{-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:1px 5px;font-size:9px}
   .b0{background:#E6F1FB!important;color:#0C447C!important}
   .b1{background:#EAF3DE!important;color:#3B6D11!important}
@@ -141,17 +129,11 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   .b4{background:#F1EFE8!important;color:#444441!important}
   .b5{background:#EEEDFE!important;color:#3C3489!important}
   .b6{background:#E1F5EE!important;color:#0F6E56!important}
-
-  /* 统计卡片 */
   .mgrid{display:flex!important;gap:6px;flex-wrap:wrap;margin-bottom:8px}
   .mc{border:0.5px solid #ddd!important;padding:6px 10px!important;border-radius:5px}
   .mv{font-size:16px!important}
   .ml{font-size:9px!important}
-
-  /* 分页控制 */
   .card{page-break-inside:avoid}
-
-  /* 页眉页脚 */
   @page{
     margin:15mm 12mm 15mm 12mm;
     @top-center{content:'2569学年 CIC 本科排课管理系统'}
@@ -224,9 +206,6 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   <button class="btn btn-sm" onclick="syncAll()" style="font-size:10px;padding:3px 8px;color:#534AB7;border-color:#AFA9EC;margin-left:4px">↑↓ 同步</button>
 </div>
 <div class="sync-bar" id="sync-bar"><div class="sync-bar-inner" id="sync-bar-inner"></div></div>
-
-<!-- ══ 权重说明 ════════════════════════════ -->
-
 
 <!-- ══ 主标签 ═════════════════════════════ -->
 <div class="tabs">
@@ -503,7 +482,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 // ── PIN 码验证 ──────────────────────────────
 const PIN = 'CICBA2569';
 const PIN_KEY = 'cic_auth';
-const PIN_TTL = 24 * 60 * 60 * 1000; // 24小时
+const PIN_TTL = 24 * 60 * 60 * 1000;
 
 function checkPin(){
   const val = document.getElementById('pin-input').value;
@@ -548,16 +527,15 @@ function logout(){
   setTimeout(()=>document.getElementById('pin-input').focus(),100);
 }
 
-// 页面载入时检查
 window.addEventListener('DOMContentLoaded', checkAuth);
 
 // ╔══════════════════════════════════════════════════════════╗
-// ║  配置区 — 修改 SHEETS_URL 即可启用 Google Sheets 同步     ║
+// ║  配置区                                                   ║
 // ╚══════════════════════════════════════════════════════════╝
 const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwu07GbhASaGaEKM8A6xtAEqkgg6AOuWvTII0jn68sHTlPEwjTrIo0lmSJltjfJUhvF/exec';
 
 // ╔══════════════════════════════════════════════════════════╗
-// ║  内建预设参考数据（SHEETS_URL 空白时自动使用）              ║
+// ║  内建预设参考数据                                          ║
 // ╚══════════════════════════════════════════════════════════╝
 const DEFAULT_C=[
   {c:'CA201',en:'Principles and Theories of Communication'},{c:'CA213',en:'Digital Photography for Communication'},
@@ -718,13 +696,10 @@ const DEFAULT_CBD={
   IT:['IT68','IT68ZSB','IT69','IT69ZSB'],SE:['SE69','SE69ZSB'],EV:['EV69','EV69ZSB']
 };
 
-// ╔══════════════════════════════════════════════════════════╗
-// ║  运行时参考数据（从 Sheets 覆盖，或维持预设）               ║
-// ╚══════════════════════════════════════════════════════════╝
 let C=DEFAULT_C.map(x=>({...x})),T=DEFAULT_T.map(x=>({...x})),CBD=JSON.parse(JSON.stringify(DEFAULT_CBD));
 let refSource='local',refLoadTime=null;
 
-// ── 动态加载 ──────────────────────────────
+// ── 动态加载参考数据 ──────────────────────
 async function loadRefFromSheets(){
   if(!SHEETS_URL)return false;
   const banner=document.getElementById('load-banner');
@@ -752,20 +727,10 @@ async function loadRefFromSheets(){
 async function reloadRef(){
   const ok=await loadRefFromSheets();rebuildUI();updateRefBar();
   if(ok){
-    // 同步更新现有排课记录里的课程英文名
     let updated=0;
-    schD.forEach(r=>{
-      const f=C.find(x=>x.c===r.course);
-      if(f&&f.en&&f.en!==r.en){r.en=f.en;updated++;}
-    });
-    spD.forEach(r=>{
-      const f=C.find(x=>x.c===r.co);
-      if(f&&f.en&&f.en!==r.co){r.en=f.en;updated++;}
-    });
-    if(updated>0){
-      renderSch();renderSp();renderAllSum();
-      syncNow('schedule');syncNow('special');
-    }
+    schD.forEach(r=>{const f=C.find(x=>x.c===r.course);if(f&&f.en&&f.en!==r.en){r.en=f.en;updated++;}});
+    spD.forEach(r=>{const f=C.find(x=>x.c===r.co);if(f&&f.en&&f.en!==r.co){r.en=f.en;updated++;}});
+    if(updated>0){renderSch();renderSp();renderAllSum();syncNow('schedule');syncNow('special');}
     alert('✅ 参考数据已刷新！\n课程：'+C.length+'条　老师：'+T.length+'位　届别：'+Object.values(CBD).flat().length+'条'+(updated>0?'\n\n已更新 '+updated+' 笔排课记录的课程英文名':''));
   }else alert('⚠ 未配置 SHEETS_URL 或连线失败，目前使用内建预设数据。');
 }
@@ -783,7 +748,6 @@ function updateRefBar(){
 
 // ── 常数与状态 ────────────────────────────
 const WTS={正常:1,英文:.5,实习:1,SG:.167,Capstone:.75};
-const RO={'主任老师':0,'副主任老师':1,'副院长':2,'支援活动科研老师':3,'一般老师':4,'兼市场部老师':5,'兼HR行政老师':5,'外聘':6};
 const TB={正常:'b0',英文:'b6',实习:'b2',SG:'b3',Capstone:'b5'};
 const CLSS=['601','602','603','604','605','331','332','333','Capstone-971','Capstone-972','Capstone-973','Capstone-974','Capstone-975','Capstone-976','Capstone-977','Capstone-978'];
 const SEMS=['2569-1','2569-2','2569-3','2570-1','2570-2','2570-3'];
@@ -822,11 +786,9 @@ function rebuildUI(){
     Object.keys(bd).sort().forEach(d=>{const g=document.createElement('optgroup');g.label=d;bd[d].forEach(t=>{const o=document.createElement('option');o.value=t.n;o.textContent=t.n;g.appendChild(o);});el.appendChild(g);});
     el.value=cur;
   });
-  // f-tc-d 专业筛选重建
   const ftcd=document.getElementById('f-tc-d');
   if(ftcd){const cur=ftcd.value;ftcd.innerHTML='<option value="">全部</option>';
     [...new Set(T.filter(t=>t.l>0).map(t=>t.d))].sort().forEach(d=>{const o=document.createElement('option');o.value=d;o.textContent=d;ftcd.appendChild(o);});ftcd.value=cur;}
-  // f-st-d 专业筛选重建
   const fstd=document.getElementById('f-st-d');
   if(fstd){const cur=fstd.value;fstd.innerHTML='<option value="">全部</option>';
     [...new Set(T.filter(t=>t.l>0).map(t=>t.d))].sort().forEach(d=>{const o=document.createElement('option');o.value=d;o.textContent=d;fstd.appendChild(o);});fstd.value=cur;}
@@ -926,25 +888,18 @@ function addSch(){
   const tc=document.getElementById('s-tc').value,nt=document.getElementById('s-nt').value,cc=getEG();
   const btec=document.getElementById('s-btec')?document.getElementById('s-btec').checked:false;
   if(!course||!cls||!cc.length){alert('请填写：课程代码、班级，并至少勾选一个届别');return;}
-  // 重复检查：同课程 + 同班级 + 同学期
   const dup=schD.find(r=>r.course===course&&r.cls===cls&&r.sem===sem&&r.half===half);
-  if(dup){
-    const go=confirm('⚠️ 重复提醒\n\n「'+course+'」已在 '+sem+' '+half+' '+cls+' 班级新增过一次。\n\n确定要继续新增吗？（如不同老师或不同届别可忽略此提醒）');
-    if(!go)return;
-  }
+  if(dup){const go=confirm('⚠️ 重复提醒\n\n「'+course+'」已在 '+sem+' '+half+' '+cls+' 班级新增过一次。\n\n确定要继续新增吗？');if(!go)return;}
   schD.push({id:Date.now(),course,en,sem,half,type,cls,tc,cc,nt,btec,editing:false});
-  clearSchF();
-  renderSch();renderAllSum();renderSta();syncNow('schedule');
+  clearSchF();renderSch();renderAllSum();renderSta();syncNow('schedule');
 }
 function delSch(id){
-  id=String(id);
-  const r=schD.find(x=>String(x.id)===id);
-  if(!r)return;
-  const msg='确认删除以下排课？\n\n课程代码：'+r.course+'\n班级：'+r.cls+'\n授课老师：'+(r.tc||'待定');
-  if(!confirm(msg))return;
+  id=String(id);const r=schD.find(x=>String(x.id)===id);if(!r)return;
+  if(!confirm('确认删除以下排课？\n\n课程代码：'+r.course+'\n班级：'+r.cls+'\n授课老师：'+(r.tc||'待定')))return;
   schD=schD.filter(r=>String(r.id)!==id);
   renderSch();renderAllSum();renderSta();
-  syncNow('schedule').then(()=>{}).catch(()=>alert('⚠️ 网页已删除，但 Sheets 同步失败，请手动按「↑ 上传」'));}
+  syncNow('schedule').catch(()=>alert('⚠️ 网页已删除，但 Sheets 同步失败，请手动按「↑ 上传」'));
+}
 function startES(id){id=String(id);schD.forEach(r=>r.editing=(String(r.id)===id));renderSch();}
 function saveES(id){
   id=String(id);const r=schD.find(x=>String(x.id)===id);if(!r)return;
@@ -1010,19 +965,12 @@ function renderSch(){
   }).join('');
 }
 function clearSchF(){
-  document.getElementById('s-co').value='';
-  document.getElementById('s-en').value='';
-  document.getElementById('s-tp').value='正常';
-  document.getElementById('s-sem').selectedIndex=0;
-  document.getElementById('s-half').value='';
-  document.getElementById('s-cls').value='';
-  document.getElementById('s-tc').value='';
-  document.getElementById('s-nt').value='';
+  document.getElementById('s-co').value='';document.getElementById('s-en').value='';
+  document.getElementById('s-tp').value='正常';document.getElementById('s-sem').selectedIndex=0;
+  document.getElementById('s-half').value='';document.getElementById('s-cls').value='';
+  document.getElementById('s-tc').value='';document.getElementById('s-nt').value='';
   const btecCb=document.getElementById('s-btec');if(btecCb)btecCb.checked=false;
-  // 清空专业筛选 + 重建届别网格
-  selDpts.clear();
-  buildDeptChips();
-  buildEG('s-eg',null);
+  selDpts.clear();buildDeptChips();buildEG('s-eg',null);
 }
 
 // ── 特别排课 CRUD ─────────────────────────
@@ -1035,18 +983,15 @@ function addSp(){
   if(!sid||!nm||!mj||!co){alert('请填写：学号、学生姓名、学生专业、课程代码');return;}
   if(/[^\x00-\x7F]/.test(nm)){alert('学生姓名请只填写英文字');return;}
   spD.push({id:Date.now(),sid,mr,nm,mj,co,en,cls,sem,tc,nt,type:'SG',editing:false});
-  clearSpF();
-  renderSp();renderAllSum();renderSta();syncNow('special');
+  clearSpF();renderSp();renderAllSum();renderSta();syncNow('special');
 }
 function delSp(id){
-  id=String(id);
-  const r=spD.find(x=>String(x.id)===id);
-  if(!r)return;
-  const msg='确认删除以下 IS/SG 排课？\n\n学生：'+(r.mr||'')+' '+r.nm+'\n课程：'+r.co+'\n授课老师：'+(r.tc||'待定');
-  if(!confirm(msg))return;
+  id=String(id);const r=spD.find(x=>String(x.id)===id);if(!r)return;
+  if(!confirm('确认删除以下 IS/SG 排课？\n\n学生：'+(r.mr||'')+' '+r.nm+'\n课程：'+r.co+'\n授课老师：'+(r.tc||'待定')))return;
   spD=spD.filter(r=>String(r.id)!==id);
   renderSp();renderAllSum();renderSta();
-  syncNow('special').then(()=>{}).catch(()=>alert('⚠️ 网页已删除，但 Sheets 同步失败，请手动按「↑ 上传」'));}
+  syncNow('special').catch(()=>alert('⚠️ 网页已删除，但 Sheets 同步失败，请手动按「↑ 上传」'));
+}
 function startESp(id){id=String(id);spD.forEach(r=>r.editing=(String(r.id)===id));renderSp();}
 function saveESp(id){
   id=String(id);const r=spD.find(x=>String(x.id)===id);if(!r)return;
@@ -1110,21 +1055,11 @@ function clearSpF(){
 // ── 学期总表 ──────────────────────────────
 function filterTchrByDept(){
   const dept=document.getElementById('f-tc-d').value;
-  const el=document.getElementById('f-tc');
-  const cur=el.value;
+  const el=document.getElementById('f-tc');const cur=el.value;
   el.innerHTML='<option value="">请选择</option>';
-  const bd={};
-  tchrDrop().filter(t=>t.l>0).forEach(t=>{
-    if(dept&&t.d!==dept)return;
-    if(!bd[t.d])bd[t.d]=[];bd[t.d].push(t);
-  });
-  Object.keys(bd).sort().forEach(d=>{
-    const g=document.createElement('optgroup');g.label=d;
-    bd[d].forEach(t=>{const o=document.createElement('option');o.value=t.n;o.textContent=t.n;g.appendChild(o);});
-    el.appendChild(g);
-  });
-  if([...el.options].some(o=>o.value===cur))el.value=cur;
-  renderTchr();
+  const bd={};tchrDrop().filter(t=>t.l>0).forEach(t=>{if(dept&&t.d!==dept)return;if(!bd[t.d])bd[t.d]=[];bd[t.d].push(t);});
+  Object.keys(bd).sort().forEach(d=>{const g=document.createElement('optgroup');g.label=d;bd[d].forEach(t=>{const o=document.createElement('option');o.value=t.n;o.textContent=t.n;g.appendChild(o);});el.appendChild(g);});
+  if([...el.options].some(o=>o.value===cur))el.value=cur;renderTchr();
 }
 function renderTchr(){
   const tc=document.getElementById('f-tc').value,sem=document.getElementById('f-tc-s').value,tp=document.getElementById('f-tc-t').value;
@@ -1132,13 +1067,11 @@ function renderTchr(){
   const tb=document.getElementById('tc-tb'),em=document.getElementById('tc-em');
   const lbl=(tc?tc:(dept?dept+'专业':'全部老师'))+(sem?' · '+sem:'');
   document.getElementById('tc-ttl').textContent='任课老师课程总表 · '+lbl;
-  // 无需先选老师，所有条件均为可选筛选
   let data=[...schD];
   if(tc)data=data.filter(r=>r.tc===tc);
   else if(dept){const dTchrs=T.filter(t=>t.d===dept).map(t=>t.n);data=data.filter(r=>dTchrs.includes(r.tc));}
   if(sem)data=data.filter(r=>r.sem===sem);
   if(tp)data=data.filter(r=>r.type===tp);
-  // 加入 SG/IS 排课
   let spRows=[];
   if(!tp||tp==='SG'){
     let spData=[...spD];
@@ -1146,11 +1079,7 @@ function renderTchr(){
     else if(dept){const dTchrs=T.filter(t=>t.d===dept).map(t=>t.n);spData=spData.filter(r=>dTchrs.includes(r.tc));}
     if(sem)spData=spData.filter(r=>r.sem===sem);
     const spMap={};
-    spData.forEach(r=>{
-      const k=r.co+'|'+r.sem;
-      if(!spMap[k])spMap[k]={co:r.co,en:r.en,sem:r.sem,cls:r.cls,tc:r.tc,stus:[]};
-      spMap[k].stus.push(r.mr+' '+r.nm);
-    });
+    spData.forEach(r=>{const k=r.co+'|'+r.sem;if(!spMap[k])spMap[k]={co:r.co,en:r.en,sem:r.sem,cls:r.cls,tc:r.tc,stus:[]};spMap[k].stus.push(r.mr+' '+r.nm);});
     spRows=Object.values(spMap);
   }
   if(!data.length&&!spRows.length){tb.innerHTML='';em.textContent='暂无符合条件的排课记录';em.style.display='block';return;}
@@ -1162,7 +1091,7 @@ function renderTchr(){
       '<td style="font-size:11px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
       '<td>'+r.cls+'</td><td><span class="badge b4">'+r.sem+'</span></td>'+
       '<td>'+halfBadge(r.half)+'</td><td>'+(tot||'—')+'</td>'+
-      '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td>'+'<td>'+(r.btec?'<span class="badge b4" style="font-size:10px">BTEC</span>':'—')+'</td></tr>';}).join('');
+      '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td><td>'+(r.btec?'<span class="badge b4" style="font-size:10px">BTEC</span>':'—')+'</td></tr>';}).join('');
   const sgRows=spRows.map((r,i)=>
     '<tr style="background:#FFF8F0"><td>'+(data.length+i+1)+'</td>'+
     '<td><span class="badge b0">'+r.co+'</span></td>'+
@@ -1175,24 +1104,15 @@ function renderTchr(){
   tb.innerHTML=schRows+sgRows;
 }
 function filterCohByDept(){
-  const dept=document.getElementById('f-co-d').value;
-  const fc=document.getElementById('f-co');
-  const cur=fc.value;
+  const dept=document.getElementById('f-co-d').value;const fc=document.getElementById('f-co');const cur=fc.value;
   fc.innerHTML='<option value="">请选择</option>';
-  Object.entries(CBD).forEach(([d,list])=>{
-    if(dept&&d!==dept)return;
-    const g=document.createElement('optgroup');g.label=d;
-    list.forEach(co=>{const o=document.createElement('option');o.value=co;o.textContent=co;g.appendChild(o);});
-    fc.appendChild(g);
-  });
-  if([...fc.options].some(o=>o.value===cur))fc.value=cur;
-  renderCoh();
+  Object.entries(CBD).forEach(([d,list])=>{if(dept&&d!==dept)return;const g=document.createElement('optgroup');g.label=d;list.forEach(co=>{const o=document.createElement('option');o.value=co;o.textContent=co;g.appendChild(o);});fc.appendChild(g);});
+  if([...fc.options].some(o=>o.value===cur))fc.value=cur;renderCoh();
 }
 function renderCoh(){
   const co=document.getElementById('f-co').value,sem=document.getElementById('f-co-s').value;
   const dept=document.getElementById('f-co-d')?document.getElementById('f-co-d').value:'';
   const tb=document.getElementById('co-tb'),em=document.getElementById('co-em');
-  // 无需先选届别，直接显示全部
   let data=[...schD];
   if(co)data=data.filter(r=>r.cc.some(x=>x.cohort===co));
   else if(dept)data=data.filter(r=>r.cc.some(x=>Object.keys(CBD).filter(d=>d===dept).flatMap(d=>CBD[d]).includes(x.cohort)));
@@ -1227,67 +1147,40 @@ function renderSpStu(){
       '<td style="font-size:11px;color:#888">'+(s.rows.filter(r=>r.nt).map(r=>r.nt).join('；')||'—')+'</td></tr>';}).join('');
 }
 function filterSpTchrByDept(){
-  const dept=document.getElementById('f-st-d').value;
-  const el=document.getElementById('f-st');
-  const cur=el.value;
+  const dept=document.getElementById('f-st-d').value;const el=document.getElementById('f-st');const cur=el.value;
   el.innerHTML='<option value="">请选择</option>';
-  const bd={};
-  tchrDrop().filter(t=>t.l>0).forEach(t=>{
-    if(dept&&t.d!==dept)return;
-    if(!bd[t.d])bd[t.d]=[];bd[t.d].push(t);
-  });
-  Object.keys(bd).sort().forEach(d=>{
-    const g=document.createElement('optgroup');g.label=d;
-    bd[d].forEach(t=>{const o=document.createElement('option');o.value=t.n;o.textContent=t.n;g.appendChild(o);});
-    el.appendChild(g);
-  });
-  if([...el.options].some(o=>o.value===cur))el.value=cur;
-  renderSpTchr();
+  const bd={};tchrDrop().filter(t=>t.l>0).forEach(t=>{if(dept&&t.d!==dept)return;if(!bd[t.d])bd[t.d]=[];bd[t.d].push(t);});
+  Object.keys(bd).sort().forEach(d=>{const g=document.createElement('optgroup');g.label=d;bd[d].forEach(t=>{const o=document.createElement('option');o.value=t.n;o.textContent=t.n;g.appendChild(o);});el.appendChild(g);});
+  if([...el.options].some(o=>o.value===cur))el.value=cur;renderSpTchr();
 }
 function renderSpTchr(){
   const tc=document.getElementById('f-st').value;
   const sem=document.getElementById('f-st-s')?document.getElementById('f-st-s').value:'';
   const dept=document.getElementById('f-st-d')?document.getElementById('f-st-d').value:'';
   const tb=document.getElementById('st-tb'),em=document.getElementById('st-em');
-  // 预设显示全部，筛选缩小
   let data=[...spD];
   if(tc)data=data.filter(r=>r.tc===tc);
   if(sem)data=data.filter(r=>r.sem===sem);
-  if(dept&&!tc){
-    // 只选专业时，筛选该专业老师的记录
-    const deptTchrs=T.filter(t=>t.d===dept).map(t=>t.n);
-    data=data.filter(r=>deptTchrs.includes(r.tc));
-  }
+  if(dept&&!tc){const deptTchrs=T.filter(t=>t.d===dept).map(t=>t.n);data=data.filter(r=>deptTchrs.includes(r.tc));}
   if(!data.length){tb.innerHTML='';em.textContent='暂无符合条件的 SG/IS 排课记录';em.style.display='block';return;}
   em.style.display='none';
-  // 按课程+老师分组
   const cm={};
-  data.forEach(r=>{
-    const k=r.co+'|'+r.tc;
-    if(!cm[k])cm[k]={co:r.co,en:r.en,tc:r.tc,stus:[]};
-    cm[k].stus.push({sid:r.sid,mr:r.mr,nm:r.nm,mj:r.mj,sem:r.sem});
-  });
-  let idx=0;let rowNum=0;
+  data.forEach(r=>{const k=r.co+'|'+r.tc;if(!cm[k])cm[k]={co:r.co,en:r.en,tc:r.tc,stus:[]};cm[k].stus.push({sid:r.sid,mr:r.mr,nm:r.nm,mj:r.mj,sem:r.sem});});
+  let rowNum=0;
   tb.innerHTML=Object.values(cm).map(x=>{
-    const n=x.stus.length;
-    rowNum++;
-    return x.stus.map((s,si)=>{
-      idx++;
-      return'<tr>'+
-        (si===0?
-          '<td rowspan="'+n+'" style="color:#bbb;font-size:11px">'+rowNum+'</td>'+
-          '<td rowspan="'+n+'"><span class="badge b0">'+x.co+'</span></td>'+
-          '<td rowspan="'+n+'" style="max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(x.en)+'</td>'+
-          '<td rowspan="'+n+'" style="font-size:12px;white-space:nowrap">'+eh(x.tc)+'</td>'
-        :'')+
-        '<td><code style="font-size:11px">'+eh(s.sid||'—')+'</code></td>'+
-        '<td><span class="badge b4" style="font-size:10px">'+eh(s.mr)+'</span></td>'+
-        '<td style="white-space:nowrap">'+eh(s.nm)+'</td>'+
-        '<td><span class="badge b4">'+eh(s.mj)+'</span></td>'+
-        '<td><span class="badge b4">'+eh(s.sem)+'</span></td>'+
-        (si===0?'<td rowspan="'+n+'"><strong>'+n+'</strong></td>':'')+
-        '</tr>';
-    }).join('');
+    const n=x.stus.length;rowNum++;
+    return x.stus.map((s,si)=>'<tr>'+
+      (si===0?'<td rowspan="'+n+'" style="color:#bbb;font-size:11px">'+rowNum+'</td>'+
+        '<td rowspan="'+n+'"><span class="badge b0">'+x.co+'</span></td>'+
+        '<td rowspan="'+n+'" style="max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(x.en)+'</td>'+
+        '<td rowspan="'+n+'" style="font-size:12px;white-space:nowrap">'+eh(x.tc)+'</td>':'')+
+      '<td><code style="font-size:11px">'+eh(s.sid||'—')+'</code></td>'+
+      '<td><span class="badge b4" style="font-size:10px">'+eh(s.mr)+'</span></td>'+
+      '<td style="white-space:nowrap">'+eh(s.nm)+'</td>'+
+      '<td><span class="badge b4">'+eh(s.mj)+'</span></td>'+
+      '<td><span class="badge b4">'+eh(s.sem)+'</span></td>'+
+      (si===0?'<td rowspan="'+n+'"><strong>'+n+'</strong></td>':'')+
+      '</tr>').join('');
   }).join('');
 }
 function renderAllSum(){renderTchr();renderCoh();renderSpStu();renderSpTchr();}
@@ -1304,29 +1197,21 @@ function semDetail(tc,sem){
 function sdCells(d,bl){
   const s=bl?'border-left:1px solid #eee;':'';
   const hasData=d.wt>0;
-  // 细项 tooltip
-  const tipRows=[
-    ['正常',d.cnt.正常,'b0'],['英文',d.cnt.英文,'b6'],
-    ['实习',d.cnt.实习,'b2'],['SG',d.cnt.SG,'b3'],['Cap',d.cnt.Capstone,'b5']
-  ].filter(([,n])=>n>0)
-   .map(([k,n,b])=>'<div class="tip-row"><span class="badge '+b+'" style="font-size:10px">'+k+'</span><span>'+n+'门</span></div>')
-   .join('');
+  const tipRows=[['正常',d.cnt.正常,'b0'],['英文',d.cnt.英文,'b6'],['实习',d.cnt.实习,'b2'],['SG',d.cnt.SG,'b3'],['Cap',d.cnt.Capstone,'b5']]
+    .filter(([,n])=>n>0).map(([k,n,b])=>'<div class="tip-row"><span class="badge '+b+'" style="font-size:10px">'+k+'</span><span>'+n+'门</span></div>').join('');
   const tip=hasData?'<div class="sem-tip"><div style="color:#888;font-size:11px;margin-bottom:4px">课程细项</div>'+tipRows+'</div>':'';
-  return'<td class="sem-cell" style="text-align:center;'+s+'">'+
-    (hasData?'<span class="sem-val">'+d.wt+'</span>':'<span class="sem-zero">—</span>')+
-    tip+'</td>';
+  return'<td class="sem-cell" style="text-align:center;'+s+'">'+(hasData?'<span class="sem-val">'+d.wt+'</span>':'<span class="sem-zero">—</span>')+tip+'</td>';
 }
 function saveBtec(el){
-  const name=el.dataset.name;
-  const val=el.value;
-  btecD[name]=parseFloat(val)||0;
-  // 更新学年总数显示（不重绘整表，只更新该行的相关 td）
-  const t=T.find(x=>x.n===name);
-  const k=name.replace(/[^a-zA-Z0-9]/g,'_');
-  const d1=semDetail(name,'2569-1'),d2=semDetail(name,'2569-2'),d3=semDetail(name,'2569-3');
-  const totalWt=Math.round((d1.wt+d2.wt+d3.wt)*100)/100;
+  const name=el.dataset.name;const val=el.value;btecD[name]=parseFloat(val)||0;
+  const t=T.find(x=>x.n===name);const k=name.replace(/[^a-zA-Z0-9]/g,'_');
+  const yr=document.getElementById('sta-yr')?document.getElementById('sta-yr').value:'';
+  const totalSems=yr?['1','2','3'].map(s=>yr+'-'+s):['2569-1','2569-2','2569-3','2570-1','2570-2','2570-3'];
+  const totalWt=Math.round(totalSems.reduce((s,sem)=>{const d=semDetail(name,sem);return s+d.wt;},0)*100)/100;
+  const btecCount=totalSems.reduce((s,sem)=>s+schD.filter(r=>r.tc===name&&r.sem===sem&&r.btec).length,0);
+  const btecWt=Math.round(btecCount*0.5*100)/100;
   const btec=btecD[name]||0;
-  const yearTotal=Math.round((totalWt+btec)*100)/100;
+  const yearTotal=Math.round((totalWt+btecWt+btec)*100)/100;
   const pct=t&&t.l>0?Math.round(yearTotal/t.l*100):0;
   const over=t&&t.l>0&&yearTotal>t.l;
   const ytEl=document.getElementById('yt-'+k);if(ytEl)ytEl.textContent=yearTotal;
@@ -1335,90 +1220,102 @@ function saveBtec(el){
   autoSyncBtec();
 }
 let btecSyncTimer=null;
+
+// ── 写入函数（全部改用 POST）────────────────
+async function syncNow(type){
+  if(!SHEETS_URL)return;
+  setSyncStatus('⏳ 正在同步…','');
+  try{
+    const data=type==='schedule'?schD:spD;
+    const res=await fetch(SHEETS_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'write',type,payload:data})
+    });
+    const r=await res.json();
+    const t=new Date().toLocaleTimeString();
+    setSyncStatus(r.success?'✅ 已同步 '+t:'❌ 同步失败',r.success);
+  }catch(e){setSyncStatus('❌ 连线失败',false);}
+}
+
 function autoSyncBtec(){
   if(!SHEETS_URL)return;
   clearTimeout(btecSyncTimer);
   btecSyncTimer=setTimeout(async()=>{
     try{
-      const btecPayload=encodeURIComponent(JSON.stringify(btecD));
-      await fetch(SHEETS_URL+'?action=write&type=btec&payload='+btecPayload,{cache:'no-store'});
+      await fetch(SHEETS_URL,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'write',type:'btec',payload:btecD})
+      });
       setSyncStatus('✅ BTEC 已同步 '+new Date().toLocaleTimeString(),true);
     }catch(e){setSyncStatus('❌ BTEC 同步失败',false);}
   },1500);
 }
+
+async function fetchWrite(type,data){
+  const res=await fetch(SHEETS_URL,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'write',type,payload:data})
+  });
+  const r=await res.json();return r.success;
+}
+
 function renderSta(){
   const yr=document.getElementById('sta-yr')?document.getElementById('sta-yr').value:'';
-  // 根据学年决定显示哪三个学期
   const activeSems=yr?['1','2','3'].map(s=>yr+'-'+s):[];
-  // 动态产生表头
-  // 学年筛选标题已在左上角显示，不需要副标签
   const actT=[...new Set([...schD.map(r=>r.tc),...spD.map(r=>r.tc)])].filter(Boolean).length;
   document.getElementById('sta-m').innerHTML=[
     [schD.length,'排课记录'],[spD.length,'特别排课'],
     [schD.reduce((s,r)=>s+r.cc.length,0),'届别课次'],
     [actT,'参与老师'],[schD.filter(r=>r.type==='Capstone').length,'Capstone课程']
   ].map(([v,l])=>'<div class="mc"><div class="mv">'+v+'</div><div class="ml">'+l+'</div></div>').join('');
-
   const depts=[...new Set(T.filter(t=>t.l>0).map(t=>t.d))].sort();
   let rows='';let hasData=false;
-
   depts.forEach(dept=>{
     const dTchrs=T.filter(t=>t.d===dept&&t.l>0).sort((a,b)=>a.n.localeCompare(b.n));
-    // colspan = 3 + 6*3 + 5 = 26
     rows+='<tr class="dh"><td colspan="'+(8+activeSems.length)+'">▸ '+dept+' · '+dTchrs.length+'位老师</td></tr>';
     let dWt=0;let idx=0;
-
     dTchrs.forEach(t=>{
       idx++;hasData=true;
       const k=t.n.replace(/[^a-zA-Z0-9]/g,'_');
       const semDetails=activeSems.map(s=>semDetail(t.n,s));
-      const d1=semDetails[0],d2=semDetails[1],d3=semDetails[2];
-      // 总计 = 所有已选学年的学期（或全部学年）
+      const d1=semDetails[0]||{wt:0,cnt:{正常:0,英文:0,实习:0,SG:0,Capstone:0}};
+      const d2=semDetails[1]||{wt:0,cnt:{正常:0,英文:0,实习:0,SG:0,Capstone:0}};
+      const d3=semDetails[2]||{wt:0,cnt:{正常:0,英文:0,实习:0,SG:0,Capstone:0}};
       const totalSems=yr?activeSems:['2569-1','2569-2','2569-3','2570-1','2570-2','2570-3'];
       const totalWt=Math.round(totalSems.reduce((s,sem)=>{const d=semDetail(t.n,sem);return s+d.wt;},0)*100)/100;
       const btec=btecD[t.n]||0;
-      // 统计该老师在选定学期内的 BTEC 课程数
       const btecCount=totalSems.reduce((s,sem)=>s+schD.filter(r=>r.tc===t.n&&r.sem===sem&&r.btec).length,0);
       const btecWt=Math.round(btecCount*0.5*100)/100;
       const yearTotal=Math.round((totalWt+btecWt+btec)*100)/100;
       dWt+=yearTotal;
       const pct=t.l>0?Math.round(yearTotal/t.l*100):0;
       const over=t.l>0&&yearTotal>t.l;
-
       rows+='<tr>'+
         '<td style="color:#bbb;font-size:11px">'+idx+'</td>'+
         '<td style="font-size:12px;white-space:nowrap">'+eh(t.n)+'</td>'+
         '<td style="font-size:11px;color:#888;white-space:nowrap">'+t.r+'</td>'+
         sdCells(d1,true)+sdCells(d2,true)+sdCells(d3,true)+
-        // 教学总数
         '<td style="text-align:center;border-left:1px solid #eee;font-weight:500">'+totalWt+'</td>'+
-        // BTEC 栏（显示加权值 门数×0.5）
-        '<td style="text-align:center;background:#F5F4FE;padding:3px">'+
-          (btecCount>0?'<span style="font-size:13px;font-weight:600;color:#534AB7">'+btecWt+'</span>':'<span style="color:#ddd">—</span>')+
-        '</td>'+
-        // LA500 手填
+        '<td style="text-align:center;background:#F5F4FE;padding:3px">'+(btecCount>0?'<span style="font-size:13px;font-weight:600;color:#534AB7">'+btecWt+'</span>':'<span style="color:#ddd">—</span>')+'</td>'+
         '<td style="text-align:center;background:#F5F4FE;padding:3px">'+
           '<input type="number" id="btec-'+k+'" value="'+(btec||'')+'" min="0" step="0.5" '+
           'style="width:58px;font-size:12px;padding:2px 4px;text-align:center;background:#fff;border:0.5px solid #AFA9EC;border-radius:5px" '+
           'onchange="saveBtec(this)" data-name="'+eh(t.n)+'" placeholder="0">'+
         '</td>'+
-        // 学年规定
         '<td style="text-align:center;color:#888;font-size:11px">'+t.l+'</td>'+
-        // 学年总数
         '<td style="text-align:center"><strong id="yt-'+k+'">'+yearTotal+'</strong></td>'+
-        // %
         '<td><span class="badge '+(over?'b3':'b1')+'" id="pct-'+k+'">'+pct+'% / '+t.l+'</span></td>'+
         '</tr>';
     });
-
-    // 专业小计
     rows+='<tr class="dt">'+
       '<td colspan="3" style="text-align:right;padding-right:12px">'+dept+' 小计</td>'+
       '<td colspan="'+activeSems.length+'"></td>'+
       '<td style="text-align:center;border-left:1px solid #eee"><strong>'+Math.round(dWt*100)/100+'</strong></td>'+
       '<td colspan="3"></td></tr>';
   });
-
   if(!yr){document.getElementById('sta-em').textContent='请先选择学年';document.getElementById('sta-em').style.display='block';document.getElementById('sta-tb').innerHTML='';return;}
   if(!hasData){document.getElementById('sta-em').style.display='block';document.getElementById('sta-tb').innerHTML='';return;}
   document.getElementById('sta-em').style.display='none';
@@ -1445,40 +1342,18 @@ function importData(){
   };input.click();
 }
 
-// ── Sheets 同步 ───────────────────────────
+// ── Sheets 同步工具 ───────────────────────
 let syncTimer=null;
 function setSyncStatus(msg,ok){
   const el=document.getElementById('sync-status-bar');
   if(el){el.textContent=msg;el.style.color=ok===true?'#3B6D11':ok===false?'#a32d2d':'#888';}
-  const bar=document.getElementById('sync-bar-inner');
-  if(!bar)return;
+  const bar=document.getElementById('sync-bar-inner');if(!bar)return;
   bar.classList.remove('running','done','fail');
-  if(ok===''){bar.classList.add('running');}
+  if(ok==='')bar.classList.add('running');
   else if(ok===true){bar.classList.add('done');setTimeout(()=>{bar.style.width='0%';},2000);}
   else if(ok===false){bar.classList.add('fail');setTimeout(()=>{bar.style.width='0%';},3000);}
 }
 
-// 自动同步（静默，防抖 2 秒，使用 GET 避免 CORS）
-async function syncNow(type){
-  if(!SHEETS_URL)return;
-  setSyncStatus('⏳ 正在同步…','');
-  try{
-    const data=type==='schedule'?schD:spD;
-    const payload=encodeURIComponent(JSON.stringify(data));
-    const res=await fetch(SHEETS_URL+'?action=write&type='+type+'&payload='+payload,{cache:'no-store'});
-    const r=await res.json();
-    const t=new Date().toLocaleTimeString();
-    setSyncStatus(r.success?'✅ 已同步 '+t:'❌ 同步失败',r.success);
-  }catch(e){setSyncStatus('❌ 连线失败',false);}
-}
-function autoSync(type){
-  if(!SHEETS_URL)return;
-  clearTimeout(syncTimer);
-  setSyncStatus('⏳ 正在同步…','');
-  syncTimer=setTimeout(()=>syncNow(type),500);
-}
-
-// 手动全部同步（有提示，使用 GET）
 async function syncAll(){
   if(!SHEETS_URL){alert('请先配置 SHEETS_URL');return;}
   setSyncStatus('⏳ 正在同步…','');
@@ -1490,13 +1365,7 @@ async function syncAll(){
     alert(r1&&r2?'✅ 两份数据已同步至 Google Sheets！':'❌ 同步失败，请检查连线');
   }catch(e){setSyncStatus('❌ 连线失败',false);alert('❌ 连线失败');}
 }
-async function fetchWrite(type,data){
-  const payload=encodeURIComponent(JSON.stringify(data));
-  const res=await fetch(SHEETS_URL+'?action=write&type='+type+'&payload='+payload,{cache:'no-store'});
-  const r=await res.json();return r.success;
-}
 
-// 手动上传（有提示，使用 GET）
 async function syncToSheets(type){
   if(!SHEETS_URL){alert('请先配置 SHEETS_URL');return;}
   const data=type==='schedule'?schD:spD;
@@ -1508,6 +1377,7 @@ async function syncToSheets(type){
     ok?alert('✅ 上传成功！'):alert('❌ 上传失败');
   }catch(e){setSyncStatus('❌ 连线失败',false);alert('❌ 连线失败');}
 }
+
 async function syncFromSheets(type){
   if(!SHEETS_URL){alert('请先配置 SHEETS_URL');return;}
   try{const res=await fetch(SHEETS_URL+'?action=read&type='+type,{cache:'no-store'});
@@ -1521,25 +1391,12 @@ async function syncFromSheets(type){
 // ── 标签切换 ──────────────────────────────
 function printPanel(id){
   switchTab(id);
-  const titles={
-    'sch':'排课记录',
-    'sp':'IS/SG 排课记录',
-    'sum':'学期总表',
-    'sta':'教学统计 · 各授课老师工作量'
-  };
-  const subtitles={
-    'sch':'课程安排总览',
-    'sp':'IS/SG 特别排课学生名单',
-    'sum':'学期课程综合总表',
-    'sta':'专业分组工作量统计（含BTEC/LA500）'
-  };
+  const titles={sch:'排课记录',sp:'IS/SG 排课记录',sum:'学期总表',sta:'教学统计 · 各授课老师工作量'};
+  const subtitles={sch:'课程安排总览',sp:'IS/SG 特别排课学生名单',sum:'学期课程综合总表',sta:'专业分组工作量统计（含BTEC/LA500）'};
   const now=new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
   const hdr=document.getElementById('print-header');
-  if(hdr){
-    hdr.innerHTML='<h1>2569学年 CIC 本科排课管理系统 · '+titles[id]+'</h1>'+
-      '<p>'+subtitles[id]+'　｜　列印日期：'+now+'　｜　数据来源：Google Sheets</p>';
-  }
-  setTimeout(()=>window.print(), 300);
+  if(hdr){hdr.innerHTML='<h1>2569学年 CIC 本科排课管理系统 · '+titles[id]+'</h1><p>'+subtitles[id]+'　｜　列印日期：'+now+'　｜　数据来源：Google Sheets</p>';}
+  setTimeout(()=>window.print(),300);
 }
 function switchTab(id){
   ['sch','sp','sum','sta'].forEach((x,i)=>{document.querySelectorAll('.tab')[i].classList.toggle('active',x===id);});
@@ -1554,7 +1411,6 @@ function switchSub(id){
 }
 
 // ── 启动 ──────────────────────────────────
-// ── 启动时从 Sheets 载入主数据 ──────────────
 async function loadDataFromSheets(){
   if(!SHEETS_URL)return;
   setSyncStatus('⏳ 正在载入排课数据…','');
@@ -1564,24 +1420,21 @@ async function loadDataFromSheets(){
       fetch(SHEETS_URL+'?action=read&type=special',{cache:'no-store'}).then(r=>r.json()),
       fetch(SHEETS_URL+'?action=read&type=btec',{cache:'no-store'}).then(r=>r.json())
     ]);
-    if(r1.success&&r1.data.length){schD=r1.data;}
-    if(r2.success&&r2.data.length){spD=r2.data;}
-    if(r3.success&&r3.data){btecD=r3.data;}
+    if(r1.success&&r1.data.length)schD=r1.data;
+    if(r2.success&&r2.data.length)spD=r2.data;
+    if(r3.success&&r3.data)btecD=r3.data;
     const t=new Date().toLocaleTimeString();
     setSyncStatus('✅ 数据已载入 '+t,true);
-  }catch(e){
-    setSyncStatus('❌ 载入失败，请手动下载',false);
-  }
+  }catch(e){setSyncStatus('❌ 载入失败，请手动下载',false);}
 }
 
 async function init(){
-  await loadRefFromSheets();  // 1. 载入参考数据（课程/老师/届别）
-  rebuildUI();                // 2. 重建下拉选单
-  updateRefBar();             // 3. 更新状态栏
-  await loadDataFromSheets(); // 4. 载入排课记录 + 特别排课
-  renderSch();renderSp();renderSta(); // 5. 渲染画面
+  await loadRefFromSheets();
+  rebuildUI();
+  updateRefBar();
+  await loadDataFromSheets();
+  renderSch();renderSp();renderSta();
 }
-// init() 由 unlockApp() 触发
 </script>
 </body>
 </html>
