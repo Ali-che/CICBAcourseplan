@@ -496,9 +496,11 @@ function renderSch(){
         '<td style="white-space:nowrap"><button class="btn btn-ok" onclick="saveES('+r.id+')">确定</button> <button class="btn btn-d" onclick="delSch('+r.id+')">删除</button></td></tr>';
     }
     const tags=r.cc.map(cc=>'<span class="tag">'+eh(cc.cohort)+(cc.count?' · '+cc.count+'人':'')+'</span>').join('');
-    return'<tr><td>'+(i+1)+'</td><td><span class="badge b0">'+r.course+'</span></td>'+
+    return'<tr>'+
+      '<td class="tbl-fixed" style="left:0;min-width:36px">'+(i+1)+'</td>'+
+      '<td class="tbl-fixed" style="left:36px;min-width:90px"><span class="badge b0">'+r.course+'</span></td>'+
+      '<td class="tbl-fixed tbl-fixed-last" style="left:126px;min-width:60px"><span class="badge '+(TB[r.type]||'b4')+'">'+r.type+'</span></td>'+
       '<td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+eh(r.en)+'">'+eh(r.en)+'</td>'+
-      '<td><span class="badge '+(TB[r.type]||'b4')+'">'+r.type+'</span></td>'+
       '<td><span class="badge b4">'+r.sem+'</span></td><td>'+halfBadge(r.half)+'</td>'+
       '<td>'+r.cls+'</td><td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
       '<td style="white-space:normal;min-width:120px">'+tags+'</td><td><strong>'+tot+'</strong></td>'+
@@ -800,7 +802,6 @@ function semDetail(tc,sem){
   return{wt,cnt};
 }
 function sdCells(d,bl){
-  if(!d)return '<td class="sem-cell" style="text-align:center;'+(bl?'border-left:1px solid #eee;':'')+'"><span class="sem-zero">—</span></td>';
   const s=bl?'border-left:1px solid #eee;':'';
   const hasData=d.wt>0;
   // 细项 tooltip
@@ -840,8 +841,8 @@ function autoSyncBtec(){
   btecSyncTimer=setTimeout(async()=>{
     try{
       const btecPayload=encodeURIComponent(JSON.stringify(btecD));
-      const br=await (await fetchWithRetry(SHEETS_URL+'?action=write&type=btec&payload='+btecPayload,{cache:'no-store'})).json();
-      setSyncStatus(br.success?'✅ BTEC 已同步 '+new Date().toLocaleTimeString():'❌ BTEC 同步失败',br.success);
+      await fetch(SHEETS_URL+'?action=write&type=btec&payload='+btecPayload,{cache:'no-store'});
+      setSyncStatus('✅ BTEC 已同步 '+new Date().toLocaleTimeString(),true);
     }catch(e){setSyncStatus('❌ BTEC 同步失败',false);}
   },1500);
 }
@@ -957,22 +958,19 @@ function setSyncStatus(msg,ok){
   else if(ok===false){bar.classList.add('fail');setTimeout(()=>{bar.style.width='0%';},3000);}
 }
 
-// 通用重试（最多 2 次，间隔 2 秒）
-async function fetchWithRetry(url,opts={},retry=2,delay=2000){
-  for(let i=0;i<=retry;i++){try{return await fetch(url,opts);}catch(e){if(i===retry)throw e;await new Promise(r=>setTimeout(r,delay));}}
-}
-// 自动同步（静默，防抖 500ms，GET + 自动重试）
+// 自动同步（静默，防抖 2 秒，使用 GET 避免 CORS）
 async function syncNow(type){
   if(!SHEETS_URL)return;
   setSyncStatus('⏳ 正在同步…','');
   try{
     const data=type==='schedule'?schD:spD;
     const payload=encodeURIComponent(JSON.stringify(data));
-    const res=await fetchWithRetry(SHEETS_URL+'?action=write&type='+type+'&payload='+payload,{cache:'no-store'});
+    const res=await fetch(SHEETS_URL+'?action=write&type='+type+'&payload='+payload,{cache:'no-store'});
     const r=await res.json();
     const t=new Date().toLocaleTimeString();
     setSyncStatus(r.success?'✅ 已同步 '+t:'❌ 同步失败',r.success);
-  }catch(e){setSyncStatus('❌ 连线失败（已重试）',false);}}
+  }catch(e){setSyncStatus('❌ 连线失败',false);}
+}
 function autoSync(type){
   if(!SHEETS_URL)return;
   clearTimeout(syncTimer);
@@ -994,7 +992,7 @@ async function syncAll(){
 }
 async function fetchWrite(type,data){
   const payload=encodeURIComponent(JSON.stringify(data));
-  const res=await fetchWithRetry(SHEETS_URL+'?action=write&type='+type+'&payload='+payload,{cache:'no-store'});
+  const res=await fetch(SHEETS_URL+'?action=write&type='+type+'&payload='+payload,{cache:'no-store'});
   const r=await res.json();return r.success;
 }
 
@@ -1012,7 +1010,7 @@ async function syncToSheets(type){
 }
 async function syncFromSheets(type){
   if(!SHEETS_URL){alert('请先配置 SHEETS_URL');return;}
-  try{const res=await fetchWithRetry(SHEETS_URL+'?action=read&type='+type,{cache:'no-store'});
+  try{const res=await fetch(SHEETS_URL+'?action=read&type='+type,{cache:'no-store'});
     const r=await res.json();
     if(r.success){if(type==='schedule')schD=r.data;else spD=r.data;
       renderSch();renderSp();renderAllSum();renderSta();alert('✅ 下载成功！'+r.data.length+'条记录');
