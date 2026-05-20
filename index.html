@@ -1769,13 +1769,13 @@ async function init(){
   document.addEventListener('keydown',e=>{
     if(e.key==='Escape'){closeSchModal();closeSpModal();}
   });
-  // 表头 sticky top = sticky-top 高度
-  function syncTheadTop(){
-    const h=document.getElementById('sticky-bar')?.offsetHeight||0;
-    document.querySelectorAll('thead th').forEach(th=>th.style.top=h+'px');
-  }
   syncTheadTop();
   window.addEventListener('resize',syncTheadTop);
+}
+// ── 表头 sticky 高度同步（全局）────────────
+function syncTheadTop(){
+  const h=document.getElementById('sticky-bar')?document.getElementById('sticky-bar').offsetHeight:0;
+  document.querySelectorAll('thead th').forEach(function(th){th.style.top=h+'px';});
 }
 </script>
 </body>
