@@ -913,8 +913,7 @@ async function loadRefFromSheets(){
   const steps=['正在连接 Google Sheets…','正在加载课程库…','正在加载老师库…','正在加载届别库…'];
   let si=0;const ticker=setInterval(()=>{if(msg)msg.textContent=steps[Math.min(si++,steps.length-1)];},700);
   try{
-    const res=await fetch(SHEETS_URL+'?action=readRef',{cache:'no-store'});
-    const data=await res.json();clearInterval(ticker);
+    const data=await gasGet({action:'readRef'});clearInterval(ticker);
     if(data.courses&&data.courses.length)C=data.courses;
     if(data.teachers&&data.teachers.length)T=data.teachers;
     if(data.cohorts&&data.cohorts.length){
@@ -1564,47 +1563,45 @@ function saveBtec(el){
   if(pEl){pEl.textContent=pct+'% / '+(t?t.l:'—');pEl.className='badge '+(over?'b3':'b1');}
   autoSyncBtec();
 }
-let btecSyncTimer=null;
+// ══ 核心同步：全部 GET，彻底避免 CORS preflight ══
 
-// ── 写入函数（全部改用 POST）────────────────
+async function gasGet(params){
+  const qs=Object.entries(params)
+    .map(([k,v])=>k+'='+encodeURIComponent(typeof v==='object'?JSON.stringify(v):String(v)))
+    .join('&');
+  const res=await fetch(SHEETS_URL+'?'+qs,{cache:'no-store'});
+  return res.json();
+}
+
+async function fetchWrite(type,data){
+  if(!SHEETS_URL)return false;
+  try{
+    const r=await gasGet({action:'write',type:type,payload:data});
+    return r.success===true;
+  }catch(e){return false;}
+}
+
 async function syncNow(type){
   if(!SHEETS_URL)return;
   setSyncStatus('⏳ 正在同步…','');
   try{
     const data=type==='schedule'?schD:spD;
-    const res=await fetch(SHEETS_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'write',type,payload:data})
-    });
-    const r=await res.json();
+    const ok=await fetchWrite(type,data);
     const t=new Date().toLocaleTimeString();
-    setSyncStatus(r.success?'✅ 已同步 '+t:'❌ 同步失败',r.success);
+    setSyncStatus(ok?'✅ 已同步 '+t:'❌ 同步失败',ok);
   }catch(e){setSyncStatus('❌ 连线失败',false);}
 }
 
+let btecSyncTimer=null;
 function autoSyncBtec(){
   if(!SHEETS_URL)return;
   clearTimeout(btecSyncTimer);
   btecSyncTimer=setTimeout(async()=>{
     try{
-      await fetch(SHEETS_URL,{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({action:'write',type:'btec',payload:btecD})
-      });
-      setSyncStatus('✅ BTEC 已同步 '+new Date().toLocaleTimeString(),true);
+      const ok=await fetchWrite('btec',btecD);
+      setSyncStatus(ok?'✅ BTEC 已同步 '+new Date().toLocaleTimeString():'❌ BTEC 同步失败',ok);
     }catch(e){setSyncStatus('❌ BTEC 同步失败',false);}
   },1500);
-}
-
-async function fetchWrite(type,data){
-  const res=await fetch(SHEETS_URL,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({action:'write',type,payload:data})
-  });
-  const r=await res.json();return r.success;
 }
 
 function renderSta(){
@@ -1725,8 +1722,7 @@ async function syncToSheets(type){
 
 async function syncFromSheets(type){
   if(!SHEETS_URL){alert('请先配置 SHEETS_URL');return;}
-  try{const res=await fetch(SHEETS_URL+'?action=read&type='+type,{cache:'no-store'});
-    const r=await res.json();
+  try{const r=await gasGet({action:'read',type:type});
     if(r.success){if(type==='schedule')schD=r.data;else spD=r.data;
       renderSch();renderSp();renderAllSum();renderSta();alert('✅ 下载成功！'+r.data.length+'条记录');
     }else alert('❌ 下载失败：'+r.error);
@@ -1854,9 +1850,9 @@ async function loadDataFromSheets(){
   setSyncStatus('⏳ 正在载入排课数据…','');
   try{
     const [r1,r2,r3]=await Promise.all([
-      fetch(SHEETS_URL+'?action=read&type=schedule',{cache:'no-store'}).then(r=>r.json()),
-      fetch(SHEETS_URL+'?action=read&type=special',{cache:'no-store'}).then(r=>r.json()),
-      fetch(SHEETS_URL+'?action=read&type=btec',{cache:'no-store'}).then(r=>r.json())
+      gasGet({action:'read',type:'schedule'}),
+      gasGet({action:'read',type:'special'}),
+      gasGet({action:'read',type:'btec'})
     ]);
     if(r1.success&&r1.data.length)schD=r1.data;
     if(r2.success&&r2.data.length)spD=r2.data;
