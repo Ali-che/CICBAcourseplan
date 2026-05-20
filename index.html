@@ -291,52 +291,63 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 
 <!-- ══ 排课表 ═══════════════════════════════ -->
 <div id="panel-sch" class="panel active">
-  <div class="card">
-    <div class="ct">新增排课</div>
-    <div class="g4">
-      <div class="fg"><label>课程代码</label>
-        <input id="s-co" list="co-dl" placeholder="输入代码，如 KL305" oninput="lookupC('s-co','s-en','s-tp')" autocomplete="off">
-        <datalist id="co-dl"></datalist>
+  <div class="card" style="padding:0;overflow:hidden">
+    <!-- 折叠标题行 -->
+    <div id="add-sch-hdr" onclick="toggleAddSch()" style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.25rem;cursor:pointer;user-select:none;background:#fff;border-radius:10px;transition:background .15s" onmouseover="this.style.background='#f8f8ff'" onmouseout="this.style.background='#fff'">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;font-weight:600;color:#534AB7;text-transform:uppercase;letter-spacing:.06em">＋ 新增排课</span>
+        <span id="add-sch-hint" style="font-size:11px;color:#bbb">（点击展开）</span>
       </div>
-      <div class="fg"><label>课程英文名（自动）</label><input id="s-en" readonly placeholder="自动显示"></div>
-      <div class="fg"><label>学期</label>
-        <select id="s-sem"><optgroup label="─ 2569 ─"><option>2569-1</option><option>2569-2</option><option>2569-3</option></optgroup><optgroup label="─ 2570 ─"><option>2570-1</option><option>2570-2</option><option>2570-3</option></optgroup></select>
-      </div>
-      <div class="fg"><label>上下半学期</label>
-        <select id="s-half"><option value="">— 待定 —</option><option value="全学期">全学期</option><option value="上半学期">上半</option><option value="下半学期">下半</option></select>
-      </div>
+      <span id="add-sch-arrow" style="font-size:13px;color:#aaa;transition:transform .2s">▼</span>
     </div>
-    <div class="g4">
-      <div class="fg"><label>课程类型（自动检测）</label>
-        <select id="s-tp">
-          <option value="正常">正常 ×1.0</option><option value="英文">英文 ×0.5</option>
-          <option value="实习">实习 ×1.0</option><option value="SG">SG/IS ×0.167</option><option value="Capstone">Capstone ×0.75</option>
-        </select>
+    <!-- 可折叠内容 -->
+    <div id="add-sch-body" style="display:none;padding:0 1.25rem 1.25rem;border-top:0.5px solid #f0f0f0">
+      <div style="height:.875rem"></div>
+      <div class="g4">
+        <div class="fg"><label>课程代码</label>
+          <input id="s-co" list="co-dl" placeholder="输入代码，如 KL305" oninput="lookupC('s-co','s-en','s-tp')" autocomplete="off">
+          <datalist id="co-dl"></datalist>
+        </div>
+        <div class="fg"><label>课程英文名（自动）</label><input id="s-en" readonly placeholder="自动显示"></div>
+        <div class="fg"><label>学期</label>
+          <select id="s-sem"><optgroup label="─ 2569 ─"><option>2569-1</option><option>2569-2</option><option>2569-3</option></optgroup><optgroup label="─ 2570 ─"><option>2570-1</option><option>2570-2</option><option>2570-3</option></optgroup></select>
+        </div>
+        <div class="fg"><label>上下半学期</label>
+          <select id="s-half"><option value="">— 待定 —</option><option value="全学期">全学期</option><option value="上半学期">上半</option><option value="下半学期">下半</option></select>
+        </div>
       </div>
-      <div class="fg"><label>班级代码</label>
-        <select id="s-cls" onchange="autoType('s-co','s-cls','s-tp')">
-          <option value="">请选择</option>
-          <optgroup label="普通"><option>601</option><option>602</option><option>603</option><option>604</option><option>605</option></optgroup>
-          <optgroup label="实习"><option>331</option><option>332</option><option>333</option></optgroup>
-          <optgroup label="Capstone"><option>Capstone-971</option><option>Capstone-972</option><option>Capstone-973</option><option>Capstone-974</option><option>Capstone-975</option><option>Capstone-976</option><option>Capstone-977</option><option>Capstone-978</option></optgroup>
-        </select>
+      <div class="g4">
+        <div class="fg"><label>课程类型（自动检测）</label>
+          <select id="s-tp">
+            <option value="正常">正常 ×1.0</option><option value="英文">英文 ×0.5</option>
+            <option value="实习">实习 ×1.0</option><option value="SG">SG/IS ×0.167</option><option value="Capstone">Capstone ×0.75</option>
+          </select>
+        </div>
+        <div class="fg"><label>班级代码</label>
+          <select id="s-cls" onchange="autoType('s-co','s-cls','s-tp')">
+            <option value="">请选择</option>
+            <optgroup label="普通"><option>601</option><option>602</option><option>603</option><option>604</option><option>605</option></optgroup>
+            <optgroup label="实习"><option>331</option><option>332</option><option>333</option></optgroup>
+            <optgroup label="Capstone"><option>Capstone-971</option><option>Capstone-972</option><option>Capstone-973</option><option>Capstone-974</option><option>Capstone-975</option><option>Capstone-976</option><option>Capstone-977</option><option>Capstone-978</option></optgroup>
+          </select>
+        </div>
+        <div class="fg"><label>授课老师</label><select id="s-tc"><option value="">请选择</option></select></div>
+        <div class="fg"><label>备注</label><input id="s-nt" placeholder="选填"></div>
       </div>
-      <div class="fg"><label>授课老师</label><select id="s-tc"><option value="">请选择</option></select></div>
-      <div class="fg"><label>备注</label><input id="s-nt" placeholder="选填"></div>
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:6px 10px;border:0.5px solid #ddd;border-radius:8px;background:#fafafa">
-        <input type="checkbox" id="s-btec" style="width:auto;cursor:pointer">
-        <span>📋 BTEC 课程</span>
-      </label>
-      <button class="btn btn-p" onclick="addSch()">＋ 添加排课</button>
-    </div>
-    <div class="es-sec">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px">
-        <span style="font-size:12px;font-weight:500">届别 · 各届人数</span>
-        <div style="display:flex;gap:4px;flex-wrap:wrap" id="dc-wrap"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:6px 10px;border:0.5px solid #ddd;border-radius:8px;background:#fafafa">
+          <input type="checkbox" id="s-btec" style="width:auto;cursor:pointer">
+          <span>📋 BTEC 课程</span>
+        </label>
+        <button class="btn btn-p" onclick="addSch()">＋ 添加排课</button>
       </div>
-      <div class="eg" id="s-eg"></div>
+      <div class="es-sec">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px">
+          <span style="font-size:12px;font-weight:500">届别 · 各届人数</span>
+          <div style="display:flex;gap:4px;flex-wrap:wrap" id="dc-wrap"></div>
+        </div>
+        <div class="eg" id="s-eg"></div>
+      </div>
     </div>
   </div>
   <div class="card">
@@ -1074,7 +1085,7 @@ function addSch(){
   const dup=schD.find(r=>r.course===course&&r.cls===cls&&r.sem===sem&&r.half===half);
   if(dup){const go=confirm('⚠️ 重复提醒\n\n「'+course+'」已在 '+sem+' '+half+' '+cls+' 班级新增过一次。\n\n确定要继续新增吗？');if(!go)return;}
   schD.push({id:Date.now(),course,en,sem,half,type,cls,tc,cc,nt,btec,editing:false});
-  clearSchF();renderSch();renderAllSum();renderSta();syncNow('schedule');
+  clearSchF();toggleAddSch(false);renderSch();renderAllSum();renderSta();syncNow('schedule');
 }
 function delSch(id){
   id=String(id);const r=schD.find(x=>String(x.id)===id);if(!r)return;
@@ -1856,6 +1867,27 @@ async function init(){
   });
   syncTblHeight();
   window.addEventListener('resize',syncTblHeight);
+  initAddSchState();
+}
+
+// ── 新增排课折叠 ──────────────────────────
+function toggleAddSch(forceOpen){
+  const body=document.getElementById('add-sch-body');
+  const arrow=document.getElementById('add-sch-arrow');
+  const hint=document.getElementById('add-sch-hint');
+  if(!body)return;
+  const isOpen=body.style.display!=='none';
+  const open=(forceOpen!==undefined)?forceOpen:!isOpen;
+  body.style.display=open?'block':'none';
+  if(arrow)arrow.style.transform=open?'rotate(180deg)':'rotate(0deg)';
+  if(hint)hint.textContent=open?'（点击收起）':'（点击展开）';
+  try{localStorage.setItem('cic_add_sch_open',open?'1':'0');}catch(e){}
+  if(open)setTimeout(syncTblHeight,50);
+}
+function initAddSchState(){
+  let open=false;
+  try{open=localStorage.getItem('cic_add_sch_open')==='1';}catch(e){}
+  if(open)toggleAddSch(true);
 }
 
 // ── 表格区高度动态计算（全局）──────────────
