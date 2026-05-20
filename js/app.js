@@ -838,9 +838,11 @@ function autoSyncBtec(){
   clearTimeout(btecSyncTimer);
   btecSyncTimer=setTimeout(async()=>{
     try{
-      const btecPayload=encodeURIComponent(JSON.stringify(btecD));
-      await fetch(SHEETS_URL+'?action=write&type=btec&payload='+btecPayload,{cache:'no-store'});
-      setSyncStatus('✅ BTEC 已同步 '+new Date().toLocaleTimeString(),true);
+      const res=await fetch(SHEETS_URL,{method:'POST',cache:'no-store',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'write',type:'btec',payload:btecD})});
+      const r=await res.json();
+      setSyncStatus(r.success?'✅ BTEC 已同步 '+new Date().toLocaleTimeString():'❌ BTEC 同步失败',r.success);
     }catch(e){setSyncStatus('❌ BTEC 同步失败',false);}
   },1500);
 }
@@ -962,8 +964,9 @@ async function syncNow(type){
   setSyncStatus('⏳ 正在同步…','');
   try{
     const data=type==='schedule'?schD:spD;
-    const payload=encodeURIComponent(JSON.stringify(data));
-    const res=await fetch(SHEETS_URL+'?action=write&type='+type+'&payload='+payload,{cache:'no-store'});
+    const res=await fetch(SHEETS_URL,{method:'POST',cache:'no-store',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'write',type,payload:data})});
     const r=await res.json();
     const t=new Date().toLocaleTimeString();
     setSyncStatus(r.success?'✅ 已同步 '+t:'❌ 同步失败',r.success);
@@ -976,7 +979,7 @@ function autoSync(type){
   syncTimer=setTimeout(()=>syncNow(type),500);
 }
 
-// 手动全部同步（有提示，使用 GET）
+// 手动全部同步
 async function syncAll(){
   if(!SHEETS_URL){alert('请先配置 SHEETS_URL');return;}
   setSyncStatus('⏳ 正在同步…','');
@@ -989,12 +992,13 @@ async function syncAll(){
   }catch(e){setSyncStatus('❌ 连线失败',false);alert('❌ 连线失败');}
 }
 async function fetchWrite(type,data){
-  const payload=encodeURIComponent(JSON.stringify(data));
-  const res=await fetch(SHEETS_URL+'?action=write&type='+type+'&payload='+payload,{cache:'no-store'});
+  const res=await fetch(SHEETS_URL,{method:'POST',cache:'no-store',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'write',type,payload:data})});
   const r=await res.json();return r.success;
 }
 
-// 手动上传（有提示，使用 GET）
+// 手动上传
 async function syncToSheets(type){
   if(!SHEETS_URL){alert('请先配置 SHEETS_URL');return;}
   const data=type==='schedule'?schD:spD;
