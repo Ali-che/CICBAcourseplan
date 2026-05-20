@@ -167,3 +167,46 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 .sync-bar-inner.done{background:#3B6D11;width:100%}
 .sync-bar-inner.fail{background:#a32d2d;width:100%}
 @keyframes syncrun{0%{width:0%;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0%;margin-left:100%}}
+/* ── 表格固定栏 + 滚动阴影 ── */
+.tbl-wrap{
+  position:relative;
+  overflow-x:auto;
+}
+/* 左右阴影遮罩 */
+.tbl-wrap::before,
+.tbl-wrap::after{
+  content:'';
+  position:absolute;
+  top:0;bottom:0;
+  width:32px;
+  pointer-events:none;
+  z-index:10;
+  transition:opacity .2s;
+}
+.tbl-wrap::before{
+  left:0;
+  background:linear-gradient(to right,rgba(83,74,183,.13),transparent);
+}
+.tbl-wrap::after{
+  right:0;
+  background:linear-gradient(to left,rgba(83,74,183,.13),transparent);
+}
+/* 固定栏样式 */
+.tbl-fixed{
+  position:sticky;
+  z-index:3;
+  background:#fff;
+}
+.tbl-fixed-th{
+  position:sticky;
+  z-index:4;
+  background:#534AB7;
+}
+/* 固定栏右侧阴影线 */
+.tbl-fixed-last,
+.tbl-fixed-th-last{
+  box-shadow:2px 0 6px rgba(0,0,0,.08);
+}
+tr.ed .tbl-fixed{background:#EEEDFE;}
+tr:not(.ed):not(.dh):not(.dt):hover .tbl-fixed{background:#fafafa;}
+tr.dh .tbl-fixed{background:#534AB7;}
