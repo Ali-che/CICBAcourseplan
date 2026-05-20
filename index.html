@@ -112,32 +112,77 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 /* ── 列印样式 ── */
 @media print{
+  /* ── 隐藏非内容元素 ── */
   .no-print,
   .header,.ref-bar,.tabs,.stabs,.fbar,
   .sechdr button,.sechdr .btn,.sechdr select,
   .btn,.btn-sm,.btn-p,.btn-e,.btn-ok,.btn-d,
-  .es-sec,.empty,
-  .sem-tip{display:none!important}
+  .es-sec,.empty,.sem-tip,
+  .modal-overlay{display:none!important}
   .panel{display:none!important}
   .panel.active{display:block!important}
   .spanel{display:none!important}
   .spanel.active{display:block!important}
-  body{background:#fff;font-size:10.5px;color:#111;margin:0}
-  .app{max-width:100%;padding:0;margin:0}
-  .print-header{display:block!important;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #534AB7}
-  .print-header h1{font-size:16px;font-weight:700;color:#111}
-  .print-header p{font-size:11px;color:#666;margin-top:3px}
-  .card{box-shadow:none!important;border:0.5px solid #ccc!important;margin-bottom:10px;padding:8px 10px;page-break-inside:avoid}
-  .ct{font-size:10px;margin-bottom:6px}
-  table{width:100%;font-size:10px;border-collapse:collapse}
-  th{background:#534AB7!important;color:#fff!important;padding:5px 7px!important;font-size:10px!important;
-    -webkit-print-color-adjust:exact;print-color-adjust:exact}
-  td{padding:4px 7px!important;border-bottom:0.5px solid #eee}
-  tr.dh td{background:#534AB7!important;color:#fff!important;
-    -webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+  /* ── A4 直式基础 ── */
+  html,body{
+    margin:0!important;padding:0!important;
+    background:#fff!important;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    font-size:9.5pt;color:#111;
+    width:210mm;
+  }
+
+  /* ── 内容居中在 A4 正中 ── */
+  .app{
+    width:176mm;          /* A4 宽 210mm 减去左右各 17mm */
+    margin:0 auto!important;
+    padding:0!important;
+    max-width:176mm!important;
+  }
+
+  /* ── 列印标题 ── */
+  .print-header{
+    display:block!important;
+    margin-bottom:10pt;
+    padding-bottom:6pt;
+    border-bottom:1.5pt solid #534AB7;
+    text-align:center;
+  }
+  .print-header h1{font-size:13pt;font-weight:700;color:#111;margin-bottom:3pt}
+  .print-header p{font-size:8.5pt;color:#666}
+
+  /* ── 卡片 ── */
+  .card{
+    box-shadow:none!important;
+    border:0.5pt solid #ccc!important;
+    margin-bottom:8pt;
+    padding:6pt 8pt;
+    page-break-inside:avoid;
+    border-radius:0!important;
+  }
+  .ct{font-size:8pt;margin-bottom:5pt}
+
+  /* ── 表格 ── */
+  table{width:100%;font-size:8pt;border-collapse:collapse}
+  th{
+    background:#534AB7!important;color:#fff!important;
+    padding:4pt 6pt!important;font-size:8pt!important;font-weight:600;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+    white-space:nowrap;
+  }
+  td{padding:3pt 5pt!important;border-bottom:0.5pt solid #eee;vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tr.dh td{
+    background:#534AB7!important;color:#fff!important;font-weight:600;
+    padding:5pt 6pt!important;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
   tr.dt td{background:#F5F4FE!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   tr.ed td{display:none}
-  .badge{-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:1px 5px;font-size:9px}
+
+  /* ── Badge 保色 ── */
+  .badge{-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:1pt 4pt;font-size:7.5pt;border-radius:10pt}
   .b0{background:#E6F1FB!important;color:#0C447C!important}
   .b1{background:#EAF3DE!important;color:#3B6D11!important}
   .b2{background:#FAEEDA!important;color:#854F0B!important}
@@ -145,15 +190,34 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   .b4{background:#F1EFE8!important;color:#444441!important}
   .b5{background:#EEEDFE!important;color:#3C3489!important}
   .b6{background:#E1F5EE!important;color:#0F6E56!important}
-  .mgrid{display:flex!important;gap:6px;flex-wrap:wrap;margin-bottom:8px}
-  .mc{border:0.5px solid #ddd!important;padding:6px 10px!important;border-radius:5px}
-  .mv{font-size:16px!important}
-  .ml{font-size:9px!important}
+  .tag{font-size:7.5pt;padding:0 4pt}
+
+  /* ── 统计卡片 ── */
+  .mgrid{display:flex!important;gap:5pt;flex-wrap:wrap;margin-bottom:6pt}
+  .mc{border:0.5pt solid #ddd!important;padding:4pt 8pt!important;border-radius:4pt!important;text-align:center}
+  .mv{font-size:13pt!important;color:#534AB7!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .ml{font-size:7.5pt!important;color:#888!important}
+
+  /* ── 分页控制 ── */
   .card{page-break-inside:avoid}
+  tr.dh{page-break-after:avoid}
+
+  /* ── A4 直式页面设置 ── */
   @page{
-    margin:15mm 12mm 15mm 12mm;
-    @top-center{content:'2569学年 CIC 本科排课管理系统'}
-    @bottom-right{content:'第 ' counter(page) ' 页，共 ' counter(pages) ' 页'}
+    size:A4 portrait;
+    margin:17mm 17mm 20mm 17mm;
+    @top-center{
+      content:'CIC 本科排课管理系统 · 2569 学年';
+      font-size:8pt;color:#888;
+    }
+    @bottom-left{
+      content:'列印日期：' date(now,'YYYY-MM-DD');
+      font-size:7.5pt;color:#aaa;
+    }
+    @bottom-right{
+      content:'第 ' counter(page) ' 页，共 ' counter(pages) ' 页';
+      font-size:7.5pt;color:#aaa;
+    }
   }
 }
 .print-header{display:none}
