@@ -78,6 +78,22 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 .sem-val{font-size:15px;font-weight:600;color:#534AB7}
 .sem-zero{font-size:13px;color:#ccc}
 .tip-row{display:flex;gap:8px;align-items:center;margin-top:5px;font-size:12px}
+/* ── 编辑 Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal-box{background:#fff;border-radius:14px;width:100%;max-width:780px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.22);transform:translateY(12px);transition:transform .2s}
+.modal-overlay.open .modal-box{transform:translateY(0)}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:.875rem 1.25rem;border-bottom:0.5px solid #e0e0e0;flex-shrink:0}
+.modal-hdr h3{font-size:14px;font-weight:600;color:#111}
+.modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:#aaa;line-height:1;padding:2px 6px;border-radius:6px}
+.modal-close:hover{background:#f0f0f0;color:#111}
+.modal-body{overflow-y:auto;padding:1.125rem 1.25rem;flex:1}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;padding:.875rem 1.25rem;border-top:0.5px solid #e0e0e0;flex-shrink:0}
+.modal-sec{font-size:10px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.06em;margin:1rem 0 .5rem}
+.modal-sec:first-child{margin-top:0}
+.modal-coh{border:0.5px solid #ddd;border-radius:8px;padding:.75rem;background:#fafafa}
+.modal-coh-chips{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.modal-coh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:5px;max-height:180px;overflow-y:auto}
 /* ── PIN 码锁定画面 ── */
 .pin-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#534AB7 0%,#3C3489 100%);
   display:flex;align-items:center;justify-content:center;z-index:9999}
@@ -478,6 +494,115 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 </div>
 </div><!-- /.app -->
 
+<!-- ══ 排课编辑 Modal ═══════════════════════ -->
+<div class="modal-overlay" id="sch-modal" onclick="if(event.target===this)closeSchModal()">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3 id="sch-modal-title">✏️ 修改排课</h3>
+      <button class="modal-close" onclick="closeSchModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-sec">基本信息</div>
+      <div class="g4">
+        <div class="fg"><label>课程代码</label>
+          <input id="m-co" list="co-dl" placeholder="课程代码" oninput="mLookupC()" autocomplete="off" style="text-transform:uppercase">
+        </div>
+        <div class="fg"><label>课程英文名（自动）</label><input id="m-en" readonly placeholder="自动显示"></div>
+        <div class="fg"><label>课程类型</label>
+          <select id="m-tp">
+            <option value="正常">正常 ×1.0</option><option value="英文">英文 ×0.5</option>
+            <option value="实习">实习 ×1.0</option><option value="SG">SG/IS ×0.167</option><option value="Capstone">Capstone ×0.75</option>
+          </select>
+        </div>
+        <div class="fg"><label>BTEC 课程</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:7px 10px;border:0.5px solid #ddd;border-radius:7px;background:#f8f8f8;height:36px">
+            <input type="checkbox" id="m-btec" style="width:auto;cursor:pointer"><span>BTEC</span>
+          </label>
+        </div>
+      </div>
+      <div class="g4">
+        <div class="fg"><label>学期</label>
+          <select id="m-sem">
+            <optgroup label="─ 2569 ─"><option>2569-1</option><option>2569-2</option><option>2569-3</option></optgroup>
+            <optgroup label="─ 2570 ─"><option>2570-1</option><option>2570-2</option><option>2570-3</option></optgroup>
+          </select>
+        </div>
+        <div class="fg"><label>上下半学期</label>
+          <select id="m-half">
+            <option value="">— 待定 —</option><option value="全学期">全学期</option>
+            <option value="上半学期">上半</option><option value="下半学期">下半</option>
+          </select>
+        </div>
+        <div class="fg"><label>班级代码</label>
+          <select id="m-cls">
+            <optgroup label="普通"><option>601</option><option>602</option><option>603</option><option>604</option><option>605</option></optgroup>
+            <optgroup label="实习"><option>331</option><option>332</option><option>333</option></optgroup>
+            <optgroup label="Capstone"><option>Capstone-971</option><option>Capstone-972</option><option>Capstone-973</option><option>Capstone-974</option><option>Capstone-975</option><option>Capstone-976</option><option>Capstone-977</option><option>Capstone-978</option></optgroup>
+          </select>
+        </div>
+        <div class="fg"><label>授课老师</label><select id="m-tc"><option value="">请选择</option></select></div>
+      </div>
+      <div class="fg" style="margin-bottom:12px"><label>备注</label><input id="m-nt" placeholder="选填"></div>
+      <div class="modal-sec">届别 · 各届人数</div>
+      <div class="modal-coh">
+        <div class="modal-coh-chips" id="m-dept-chips"></div>
+        <div class="modal-coh-grid" id="m-coh-grid"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-d" id="m-del-btn" onclick="mDelSch()">🗑 删除此排课</button>
+      <button class="btn" onclick="closeSchModal()">取消</button>
+      <button class="btn btn-p" onclick="mSaveES()">✓ 储存变更</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ IS/SG 编辑 Modal ════════════════════ -->
+<div class="modal-overlay" id="sp-modal" onclick="if(event.target===this)closeSpModal()">
+  <div class="modal-box" style="max-width:640px">
+    <div class="modal-hdr">
+      <h3>✏️ 修改 IS/SG 排课</h3>
+      <button class="modal-close" onclick="closeSpModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-sec">学生信息</div>
+      <div class="g4">
+        <div class="fg"><label>学号</label><input id="mp-id" placeholder="学号"></div>
+        <div class="fg"><label>称谓</label>
+          <select id="mp-mr"><option value="Mr.">Mr.</option><option value="Ms.">Ms.</option></select>
+        </div>
+        <div class="fg"><label>学生姓名（英文）</label><input id="mp-nm" placeholder="English name only" oninput="enOnly(this)"></div>
+        <div class="fg"><label>学生专业</label><select id="mp-mj"><option value="">请选择</option></select></div>
+      </div>
+      <div class="modal-sec">课程信息</div>
+      <div class="g4">
+        <div class="fg"><label>课程代码</label>
+          <input id="mp-co" list="co-dl" placeholder="课程代码" oninput="mpLookupC()" autocomplete="off" style="text-transform:uppercase">
+        </div>
+        <div class="fg"><label>课程英文名（自动）</label><input id="mp-en" readonly placeholder="自动显示"></div>
+        <div class="fg"><label>班级代码</label>
+          <select id="mp-cls"><option value="IS-222">IS-222</option><option value="SG-222">SG-222</option></select>
+        </div>
+        <div class="fg"><label>学期</label>
+          <select id="mp-sem">
+            <optgroup label="─ 2569 ─"><option>2569-1</option><option>2569-2</option><option>2569-3</option></optgroup>
+            <optgroup label="─ 2570 ─"><option>2570-1</option><option>2570-2</option><option>2570-3</option></optgroup>
+          </select>
+        </div>
+      </div>
+      <div class="g3">
+        <div class="fg"><label>授课老师</label><select id="mp-tc"><option value="">请选择</option></select></div>
+        <div class="fg" style="grid-column:span 2"><label>备注</label><input id="mp-nt" placeholder="选填"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-d" id="mp-del-btn" onclick="mpDelSp()">🗑 删除此排课</button>
+      <button class="btn" onclick="closeSpModal()">取消</button>
+      <button class="btn btn-p" onclick="mpSaveESp()">✓ 储存变更</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── PIN 码验证 ──────────────────────────────
 const PIN = 'CICBA2569';
@@ -532,7 +657,7 @@ window.addEventListener('DOMContentLoaded', checkAuth);
 // ╔══════════════════════════════════════════════════════════╗
 // ║  配置区                                                   ║
 // ╚══════════════════════════════════════════════════════════╝
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwu07GbhASaGaEKM8A6xtAEqkgg6AOuWvTII0jn68sHTlPEwjTrIo0lmSJltjfJUhvF/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwYcCOKES7aSx4vxZdi3WJEN1KZx-wWgKcVCr94EwLh-qvR7h-P7WIQFsiHryAc0vHU/exec';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║  内建预设参考数据                                          ║
@@ -900,17 +1025,134 @@ function delSch(id){
   renderSch();renderAllSum();renderSta();
   syncNow('schedule').catch(()=>alert('⚠️ 网页已删除，但 Sheets 同步失败，请手动按「↑ 上传」'));
 }
-function startES(id){id=String(id);schD.forEach(r=>r.editing=(String(r.id)===id));renderSch();}
-function saveES(id){
-  id=String(id);const r=schD.find(x=>String(x.id)===id);if(!r)return;
-  const g=(p)=>{const el=document.getElementById(p+id);return el?el.value:null;};
-  if(g('esc-'))r.course=g('esc-').toUpperCase();
-  const f=C.find(x=>x.c===r.course);if(f)r.en=f.en;
-  if(g('ess-'))r.sem=g('ess-');if(g('esh-'))r.half=g('esh-');
-  if(g('est-'))r.type=g('est-');if(g('escl-'))r.cls=g('escl-');
-  if(g('estc-'))r.tc=g('estc-');if(g('esnt-')!==null)r.nt=g('esnt-');
-  r.cc=collectEC(id);r.editing=false;renderSch();renderAllSum();renderSta();syncNow('schedule');
+// ── 排课 Modal 逻辑 ───────────────────────
+let _mId=null; // 当前编辑的排课 id
+let _mSelDpts=new Set();
+
+function startES(id){
+  id=String(id);
+  const r=schD.find(x=>String(x.id)===id);if(!r)return;
+  _mId=id;_mSelDpts=new Set();
+
+  // 填入基本字段
+  document.getElementById('m-co').value=r.course;
+  document.getElementById('m-en').value=r.en||'';
+  document.getElementById('m-tp').value=r.type||'正常';
+  document.getElementById('m-sem').value=r.sem;
+  document.getElementById('m-half').value=r.half||'';
+  document.getElementById('m-cls').value=r.cls;
+  document.getElementById('m-nt').value=r.nt||'';
+  document.getElementById('m-btec').checked=!!(r.btec===true||r.btec==='TRUE'||r.btec==='true');
+
+  // 老师下拉
+  const mtc=document.getElementById('m-tc');
+  mtc.innerHTML=tchrOptHTML(r.tc,'— 选择老师 —');
+  mtc.value=r.tc||'';
+
+  // 届别 chips + grid
+  mBuildDeptChips();
+  mBuildCohGrid(r.cc);
+
+  document.getElementById('sch-modal-title').textContent='✏️ 修改排课 · '+r.course;
+  document.getElementById('sch-modal').classList.add('open');
+  document.body.style.overflow='hidden';
 }
+
+function mLookupC(){
+  const code=document.getElementById('m-co').value.trim().toUpperCase();
+  const f=C.find(x=>x.c===code);
+  document.getElementById('m-en').value=f?f.en:'';
+}
+
+function mBuildDeptChips(){
+  const wrap=document.getElementById('m-dept-chips');wrap.innerHTML='';
+  Object.keys(CBD).forEach(d=>{
+    const b=document.createElement('button');
+    b.className='ei-chip'+(_mSelDpts.has(d)?' on':'');
+    b.style.background=_mSelDpts.has(d)?'#534AB7':'';
+    b.style.color=_mSelDpts.has(d)?'#fff':'';
+    b.textContent=d;
+    b.onclick=()=>{
+      if(_mSelDpts.has(d))_mSelDpts.delete(d);else _mSelDpts.add(d);
+      b.style.background=_mSelDpts.has(d)?'#534AB7':'';
+      b.style.color=_mSelDpts.has(d)?'#fff':'';
+      mFilterCohGrid();
+    };
+    wrap.appendChild(b);
+  });
+  // 全部按钮
+  const all=document.createElement('button');all.className='ei-chip';all.textContent='全部';
+  all.onclick=()=>{_mSelDpts.clear();mBuildDeptChips();mFilterCohGrid();};
+  wrap.appendChild(all);
+}
+
+function mBuildCohGrid(existCC){
+  const grid=document.getElementById('m-coh-grid');grid.innerHTML='';
+  const cm={};(existCC||[]).forEach(x=>cm[x.cohort]=x.count);
+  Object.entries(CBD).forEach(([d,cohorts])=>{
+    cohorts.forEach(cohort=>{
+      const k=sk(cohort),chk=cm.hasOwnProperty(cohort),cnt=cm[cohort]||'';
+      const w=document.createElement('div');w.className='ei';w.dataset.d=d;
+      w.innerHTML='<input type="checkbox" id="mc-'+k+'" value="'+eh(cohort)+'"'+(chk?' checked':'')+'>'+
+        '<label for="mc-'+k+'" title="'+eh(cohort)+'" style="font-size:10px">'+eh(cohort)+'</label>'+
+        '<input type="number" id="mn-'+k+'" min="0" value="'+cnt+'"'+(chk?'':' disabled')+' style="width:40px;font-size:11px;padding:2px 4px;text-align:center">';
+      const cb=w.querySelector('input[type=checkbox]'),ni=w.querySelector('input[type=number]');
+      cb.onchange=()=>{ni.disabled=!cb.checked;if(!cb.checked)ni.value='';};
+      grid.appendChild(w);
+    });
+  });
+}
+
+function mFilterCohGrid(){
+  document.querySelectorAll('#m-coh-grid .ei').forEach(el=>{
+    el.style.display=(_mSelDpts.size===0||_mSelDpts.has(el.dataset.d))?'':'none';
+  });
+}
+
+function mCollectCoh(){
+  const r=[];
+  document.querySelectorAll('#m-coh-grid input[type=checkbox]:checked').forEach(cb=>{
+    const k=sk(cb.value),n=document.getElementById('mn-'+k);
+    r.push({cohort:cb.value,count:n?parseInt(n.value)||0:0});
+  });
+  return r;
+}
+
+function mSaveES(){
+  const r=schD.find(x=>String(x.id)===_mId);if(!r)return;
+  const cc=mCollectCoh();
+  if(!cc.length){alert('请至少勾选一个届别');return;}
+  r.course=document.getElementById('m-co').value.trim().toUpperCase();
+  const f=C.find(x=>x.c===r.course);if(f)r.en=f.en;
+  r.type=document.getElementById('m-tp').value;
+  r.sem=document.getElementById('m-sem').value;
+  r.half=document.getElementById('m-half').value;
+  r.cls=document.getElementById('m-cls').value;
+  r.tc=document.getElementById('m-tc').value;
+  r.nt=document.getElementById('m-nt').value;
+  r.btec=document.getElementById('m-btec').checked;
+  r.cc=cc;
+  closeSchModal();
+  renderSch();renderAllSum();renderSta();syncNow('schedule');
+}
+
+function mDelSch(){
+  const r=schD.find(x=>String(x.id)===_mId);if(!r)return;
+  if(!confirm('确认删除？\n\n课程代码：'+r.course+'\n班级：'+r.cls+'\n授课老师：'+(r.tc||'待定')))return;
+  schD=schD.filter(x=>String(x.id)!==_mId);
+  closeSchModal();
+  renderSch();renderAllSum();renderSta();
+  syncNow('schedule').catch(()=>alert('⚠️ 已删除，但 Sheets 同步失败，请手动上传'));
+}
+
+function closeSchModal(){
+  document.getElementById('sch-modal').classList.remove('open');
+  document.body.style.overflow='';
+  _mId=null;
+}
+
+// saveES / collectEC 保留兼容（不再用于 modal，可忽略）
+function saveES(id){}
 function halfBadge(h){
   if(h==='上半学期'||h==='上半')return'<span class="badge b0" style="font-size:10px">上半</span>';
   if(h==='下半学期'||h==='下半')return'<span class="badge b2" style="font-size:10px">下半</span>';
@@ -933,25 +1175,6 @@ function renderSch(){
   if(schSK==='half'){const ho={'上半学期':0,'上半':0,'下半学期':1,'下半':1,'全学期':2};disp.sort((a,b)=>schSD*((ho[a.half]??2)-(ho[b.half]??2)));}
   tb.innerHTML=disp.map((r,i)=>{
     const tot=r.cc.reduce((s,x)=>s+(x.count||0),0);
-    if(r.editing){
-      const cO=SEMS.map(s=>'<option'+(s===r.sem?' selected':'')+'>'+s+'</option>').join('');
-      const hO='<option value=""'+(''===r.half?' selected':'')+'>— 待定 —</option>'+[['全学期','全学期'],['上半学期','上半'],['下半学期','下半']].map(([v,t])=>'<option value="'+v+'"'+(v===r.half?' selected':'')+'>'+t+'</option>').join('');
-      const ttO=['正常','英文','实习','SG','Capstone'].map(t=>'<option value="'+t+'"'+(t===r.type?' selected':'')+'>'+t+'</option>').join('');
-      const ccO=CLSS.map(s=>'<option'+(s===r.cls?' selected':'')+'>'+s+'</option>').join('');
-      const tccO=tchrOptHTML(r.tc);
-      return'<tr class="ed"><td>'+(i+1)+'</td>'+
-        '<td><input id="esc-'+r.id+'" value="'+eh(r.course)+'" style="width:80px;text-transform:uppercase"></td>'+
-        '<td style="font-size:11px;color:#534AB7">'+eh(r.en)+'</td>'+
-        '<td><select id="est-'+r.id+'" style="width:90px">'+ttO+'</select></td>'+
-        '<td><select id="ess-'+r.id+'" style="width:78px">'+cO+'</select></td>'+
-        '<td><select id="esh-'+r.id+'" style="width:90px">'+hO+'</select></td>'+
-        '<td><select id="escl-'+r.id+'" style="width:100px">'+ccO+'</select></td>'+
-        '<td><select id="estc-'+r.id+'" style="width:150px">'+tccO+'</select></td>'+
-        '<td>'+cohEditHTML(r.id,r.cc)+'</td><td><strong>'+tot+'</strong></td>'+
-        '<td><input id="esnt-'+r.id+'" value="'+eh(r.nt||'')+'" style="width:80px"></td>'+
-        '<td><input type="checkbox" id="esbt-'+r.id+'"'+(r.btec?' checked':'')+' style="width:auto"></td>'+
-        '<td style="white-space:nowrap"><button class="btn btn-ok" onclick="saveES('+r.id+')">确定</button> <button class="btn btn-d" onclick="delSch('+r.id+')">删除</button></td></tr>';
-    }
     const tags=r.cc.map(cc=>'<span class="tag">'+eh(cc.cohort)+(cc.count?' · '+cc.count+'人':'')+'</span>').join('');
     return'<tr><td>'+(i+1)+'</td><td><span class="badge b0">'+r.course+'</span></td>'+
       '<td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+eh(r.en)+'">'+eh(r.en)+'</td>'+
@@ -992,18 +1215,79 @@ function delSp(id){
   renderSp();renderAllSum();renderSta();
   syncNow('special').catch(()=>alert('⚠️ 网页已删除，但 Sheets 同步失败，请手动按「↑ 上传」'));
 }
-function startESp(id){id=String(id);spD.forEach(r=>r.editing=(String(r.id)===id));renderSp();}
-function saveESp(id){
-  id=String(id);const r=spD.find(x=>String(x.id)===id);if(!r)return;
-  const g=(p)=>{const el=document.getElementById(p+id);return el?el.value:null;};
-  if(g('epid-'))r.sid=g('epid-');if(g('epmr-'))r.mr=g('epmr-');
-  if(g('epnm-')){r.nm=g('epnm-');if(/[^\x00-\x7F]/.test(r.nm)){alert('学生姓名请只填写英文字');return;}}
-  if(g('epmj-'))r.mj=g('epmj-');
-  if(g('epco-')){r.co=g('epco-').toUpperCase();const f=C.find(x=>x.c===r.co);if(f)r.en=f.en;}
-  if(g('epcl-'))r.cls=g('epcl-');if(g('epsm-'))r.sem=g('epsm-');
-  if(g('eptc-'))r.tc=g('eptc-');if(g('epnt-')!==null)r.nt=g('epnt-');
-  r.editing=false;renderSp();renderAllSum();renderSta();syncNow('special');
+// ── IS/SG Modal 逻辑 ─────────────────────
+let _mpId=null;
+
+function startESp(id){
+  id=String(id);
+  const r=spD.find(x=>String(x.id)===id);if(!r)return;
+  _mpId=id;
+
+  document.getElementById('mp-id').value=r.sid;
+  document.getElementById('mp-mr').value=r.mr;
+  document.getElementById('mp-nm').value=r.nm;
+  document.getElementById('mp-co').value=r.co;
+  document.getElementById('mp-en').value=r.en||'';
+  document.getElementById('mp-cls').value=r.cls;
+  document.getElementById('mp-sem').value=r.sem;
+  document.getElementById('mp-nt').value=r.nt||'';
+
+  // 老师下拉
+  const mptc=document.getElementById('mp-tc');
+  mptc.innerHTML=tchrOptHTML(r.tc,'— 选择老师 —');
+  mptc.value=r.tc||'';
+
+  // 专业下拉
+  const mpmj=document.getElementById('mp-mj');
+  const depts=[...new Set(T.map(t=>t.d).filter(d=>!['DPU','CIC'].includes(d)))].sort();
+  mpmj.innerHTML='<option value="">请选择</option>';
+  depts.forEach(d=>{const o=document.createElement('option');o.value=d;o.textContent=d;mpmj.appendChild(o);});
+  mpmj.value=r.mj||'';
+
+  document.getElementById('sp-modal').classList.add('open');
+  document.body.style.overflow='hidden';
 }
+
+function mpLookupC(){
+  const code=document.getElementById('mp-co').value.trim().toUpperCase();
+  const f=C.find(x=>x.c===code);
+  document.getElementById('mp-en').value=f?f.en:'';
+}
+
+function mpSaveESp(){
+  const r=spD.find(x=>String(x.id)===_mpId);if(!r)return;
+  const nm=document.getElementById('mp-nm').value.trim();
+  if(/[^\x00-\x7F]/.test(nm)){alert('学生姓名请只填写英文字');return;}
+  r.sid=document.getElementById('mp-id').value.trim();
+  r.mr=document.getElementById('mp-mr').value;
+  r.nm=nm;
+  r.mj=document.getElementById('mp-mj').value;
+  r.co=document.getElementById('mp-co').value.trim().toUpperCase();
+  const f=C.find(x=>x.c===r.co);if(f)r.en=f.en;
+  r.cls=document.getElementById('mp-cls').value;
+  r.sem=document.getElementById('mp-sem').value;
+  r.tc=document.getElementById('mp-tc').value;
+  r.nt=document.getElementById('mp-nt').value;
+  closeSpModal();
+  renderSp();renderAllSum();renderSta();syncNow('special');
+}
+
+function mpDelSp(){
+  const r=spD.find(x=>String(x.id)===_mpId);if(!r)return;
+  if(!confirm('确认删除？\n\n学生：'+(r.mr||'')+' '+r.nm+'\n课程：'+r.co))return;
+  spD=spD.filter(x=>String(x.id)!==_mpId);
+  closeSpModal();
+  renderSp();renderAllSum();renderSta();
+  syncNow('special').catch(()=>alert('⚠️ 已删除，但 Sheets 同步失败，请手动上传'));
+}
+
+function closeSpModal(){
+  document.getElementById('sp-modal').classList.remove('open');
+  document.body.style.overflow='';
+  _mpId=null;
+}
+
+function saveESp(id){}
 function renderSp(){
   const tb=document.getElementById('sp-tb'),em=document.getElementById('sp-em');
   document.getElementById('sp-n').textContent='('+spD.length+'条)';
@@ -1017,26 +1301,6 @@ function renderSp(){
   if(spSK==='sid')disp.sort((a,b)=>spSD*a.sid.localeCompare(b.sid));
   if(spSK==='tc')disp.sort((a,b)=>{const ta=T.find(x=>x.n===a.tc),tb2=T.find(x=>x.n===b.tc);return spSD*((ta?ta.d:'ZZ').localeCompare(tb2?tb2.d:'ZZ')||a.tc.localeCompare(b.tc));});
   tb.innerHTML=disp.map((r,i)=>{
-    if(r.editing){
-      const mrO=['Mr.','Ms.'].map(m=>'<option'+(m===r.mr?' selected':'')+'>'+m+'</option>').join('');
-      const dpts=[...new Set(T.map(t=>t.d).filter(d=>!['DPU','CIC'].includes(d)))].sort();
-      const mjO=dpts.map(m=>'<option'+(m===r.mj?' selected':'')+'>'+m+'</option>').join('');
-      const smO=SEMS.map(s=>'<option'+(s===r.sem?' selected':'')+'>'+s+'</option>').join('');
-      const clO=['IS-222','SG-222'].map(c=>'<option'+(c===r.cls?' selected':'')+'>'+c+'</option>').join('');
-      const tO=tchrOptHTML(r.tc);
-      return'<tr class="ed"><td>'+(i+1)+'</td>'+
-        '<td><input id="epid-'+r.id+'" value="'+eh(r.sid)+'" style="width:80px"></td>'+
-        '<td><select id="epmr-'+r.id+'" style="width:55px">'+mrO+'</select></td>'+
-        '<td><input id="epnm-'+r.id+'" value="'+eh(r.nm)+'" style="width:100px" oninput="enOnly(this)"></td>'+
-        '<td><select id="epmj-'+r.id+'" style="width:60px">'+mjO+'</select></td>'+
-        '<td><input id="epco-'+r.id+'" value="'+eh(r.co)+'" style="width:80px;text-transform:uppercase"></td>'+
-        '<td><input id="epen-'+r.id+'" readonly value="'+eh(r.en)+'" style="width:120px;font-size:11px"></td>'+
-        '<td><select id="epcl-'+r.id+'" style="width:72px">'+clO+'</select></td>'+
-        '<td><select id="epsm-'+r.id+'" style="width:72px">'+smO+'</select></td>'+
-        '<td><select id="eptc-'+r.id+'" style="width:150px">'+tO+'</select></td>'+
-        '<td><input id="epnt-'+r.id+'" value="'+eh(r.nt||'')+'" style="width:80px"></td>'+
-        '<td style="white-space:nowrap"><button class="btn btn-ok" onclick="saveESp('+r.id+')">确定</button> <button class="btn btn-d" onclick="delSp('+r.id+')">删除</button></td></tr>';
-    }
     return'<tr><td>'+(i+1)+'</td><td><code style="font-size:11px">'+eh(r.sid)+'</code></td>'+
       '<td><span class="badge b4">'+r.mr+'</span></td><td>'+eh(r.nm)+'</td>'+
       '<td><span class="badge b4">'+r.mj+'</span></td><td><span class="badge b0">'+r.co+'</span></td>'+
@@ -1434,6 +1698,10 @@ async function init(){
   updateRefBar();
   await loadDataFromSheets();
   renderSch();renderSp();renderSta();
+  // ESC 关闭 Modal
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){closeSchModal();closeSpModal();}
+  });
 }
 </script>
 </body>
