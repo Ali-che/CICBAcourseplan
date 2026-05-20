@@ -378,33 +378,44 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 
 <!-- ══ 特别排课 ════════════════════════════ -->
 <div id="panel-sp" class="panel">
-  <div class="card">
-    <div class="ct">新增 IS/SG 排课</div>
-    <div class="g4">
-      <div class="fg"><label>学号</label><input id="p-id" placeholder="学号"></div>
-      <div class="fg"><label>学生称谓</label>
-        <select id="p-mr"><option value="Mr.">Mr.</option><option value="Ms.">Ms.</option></select>
+  <div class="card" style="padding:0;overflow:hidden">
+    <!-- 折叠标题行 -->
+    <div id="add-sp-hdr" onclick="toggleAddSp()" style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.25rem;cursor:pointer;user-select:none;background:#fff;border-radius:10px;transition:background .15s" onmouseover="this.style.background='#f8f8ff'" onmouseout="this.style.background='#fff'">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;font-weight:600;color:#534AB7;text-transform:uppercase;letter-spacing:.06em">＋ 新增 IS/SG 排课</span>
+        <span id="add-sp-hint" style="font-size:11px;color:#bbb">（点击展开）</span>
       </div>
-      <div class="fg"><label>学生姓名（英文）</label><input id="p-nm" placeholder="English name only" oninput="enOnly(this)"></div>
-      <div class="fg"><label>学生专业</label><select id="p-mj"><option value="">请选择</option></select></div>
+      <span id="add-sp-arrow" style="font-size:13px;color:#aaa;transition:transform .2s">▼</span>
     </div>
-    <div class="g4">
-      <div class="fg"><label>课程代码</label>
-        <input id="p-co" list="co-dl" placeholder="输入代码" oninput="lookupC('p-co','p-en',null)" autocomplete="off">
+    <!-- 可折叠内容 -->
+    <div id="add-sp-body" style="display:none;padding:0 1.25rem 1.25rem;border-top:0.5px solid #f0f0f0">
+      <div style="height:.875rem"></div>
+      <div class="g4">
+        <div class="fg"><label>学号</label><input id="p-id" placeholder="学号"></div>
+        <div class="fg"><label>学生称谓</label>
+          <select id="p-mr"><option value="Mr.">Mr.</option><option value="Ms.">Ms.</option></select>
+        </div>
+        <div class="fg"><label>学生姓名（英文）</label><input id="p-nm" placeholder="English name only" oninput="enOnly(this)"></div>
+        <div class="fg"><label>学生专业</label><select id="p-mj"><option value="">请选择</option></select></div>
       </div>
-      <div class="fg"><label>课程英文名（自动）</label><input id="p-en" readonly placeholder="自动显示"></div>
-      <div class="fg"><label>班级代码</label>
-        <select id="p-cls"><option value="IS-222">IS-222</option><option value="SG-222">SG-222</option></select>
+      <div class="g4">
+        <div class="fg"><label>课程代码</label>
+          <input id="p-co" list="co-dl" placeholder="输入代码" oninput="lookupC('p-co','p-en',null)" autocomplete="off">
+        </div>
+        <div class="fg"><label>课程英文名（自动）</label><input id="p-en" readonly placeholder="自动显示"></div>
+        <div class="fg"><label>班级代码</label>
+          <select id="p-cls"><option value="IS-222">IS-222</option><option value="SG-222">SG-222</option></select>
+        </div>
+        <div class="fg"><label>学期</label>
+          <select id="p-sem"><optgroup label="─ 2569 ─"><option>2569-1</option><option>2569-2</option><option>2569-3</option></optgroup><optgroup label="─ 2570 ─"><option>2570-1</option><option>2570-2</option><option>2570-3</option></optgroup></select>
+        </div>
       </div>
-      <div class="fg"><label>学期</label>
-        <select id="p-sem"><optgroup label="─ 2569 ─"><option>2569-1</option><option>2569-2</option><option>2569-3</option></optgroup><optgroup label="─ 2570 ─"><option>2570-1</option><option>2570-2</option><option>2570-3</option></optgroup></select>
-      </div>
-    </div>
-    <div class="g3">
-      <div class="fg"><label>授课老师</label><select id="p-tc"><option value="">请选择</option></select></div>
-      <div class="fg"><label>备注</label><input id="p-nt" placeholder="选填"></div>
-      <div class="fg" style="justify-content:flex-end"><label>&nbsp;</label>
-        <button class="btn btn-p" onclick="addSp()">＋ 添加特别排课</button>
+      <div class="g3">
+        <div class="fg"><label>授课老师</label><select id="p-tc"><option value="">请选择</option></select></div>
+        <div class="fg"><label>备注</label><input id="p-nt" placeholder="选填"></div>
+        <div class="fg" style="justify-content:flex-end"><label>&nbsp;</label>
+          <button class="btn btn-p" onclick="addSp()">＋ 添加特别排课</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1276,7 +1287,7 @@ function addSp(){
   if(!sid||!nm||!mj||!co){alert('请填写：学号、学生姓名、学生专业、课程代码');return;}
   if(/[^\x00-\x7F]/.test(nm)){alert('学生姓名请只填写英文字');return;}
   spD.push({id:Date.now(),sid,mr,nm,mj,co,en,cls,sem,tc,nt,type:'SG',editing:false});
-  clearSpF();renderSp();renderAllSum();renderSta();syncNow('special');
+  clearSpF();toggleAddSp(false);renderSp();renderAllSum();renderSta();syncNow('special');
 }
 function delSp(id){
   id=String(id);const r=spD.find(x=>String(x.id)===id);if(!r)return;
@@ -1868,6 +1879,7 @@ async function init(){
   syncTblHeight();
   window.addEventListener('resize',syncTblHeight);
   initAddSchState();
+  initAddSpState();
 }
 
 // ── 新增排课折叠 ──────────────────────────
@@ -1888,6 +1900,26 @@ function initAddSchState(){
   let open=false;
   try{open=localStorage.getItem('cic_add_sch_open')==='1';}catch(e){}
   if(open)toggleAddSch(true);
+}
+
+// ── 新增 IS/SG 排课折叠 ───────────────────
+function toggleAddSp(forceOpen){
+  const body=document.getElementById('add-sp-body');
+  const arrow=document.getElementById('add-sp-arrow');
+  const hint=document.getElementById('add-sp-hint');
+  if(!body)return;
+  const isOpen=body.style.display!=='none';
+  const open=(forceOpen!==undefined)?forceOpen:!isOpen;
+  body.style.display=open?'block':'none';
+  if(arrow)arrow.style.transform=open?'rotate(180deg)':'rotate(0deg)';
+  if(hint)hint.textContent=open?'（点击收起）':'（点击展开）';
+  try{localStorage.setItem('cic_add_sp_open',open?'1':'0');}catch(e){}
+  if(open)setTimeout(syncTblHeight,50);
+}
+function initAddSpState(){
+  let open=false;
+  try{open=localStorage.getItem('cic_add_sp_open')==='1';}catch(e){}
+  if(open)toggleAddSp(true);
 }
 
 // ── 表格区高度动态计算（全局）──────────────
