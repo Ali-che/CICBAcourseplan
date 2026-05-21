@@ -230,6 +230,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 .sync-bar-inner.done{background:#3B6D11;width:100%}
 .sync-bar-inner.fail{background:#a32d2d;width:100%}
 @keyframes syncrun{0%{width:0%;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0%;margin-left:100%}}
+
 </style>
 </head>
 <body>
@@ -959,6 +960,33 @@ const SEMS=['2569-1','2569-2','2569-3','2570-1','2570-2','2570-3'];
 let schD=[],spD=[],selDpts=new Set(),btecD={};
 let schSK=null,schSD=1,spSK='tc',spSD=1;
 
+// ── 数据安全防护：加载失败时禁止写入，避免空数组覆盖整张 Sheet ──
+let loadOK=false;            // 启动时设 true，加载失败则保持 false
+let writeLocked=false;       // 任何写入失败也会锁死，强制刷新
+function showSafeBanner(msg){
+  let b=document.getElementById('safe-banner');
+  if(!b){
+    b=document.createElement('div');
+    b.id='safe-banner';
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;padding:10px 16px;font-weight:600;text-align:center;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.3)';
+    document.body.appendChild(b);
+  }
+  b.innerHTML='⚠ '+msg+' &nbsp;<button onclick="location.reload()" style="background:#fff;color:#dc2626;border:0;padding:4px 12px;border-radius:4px;font-weight:600;margin-left:8px;cursor:pointer">刷新页面</button> <button onclick="overrideSafeLock()" style="background:transparent;color:#fff;border:1px solid #fff;padding:4px 10px;border-radius:4px;margin-left:6px;cursor:pointer;font-size:11px">我确认强制解锁</button>';
+  b.style.display='block';
+}
+function hideSafeBanner(){const b=document.getElementById('safe-banner');if(b)b.style.display='none';}
+function overrideSafeLock(){
+  if(!confirm('强制解锁后，下次同步将以你当前看到的数据为准覆盖 Sheet。\n如果你刚打开页面、数据还没载入，这会清空 Sheet！\n\n确认强制解锁？')) return;
+  loadOK=true; writeLocked=false; hideSafeBanner();
+}
+// 同步前的硬拦截：未加载成功或锁死状态拒绝写入
+function canSync(){
+  if(!loadOK){showSafeBanner('数据未成功载入，写入已锁定，避免覆盖 Sheet 数据。');return false;}
+  if(writeLocked){showSafeBanner('上次同步失败，写入已锁定。');return false;}
+  // 空状态二次保护：本地数据是空、但备份的预期非空时，也拦截
+  return true;
+}
+
 // ── 辅助 ──────────────────────────────────
 function sk(s){return String(s).replace(/[^a-zA-Z0-9]/g,'_');}
 function eh(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -1579,6 +1607,13 @@ async function gasGet(params){
 // text/plain POST：不触发 preflight，数据量不受 URL 长度限制
 async function fetchWrite(type,data){
   if(!SHEETS_URL)return false;
+  // ★ 本地空数组的最后一道防线：永不发空 payload（Apps Script v6 也会拒，但前端先拦下更省 quota）
+  const len = Array.isArray(data) ? data.length : Object.keys(data||{}).length;
+  if(len===0){
+    writeLocked=true;
+    showSafeBanner('检测到本地数据为空，已拒绝同步避免清空 Sheet。请按「↓ 下载」从 Sheet 重新载入。');
+    return false;
+  }
   try{
     const res=await fetch(SHEETS_URL,{
       method:'POST',
@@ -1586,12 +1621,18 @@ async function fetchWrite(type,data){
       body:JSON.stringify({action:'write',type:type,payload:data})
     });
     const r=await res.json();
+    // Apps Script v6 用 blocked:'EMPTY_PAYLOAD' 标记被拒
+    if(r.blocked==='EMPTY_PAYLOAD'){
+      writeLocked=true;
+      showSafeBanner('Apps Script 已拒绝空数组写入。这通常意味着本地数据丢失，请刷新或下载。');
+    }
     return r.success===true;
   }catch(e){return false;}
 }
 
 async function syncNow(type){
   if(!SHEETS_URL)return;
+  if(!canSync())return;  // ★ 启动失败 / 锁死时直接拒绝
   setSyncStatus('⏳ 正在同步…','');
   try{
     const data=type==='schedule'?schD:spD;
@@ -1604,6 +1645,7 @@ async function syncNow(type){
 let btecSyncTimer=null;
 function autoSyncBtec(){
   if(!SHEETS_URL)return;
+  if(!canSync())return;  // ★ 同上
   clearTimeout(btecSyncTimer);
   btecSyncTimer=setTimeout(async()=>{
     try{
@@ -1855,7 +1897,7 @@ function switchSub(id){
 
 // ── 启动 ──────────────────────────────────
 async function loadDataFromSheets(){
-  if(!SHEETS_URL)return;
+  if(!SHEETS_URL){loadOK=true;return;}  // 不配 SHEETS_URL = 纯本地模式，视为加载成功
   setSyncStatus('⏳ 正在载入排课数据…','');
   try{
     const [r1,r2,r3]=await Promise.all([
@@ -1863,12 +1905,21 @@ async function loadDataFromSheets(){
       gasGet({action:'read',type:'special'}),
       gasGet({action:'read',type:'btec'})
     ]);
-    if(r1.success&&r1.data.length)schD=r1.data;
-    if(r2.success&&r2.data.length)spD=r2.data;
-    if(r3.success&&r3.data)btecD=r3.data;
+    // ★ 任何一个失败都视为加载失败（Apps Script quota 错误也会让 r.success=false）
+    if(!r1.success||!r2.success||!r3.success){
+      throw new Error('Apps Script 返回错误：'+(r1.error||r2.error||r3.error||'unknown'));
+    }
+    if(r1.data.length)schD=r1.data;
+    if(r2.data.length)spD=r2.data;
+    if(r3.data)btecD=r3.data;
+    loadOK=true; hideSafeBanner();
     const t=new Date().toLocaleTimeString();
     setSyncStatus('✅ 数据已载入 '+t,true);
-  }catch(e){setSyncStatus('❌ 载入失败，请手动下载',false);}
+  }catch(e){
+    loadOK=false;
+    setSyncStatus('❌ 载入失败：'+e.message,false);
+    showSafeBanner('Sheet 数据载入失败（'+e.message+'）。写入已锁定，避免本地空数据覆盖 Sheet。');
+  }
 }
 
 async function init(){
@@ -1940,6 +1991,7 @@ function syncTblHeight(){
     wrap.style.maxHeight=h+'px';
   });
 }
+
 </script>
 </body>
 </html>
