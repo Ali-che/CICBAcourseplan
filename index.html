@@ -1419,6 +1419,30 @@ function halfBadge(h){
 // v7.1: 课程→专业 查询 + badge（资料来自「课程库」D 栏）
 // 配色：CA=蓝 CD=粉 FA=橘 TM=绿 IB=紫 GE=灰 IT=青 SE=蓝 IC=橘 EV=绿
 const DEPT_BADGE={CA:'b0',CD:'b3',FA:'b2',TM:'b1',IB:'b5',GE:'b4',IT:'b6',SE:'b0',IC:'b2',EV:'b1'};
+
+// v7.2: 屆別 chip 按系别上色（取屆別代码前两个英文字母判定）
+// 例：TM68(7) → TM 绿、IB66-1FAN-A → IB 蓝、CD69 → CD 桃红
+// 没列到的（SE 等）维持默认灰色 tag
+const COHORT_COLOR={
+  TM:{bg:'#E8F5E9',fg:'#2E7D32'}, // 绿
+  FA:{bg:'#FFF8DC',fg:'#A87800'}, // 黄
+  CD:{bg:'#FCE4EC',fg:'#C2185B'}, // 桃红
+  IB:{bg:'#E3F2FD',fg:'#1565C0'}, // 蓝
+  CA:{bg:'#F3E5F5',fg:'#6A1B9A'}, // 紫
+  EV:{bg:'#F1F8E9',fg:'#558B2F'}, // 黄绿
+  IT:{bg:'#EFEBE9',fg:'#5D4037'}, // 咖啡
+  SC:{bg:'#FFF8E1',fg:'#B8860B'}  // 金
+};
+function cohortPrefix(cohort){
+  const m=String(cohort||'').match(/^[A-Za-z]+/);
+  return m?m[0].substring(0,2).toUpperCase():'';
+}
+function cohortTag(cohort,count){
+  const c=COHORT_COLOR[cohortPrefix(cohort)];
+  const style=c?'background:'+c.bg+';color:'+c.fg:'';
+  const txt=eh(cohort)+(count?' · '+count+'人':'');
+  return'<span class="tag" style="'+style+'">'+txt+'</span>';
+}
 function getCourseDept(courseCode){
   const f=C.find(x=>x.c===courseCode);
   return f&&f.dept?f.dept:'';
@@ -1462,7 +1486,7 @@ function renderSch(){
   if(schSK==='half'){const ho={'上半学期':0,'上半':0,'下半学期':1,'下半':1,'全学期':2};disp.sort((a,b)=>schSD*((ho[a.half]??2)-(ho[b.half]??2)));}
   tb.innerHTML=disp.map((r,i)=>{
     const tot=r.cc.reduce((s,x)=>s+(x.count||0),0);
-    const tags=r.cc.map(cc=>'<span class="tag">'+eh(cc.cohort)+(cc.count?' · '+cc.count+'人':'')+'</span>').join('');
+    const tags=r.cc.map(cc=>cohortTag(cc.cohort,cc.count)).join(''); // v7.2: 按系别上色
     return'<tr><td>'+(i+1)+'</td><td><span class="badge b0">'+r.course+'</span></td>'+
       '<td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+eh(r.en)+'">'+eh(r.en)+'</td>'+
       '<td><span class="badge '+(TB[r.type]||'b4')+'">'+r.type+'</span></td>'+
