@@ -358,7 +358,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <span style="font-size:10px;color:#ccc;margin-left:6px">点击「课程代码」或「上下半」可排序</span>
       </span>
       <div style="display:flex;gap:6px;align-items:center">
-        <select id="sch-dept-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto"><option value="">全部专业</option></select>
+        <select id="sch-dept-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto"><option value="">课程代码</option></select>
         <select id="sch-sem-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto"><option value="">全部学期</option><optgroup label="─ 2569 ─"><option>2569-1</option><option>2569-2</option><option>2569-3</option></optgroup><optgroup label="─ 2570 ─"><option>2570-1</option><option>2570-2</option><option>2570-3</option></optgroup></select>
         <button class="btn btn-sm" onclick="syncToSheets('schedule')">↑ 上传</button>
         <button class="btn btn-sm" onclick="syncFromSheets('schedule')">↓ 下载</button>
@@ -1452,21 +1452,15 @@ function deptBadge(dept){
   const cls=DEPT_BADGE[dept]||'b4';
   return'<span class="badge '+cls+'" style="font-size:10px">'+eh(dept)+'</span>';
 }
-// v7.1: 把课程库 D 栏的细分类合并成「主分组」—— 取「-」前那段
-// 例：GE-KH → GE、GE-LA → GE、GE-KE → GE、TM → TM、FA-视觉 → FA
-// 这样下拉清单不会被一堆子分类塞爆，但 Sheet 资料仍保留完整细节
-function deptGroup(dept){
-  if(!dept)return'';
-  const i=String(dept).indexOf('-');
-  return i>0?dept.slice(0,i):dept;
-}
+// v7.3: 排课记录上方「课程代码」筛选下拉 —— 固定 13 项，与课程库 D 栏对应
+// 选中某项时严格匹配（GE 跟 GE-KE/GE-KH/GE-LA 分别独立筛选）
+const SCH_DEPT_OPTIONS=['CA','CD','EV','FA','GE','GE-KE','GE-KH','GE-LA','IB','IT','KB','SC','TM'];
 function buildSchDeptFilter(){
   const sel=document.getElementById('sch-dept-f');if(!sel)return;
   const cur=sel.value;
-  // 全部 dept 通通转成主分组、再去重
-  const groups=[...new Set(C.map(c=>deptGroup(c.dept)).filter(Boolean))].sort();
-  sel.innerHTML='<option value="">全部专业</option>'+
-    groups.map(g=>'<option value="'+eh(g)+'"'+(cur===g?' selected':'')+'>'+eh(g)+'</option>').join('');
+  // 默认项文字 = "课程代码"（同时作为「显示全部」状态）
+  sel.innerHTML='<option value="">课程代码</option>'+
+    SCH_DEPT_OPTIONS.map(d=>'<option value="'+eh(d)+'"'+(cur===d?' selected':'')+'>'+eh(d)+'</option>').join('');
 }
 function renderSch(){
   const tb=document.getElementById('sch-tb'),em=document.getElementById('sch-em');
@@ -1480,7 +1474,7 @@ function renderSch(){
   const deptF=document.getElementById('sch-dept-f'); // v7.1
   let disp=[...schD];
   if(semF&&semF.value)disp=disp.filter(r=>r.sem===semF.value);
-  if(deptF&&deptF.value)disp=disp.filter(r=>deptGroup(getCourseDept(r.course))===deptF.value); // v7.1: 按专业主分组筛选
+  if(deptF&&deptF.value)disp=disp.filter(r=>getCourseDept(r.course)===deptF.value); // v7.3: 严格匹配（GE 与 GE-KE 等分开筛）
   if(schSK==='course')disp.sort((a,b)=>schSD*a.course.localeCompare(b.course));
   if(schSK==='sem')disp.sort((a,b)=>schSD*a.sem.localeCompare(b.sem));
   if(schSK==='half'){const ho={'上半学期':0,'上半':0,'下半学期':1,'下半':1,'全学期':2};disp.sort((a,b)=>schSD*((ho[a.half]??2)-(ho[b.half]??2)));}
