@@ -359,6 +359,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       </span>
       <div style="display:flex;gap:6px;align-items:center">
         <select id="sch-dept-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto"><option value="">课程代码</option></select>
+        <input id="sch-search" type="text" oninput="renderSch()" placeholder="🔍 搜课程代码/英文名" style="font-size:11px;padding:4px 8px;width:170px">
         <select id="sch-sem-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto"><option value="">全部学期</option><optgroup label="─ 2569 ─"><option>2569-1</option><option>2569-2</option><option>2569-3</option></optgroup><optgroup label="─ 2570 ─"><option>2570-1</option><option>2570-2</option><option>2570-3</option></optgroup></select>
         <button class="btn btn-sm" onclick="syncToSheets('schedule')">↑ 上传</button>
         <button class="btn btn-sm" onclick="syncFromSheets('schedule')">↓ 下载</button>
@@ -1475,6 +1476,12 @@ function renderSch(){
   let disp=[...schD];
   if(semF&&semF.value)disp=disp.filter(r=>r.sem===semF.value);
   if(deptF&&deptF.value)disp=disp.filter(r=>getCourseDept(r.course)===deptF.value); // v7.3: 严格匹配（GE 与 GE-KE 等分开筛）
+  // v7.4: 课程搜索框 —— 同时比对课程代码 + 英文名（不分大小写）
+  const searchF=document.getElementById('sch-search');
+  if(searchF&&searchF.value.trim()){
+    const q=searchF.value.trim().toLowerCase();
+    disp=disp.filter(r=>(r.course||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q));
+  }
   if(schSK==='course')disp.sort((a,b)=>schSD*a.course.localeCompare(b.course));
   if(schSK==='sem')disp.sort((a,b)=>schSD*a.sem.localeCompare(b.sem));
   if(schSK==='half'){const ho={'上半学期':0,'上半':0,'下半学期':1,'下半':1,'全学期':2};disp.sort((a,b)=>schSD*((ho[a.half]??2)-(ho[b.half]??2)));}
