@@ -1428,13 +1428,21 @@ function deptBadge(dept){
   const cls=DEPT_BADGE[dept]||'b4';
   return'<span class="badge '+cls+'" style="font-size:10px">'+eh(dept)+'</span>';
 }
-// v7.1: 根据「课程库」里实际出现的专业，动态填充排课记录上方的「专业」筛选下拉
+// v7.1: 把课程库 D 栏的细分类合并成「主分组」—— 取「-」前那段
+// 例：GE-KH → GE、GE-LA → GE、GE-KE → GE、TM → TM、FA-视觉 → FA
+// 这样下拉清单不会被一堆子分类塞爆，但 Sheet 资料仍保留完整细节
+function deptGroup(dept){
+  if(!dept)return'';
+  const i=String(dept).indexOf('-');
+  return i>0?dept.slice(0,i):dept;
+}
 function buildSchDeptFilter(){
   const sel=document.getElementById('sch-dept-f');if(!sel)return;
   const cur=sel.value;
-  const depts=[...new Set(C.map(c=>c.dept).filter(Boolean))].sort();
+  // 全部 dept 通通转成主分组、再去重
+  const groups=[...new Set(C.map(c=>deptGroup(c.dept)).filter(Boolean))].sort();
   sel.innerHTML='<option value="">全部专业</option>'+
-    depts.map(d=>'<option value="'+eh(d)+'"'+(cur===d?' selected':'')+'>'+eh(d)+'</option>').join('');
+    groups.map(g=>'<option value="'+eh(g)+'"'+(cur===g?' selected':'')+'>'+eh(g)+'</option>').join('');
 }
 function renderSch(){
   const tb=document.getElementById('sch-tb'),em=document.getElementById('sch-em');
@@ -1448,7 +1456,7 @@ function renderSch(){
   const deptF=document.getElementById('sch-dept-f'); // v7.1
   let disp=[...schD];
   if(semF&&semF.value)disp=disp.filter(r=>r.sem===semF.value);
-  if(deptF&&deptF.value)disp=disp.filter(r=>getCourseDept(r.course)===deptF.value); // v7.1: 按专业筛选
+  if(deptF&&deptF.value)disp=disp.filter(r=>deptGroup(getCourseDept(r.course))===deptF.value); // v7.1: 按专业主分组筛选
   if(schSK==='course')disp.sort((a,b)=>schSD*a.course.localeCompare(b.course));
   if(schSK==='sem')disp.sort((a,b)=>schSD*a.sem.localeCompare(b.sem));
   if(schSK==='half'){const ho={'上半学期':0,'上半':0,'下半学期':1,'下半':1,'全学期':2};disp.sort((a,b)=>schSD*((ho[a.half]??2)-(ho[b.half]??2)));}
