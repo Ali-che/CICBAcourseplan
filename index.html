@@ -504,7 +504,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     <div class="card">
       <div class="ct">SG/IS 排课总表 · 学生维度</div>
       <div class="tbl-wrap">
-        <table><thead><tr><th>#</th><th>学号</th><th>称谓</th><th>学生姓名</th><th>学生专业</th><th>特别课数</th><th>课程代码（班级）</th><th>课程英文名</th><th>学期</th><th>备注</th></tr></thead>
+        <table><thead><tr><th>#</th><th>学号</th><th>称谓</th><th>学生姓名</th><th>学生专业</th><th>特别课数</th><th>课程代码（班级）</th><th>课程英文名</th><th>授课老师</th><th>学期</th><th>备注</th></tr></thead>
         <tbody id="ss-tb"></tbody></table>
       </div>
       <div class="empty" id="ss-em">暂无数据</div>
@@ -1541,6 +1541,8 @@ function renderSpStu(){
       '<td><strong>'+s.rows.length+'</strong></td>'+
       '<td>'+s.rows.map(r=>'<span class="badge b0" style="margin:1px">'+r.co+'</span><span class="tag" style="margin:1px">'+r.cls+'</span>').join('<br>')+'</td>'+
       '<td>'+s.rows.map(r=>'<span style="font-size:11px">'+eh(r.en)+'</span>').join('<br>')+'</td>'+
+      // FIX: 新增「授課老師」欄，每門課對齊顯示
+      '<td style="font-size:11px;white-space:nowrap">'+s.rows.map(r=>r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>').join('<br>')+'</td>'+
       '<td>'+s.rows.map(r=>'<span class="badge b4" style="margin:1px">'+r.sem+'</span>').join('<br>')+'</td>'+
       '<td style="font-size:11px;color:#888">'+(s.rows.filter(r=>r.nt).map(r=>r.nt).join('；')||'—')+'</td></tr>';}).join('');
 }
