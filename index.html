@@ -577,7 +577,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 </div><!-- /.app -->
 
 <!-- ══ 排课编辑 Modal ═══════════════════════ -->
-<div class="modal-overlay" id="sch-modal" onclick="if(event.target===this)closeSchModal()">
+<div class="modal-overlay" id="sch-modal" onmousedown="modalMouseDown(event,this)" onclick="modalMaybeClose(event,this,closeSchModal)">
   <div class="modal-box">
     <div class="modal-hdr">
       <h3 id="sch-modal-title">✏️ 修改排课</h3>
@@ -640,7 +640,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 </div>
 
 <!-- ══ IS/SG 编辑 Modal ════════════════════ -->
-<div class="modal-overlay" id="sp-modal" onclick="if(event.target===this)closeSpModal()">
+<div class="modal-overlay" id="sp-modal" onmousedown="modalMouseDown(event,this)" onclick="modalMaybeClose(event,this,closeSpModal)">
   <div class="modal-box" style="max-width:640px">
     <div class="modal-hdr">
       <h3>✏️ 修改 IS/SG 排课</h3>
@@ -686,6 +686,12 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 </div>
 
 <script>
+// ⚠️ 安全性警告 ⚠️
+// 1. 下面這個 PIN 寫在前端，任何人 View Source 都能看到。
+//    要做真正的存取控管，必須改成把 PIN 送到 Apps Script，由後端驗證並發回 token。
+// 2. SHEETS_URL 也是 public，建議在 Apps Script 的 doGet/doPost 開頭加 token 檢查，
+//    例如 if(e.parameter.token!==SCRIPT_SECRET) return blocked。
+// 這兩件事都不是改前端 HTML 就能解決，請另開 Apps Script 端的工作。
 // ── PIN 码验证 ──────────────────────────────
 const PIN = 'CICBA2569';
 const PIN_KEY = 'cic_auth';
@@ -735,6 +741,15 @@ function logout(){
 }
 
 window.addEventListener('DOMContentLoaded', checkAuth);
+
+// FIX: Modal 拖選保護 —— 只有 mousedown 起點就在 overlay 上、且 click 結束也在 overlay 上才關閉
+// 避免在輸入框內按住拖到 overlay 才放開導致誤關
+let _modalMouseDownOnOverlay=false;
+function modalMouseDown(ev,overlay){_modalMouseDownOnOverlay=(ev.target===overlay);}
+function modalMaybeClose(ev,overlay,closeFn){
+  if(ev.target===overlay&&_modalMouseDownOnOverlay)closeFn();
+  _modalMouseDownOnOverlay=false;
+}
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║  配置区                                                   ║
@@ -1053,7 +1068,11 @@ function lookupC(ci,ei,ti){
   const code=document.getElementById(ci).value.trim().toUpperCase();
   const f=C.find(x=>x.c===code);
   if(ei)document.getElementById(ei).value=f?f.en:'';
-  if(ti&&f)document.getElementById(ti).value=detectType(code,'');
+  // FIX: 讀取當前 cls 值，否則 IS-222/SG-222/Capstone-*/331-333 會被誤判為「正常」
+  if(ti&&f){
+    const clsEl=ci==='s-co'?document.getElementById('s-cls'):null;
+    document.getElementById(ti).value=detectType(code,clsEl?clsEl.value:'');
+  }
 }
 function detectType(code,cls){
   if(cls==='IS-222'||cls==='SG-222')return'SG';
@@ -1061,7 +1080,8 @@ function detectType(code,cls){
   if(cls==='331'||cls==='332'||cls==='333')return'实习';
   if(!code)return'正常';
   const p=code.substring(0,2);
-  if(p==='KE'||p==='LA'||p==='KH')return'英文';
+  // FIX: KH（Thai Language）算正常一門課，不該歸「英文 ×0.5」
+  if(p==='KE'||p==='LA')return'英文';
   if(['FA405','IT410','KL411','KF411','KT411','DI403','SS412','AE491','AE492'].includes(code))return'实习';
   if(['FA401','FA402','IT430','IT433','IT434','KL412','KF412','KT412','DI404','SS411','AE399'].includes(code))return'Capstone';
   return'正常';
@@ -1231,7 +1251,8 @@ function mSaveES(){
   const cc=mCollectCoh();
   if(!cc.length){alert('请至少勾选一个届别');return;}
   r.course=document.getElementById('m-co').value.trim().toUpperCase();
-  const f=C.find(x=>x.c===r.course);if(f)r.en=f.en;
+  // FIX: 若新代碼不在課程庫，清空英文名避免顯示舊資料
+  const f=C.find(x=>x.c===r.course);r.en=f?f.en:'';
   r.type=document.getElementById('m-tp').value;
   r.sem=document.getElementById('m-sem').value;
   r.half=document.getElementById('m-half').value;
@@ -1314,6 +1335,9 @@ function addSp(){
   const tc=document.getElementById('p-tc').value,nt=document.getElementById('p-nt').value;
   if(!sid||!nm||!mj||!co){alert('请填写：学号、学生姓名、学生专业、课程代码');return;}
   if(/[^\x00-\x7F]/.test(nm)){alert('学生姓名请只填写英文字');return;}
+  // FIX: 與排課表一致的重複偵測（同學號 + 同課程 + 同學期 + 同班級）
+  const dupSp=spD.find(r=>r.sid===sid&&r.co===co&&r.sem===sem&&r.cls===cls);
+  if(dupSp){if(!confirm('⚠️ 重複提醒\n\n學號「'+sid+'」已在 '+sem+' '+cls+' 報過「'+co+'」。\n\n確定要繼續新增？'))return;}
   spD.push({id:Date.now(),sid,mr,nm,mj,co,en,cls,sem,tc,nt,type:'SG',editing:false});
   clearSpF();toggleAddSp(false);renderSp();renderAllSum();renderSta();syncNow('special');
 }
@@ -1372,7 +1396,8 @@ function mpSaveESp(){
   r.nm=nm;
   r.mj=document.getElementById('mp-mj').value;
   r.co=document.getElementById('mp-co').value.trim().toUpperCase();
-  const f=C.find(x=>x.c===r.co);if(f)r.en=f.en;
+  // FIX: 同上，找不到時清空
+  const f=C.find(x=>x.c===r.co);r.en=f?f.en:'';
   r.cls=document.getElementById('mp-cls').value;
   r.sem=document.getElementById('mp-sem').value;
   r.tc=document.getElementById('mp-tc').value;
@@ -1668,7 +1693,8 @@ function renderSta(){
   let rows='';let hasData=false;
   depts.forEach(dept=>{
     const dTchrs=T.filter(t=>t.d===dept&&t.l>0).sort((a,b)=>a.n.localeCompare(b.n));
-    rows+='<tr class="dh"><td colspan="'+(8+activeSems.length)+'">▸ '+dept+' · '+dTchrs.length+'位老师</td></tr>';
+    // FIX: 表頭實際是 9 + activeSems.length 欄（#/老師/職位/各學期/教學總數/BTEC/LA500/規定/年總/%）
+    rows+='<tr class="dh"><td colspan="'+(9+activeSems.length)+'">▸ '+dept+' · '+dTchrs.length+'位老师</td></tr>';
     let dWt=0;let idx=0;
     dTchrs.forEach(t=>{
       idx++;hasData=true;
@@ -1703,11 +1729,12 @@ function renderSta(){
         '<td><span class="badge '+(over?'b3':'b1')+'" id="pct-'+k+'">'+pct+'% / '+t.l+'</span></td>'+
         '</tr>';
     });
+    // FIX: 小計列總欄數要等於 9 + activeSems.length（3+sems+1總+4尾）
     rows+='<tr class="dt">'+
       '<td colspan="3" style="text-align:right;padding-right:12px">'+dept+' 小计</td>'+
       '<td colspan="'+activeSems.length+'"></td>'+
       '<td style="text-align:center;border-left:1px solid #eee"><strong>'+Math.round(dWt*100)/100+'</strong></td>'+
-      '<td colspan="3"></td></tr>';
+      '<td colspan="5"></td></tr>';
   });
   if(!yr){document.getElementById('sta-em').textContent='请先选择学年';document.getElementById('sta-em').style.display='block';document.getElementById('sta-tb').innerHTML='';return;}
   if(!hasData){document.getElementById('sta-em').style.display='block';document.getElementById('sta-tb').innerHTML='';return;}
@@ -1717,7 +1744,8 @@ function renderSta(){
 
 // ── JSON 导出/导入 ────────────────────────
 function exportData(){
-  const data={version:'2569-v2',exported:new Date().toISOString(),schedule:schD,special:spD};
+  // FIX: 把 btecD（LA500 手填值）一起存進備份，否則 import 後手填值全消
+  const data={version:'2569-v3',exported:new Date().toISOString(),schedule:schD,special:spD,btec:btecD};
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
   a.download='排课数据_'+new Date().toISOString().slice(0,10)+'.json';a.click();
 }
@@ -1727,8 +1755,16 @@ function importData(){
     const reader=new FileReader();
     reader.onload=ev=>{
       try{const data=JSON.parse(ev.target.result);
-        if(data.schedule)schD=data.schedule;if(data.special)spD=data.special;
+        if(!confirm('⚠️ 匯入會覆蓋目前所有本地排課資料。\n\n排課記錄：'+(data.schedule?data.schedule.length:0)+'條\n特別排課：'+(data.special?data.special.length:0)+'條\nLA500 手填：'+(data.btec?Object.keys(data.btec).length:0)+'位老師\n\n確定匯入？'))return;
+        if(data.schedule)schD=data.schedule;
+        if(data.special)spD=data.special;
+        if(data.btec)btecD=data.btec;     // FIX: 連同 LA500 一起匯入
         renderSch();renderSp();renderAllSum();renderSta();
+        // FIX: 匯入後立即推送，避免本地/雲端落差
+        if(SHEETS_URL&&canSync()){
+          syncNow('schedule');syncNow('special');
+          if(Object.keys(btecD).length)fetchWrite('btec',btecD);
+        }
         alert('导入成功！排课记录：'+schD.length+'条，特别排课：'+spD.length+'条');
       }catch(e){alert('导入失败，请检查文件格式');}
     };reader.readAsText(e.target.files[0]);
@@ -1773,6 +1809,10 @@ async function syncToSheets(type){
 
 async function syncFromSheets(type){
   if(!SHEETS_URL){alert('请先配置 SHEETS_URL');return;}
+  // FIX: 下載會覆蓋本地，給使用者一個煞車
+  const local=type==='schedule'?schD.length:spD.length;
+  const label=type==='schedule'?'排課記錄':'IS/SG 排課';
+  if(!confirm('⚠️ 從 Google Sheets 下載「'+label+'」會覆蓋本地目前的 '+local+' 條資料。\n\n如果有未上傳的編輯會遺失。\n\n確定下載？'))return;
   try{const r=await gasGet({action:'read',type:type});
     if(r.success){if(type==='schedule')schD=r.data;else spD=r.data;
       renderSch();renderSp();renderAllSum();renderSta();alert('✅ 下载成功！'+r.data.length+'条记录');
@@ -1922,11 +1962,31 @@ async function loadDataFromSheets(){
   }
 }
 
+// FIX: 一次性資料遷移 —— 把舊的 KH 課程從「英文」改回「正常」
+// 因為原本 detectType 誤把 KH（Thai Language）歸 ×0.5
+// 同筆資料只會遷移一次：寫進 schD[i].migratedKH=true 做旗標，避免重複改
+function migrateKHType(){
+  let n=0;
+  schD.forEach(r=>{
+    if(r.migratedKH)return;
+    if(r.course&&r.course.startsWith('KH')&&r.type==='英文'){
+      r.type='正常';n++;
+    }
+    r.migratedKH=true;
+  });
+  if(n>0){
+    console.log('[migrate] KH 課程類型修正：'+n+' 筆');
+    // 推回 Sheets（如果同步可用）
+    if(SHEETS_URL&&canSync())syncNow('schedule');
+  }
+}
+
 async function init(){
   await loadRefFromSheets();
   rebuildUI();
   updateRefBar();
   await loadDataFromSheets();
+  migrateKHType();   // ← 在 render 前跑，這樣畫面顯示的就是修正後的值
   renderSch();renderSp();renderSta();
   // ESC 关闭 Modal
   document.addEventListener('keydown',e=>{
@@ -1950,7 +2010,8 @@ function toggleAddSch(forceOpen){
   if(arrow)arrow.style.transform=open?'rotate(180deg)':'rotate(0deg)';
   if(hint)hint.textContent=open?'（点击收起）':'（点击展开）';
   try{localStorage.setItem('cic_add_sch_open',open?'1':'0');}catch(e){}
-  if(open)setTimeout(syncTblHeight,50);
+  // FIX: 不論開/合都要重算表格高度，否則收起後下方表格不會長回來
+  setTimeout(syncTblHeight,50);
 }
 function initAddSchState(){
   let open=false;
@@ -1970,7 +2031,8 @@ function toggleAddSp(forceOpen){
   if(arrow)arrow.style.transform=open?'rotate(180deg)':'rotate(0deg)';
   if(hint)hint.textContent=open?'（点击收起）':'（点击展开）';
   try{localStorage.setItem('cic_add_sp_open',open?'1':'0');}catch(e){}
-  if(open)setTimeout(syncTblHeight,50);
+  // FIX: 同 toggleAddSch
+  setTimeout(syncTblHeight,50);
 }
 function initAddSpState(){
   let open=false;
