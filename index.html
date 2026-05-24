@@ -358,6 +358,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <span style="font-size:10px;color:#ccc;margin-left:6px">点击「课程代码」或「上下半」可排序</span>
       </span>
       <div style="display:flex;gap:6px;align-items:center">
+        <select id="sch-dept-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto"><option value="">全部专业</option></select>
         <select id="sch-sem-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto"><option value="">全部学期</option><optgroup label="─ 2569 ─"><option>2569-1</option><option>2569-2</option><option>2569-3</option></optgroup><optgroup label="─ 2570 ─"><option>2570-1</option><option>2570-2</option><option>2570-3</option></optgroup></select>
         <button class="btn btn-sm" onclick="syncToSheets('schedule')">↑ 上传</button>
         <button class="btn btn-sm" onclick="syncFromSheets('schedule')">↓ 下载</button>
@@ -1140,6 +1141,7 @@ function rebuildUI(){
     depts.forEach(d=>{const o=document.createElement('option');o.value=d;o.textContent=d;el.appendChild(o);});el.value=cur;
   });
   buildDeptChips();buildEG('s-eg',null);
+  buildSchDeptFilter(); // v7.1: 同步刷新排课表上方的专业筛选下拉
 }
 
 // ── 课程检测 ──────────────────────────────
@@ -1426,6 +1428,14 @@ function deptBadge(dept){
   const cls=DEPT_BADGE[dept]||'b4';
   return'<span class="badge '+cls+'" style="font-size:10px">'+eh(dept)+'</span>';
 }
+// v7.1: 根据「课程库」里实际出现的专业，动态填充排课记录上方的「专业」筛选下拉
+function buildSchDeptFilter(){
+  const sel=document.getElementById('sch-dept-f');if(!sel)return;
+  const cur=sel.value;
+  const depts=[...new Set(C.map(c=>c.dept).filter(Boolean))].sort();
+  sel.innerHTML='<option value="">全部专业</option>'+
+    depts.map(d=>'<option value="'+eh(d)+'"'+(cur===d?' selected':'')+'>'+eh(d)+'</option>').join('');
+}
 function renderSch(){
   const tb=document.getElementById('sch-tb'),em=document.getElementById('sch-em');
   document.getElementById('sch-n').textContent='('+schD.length+'条)';
@@ -1436,8 +1446,10 @@ function renderSch(){
   if(!schD.length){tb.innerHTML='';em.style.display='block';return;}
   em.style.display='none';
   const semF=document.getElementById('sch-sem-f');
+  const deptF=document.getElementById('sch-dept-f'); // v7.1
   let disp=[...schD];
   if(semF&&semF.value)disp=disp.filter(r=>r.sem===semF.value);
+  if(deptF&&deptF.value)disp=disp.filter(r=>getCourseDept(r.course)===deptF.value); // v7.1: 按专业筛选
   if(schSK==='course')disp.sort((a,b)=>schSD*a.course.localeCompare(b.course));
   if(schSK==='sem')disp.sort((a,b)=>schSD*a.sem.localeCompare(b.sem));
   if(schSK==='half'){const ho={'上半学期':0,'上半':0,'下半学期':1,'下半':1,'全学期':2};disp.sort((a,b)=>schSD*((ho[a.half]??2)-(ho[b.half]??2)));}
