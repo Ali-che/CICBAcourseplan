@@ -1213,7 +1213,7 @@ function egTgl(rid,k){const cb=document.getElementById('ec-'+rid+'-'+k),n=docume
 function collectEC(rid){const r=[];const g=document.getElementById('egi-'+rid);if(!g)return r;g.querySelectorAll('input[type=checkbox]:checked').forEach(cb=>{const k=sk(cb.value),n=document.getElementById('en-'+rid+'-'+k);r.push({cohort:cb.value,count:n?parseInt(n.value)||0:0});});return r;}
 
 // ── 排课 CRUD ──────────────────────────────
-function addSch(){
+async function addSch(){
   const course=document.getElementById('s-co').value.trim().toUpperCase(),en=document.getElementById('s-en').value;
   const sem=document.getElementById('s-sem').value,half=document.getElementById('s-half').value;
   const type=document.getElementById('s-tp').value,cls=document.getElementById('s-cls').value;
@@ -1222,25 +1222,45 @@ function addSch(){
   if(!course||!cls||!cc.length){alert('请填写：课程代码、班级，并至少勾选一个届别');return;}
   const dup=schD.find(r=>r.course===course&&r.cls===cls&&r.sem===sem&&r.half===half);
   if(dup){const go=confirm('⚠️ 重复提醒\n\n「'+course+'」已在 '+sem+' '+half+' '+cls+' 班级新增过一次。\n\n确定要继续新增吗？');if(!go)return;}
-  schD.push({id:Date.now(),course,en,sem,half,type,cls,tc,cc,nt,btec,editing:false});
-  clearSchF();toggleAddSch(false);renderSch();renderAllSum();renderSta();syncNow('schedule');
+  // v7: 直接呼叫 addRecord，不再全量同步
+  const localId=Date.now();
+  const rec={id:localId,course,en,sem,half,type,cls,tc,cc,nt,btec,editing:false};
+  schD.push(rec);
+  clearSchF();toggleAddSch(false);renderSch();renderAllSum();renderSta();
+  if(SHEETS_URL&&canSync()){
+    setSyncStatus('⏳ 新增中…','');
+    const r=await gasAddRecord('schedule',rec);
+    if(r&&r.success){
+      // 后端可能因 id 碰撞改了 id，本地也同步更新
+      if(r.id&&String(r.id)!==String(localId)){rec.id=r.id;renderSch();}
+      setSyncStatus('✅ 已新增 '+new Date().toLocaleTimeString(),true);
+    }else{handleRecordApiFail(r);setSyncStatus('❌ 新增失败',false);}
+  }
 }
-function delSch(id){
+async function delSch(id){
   id=String(id);const r=schD.find(x=>String(x.id)===id);if(!r)return;
   if(!confirm('确认删除以下排课？\n\n课程代码：'+r.course+'\n班级：'+r.cls+'\n授课老师：'+(r.tc||'待定')))return;
-  trackDelete('schedule',id); // FIX 多人协作：登记墓碑，避免合并时被复活
   schD=schD.filter(r=>String(r.id)!==id);
   renderSch();renderAllSum();renderSta();
-  syncNow('schedule').catch(()=>alert('⚠️ 网页已删除，但 Sheets 同步失败，请手动按「↑ 上传」'));
+  // v7: 按 id 删，不影响其他记录
+  if(SHEETS_URL&&canSync()){
+    setSyncStatus('⏳ 删除中…','');
+    const res=await gasDeleteRecord('schedule',id);
+    if(res&&res.success){setSyncStatus('✅ 已删除 '+new Date().toLocaleTimeString(),true);}
+    else{handleRecordApiFail(res);setSyncStatus('❌ 删除失败',false);}
+  }
 }
 // ── 排课 Modal 逻辑 ───────────────────────
 let _mId=null; // 当前编辑的排课 id
 let _mSelDpts=new Set();
+let _mOrig=null; // v7: 开窗时的原始快照，用来 diff 出真正被改的字段
 
 function startES(id){
   id=String(id);
   const r=schD.find(x=>String(x.id)===id);if(!r)return;
   _mId=id;_mSelDpts=new Set();
+  // v7: 深拷贝快照，等下 mSaveES 时用来算 diff
+  _mOrig=JSON.parse(JSON.stringify(r));
 
   // 填入基本字段
   document.getElementById('m-co').value=r.course;
@@ -1326,39 +1346,64 @@ function mCollectCoh(){
   return r;
 }
 
-function mSaveES(){
+async function mSaveES(){
   const r=schD.find(x=>String(x.id)===_mId);if(!r)return;
   const cc=mCollectCoh();
   if(!cc.length){alert('请至少勾选一个届别');return;}
-  r.course=document.getElementById('m-co').value.trim().toUpperCase();
-  // FIX: 若新代碼不在課程庫，清空英文名避免顯示舊資料
-  const f=C.find(x=>x.c===r.course);r.en=f?f.en:'';
-  r.type=document.getElementById('m-tp').value;
-  r.sem=document.getElementById('m-sem').value;
-  r.half=document.getElementById('m-half').value;
-  r.cls=document.getElementById('m-cls').value;
-  r.tc=document.getElementById('m-tc').value;
-  r.nt=document.getElementById('m-nt').value;
-  r.btec=document.getElementById('m-btec').checked;
-  r.cc=cc;
-  closeSchModal();
-  renderSch();renderAllSum();renderSta();syncNow('schedule');
-}
-
-function mDelSch(){
-  const r=schD.find(x=>String(x.id)===_mId);if(!r)return;
-  if(!confirm('确认删除？\n\n课程代码：'+r.course+'\n班级：'+r.cls+'\n授课老师：'+(r.tc||'待定')))return;
-  trackDelete('schedule',_mId); // FIX 多人协作：登记墓碑
-  schD=schD.filter(x=>String(x.id)!==_mId);
+  // 把表单读出来
+  const newVals={
+    course:document.getElementById('m-co').value.trim().toUpperCase(),
+    type:document.getElementById('m-tp').value,
+    sem:document.getElementById('m-sem').value,
+    half:document.getElementById('m-half').value,
+    cls:document.getElementById('m-cls').value,
+    tc:document.getElementById('m-tc').value,
+    nt:document.getElementById('m-nt').value,
+    btec:document.getElementById('m-btec').checked,
+    cc:cc
+  };
+  const f=C.find(x=>x.c===newVals.course);newVals.en=f?f.en:'';
+  // v7: 只 diff 出真正被改的字段，让两个老师同时改不同字段时不会互相覆盖
+  const diff={};
+  const orig=_mOrig||{};
+  ['course','en','type','sem','half','cls','tc','nt'].forEach(k=>{
+    if(String(newVals[k]||'')!==String(orig[k]||''))diff[k]=newVals[k];
+  });
+  if(Boolean(newVals.btec)!==Boolean(orig.btec===true||orig.btec==='TRUE'||orig.btec==='true'))diff.btec=newVals.btec;
+  if(JSON.stringify(newVals.cc)!==JSON.stringify(orig.cc||[]))diff.cc=newVals.cc;
+  // 应用到本地
+  Object.assign(r,newVals);
   closeSchModal();
   renderSch();renderAllSum();renderSta();
-  syncNow('schedule').catch(()=>alert('⚠️ 已删除，但 Sheets 同步失败，请手动上传'));
+  // 没改任何字段就不打 API
+  if(!Object.keys(diff).length){setSyncStatus('（未改动）',null);return;}
+  if(SHEETS_URL&&canSync()){
+    setSyncStatus('⏳ 储存中…（'+Object.keys(diff).length+'个字段）','');
+    const res=await gasUpdateRecord('schedule',_mId||r.id,diff);
+    if(res&&res.success){setSyncStatus('✅ 已储存 '+new Date().toLocaleTimeString(),true);}
+    else{handleRecordApiFail(res);setSyncStatus('❌ 储存失败',false);}
+  }
+}
+
+async function mDelSch(){
+  const r=schD.find(x=>String(x.id)===_mId);if(!r)return;
+  if(!confirm('确认删除？\n\n课程代码：'+r.course+'\n班级：'+r.cls+'\n授课老师：'+(r.tc||'待定')))return;
+  const id=_mId;
+  schD=schD.filter(x=>String(x.id)!==id);
+  closeSchModal();
+  renderSch();renderAllSum();renderSta();
+  if(SHEETS_URL&&canSync()){
+    setSyncStatus('⏳ 删除中…','');
+    const res=await gasDeleteRecord('schedule',id);
+    if(res&&res.success){setSyncStatus('✅ 已删除 '+new Date().toLocaleTimeString(),true);}
+    else{handleRecordApiFail(res);setSyncStatus('❌ 删除失败',false);}
+  }
 }
 
 function closeSchModal(){
   document.getElementById('sch-modal').classList.remove('open');
   document.body.style.overflow='';
-  _mId=null;
+  _mId=null;_mOrig=null;
 }
 
 // saveES / collectEC 保留兼容（不再用于 modal，可忽略）
@@ -1408,7 +1453,7 @@ function clearSchF(){
 }
 
 // ── 特别排课 CRUD ─────────────────────────
-function addSp(){
+async function addSp(){
   const sid=document.getElementById('p-id').value.trim(),mr=document.getElementById('p-mr').value;
   const nm=document.getElementById('p-nm').value.trim(),mj=document.getElementById('p-mj').value;
   const co=document.getElementById('p-co').value.trim().toUpperCase(),en=document.getElementById('p-en').value;
@@ -1416,27 +1461,42 @@ function addSp(){
   const tc=document.getElementById('p-tc').value,nt=document.getElementById('p-nt').value;
   if(!sid||!nm||!mj||!co){alert('请填写：学号、学生姓名、学生专业、课程代码');return;}
   if(/[^\x00-\x7F]/.test(nm)){alert('学生姓名请只填写英文字');return;}
-  // FIX: 與排課表一致的重複偵測（同學號 + 同課程 + 同學期 + 同班級）
   const dupSp=spD.find(r=>r.sid===sid&&r.co===co&&r.sem===sem&&r.cls===cls);
   if(dupSp){if(!confirm('⚠️ 重複提醒\n\n學號「'+sid+'」已在 '+sem+' '+cls+' 報過「'+co+'」。\n\n確定要繼續新增？'))return;}
-  spD.push({id:Date.now(),sid,mr,nm,mj,co,en,cls,sem,tc,nt,type:'SG',editing:false});
-  clearSpF();toggleAddSp(false);renderSp();renderAllSum();renderSta();syncNow('special');
+  const localId=Date.now();
+  const rec={id:localId,sid,mr,nm,mj,co,en,cls,sem,tc,nt,type:'SG',editing:false};
+  spD.push(rec);
+  clearSpF();toggleAddSp(false);renderSp();renderAllSum();renderSta();
+  if(SHEETS_URL&&canSync()){
+    setSyncStatus('⏳ 新增中…','');
+    const res=await gasAddRecord('special',rec);
+    if(res&&res.success){
+      if(res.id&&String(res.id)!==String(localId)){rec.id=res.id;renderSp();}
+      setSyncStatus('✅ 已新增 '+new Date().toLocaleTimeString(),true);
+    }else{handleRecordApiFail(res);setSyncStatus('❌ 新增失败',false);}
+  }
 }
-function delSp(id){
+async function delSp(id){
   id=String(id);const r=spD.find(x=>String(x.id)===id);if(!r)return;
   if(!confirm('确认删除以下 IS/SG 排课？\n\n学生：'+(r.mr||'')+' '+r.nm+'\n课程：'+r.co+'\n授课老师：'+(r.tc||'待定')))return;
-  trackDelete('special',id); // FIX 多人协作：登记墓碑
   spD=spD.filter(r=>String(r.id)!==id);
   renderSp();renderAllSum();renderSta();
-  syncNow('special').catch(()=>alert('⚠️ 网页已删除，但 Sheets 同步失败，请手动按「↑ 上传」'));
+  if(SHEETS_URL&&canSync()){
+    setSyncStatus('⏳ 删除中…','');
+    const res=await gasDeleteRecord('special',id);
+    if(res&&res.success){setSyncStatus('✅ 已删除 '+new Date().toLocaleTimeString(),true);}
+    else{handleRecordApiFail(res);setSyncStatus('❌ 删除失败',false);}
+  }
 }
 // ── IS/SG Modal 逻辑 ─────────────────────
 let _mpId=null;
+let _mpOrig=null; // v7: 原始快照，用于 diff
 
 function startESp(id){
   id=String(id);
   const r=spD.find(x=>String(x.id)===id);if(!r)return;
   _mpId=id;
+  _mpOrig=JSON.parse(JSON.stringify(r));
 
   document.getElementById('mp-id').value=r.sid;
   document.getElementById('mp-mr').value=r.mr;
@@ -1469,39 +1529,59 @@ function mpLookupC(){
   document.getElementById('mp-en').value=f?f.en:'';
 }
 
-function mpSaveESp(){
+async function mpSaveESp(){
   const r=spD.find(x=>String(x.id)===_mpId);if(!r)return;
   const nm=document.getElementById('mp-nm').value.trim();
   if(/[^\x00-\x7F]/.test(nm)){alert('学生姓名请只填写英文字');return;}
-  r.sid=document.getElementById('mp-id').value.trim();
-  r.mr=document.getElementById('mp-mr').value;
-  r.nm=nm;
-  r.mj=document.getElementById('mp-mj').value;
-  r.co=document.getElementById('mp-co').value.trim().toUpperCase();
-  // FIX: 同上，找不到時清空
-  const f=C.find(x=>x.c===r.co);r.en=f?f.en:'';
-  r.cls=document.getElementById('mp-cls').value;
-  r.sem=document.getElementById('mp-sem').value;
-  r.tc=document.getElementById('mp-tc').value;
-  r.nt=document.getElementById('mp-nt').value;
-  closeSpModal();
-  renderSp();renderAllSum();renderSta();syncNow('special');
-}
-
-function mpDelSp(){
-  const r=spD.find(x=>String(x.id)===_mpId);if(!r)return;
-  if(!confirm('确认删除？\n\n学生：'+(r.mr||'')+' '+r.nm+'\n课程：'+r.co))return;
-  trackDelete('special',_mpId); // FIX 多人协作：登记墓碑
-  spD=spD.filter(x=>String(x.id)!==_mpId);
+  const newVals={
+    sid:document.getElementById('mp-id').value.trim(),
+    mr:document.getElementById('mp-mr').value,
+    nm:nm,
+    mj:document.getElementById('mp-mj').value,
+    co:document.getElementById('mp-co').value.trim().toUpperCase(),
+    cls:document.getElementById('mp-cls').value,
+    sem:document.getElementById('mp-sem').value,
+    tc:document.getElementById('mp-tc').value,
+    nt:document.getElementById('mp-nt').value
+  };
+  const f=C.find(x=>x.c===newVals.co);newVals.en=f?f.en:'';
+  // v7: diff
+  const diff={};
+  const orig=_mpOrig||{};
+  ['sid','mr','nm','mj','co','en','cls','sem','tc','nt'].forEach(k=>{
+    if(String(newVals[k]||'')!==String(orig[k]||''))diff[k]=newVals[k];
+  });
+  Object.assign(r,newVals);
   closeSpModal();
   renderSp();renderAllSum();renderSta();
-  syncNow('special').catch(()=>alert('⚠️ 已删除，但 Sheets 同步失败，请手动上传'));
+  if(!Object.keys(diff).length){setSyncStatus('（未改动）',null);return;}
+  if(SHEETS_URL&&canSync()){
+    setSyncStatus('⏳ 储存中…（'+Object.keys(diff).length+'个字段）','');
+    const res=await gasUpdateRecord('special',_mpId||r.id,diff);
+    if(res&&res.success){setSyncStatus('✅ 已储存 '+new Date().toLocaleTimeString(),true);}
+    else{handleRecordApiFail(res);setSyncStatus('❌ 储存失败',false);}
+  }
+}
+
+async function mpDelSp(){
+  const r=spD.find(x=>String(x.id)===_mpId);if(!r)return;
+  if(!confirm('确认删除？\n\n学生：'+(r.mr||'')+' '+r.nm+'\n课程：'+r.co))return;
+  const id=_mpId;
+  spD=spD.filter(x=>String(x.id)!==id);
+  closeSpModal();
+  renderSp();renderAllSum();renderSta();
+  if(SHEETS_URL&&canSync()){
+    setSyncStatus('⏳ 删除中…','');
+    const res=await gasDeleteRecord('special',id);
+    if(res&&res.success){setSyncStatus('✅ 已删除 '+new Date().toLocaleTimeString(),true);}
+    else{handleRecordApiFail(res);setSyncStatus('❌ 删除失败',false);}
+  }
 }
 
 function closeSpModal(){
   document.getElementById('sp-modal').classList.remove('open');
   document.body.style.overflow='';
-  _mpId=null;
+  _mpId=null;_mpOrig=null;
 }
 
 function saveESp(id){}
@@ -1685,22 +1765,27 @@ function sdCells(d,bl){
   const tip=hasData?'<div class="sem-tip"><div style="color:#888;font-size:11px;margin-bottom:4px">课程细项</div>'+tipRows+'</div>':'';
   return'<td class="sem-cell" style="text-align:center;'+s+'">'+(hasData?'<span class="sem-val">'+d.wt+'</span>':'<span class="sem-zero">—</span>')+tip+'</td>';
 }
-function saveBtec(el){
-  const name=el.dataset.name;const val=el.value;btecD[name]=parseFloat(val)||0;
+async function saveBtec(el){
+  const name=el.dataset.name;const val=parseFloat(el.value)||0;btecD[name]=val;
   const t=T.find(x=>x.n===name);const k=name.replace(/[^a-zA-Z0-9]/g,'_');
   const yr=document.getElementById('sta-yr')?document.getElementById('sta-yr').value:'';
   const totalSems=yr?['1','2','3'].map(s=>yr+'-'+s):['2569-1','2569-2','2569-3','2570-1','2570-2','2570-3'];
   const totalWt=Math.round(totalSems.reduce((s,sem)=>{const d=semDetail(name,sem);return s+d.wt;},0)*100)/100;
   const btecCount=totalSems.reduce((s,sem)=>s+schD.filter(r=>r.tc===name&&r.sem===sem&&r.btec).length,0);
   const btecWt=Math.round(btecCount*0.5*100)/100;
-  const btec=btecD[name]||0;
-  const yearTotal=Math.round((totalWt+btecWt+btec)*100)/100;
+  const yearTotal=Math.round((totalWt+btecWt+val)*100)/100;
   const pct=t&&t.l>0?Math.round(yearTotal/t.l*100):0;
   const over=t&&t.l>0&&yearTotal>t.l;
   const ytEl=document.getElementById('yt-'+k);if(ytEl)ytEl.textContent=yearTotal;
   const pEl=document.getElementById('pct-'+k);
   if(pEl){pEl.textContent=pct+'% / '+(t?t.l:'—');pEl.className='badge '+(over?'b3':'b1');}
-  autoSyncBtec();
+  // v7: 单笔 upsert，不再 push 整个 btecD 对象
+  if(SHEETS_URL&&canSync()){
+    setSyncStatus('⏳ 储存 LA500…','');
+    const res=await gasUpsertBtec(name,val);
+    if(res&&res.success){setSyncStatus('✅ '+name+' LA500='+val+' '+new Date().toLocaleTimeString(),true);}
+    else{handleRecordApiFail(res);setSyncStatus('❌ LA500 储存失败',false);}
+  }
 }
 // ══ 核心同步函数 ══
 // 读取：GET（无 preflight）
@@ -1738,6 +1823,46 @@ async function fetchWrite(type,data){
     }
     return r.success===true;
   }catch(e){return false;}
+}
+
+// ════════════════════════════════════════
+// v7 Per-Record API（按 id 增/改/删，真正解决多人同改同筆的竞争）
+// 后端 Apps Script v7 已部署对应 endpoint，前端这里包成 Promise
+// 任何一次写入只动 sheet 里那一列 / 那个字段，不会覆盖别人正在改的其他字段
+// ════════════════════════════════════════
+async function gasPost(action, body){
+  if(!SHEETS_URL)return{success:false,error:'未配置 SHEETS_URL'};
+  try{
+    const res=await fetch(SHEETS_URL,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify(Object.assign({action},body))
+    });
+    return await res.json();
+  }catch(e){return{success:false,error:e.message};}
+}
+// 新增 1 笔，返回后端最终的 id（可能因碰撞被加 -N 后缀）
+async function gasAddRecord(type,record){return gasPost('addRecord',{type,record});}
+// 只改指定字段（fields 是 partial object），不动其他字段
+async function gasUpdateRecord(type,id,fields){return gasPost('updateRecord',{type,id,fields});}
+// 按 id 删一列
+async function gasDeleteRecord(type,id){return gasPost('deleteRecord',{type,id});}
+// BTEC/LA500 按老师名增改一格，0 视为删除
+async function gasUpsertBtec(name,value){
+  if(Number(value)===0)return gasPost('deleteBtec',{name});
+  return gasPost('upsertBtec',{name,value:Number(value)||0});
+}
+
+// 处理 per-record API 失败的统一提示
+function handleRecordApiFail(r,fallbackAction){
+  if(!r||r.success===true)return false;
+  const err=String(r.error||'未知错误');
+  if(err.includes('找不到 id=')){
+    alert('⚠️ 这笔记录在 Google Sheets 上已不存在（可能被别的老师删除了）。\n\n请按右上「↓ 下载」刷新最新状态。');
+  }else{
+    alert('⚠️ 同步失败：'+err+'\n\n你的本地变更没有遗失，请稍后再试或按「↑ 上传」做整张同步。');
+  }
+  return true;
 }
 
 // FIX 多人协作：Read-Modify-Write —— 先抓最新远端，合并别人新加的记录，再推送
