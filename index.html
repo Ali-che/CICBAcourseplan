@@ -978,6 +978,23 @@ let schSK=null,schSD=1,spSK='tc',spSD=1;
 // ── 数据安全防护：加载失败时禁止写入，避免空数组覆盖整张 Sheet ──
 let loadOK=false;            // 启动时设 true，加载失败则保持 false
 let writeLocked=false;       // 任何写入失败也会锁死，强制刷新
+
+// ── 多人协作防覆盖三件套 ──────────────────
+// 1. Read-Modify-Write：写入前先抓最新，合并别人的新记录
+// 2. 30秒轮询：发现云端有别人改动 → 顶部警告条 + 暂停写入
+// 3. 资料时效指示：标题旁显示「载入于 N 分钟前」，太久变红
+let dataLoadTime=null;        // 本次资料载入的时间
+let lastRemoteHash=null;      // 上次拉到的远端指纹（轮询比对用）
+let staleWarningShown=false;  // 远端有变更通知显示中
+let deletedIds={schedule:new Set(),special:new Set()}; // 本地删除墓碑（同步后清空）
+
+function hashRecords(arr){
+  if(!Array.isArray(arr))return '0';
+  return arr.length+':'+arr.map(r=>String(r.id)).sort().join(',');
+}
+function trackDelete(type,id){
+  if(deletedIds[type])deletedIds[type].add(String(id));
+}
 function showSafeBanner(msg){
   let b=document.getElementById('safe-banner');
   if(!b){
@@ -998,9 +1015,71 @@ function overrideSafeLock(){
 function canSync(){
   if(!loadOK){showSafeBanner('数据未成功载入，写入已锁定，避免覆盖 Sheet 数据。');return false;}
   if(writeLocked){showSafeBanner('上次同步失败，写入已锁定。');return false;}
-  // 空状态二次保护：本地数据是空、但备份的预期非空时，也拦截
+  // FIX 多人协作：远端有他人新编辑时，暂停写入直到使用者按「刷新并合并」
+  if(staleWarningShown){alert('⚠️ 雲端有別人剛剛編輯。\n\n請按頂部黃色提示條的「↻ 刷新並合併」，把雲端新資料合進來再儲存。\n\n避免覆蓋同事的編輯。');return false;}
   return true;
 }
+
+// ── 远端轮询 + 警告条 ────────────────────
+const POLL_INTERVAL_MS=30000;
+let pollTimer=null;
+function startRemotePoll(){
+  if(!SHEETS_URL||pollTimer)return;
+  pollTimer=setInterval(async()=>{
+    if(!loadOK||staleWarningShown)return; // 已经警告中就不再打扰
+    try{
+      const r=await gasGet({action:'read',type:'schedule'});
+      if(!r.success)return;
+      const remoteHash=hashRecords(r.data);
+      const localHash=hashRecords(schD);
+      // 远端跟我们上次看到的不一样、也跟本地不一样 = 别人改了东西
+      if(lastRemoteHash&&remoteHash!==lastRemoteHash&&remoteHash!==localHash){
+        showStaleWarning();
+      }
+    }catch(e){}
+  },POLL_INTERVAL_MS);
+}
+function showStaleWarning(){
+  if(staleWarningShown)return;
+  staleWarningShown=true;
+  let b=document.getElementById('stale-banner');
+  if(!b){
+    b=document.createElement('div');
+    b.id='stale-banner';
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9998;background:#FAEEDA;color:#854F0B;padding:10px 16px;font-weight:600;text-align:center;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.15);border-bottom:1px solid #E5C58A';
+    document.body.appendChild(b);
+  }
+  b.innerHTML='🔔 雲端有別人剛剛編輯。儲存功能已暫停，請先合併。 <button onclick="refreshAndClearStale()" style="background:#854F0B;color:#fff;border:0;padding:5px 14px;border-radius:5px;font-weight:600;margin-left:8px;cursor:pointer;font-size:12px">↻ 刷新並合併</button>';
+  b.style.display='block';
+}
+async function refreshAndClearStale(){
+  staleWarningShown=false;
+  const b=document.getElementById('stale-banner');if(b)b.style.display='none';
+  await loadDataFromSheets();
+  renderSch();renderSp();renderAllSum();renderSta();
+}
+
+// ── 资料时效指示 ──────────────────────────
+function updateFreshness(){
+  if(!dataLoadTime)return;
+  const min=Math.floor((Date.now()-dataLoadTime)/60000);
+  let ind=document.getElementById('freshness-ind');
+  if(!ind){
+    // 加在标题下方的 subtitle 旁
+    const subt=document.querySelector('.header > div > div:nth-child(3)');
+    if(!subt)return;
+    ind=document.createElement('span');ind.id='freshness-ind';
+    ind.style.cssText='margin-left:8px;font-size:11px;font-weight:500';
+    subt.appendChild(ind);
+  }
+  let color='#888',label='';
+  if(min<1){color='#3B6D11';label='刚载入';}
+  else if(min<5){color='#888';label='载入于 '+min+' 分钟前';}
+  else if(min<10){color='#B8860B';label='⚠ 已 '+min+' 分钟未刷新';}
+  else{color='#a32d2d';label='❗ 已 '+min+' 分钟未刷新，建议按「↻ 同步」';}
+  ind.style.color=color;ind.textContent='· '+label;
+}
+setInterval(updateFreshness,30000); // 每30秒更新一次显示
 
 // ── 辅助 ──────────────────────────────────
 function sk(s){return String(s).replace(/[^a-zA-Z0-9]/g,'_');}
@@ -1149,6 +1228,7 @@ function addSch(){
 function delSch(id){
   id=String(id);const r=schD.find(x=>String(x.id)===id);if(!r)return;
   if(!confirm('确认删除以下排课？\n\n课程代码：'+r.course+'\n班级：'+r.cls+'\n授课老师：'+(r.tc||'待定')))return;
+  trackDelete('schedule',id); // FIX 多人协作：登记墓碑，避免合并时被复活
   schD=schD.filter(r=>String(r.id)!==id);
   renderSch();renderAllSum();renderSta();
   syncNow('schedule').catch(()=>alert('⚠️ 网页已删除，但 Sheets 同步失败，请手动按「↑ 上传」'));
@@ -1268,6 +1348,7 @@ function mSaveES(){
 function mDelSch(){
   const r=schD.find(x=>String(x.id)===_mId);if(!r)return;
   if(!confirm('确认删除？\n\n课程代码：'+r.course+'\n班级：'+r.cls+'\n授课老师：'+(r.tc||'待定')))return;
+  trackDelete('schedule',_mId); // FIX 多人协作：登记墓碑
   schD=schD.filter(x=>String(x.id)!==_mId);
   closeSchModal();
   renderSch();renderAllSum();renderSta();
@@ -1344,6 +1425,7 @@ function addSp(){
 function delSp(id){
   id=String(id);const r=spD.find(x=>String(x.id)===id);if(!r)return;
   if(!confirm('确认删除以下 IS/SG 排课？\n\n学生：'+(r.mr||'')+' '+r.nm+'\n课程：'+r.co+'\n授课老师：'+(r.tc||'待定')))return;
+  trackDelete('special',id); // FIX 多人协作：登记墓碑
   spD=spD.filter(r=>String(r.id)!==id);
   renderSp();renderAllSum();renderSta();
   syncNow('special').catch(()=>alert('⚠️ 网页已删除，但 Sheets 同步失败，请手动按「↑ 上传」'));
@@ -1409,6 +1491,7 @@ function mpSaveESp(){
 function mpDelSp(){
   const r=spD.find(x=>String(x.id)===_mpId);if(!r)return;
   if(!confirm('确认删除？\n\n学生：'+(r.mr||'')+' '+r.nm+'\n课程：'+r.co))return;
+  trackDelete('special',_mpId); // FIX 多人协作：登记墓碑
   spD=spD.filter(x=>String(x.id)!==_mpId);
   closeSpModal();
   renderSp();renderAllSum();renderSta();
@@ -1657,16 +1740,55 @@ async function fetchWrite(type,data){
   }catch(e){return false;}
 }
 
+// FIX 多人协作：Read-Modify-Write —— 先抓最新远端，合并别人新加的记录，再推送
+// 合并规则：
+//   - 远端有 + 本地有（同 id）  → 用本地（你的编辑覆盖远端这一笔）
+//   - 远端有 + 本地没有 + 不在墓碑 → 保留远端（别人新加/我没载到）
+//   - 远端有 + 本地没有 + 在墓碑   → 删掉（我刚刚删的，远端还没追上）
+//   - 远端没有 + 本地有           → 保留本地（我新加的）
 async function syncNow(type){
   if(!SHEETS_URL)return;
-  if(!canSync())return;  // ★ 启动失败 / 锁死时直接拒绝
-  setSyncStatus('⏳ 正在同步…','');
+  if(!canSync())return;
+  setSyncStatus('⏳ 正在检查云端…','');
   try{
-    const data=type==='schedule'?schD:spD;
-    const ok=await fetchWrite(type,data);
+    // 1. 抓最新远端
+    const r=await gasGet({action:'read',type:type});
+    if(!r.success){setSyncStatus('❌ 检查云端失败：'+(r.error||''),false);return;}
+    const remote=r.data||[];
+    const local=type==='schedule'?schD:spD;
+    const localIds=new Set(local.map(x=>String(x.id)));
+    const tombstones=deletedIds[type];
+
+    // 2. 合并：把远端有、本地没有、也不在墓碑的「他人记录」捞回来
+    const preserved=remote.filter(x=>{
+      const id=String(x.id);
+      return !localIds.has(id)&&!tombstones.has(id);
+    });
+    if(preserved.length>0){
+      console.log('[merge] 同步前发现他人 '+preserved.length+' 笔新记录，已合并');
+      if(type==='schedule')schD=[...local,...preserved];
+      else spD=[...local,...preserved];
+      // 重画
+      renderSch();renderSp();renderAllSum();renderSta();
+    }
+
+    // 3. 推送合并后的版本
+    setSyncStatus('⏳ 正在上传…','');
+    const merged=type==='schedule'?schD:spD;
+    const ok=await fetchWrite(type,merged);
     const t=new Date().toLocaleTimeString();
-    setSyncStatus(ok?'✅ 已同步 '+t:'❌ 同步失败',ok);
-  }catch(e){setSyncStatus('❌ 连线失败',false);}
+    if(ok){
+      // 清掉这一型的墓碑（已经推上去了）
+      tombstones.clear();
+      // 更新远端 hash（避免轮询误报）
+      if(type==='schedule')lastRemoteHash=hashRecords(merged);
+      setSyncStatus(preserved.length>0?
+        '✅ 已合并他人 '+preserved.length+' 笔并同步 '+t:
+        '✅ 已同步 '+t,true);
+    }else{
+      setSyncStatus('❌ 同步失败',false);
+    }
+  }catch(e){setSyncStatus('❌ 连线失败：'+e.message,false);}
 }
 
 let btecSyncTimer=null;
@@ -1955,6 +2077,11 @@ async function loadDataFromSheets(){
     if(r2.data.length)spD=r2.data;
     if(r3.data)btecD=r3.data;
     loadOK=true; hideSafeBanner();
+    // FIX 多人协作：记录载入时间 + 远端 hash，供时效指示器和轮询比对用
+    dataLoadTime=Date.now();
+    lastRemoteHash=hashRecords(schD);
+    deletedIds.schedule.clear();deletedIds.special.clear(); // 重新载入後清空墓碑
+    updateFreshness();
     const t=new Date().toLocaleTimeString();
     setSyncStatus('✅ 数据已载入 '+t,true);
   }catch(e){
@@ -1990,6 +2117,8 @@ async function init(){
   await loadDataFromSheets();
   migrateKHType();   // ← 在 render 前跑，這樣畫面顯示的就是修正後的值
   renderSch();renderSp();renderSta();
+  startRemotePoll();  // FIX 多人协作：启动 30 秒轮询，发现别人改了东西就弹警告条
+  updateFreshness();  // 立即显示一次时效
   // ESC 关闭 Modal
   document.addEventListener('keydown',e=>{
     if(e.key==='Escape'){closeSchModal();closeSpModal();}
