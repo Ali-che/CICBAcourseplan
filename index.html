@@ -716,35 +716,53 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 //    例如 if(e.parameter.token!==SCRIPT_SECRET) return blocked。
 // 這兩件事都不是改前端 HTML 就能解決，請另開 Apps Script 端的工作。
 // ── PIN 码验证 ──────────────────────────────
-const PIN = 'CICBACICBA2016';   // master PIN（永远有效），登入身份显示为 The Ghost Captain 👻⚓
 const PIN_KEY = 'cic_auth';
 const PIN_TTL = 24 * 60 * 60 * 1000;
-const EDITOR_KEY = 'cic_editor'; // v7.4: 当前操作人名字
-let DIRECTORS = [];              // v7.4: 主任 PIN 列表 [{pin, name, note}]
-let currentEditor = '';          // v7.4: 当前操作人（每次 API 调用会带上）
+const EDITOR_KEY = 'cic_editor';     // v7.4: 当前操作人名字
+const TOKEN_KEY = 'cic_token';       // v7.5: 后端验证 token
+let currentEditor = '';              // v7.4: 当前操作人（每次 API 调用会带上）
+let currentToken = '';               // v7.5: 后端发的 token（每次 API 调用带上）
 
-// v7.4: 启动时先从 localStorage 读取上次缓存的主任列表，让 PIN 检查能用
-try { DIRECTORS = JSON.parse(localStorage.getItem('cic_directors') || '[]'); } catch(e){}
+// v7.4/v7.5: 启动时从 localStorage 读取上次的 editor + token
 try { currentEditor = localStorage.getItem(EDITOR_KEY) || ''; } catch(e){}
+try { currentToken  = localStorage.getItem(TOKEN_KEY)  || ''; } catch(e){}
 
-function checkPin(){
+// v7.5: PIN 验证整个搬到后端。前端不再持有 PIN 列表。
+async function checkPin(){
   const val = document.getElementById('pin-input').value.trim();
-  // v7.4: 先查主任列表
-  const matched = DIRECTORS.find(d => String(d.pin) === val);
-  const isMaster = (val === PIN);
-  if(matched || isMaster){
-    localStorage.setItem(PIN_KEY, Date.now());
-    currentEditor = matched ? matched.name : 'The Ghost Captain';
-    try { localStorage.setItem(EDITOR_KEY, currentEditor); } catch(e){}
-    unlockApp();
-  } else {
-    const box = document.querySelector('.pin-box');
-    const err = document.getElementById('pin-err');
-    err.textContent = '密码错误，请再试一次';
-    box.classList.remove('pin-shake');
-    void box.offsetWidth;
-    box.classList.add('pin-shake');
-    document.getElementById('pin-input').value = '';
+  if(!val) return;
+  if(!SHEETS_URL){alert('未配置 SHEETS_URL，无法验证');return;}
+  const box = document.querySelector('.pin-box');
+  const err = document.getElementById('pin-err');
+  err.textContent = '⏳ 验证中…';
+  err.style.color = '#666';
+  try{
+    // 调 authenticate endpoint（这个不需要 token）
+    const res = await fetch(SHEETS_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'authenticate', pin:val})
+    });
+    const r = await res.json();
+    if(r.success){
+      localStorage.setItem(PIN_KEY, Date.now());
+      currentEditor = r.name || '';
+      currentToken  = r.token || '';
+      try { localStorage.setItem(EDITOR_KEY, currentEditor); } catch(e){}
+      try { localStorage.setItem(TOKEN_KEY,  currentToken); } catch(e){}
+      err.textContent = '';
+      unlockApp();
+    } else {
+      err.textContent = r.error || '密码错误，请再试一次';
+      err.style.color = '#e53e3e';
+      box.classList.remove('pin-shake');
+      void box.offsetWidth;
+      box.classList.add('pin-shake');
+      document.getElementById('pin-input').value = '';
+    }
+  }catch(e){
+    err.textContent = '⚠️ 连线失败：'+e.message;
+    err.style.color = '#e53e3e';
   }
 }
 
@@ -769,7 +787,8 @@ function logout(){
   if(!confirm('确认登出？'))return;
   localStorage.removeItem(PIN_KEY);
   localStorage.removeItem(EDITOR_KEY);  // v7.4
-  currentEditor='';
+  localStorage.removeItem(TOKEN_KEY);   // v7.5
+  currentEditor='';currentToken='';
   document.getElementById('pin-input').value='';
   document.getElementById('pin-err').textContent='';
   document.getElementById('pin-overlay').style.display='flex';
@@ -1947,11 +1966,19 @@ async function saveBtec(el){
 // 写入：POST + text/plain（简单请求，无 preflight，GAS doPost 原生支持）
 
 async function gasGet(params){
-  const qs=Object.entries(params)
+  // v7.5: 自动带 token（除非 params 已指定）
+  const p=Object.assign({},params);
+  if(currentToken&&!('token' in p))p.token=currentToken;
+  const qs=Object.entries(p)
     .map(([k,v])=>k+'='+encodeURIComponent(typeof v==='object'?JSON.stringify(v):String(v)))
     .join('&');
   const res=await fetch(SHEETS_URL+'?'+qs,{cache:'no-store'});
-  return res.json();
+  const r=await res.json();
+  // v7.5: token 失效 → 强制重新登入
+  if(r&&r.error&&String(r.error).includes('UNAUTHORIZED')){
+    handleTokenExpired();
+  }
+  return r;
 }
 
 // text/plain POST：不触发 preflight，数据量不受 URL 长度限制
@@ -1988,15 +2015,28 @@ async function fetchWrite(type,data){
 async function gasPost(action, body){
   if(!SHEETS_URL)return{success:false,error:'未配置 SHEETS_URL'};
   try{
-    // v7.4: 每次 API 呼叫自动带上当前操作人（除非 body 已经指定）
-    const payload=Object.assign({action,editor:currentEditor||''},body);
+    // v7.4: editor，v7.5: token —— 都自动带上（除非 body 已指定）
+    const payload=Object.assign({action,editor:currentEditor||'',token:currentToken||''},body);
     const res=await fetch(SHEETS_URL,{
       method:'POST',
       headers:{'Content-Type':'text/plain'},
       body:JSON.stringify(payload)
     });
-    return await res.json();
+    const r=await res.json();
+    if(r&&r.error&&String(r.error).includes('UNAUTHORIZED')){
+      handleTokenExpired();
+    }
+    return r;
   }catch(e){return{success:false,error:e.message};}
+}
+
+// v7.5: token 失效（后端 SCRIPT_SECRET 改了或被清掉）→ 提示重新登入
+let _tokenExpiredAlerted=false;
+function handleTokenExpired(){
+  if(_tokenExpiredAlerted)return;
+  _tokenExpiredAlerted=true;
+  alert('⚠️ 登入凭证已失效（可能是 Apps Script 重新部署）。\n\n请重新登入。');
+  setTimeout(()=>{logout();_tokenExpiredAlerted=false;},500);
 }
 // 新增 1 笔，返回后端最终的 id（可能因碰撞被加 -N 后缀）
 async function gasAddRecord(type,record){return gasPost('addRecord',{type,record});}
