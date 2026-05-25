@@ -2030,13 +2030,29 @@ async function gasPost(action, body){
   }catch(e){return{success:false,error:e.message};}
 }
 
-// v7.5: token 失效（后端 SCRIPT_SECRET 改了或被清掉）→ 提示重新登入
+// v7.5: token 失效 → 静悄悄清掉本地状态，跳回 PIN 画面（不弹一堆讨厌的红色横条）
 let _tokenExpiredAlerted=false;
 function handleTokenExpired(){
   if(_tokenExpiredAlerted)return;
   _tokenExpiredAlerted=true;
-  alert('⚠️ 登入凭证已失效（可能是 Apps Script 重新部署）。\n\n请重新登入。');
-  setTimeout(()=>{logout();_tokenExpiredAlerted=false;},500);
+  // 直接清本地状态，不问 confirm
+  try{
+    localStorage.removeItem(PIN_KEY);
+    localStorage.removeItem(EDITOR_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+  }catch(e){}
+  currentEditor='';currentToken='';loadOK=true; // loadOK=true 解锁 safe banner
+  hideSafeBanner();
+  // 跳回 PIN 画面
+  document.getElementById('main-app').style.display='none';
+  document.getElementById('pin-overlay').style.display='flex';
+  const err=document.getElementById('pin-err');
+  if(err){err.textContent='登入凭证已过期，请重新输入 PIN';err.style.color='#854F0B';}
+  setTimeout(()=>{
+    const inp=document.getElementById('pin-input');
+    if(inp)inp.focus();
+    _tokenExpiredAlerted=false;
+  },200);
 }
 // 新增 1 笔，返回后端最终的 id（可能因碰撞被加 -N 后缀）
 async function gasAddRecord(type,record){return gasPost('addRecord',{type,record});}
