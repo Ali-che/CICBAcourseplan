@@ -376,7 +376,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <th class="sort" onclick="sortSch('course')">课程代码 <span id="si-co">⇅</span></th>
         <th>课程英文名</th><th>类型</th><th class="sort" onclick="sortSch('sem')">学期 <span id="si-sem">⇅</span></th>
         <th class="sort" onclick="sortSch('half')">上下半 <span id="si-hl">⇅</span></th>
-        <th>班级</th><th>授课老师</th><th>届别（人数）</th><th>总人数</th><th>备注</th><th>BTEC</th><th title="最后操作人">操作人</th><th>操作</th>
+        <th>班级</th><th>授课老师</th><th>届别（人数）</th><th>总人数</th><th>备注</th><th>BTEC</th><th>操作</th>
       </tr></thead><tbody id="sch-tb"></tbody></table>
     </div>
     <div class="empty" id="sch-em">暂无排课记录</div>
@@ -445,7 +445,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <th>学生称谓</th><th>学生姓名</th><th>学生专业</th>
         <th>课程代码</th><th>课程英文名</th><th>班级</th><th>学期</th>
         <th class="sort" onclick="sortSp('tc')">授课老师 <span id="si-tc">▼</span></th>
-        <th>备注</th><th title="最后操作人">操作人</th><th>操作</th>
+        <th>备注</th><th>操作</th>
       </tr></thead><tbody id="sp-tb"></tbody></table>
     </div>
     <div class="empty" id="sp-em">暂无 SG/IS 排课记录</div>
@@ -1594,7 +1594,6 @@ function renderSch(){
       '<td style="white-space:normal;min-width:120px">'+tags+'</td><td><strong>'+tot+'</strong></td>'+
       '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td>'+
       '<td>'+(r.btec===true||r.btec==='TRUE'||r.btec==='true'?'<span class="badge b4" style="font-size:10px">✓</span>':'—')+'</td>'+
-      '<td style="font-size:11px;color:#666;white-space:nowrap" title="'+eh(r.updated||'')+'">'+(r.editor?eh(r.editor):'<span style="color:#ccc">—</span>')+'</td>'+
       '<td style="white-space:nowrap"><button class="btn btn-e" onclick="startES('+r.id+')">更动</button> <button class="btn btn-d" onclick="delSch('+r.id+')">删除</button></td></tr>';
   }).join('');
   if(typeof syncTblHeight==='function')syncTblHeight();
@@ -1761,7 +1760,6 @@ function renderSp(){
       '<td>'+r.cls+'</td><td><span class="badge b4">'+r.sem+'</span></td>'+
       '<td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
       '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td>'+
-      '<td style="font-size:11px;color:#666;white-space:nowrap" title="'+eh(r.updated||'')+'">'+(r.editor?eh(r.editor):'<span style="color:#ccc">—</span>')+'</td>'+
       '<td style="white-space:nowrap"><button class="btn btn-e" onclick="startESp('+r.id+')">更动</button> <button class="btn btn-d" onclick="delSp('+r.id+')">删除</button></td></tr>';
   }).join('');
 }
