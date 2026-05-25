@@ -258,6 +258,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     <button class="btn btn-sm" onclick="exportData()">💾 导出 JSON</button>
     <button class="btn btn-sm" onclick="importData()">📂 导入 JSON</button>
     <button class="btn btn-sm" id="btn-refresh" onclick="reloadRef()">↻ 刷新参考数据</button>
+    <button class="btn btn-sm" onclick="showErrorLog()" style="color:#854F0B;border-color:#FCD34D" title="查看后端错误日志（最近 50 条）">🩺 错误日志</button>
     <span id="editor-badge" class="badge b5" style="font-size:11px;padding:5px 12px" title="当前操作人（每次新增/编辑/删除都会记录到 Sheet）">👤 —</span>
     <button class="btn btn-sm" onclick="logout()" style="color:#a32d2d;border-color:#f7c1c1" title="登出系统">🔒 登出</button>
   </div>
@@ -1496,6 +1497,36 @@ async function handleEditConflict(res,type,id,myDiff,myFullNew){
     renderSch();renderSp();renderAllSum();renderSta();
     setSyncStatus('已重新载入这笔记录的最新版',null);
   }
+}
+
+// v7.7: 显示后端错误日志（最近 50 条）
+async function showErrorLog(){
+  if(!SHEETS_URL){alert('未配置 SHEETS_URL');return;}
+  setSyncStatus('⏳ 抓取错误日志…','');
+  const r=await gasGet({action:'readErrors',limit:50});
+  if(!r||!r.success){alert('❌ 抓取失败：'+(r&&r.error||'unknown'));return;}
+  setSyncStatus('',null);
+  const errs=r.errors||[];
+  if(!errs.length){alert('🎉 没有任何错误纪录！');return;}
+  // 简单的 modal 展示
+  let html='<div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)this.remove()">';
+  html+='<div style="background:#fff;border-radius:10px;max-width:900px;max-height:80vh;overflow:auto;padding:20px;width:100%">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
+  html+='<h3 style="margin:0">🩺 错误日志（最近 '+errs.length+' 条）</h3>';
+  html+='<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer">✕</button></div>';
+  html+='<table style="width:100%;font-size:11px;border-collapse:collapse">';
+  html+='<thead><tr style="background:#534AB7;color:#fff;position:sticky;top:0"><th style="padding:6px 8px;text-align:left">时间</th><th>操作人</th><th>action</th><th>错误</th></tr></thead><tbody>';
+  errs.forEach(e=>{
+    const t=e.time?new Date(e.time).toLocaleString():'—';
+    html+='<tr style="border-bottom:1px solid #eee"><td style="padding:5px 8px;white-space:nowrap;color:#888">'+eh(t)+'</td>';
+    html+='<td style="padding:5px 8px">'+eh(e.editor||'—')+'</td>';
+    html+='<td style="padding:5px 8px"><code>'+eh(e.action||'—')+'</code></td>';
+    html+='<td style="padding:5px 8px;color:#a32d2d">'+eh(e.error||'—')+'</td></tr>';
+  });
+  html+='</tbody></table>';
+  html+='<div style="font-size:11px;color:#888;margin-top:12px">💡 提示：完整堆栈在 Google Sheet「错误日志」分页里。</div>';
+  html+='</div></div>';
+  const div=document.createElement('div');div.innerHTML=html;document.body.appendChild(div.firstChild);
 }
 
 async function mDelSch(){
