@@ -1452,9 +1452,49 @@ async function mSaveES(){
   if(!Object.keys(diff).length){setSyncStatus('（未改动）',null);return;}
   if(SHEETS_URL&&canSync()){
     setSyncStatus('⏳ 储存中…（'+Object.keys(diff).length+'个字段）','');
-    const res=await gasUpdateRecord('schedule',_mId||r.id,diff);
-    if(res&&res.success){setSyncStatus('✅ 已储存 '+new Date().toLocaleTimeString(),true);}
-    else{handleRecordApiFail(res);setSyncStatus('❌ 储存失败',false);}
+    // v7.6: 带上 _mOrig.updated 让后端检查冲突
+    const expectedVer=(_mOrig&&_mOrig.updated)?_mOrig.updated:'';
+    const res=await gasUpdateRecord('schedule',_mId||r.id,diff,expectedVer);
+    if(res&&res.success){
+      setSyncStatus('✅ 已储存 '+new Date().toLocaleTimeString(),true);
+    }else if(res&&res.conflict){
+      handleEditConflict(res,'schedule',_mId||r.id,diff,newVals);
+    }else{
+      handleRecordApiFail(res);setSyncStatus('❌ 储存失败',false);
+    }
+  }
+}
+
+// v7.6: 处理编辑冲突（别人在你打开后改过这笔）
+async function handleEditConflict(res,type,id,myDiff,myFullNew){
+  const cur=res.currentRecord||{};
+  const editorTxt=cur.editor?('「'+cur.editor+'」'):'某人';
+  const updTxt=cur.updated?new Date(cur.updated).toLocaleString():'刚刚';
+  const choice=confirm(
+    '⚠️ 编辑冲突\n\n'+
+    editorTxt+'在你打开这笔记录后，已经改过了（'+updTxt+'）。\n\n'+
+    '你的改动还没储存。请选择：\n\n'+
+    '✓ 确定 = 强制覆盖（用你的版本盖掉别人刚改的）\n'+
+    '✗ 取消 = 放弃你的改动，刷新看别人的最新版'
+  );
+  if(choice){
+    // 强制覆盖：不带 expectedVersion 再送一次
+    setSyncStatus('⏳ 强制覆盖中…','');
+    const r2=await gasUpdateRecord(type,id,myDiff,''); // expectedVersion 空 = 跳过检查
+    if(r2&&r2.success){
+      setSyncStatus('✅ 已覆盖 '+new Date().toLocaleTimeString(),true);
+    }else{
+      handleRecordApiFail(r2);
+    }
+  }else{
+    // 放弃 → 从云端重载这笔（最简单：整张刷新）
+    setSyncStatus('🔄 刷新中…','');
+    // 把本地这笔回滚成 server 版本
+    const arr=type==='schedule'?schD:spD;
+    const idx=arr.findIndex(x=>String(x.id)===String(id));
+    if(idx>=0)arr[idx]=cur;
+    renderSch();renderSp();renderAllSum();renderSta();
+    setSyncStatus('已重新载入这笔记录的最新版',null);
   }
 }
 
@@ -1731,9 +1771,16 @@ async function mpSaveESp(){
   if(!Object.keys(diff).length){setSyncStatus('（未改动）',null);return;}
   if(SHEETS_URL&&canSync()){
     setSyncStatus('⏳ 储存中…（'+Object.keys(diff).length+'个字段）','');
-    const res=await gasUpdateRecord('special',_mpId||r.id,diff);
-    if(res&&res.success){setSyncStatus('✅ 已储存 '+new Date().toLocaleTimeString(),true);}
-    else{handleRecordApiFail(res);setSyncStatus('❌ 储存失败',false);}
+    // v7.6: 同样带上版本，处理冲突
+    const expectedVer=(_mpOrig&&_mpOrig.updated)?_mpOrig.updated:'';
+    const res=await gasUpdateRecord('special',_mpId||r.id,diff,expectedVer);
+    if(res&&res.success){
+      setSyncStatus('✅ 已储存 '+new Date().toLocaleTimeString(),true);
+    }else if(res&&res.conflict){
+      handleEditConflict(res,'special',_mpId||r.id,diff,newVals);
+    }else{
+      handleRecordApiFail(res);setSyncStatus('❌ 储存失败',false);
+    }
   }
 }
 
@@ -2057,7 +2104,8 @@ function handleTokenExpired(){
 // 新增 1 笔，返回后端最终的 id（可能因碰撞被加 -N 后缀）
 async function gasAddRecord(type,record){return gasPost('addRecord',{type,record});}
 // 只改指定字段（fields 是 partial object），不动其他字段
-async function gasUpdateRecord(type,id,fields){return gasPost('updateRecord',{type,id,fields});}
+// v7.6: expectedVersion = 客户端打开 modal 时记下的「最后更新」，让后端侦测冲突
+async function gasUpdateRecord(type,id,fields,expectedVersion){return gasPost('updateRecord',{type,id,fields,expectedVersion:expectedVersion||''});}
 // 按 id 删一列
 async function gasDeleteRecord(type,id){return gasPost('deleteRecord',{type,id});}
 // BTEC/LA500 按老师名增改一格，0 视为删除
