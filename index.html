@@ -1457,6 +1457,9 @@ async function mSaveES(){
     const expectedVer=(_mOrig&&_mOrig.updated)?_mOrig.updated:'';
     const res=await gasUpdateRecord('schedule',_mId||r.id,diff,expectedVer);
     if(res&&res.success){
+      // v7.6 fix: 同步本地 updated 时间戳，避免同人连续编辑同笔时误触冲突
+      r.updated=new Date().toISOString();
+      r.editor=currentEditor||r.editor;
       setSyncStatus('✅ 已储存 '+new Date().toLocaleTimeString(),true);
     }else if(res&&res.conflict){
       handleEditConflict(res,'schedule',_mId||r.id,diff,newVals);
@@ -1806,6 +1809,9 @@ async function mpSaveESp(){
     const expectedVer=(_mpOrig&&_mpOrig.updated)?_mpOrig.updated:'';
     const res=await gasUpdateRecord('special',_mpId||r.id,diff,expectedVer);
     if(res&&res.success){
+      // v7.6 fix: 同步本地 updated 时间戳
+      r.updated=new Date().toISOString();
+      r.editor=currentEditor||r.editor;
       setSyncStatus('✅ 已储存 '+new Date().toLocaleTimeString(),true);
     }else if(res&&res.conflict){
       handleEditConflict(res,'special',_mpId||r.id,diff,newVals);
