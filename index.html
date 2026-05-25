@@ -276,6 +276,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   <span id="ref-teachers" class="badge b4" style="font-size:11px">老师库 — 位</span>
   <span id="ref-cohorts" class="badge b4" style="font-size:11px">届别库 — 条</span>
   <span id="ref-depts" class="badge b4" style="font-size:11px">专业库 — 个</span>
+  <span id="ref-sems" class="badge b4" style="font-size:11px">学期 — 个</span>
   <span id="ref-time" style="font-size:10px;color:#bbb;margin-left:auto"></span>
   <span id="sync-status-bar" style="font-size:11px;color:#888;margin-left:4px"></span>
   <button class="btn btn-sm" onclick="syncAll()" style="font-size:10px;padding:3px 8px;color:#0F6E56;border-color:#9ADDC5;margin-left:4px" title="从云端拉最新资料（看到其他老师的编辑）">↻ 刷新</button>
@@ -984,6 +985,9 @@ function updateRefBar(){
   document.getElementById('ref-teachers').textContent='老师库 '+T.length+' 位';
   document.getElementById('ref-cohorts').textContent='届别库 '+totalCoh+' 条';
   document.getElementById('ref-depts').textContent='专业库 '+depts+' 个';
+  // v7.3: 学期数（按学年分组也显示）
+  const yrs=[...new Set(SEMS.map(s=>String(s).substring(0,4)))].length;
+  document.getElementById('ref-sems').textContent='学期 '+SEMS.length+' 个 / '+yrs+' 学年';
   document.getElementById('ref-time').textContent=refLoadTime?'更新：'+refLoadTime.toLocaleTimeString():'';
   const b=document.getElementById('src-badge');
   if(b){b.className='src-badge '+(refSource==='sheets'?'src-sheets':'src-local');
