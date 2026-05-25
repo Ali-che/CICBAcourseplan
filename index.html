@@ -716,7 +716,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 //    例如 if(e.parameter.token!==SCRIPT_SECRET) return blocked。
 // 這兩件事都不是改前端 HTML 就能解決，請另開 Apps Script 端的工作。
 // ── PIN 码验证 ──────────────────────────────
-const PIN = 'CICBA2569';        // 管理员 master PIN（永远有效）
+const PIN = 'CICBACICBA2016';   // master PIN（永远有效），登入身份显示为 The Ghost Captain 👻⚓
 const PIN_KEY = 'cic_auth';
 const PIN_TTL = 24 * 60 * 60 * 1000;
 const EDITOR_KEY = 'cic_editor'; // v7.4: 当前操作人名字
@@ -734,7 +734,7 @@ function checkPin(){
   const isMaster = (val === PIN);
   if(matched || isMaster){
     localStorage.setItem(PIN_KEY, Date.now());
-    currentEditor = matched ? matched.name : '管理员';
+    currentEditor = matched ? matched.name : 'The Ghost Captain';
     try { localStorage.setItem(EDITOR_KEY, currentEditor); } catch(e){}
     unlockApp();
   } else {
