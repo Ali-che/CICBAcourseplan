@@ -258,6 +258,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     <button class="btn btn-sm" onclick="exportData()">💾 导出 JSON</button>
     <button class="btn btn-sm" onclick="importData()">📂 导入 JSON</button>
     <button class="btn btn-sm" id="btn-refresh" onclick="reloadRef()">↻ 刷新参考数据</button>
+    <span id="editor-badge" class="badge b5" style="font-size:11px;padding:5px 12px" title="当前操作人（每次新增/编辑/删除都会记录到 Sheet）">👤 —</span>
     <button class="btn btn-sm" onclick="logout()" style="color:#a32d2d;border-color:#f7c1c1" title="登出系统">🔒 登出</button>
   </div>
 </div>
@@ -375,7 +376,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <th class="sort" onclick="sortSch('course')">课程代码 <span id="si-co">⇅</span></th>
         <th>课程英文名</th><th>类型</th><th class="sort" onclick="sortSch('sem')">学期 <span id="si-sem">⇅</span></th>
         <th class="sort" onclick="sortSch('half')">上下半 <span id="si-hl">⇅</span></th>
-        <th>班级</th><th>授课老师</th><th>届别（人数）</th><th>总人数</th><th>备注</th><th>BTEC</th><th>操作</th>
+        <th>班级</th><th>授课老师</th><th>届别（人数）</th><th>总人数</th><th>备注</th><th>BTEC</th><th title="最后操作人">操作人</th><th>操作</th>
       </tr></thead><tbody id="sch-tb"></tbody></table>
     </div>
     <div class="empty" id="sch-em">暂无排课记录</div>
@@ -444,7 +445,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <th>学生称谓</th><th>学生姓名</th><th>学生专业</th>
         <th>课程代码</th><th>课程英文名</th><th>班级</th><th>学期</th>
         <th class="sort" onclick="sortSp('tc')">授课老师 <span id="si-tc">▼</span></th>
-        <th>备注</th><th>操作</th>
+        <th>备注</th><th title="最后操作人">操作人</th><th>操作</th>
       </tr></thead><tbody id="sp-tb"></tbody></table>
     </div>
     <div class="empty" id="sp-em">暂无 SG/IS 排课记录</div>
@@ -715,14 +716,26 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 //    例如 if(e.parameter.token!==SCRIPT_SECRET) return blocked。
 // 這兩件事都不是改前端 HTML 就能解決，請另開 Apps Script 端的工作。
 // ── PIN 码验证 ──────────────────────────────
-const PIN = 'CICBA2569';
+const PIN = 'CICBA2569';        // 管理员 master PIN（永远有效）
 const PIN_KEY = 'cic_auth';
 const PIN_TTL = 24 * 60 * 60 * 1000;
+const EDITOR_KEY = 'cic_editor'; // v7.4: 当前操作人名字
+let DIRECTORS = [];              // v7.4: 主任 PIN 列表 [{pin, name, note}]
+let currentEditor = '';          // v7.4: 当前操作人（每次 API 调用会带上）
+
+// v7.4: 启动时先从 localStorage 读取上次缓存的主任列表，让 PIN 检查能用
+try { DIRECTORS = JSON.parse(localStorage.getItem('cic_directors') || '[]'); } catch(e){}
+try { currentEditor = localStorage.getItem(EDITOR_KEY) || ''; } catch(e){}
 
 function checkPin(){
-  const val = document.getElementById('pin-input').value;
-  if(val === PIN){
+  const val = document.getElementById('pin-input').value.trim();
+  // v7.4: 先查主任列表
+  const matched = DIRECTORS.find(d => String(d.pin) === val);
+  const isMaster = (val === PIN);
+  if(matched || isMaster){
     localStorage.setItem(PIN_KEY, Date.now());
+    currentEditor = matched ? matched.name : '管理员';
+    try { localStorage.setItem(EDITOR_KEY, currentEditor); } catch(e){}
     unlockApp();
   } else {
     const box = document.querySelector('.pin-box');
@@ -755,6 +768,8 @@ function checkAuth(){
 function logout(){
   if(!confirm('确认登出？'))return;
   localStorage.removeItem(PIN_KEY);
+  localStorage.removeItem(EDITOR_KEY);  // v7.4
+  currentEditor='';
   document.getElementById('pin-input').value='';
   document.getElementById('pin-err').textContent='';
   document.getElementById('pin-overlay').style.display='flex';
@@ -960,6 +975,11 @@ async function loadRefFromSheets(){
     }
     // v7.3: 接收学期列表
     if(data.sems&&data.sems.length)SEMS=data.sems;
+    // v7.4: 接收主任 PIN 列表，并缓存到 localStorage（让下次 PIN 输入能立刻查）
+    if(data.directors&&Array.isArray(data.directors)){
+      DIRECTORS=data.directors;
+      try{ localStorage.setItem('cic_directors',JSON.stringify(DIRECTORS)); }catch(e){}
+    }
     refSource='sheets';refLoadTime=new Date();
     if(banner)banner.style.display='none';return true;
   }catch(e){
@@ -988,6 +1008,9 @@ function updateRefBar(){
   // v7.3: 学期数（按学年分组也显示）
   const yrs=[...new Set(SEMS.map(s=>String(s).substring(0,4)))].length;
   document.getElementById('ref-sems').textContent='学期 '+SEMS.length+' 个 / '+yrs+' 学年';
+  // v7.4: 当前操作人 badge
+  const eb=document.getElementById('editor-badge');
+  if(eb)eb.textContent='👤 '+(currentEditor||'未指名');
   document.getElementById('ref-time').textContent=refLoadTime?'更新：'+refLoadTime.toLocaleTimeString():'';
   const b=document.getElementById('src-badge');
   if(b){b.className='src-badge '+(refSource==='sheets'?'src-sheets':'src-local');
@@ -1571,6 +1594,7 @@ function renderSch(){
       '<td style="white-space:normal;min-width:120px">'+tags+'</td><td><strong>'+tot+'</strong></td>'+
       '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td>'+
       '<td>'+(r.btec===true||r.btec==='TRUE'||r.btec==='true'?'<span class="badge b4" style="font-size:10px">✓</span>':'—')+'</td>'+
+      '<td style="font-size:11px;color:#666;white-space:nowrap" title="'+eh(r.updated||'')+'">'+(r.editor?eh(r.editor):'<span style="color:#ccc">—</span>')+'</td>'+
       '<td style="white-space:nowrap"><button class="btn btn-e" onclick="startES('+r.id+')">更动</button> <button class="btn btn-d" onclick="delSch('+r.id+')">删除</button></td></tr>';
   }).join('');
   if(typeof syncTblHeight==='function')syncTblHeight();
@@ -1737,6 +1761,7 @@ function renderSp(){
       '<td>'+r.cls+'</td><td><span class="badge b4">'+r.sem+'</span></td>'+
       '<td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
       '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td>'+
+      '<td style="font-size:11px;color:#666;white-space:nowrap" title="'+eh(r.updated||'')+'">'+(r.editor?eh(r.editor):'<span style="color:#ccc">—</span>')+'</td>'+
       '<td style="white-space:nowrap"><button class="btn btn-e" onclick="startESp('+r.id+')">更动</button> <button class="btn btn-d" onclick="delSp('+r.id+')">删除</button></td></tr>';
   }).join('');
 }
@@ -1965,10 +1990,12 @@ async function fetchWrite(type,data){
 async function gasPost(action, body){
   if(!SHEETS_URL)return{success:false,error:'未配置 SHEETS_URL'};
   try{
+    // v7.4: 每次 API 呼叫自动带上当前操作人（除非 body 已经指定）
+    const payload=Object.assign({action,editor:currentEditor||''},body);
     const res=await fetch(SHEETS_URL,{
       method:'POST',
       headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify(Object.assign({action},body))
+      body:JSON.stringify(payload)
     });
     return await res.json();
   }catch(e){return{success:false,error:e.message};}
