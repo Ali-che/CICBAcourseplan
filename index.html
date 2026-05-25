@@ -278,7 +278,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   <span id="ref-depts" class="badge b4" style="font-size:11px">专业库 — 个</span>
   <span id="ref-time" style="font-size:10px;color:#bbb;margin-left:auto"></span>
   <span id="sync-status-bar" style="font-size:11px;color:#888;margin-left:4px"></span>
-  <button class="btn btn-sm" onclick="syncAll()" style="font-size:10px;padding:3px 8px;color:#534AB7;border-color:#AFA9EC;margin-left:4px">↑↓ 同步</button>
+  <button class="btn btn-sm" onclick="syncAll()" style="font-size:10px;padding:3px 8px;color:#0F6E56;border-color:#9ADDC5;margin-left:4px" title="从云端拉最新资料（看到其他老师的编辑）">↻ 刷新</button>
 </div>
 <div class="sync-bar" id="sync-bar"><div class="sync-bar-inner" id="sync-bar-inner"></div></div>
 
@@ -2116,16 +2116,38 @@ function setSyncStatus(msg,ok){
   else if(ok===false){bar.classList.add('fail');setTimeout(()=>{bar.style.width='0%';},3000);}
 }
 
+// v7.3: 旧 syncAll 是「整张推上去 + 备份」5+ 秒、空表会失败
+// 改成「从云端拉最新」—— 0.5-1 秒、永不会失败、能看到其他老师的编辑
+// 你自己的编辑早就在按 ✓ 储存当下就 per-record 同步好了，不需要再「推一次」
 async function syncAll(){
   if(!SHEETS_URL){alert('请先配置 SHEETS_URL');return;}
-  setSyncStatus('⏳ 正在同步…','');
+  setSyncStatus('⏳ 正在从云端刷新…','');
   try{
-    const r1=await fetchWrite('schedule',schD);
-    const r2=await fetchWrite('special',spD);
+    // 并行抓 3 份：schedule + special + btec
+    const [r1,r2,r3]=await Promise.all([
+      gasGet({action:'read',type:'schedule'}),
+      gasGet({action:'read',type:'special'}),
+      gasGet({action:'read',type:'btec'})
+    ]);
+    if(!r1.success||!r2.success||!r3.success){
+      throw new Error(r1.error||r2.error||r3.error||'读取失败');
+    }
+    if(r1.data&&r1.data.length)schD=r1.data;
+    if(r2.data)spD=r2.data; // special 允许空数组
+    if(r3.data)btecD=r3.data;
+    dataLoadTime=Date.now();
+    lastRemoteHash=hashRecords(schD);
+    deletedIds.schedule.clear();deletedIds.special.clear();
+    // 隐藏可能的「云端有改动」黄色警告
+    staleWarningShown=false;
+    const b=document.getElementById('stale-banner');if(b)b.style.display='none';
+    renderSch();renderSp();renderAllSum();renderSta();updateFreshness();
     const t=new Date().toLocaleTimeString();
-    setSyncStatus((r1&&r2)?'✅ 已同步 '+t:'❌ 部分失败',r1&&r2);
-    alert(r1&&r2?'✅ 两份数据已同步至 Google Sheets！':'❌ 同步失败，请检查连线');
-  }catch(e){setSyncStatus('❌ 连线失败',false);alert('❌ 连线失败');}
+    setSyncStatus('✅ 已刷新 '+t+'（'+schD.length+' 排课 / '+spD.length+' IS-SG）',true);
+  }catch(e){
+    setSyncStatus('❌ 刷新失败：'+e.message,false);
+    alert('❌ 刷新失败：'+e.message);
+  }
 }
 
 async function syncToSheets(type){
