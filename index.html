@@ -364,6 +364,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <button class="btn btn-sm" onclick="syncToSheets('schedule')">↑ 上传</button>
         <button class="btn btn-sm" onclick="syncFromSheets('schedule')">↓ 下载</button>
         <button class="btn btn-sm no-print" onclick="exportSchExcel()" style="color:#1a6b2f;border-color:#9ed4ae">📊 Excel</button>
+        <button class="btn btn-sm no-print" onclick="openCsvImport()" style="color:#854F0B;border-color:#FCD34D">📥 批量导入</button>
         <button class="btn btn-sm no-print" onclick="printPanel('sch')">🖨️ 列印</button>
       </div>
     </div>
@@ -683,6 +684,32 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <button class="btn btn-d" id="mp-del-btn" onclick="mpDelSp()">🗑 删除此排课</button>
       <button class="btn" onclick="closeSpModal()">取消</button>
       <button class="btn btn-p" onclick="mpSaveESp()">✓ 储存变更</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CSV 批量导入 Modal ════════════════════ -->
+<div class="modal-overlay" id="csv-modal" onmousedown="modalMouseDown(event,this)" onclick="modalMaybeClose(event,this,closeCsvImport)">
+  <div class="modal-box" style="max-width:980px">
+    <div class="modal-hdr">
+      <h3>📥 CSV 批量导入排课</h3>
+      <button class="modal-close" onclick="closeCsvImport()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-sec">操作步骤</div>
+      <ol style="margin-left:20px;font-size:12px;line-height:1.8;color:#444">
+        <li>下载模板（含表头与说明）<button class="btn btn-sm" style="margin-left:8px;color:#3B6D11;border-color:#C0DD97" onclick="downloadCsvTemplate()">📥 下载 CSV 模板</button></li>
+        <li>用 <strong>Excel</strong> 或 <strong>Google Sheet</strong> 编辑填写</li>
+        <li>另存为 <strong style="color:#a32d2d">CSV UTF-8（逗号分隔）</strong>，避免中文乱码</li>
+        <li>下方选择档案 → 检查预览 → 确认导入</li>
+      </ol>
+      <div class="modal-sec">选择档案</div>
+      <input type="file" id="csv-file" accept=".csv,text/csv" onchange="onCsvFileChosen(event)" style="font-size:12px;padding:6px;border:1px dashed #aaa;border-radius:6px;background:#fafafa;width:100%;cursor:pointer">
+      <div id="csv-preview" style="margin-top:14px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeCsvImport()">取消</button>
+      <button class="btn btn-p" id="csv-import-btn" onclick="confirmCsvImport()" disabled>请先选择 CSV 档案</button>
     </div>
   </div>
 </div>
@@ -2227,6 +2254,227 @@ function exportSchExcel(){
   a.click();
   URL.revokeObjectURL(a.href);
 }
+
+// ════════════════════════════════════════
+// v7.3+ CSV 批量导入
+// 模板栏位：课程代码,学期,上下半,班级,授课老师,届别1,人数1,...,届别5,人数5,备注,BTEC
+// 走跟手填表单完全一样的 gasAddRecord 路径 → 产出的记录 100% 一致
+// ════════════════════════════════════════
+const CSV_HEADERS=['课程代码','学期','上下半','班级','授课老师',
+  '届别1','人数1','届别2','人数2','届别3','人数3','届别4','人数4','届别5','人数5','备注','BTEC'];
+
+let _csvParsed=[]; // 解析+验证后的行 [{record, errors, warnings, isDup}]
+
+function openCsvImport(){
+  document.getElementById('csv-modal').classList.add('open');
+  document.body.style.overflow='hidden';
+  document.getElementById('csv-file').value='';
+  document.getElementById('csv-preview').innerHTML='';
+  const btn=document.getElementById('csv-import-btn');
+  btn.disabled=true;btn.textContent='请先选择 CSV 档案';
+  _csvParsed=[];
+}
+function closeCsvImport(){
+  document.getElementById('csv-modal').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+function downloadCsvTemplate(){
+  // 生成含表头 + 1 行范例的模板，附加注释行说明
+  const rows=[
+    CSV_HEADERS,
+    ['# 范例（删除此行）','','','','','','','','','','','','','','','',''],
+    ['KF301','2569-1','全学期','601','Aj. Chen, Dui','TM67(7)','35','TM68(7)','30','','','','','','','合班','FALSE'],
+    ['# 说明：','','','','','','','','','','','','','','','',''],
+    ['# 课程代码、学期、班级、至少 1 个届别+人数 = 必填','','','','','','','','','','','','','','','',''],
+    ['# 上下半：留空 / 全学期 / 上半学期 / 下半学期','','','','','','','','','','','','','','','',''],
+    ['# BTEC：TRUE / FALSE（留空=FALSE）','','','','','','','','','','','','','','','',''],
+    ['# 一行 = 一筆排课，最多 5 个届别栏位','','','','','','','','','','','','','','','',''],
+  ];
+  const csv=rows.map(r=>r.map(c=>{
+    const s=String(c==null?'':c);
+    return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+  }).join(',')).join('\n');
+  // UTF-8 BOM 让 Excel 直接识别
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='排课导入模板_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// 简单但够用的 CSV 解析（支持引号、转义双引号）
+function parseCsv(text){
+  if(text.charCodeAt(0)===0xFEFF)text=text.slice(1); // strip BOM
+  const lines=text.split(/\r?\n/);
+  const rows=[];
+  for(const line of lines){
+    if(!line.trim())continue;
+    if(line.trim().startsWith('#'))continue; // 跳过注释行
+    const row=[];let cur='',inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'){
+        if(inQ&&line[i+1]==='"'){cur+='"';i++;}
+        else inQ=!inQ;
+      }else if(c===','&&!inQ){row.push(cur);cur='';}
+      else cur+=c;
+    }
+    row.push(cur);
+    rows.push(row);
+  }
+  return rows;
+}
+
+function onCsvFileChosen(ev){
+  const file=ev.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    let text=e.target.result;
+    // 检测乱码：常见 Big5 标识
+    if(/锟斤拷|�/.test(text)){
+      alert('⚠️ 档案似乎不是 UTF-8（出现乱码）。\n\n请在 Excel 重新「另存为 → CSV UTF-8（逗号分隔）」后再上传。');
+      return;
+    }
+    const rows=parseCsv(text);
+    if(rows.length<2){alert('❌ CSV 内容为空或只有表头');return;}
+    const headers=rows[0].map(h=>h.trim());
+    // 验证表头
+    const missing=CSV_HEADERS.filter(h=>!headers.includes(h));
+    if(missing.length){
+      alert('❌ CSV 表头不完整，缺少：'+missing.join('、')+'\n\n请用「下载 CSV 模板」按钮取得正确表头。');
+      return;
+    }
+    const colIdx={};
+    CSV_HEADERS.forEach(h=>colIdx[h]=headers.indexOf(h));
+    _csvParsed=rows.slice(1).map((r,i)=>parseAndValidateRow(r,colIdx,i+2));
+    buildCsvPreview();
+  };
+  reader.readAsText(file,'UTF-8');
+}
+
+function parseAndValidateRow(row,colIdx,lineNum){
+  const get=h=>(row[colIdx[h]]||'').trim();
+  const course=get('课程代码').toUpperCase();
+  const sem=get('学期');
+  const half=get('上下半');
+  const cls=get('班级');
+  const tc=get('授课老师');
+  const nt=get('备注');
+  const btecRaw=get('BTEC').toUpperCase();
+  const btec=(btecRaw==='TRUE'||btecRaw==='1'||btecRaw==='Y'||btecRaw==='是');
+
+  // 蒐集 5 组届别+人数
+  const cc=[];
+  for(let i=1;i<=5;i++){
+    const coh=get('届别'+i);
+    if(!coh)continue;
+    const cnt=parseInt(get('人数'+i))||0;
+    cc.push({cohort:coh,count:cnt});
+  }
+
+  const errors=[],warnings=[];
+  if(!course)errors.push('课程代码必填');
+  else if(!C.find(x=>x.c===course))errors.push('「'+course+'」不在课程库');
+  if(!sem)errors.push('学期必填');
+  else if(!/^\d{4}-[1-3]$/.test(sem))errors.push('学期格式应为 2569-1');
+  if(half&&!['全学期','上半学期','下半学期'].includes(half))warnings.push('上下半「'+half+'」不在预设值');
+  if(!cls)errors.push('班级必填');
+  if(!cc.length)errors.push('至少需要一个届别+人数');
+  if(tc&&!T.find(x=>x.n===tc))warnings.push('老师「'+tc+'」不在老师库（可能拼错）');
+  cc.forEach((x,i)=>{
+    const allCoh=Object.values(CBD).flat();
+    if(!allCoh.includes(x.cohort))warnings.push('届别「'+x.cohort+'」不在届别库');
+  });
+
+  // 课程查得到 → 补 en + 自动 type
+  let en='',type='正常';
+  const cInfo=C.find(x=>x.c===course);
+  if(cInfo){en=cInfo.en||'';type=detectType(course,cls);}
+
+  // 重复侦测：跟已存在记录撞 course+sem+half+cls
+  const isDup=!!schD.find(r=>r.course===course&&r.cls===cls&&r.sem===sem&&r.half===half);
+  if(isDup)warnings.push('本地已有同 课程+学期+半期+班级 的记录');
+
+  return{
+    line:lineNum,
+    record:{course,en,sem,half,type,cls,tc,nt,cc,btec},
+    errors,warnings,isDup,
+    raw:row
+  };
+}
+
+function buildCsvPreview(){
+  const wrap=document.getElementById('csv-preview');
+  if(!_csvParsed.length){wrap.innerHTML='<div style="color:#999;padding:14px;text-align:center">没有可解析的资料</div>';return;}
+  const okCount=_csvParsed.filter(x=>!x.errors.length).length;
+  const errCount=_csvParsed.filter(x=>x.errors.length).length;
+  const warnCount=_csvParsed.filter(x=>!x.errors.length&&x.warnings.length).length;
+  const html=[];
+  html.push('<div style="display:flex;gap:10px;font-size:12px;margin-bottom:8px">');
+  html.push('<span class="badge b1">🟢 可导入 '+okCount+'</span>');
+  if(warnCount)html.push('<span class="badge b2">🟡 含警告 '+warnCount+'</span>');
+  if(errCount)html.push('<span class="badge b3">🔴 不可导入 '+errCount+'</span>');
+  html.push('</div>');
+  html.push('<div style="max-height:380px;overflow-y:auto;border:1px solid #eee;border-radius:6px">');
+  html.push('<table style="font-size:11px;width:100%"><thead><tr style="background:#534AB7;color:#fff;position:sticky;top:0">');
+  html.push('<th style="padding:5px 8px">状态</th><th>行号</th><th>课程</th><th>学期</th><th>上下半</th><th>班级</th><th>老师</th><th>届别</th><th>问题</th>');
+  html.push('</tr></thead><tbody>');
+  _csvParsed.forEach(p=>{
+    const icon=p.errors.length?'🔴':(p.warnings.length?'🟡':'🟢');
+    const bg=p.errors.length?'#FEF2F2':(p.warnings.length?'#FFFBEB':'');
+    const r=p.record;
+    const ccTxt=r.cc.map(c=>c.cohort+'·'+c.count+'人').join(' / ');
+    const probs=[...p.errors.map(e=>'❌ '+e),...p.warnings.map(w=>'⚠️ '+w)].join('<br>');
+    html.push('<tr style="background:'+bg+'"><td style="padding:4px 8px;text-align:center">'+icon+'</td>');
+    html.push('<td style="color:#999">'+p.line+'</td>');
+    html.push('<td><code>'+eh(r.course||'—')+'</code></td>');
+    html.push('<td>'+eh(r.sem||'—')+'</td><td>'+eh(r.half||'—')+'</td><td>'+eh(r.cls||'—')+'</td>');
+    html.push('<td>'+eh(r.tc||'—')+'</td>');
+    html.push('<td style="max-width:200px">'+eh(ccTxt||'—')+'</td>');
+    html.push('<td style="font-size:10px;color:'+(p.errors.length?'#a32d2d':'#854F0B')+'">'+probs+'</td>');
+    html.push('</tr>');
+  });
+  html.push('</tbody></table></div>');
+  wrap.innerHTML=html.join('');
+  const btn=document.getElementById('csv-import-btn');
+  if(okCount===0){btn.disabled=true;btn.textContent='没有可导入的记录';}
+  else{btn.disabled=false;btn.textContent='✓ 确认导入 '+okCount+' 笔';}
+}
+
+async function confirmCsvImport(){
+  const valid=_csvParsed.filter(x=>!x.errors.length);
+  if(!valid.length){alert('没有可导入的记录');return;}
+  if(!SHEETS_URL){alert('未配置 SHEETS_URL，无法同步');return;}
+  if(!canSync())return;
+  if(!confirm('确定导入 '+valid.length+' 笔排课？\n\n警告项（黄色）也会一并导入。'))return;
+
+  const btn=document.getElementById('csv-import-btn');
+  btn.disabled=true;
+  let success=0,fail=0;
+  for(let i=0;i<valid.length;i++){
+    const v=valid[i];
+    btn.textContent='⏳ 导入中 '+(i+1)+'/'+valid.length+'…';
+    const localId=Date.now()+i; // +i 避免同毫秒碰撞
+    const rec={id:localId,...v.record,editing:false};
+    schD.push(rec);
+    try{
+      const res=await gasAddRecord('schedule',rec);
+      if(res&&res.success){
+        if(res.id&&String(res.id)!==String(localId))rec.id=res.id;
+        success++;
+      }else{
+        schD=schD.filter(x=>x!==rec); // 失败回滚
+        fail++;
+      }
+    }catch(e){schD=schD.filter(x=>x!==rec);fail++;}
+  }
+  renderSch();renderAllSum();renderSta();
+  alert('✅ 完成！\n\n成功：'+success+' 笔\n失败：'+fail+' 笔'+(fail?'\n（失败的记录已自本地回滚）':''));
+  closeCsvImport();
+}
+
 function switchTab(id){
   ['sch','sp','sum','sta'].forEach((x,i)=>{document.querySelectorAll('.tab')[i].classList.toggle('active',x===id);});
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
