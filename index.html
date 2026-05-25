@@ -1445,6 +1445,9 @@ async function mSaveES(){
   });
   if(Boolean(newVals.btec)!==Boolean(orig.btec===true||orig.btec==='TRUE'||orig.btec==='true'))diff.btec=newVals.btec;
   if(JSON.stringify(newVals.cc)!==JSON.stringify(orig.cc||[]))diff.cc=newVals.cc;
+  // v7.6 fix #2: 先抢救 _mId 和 _mOrig.updated！closeSchModal 会把它们清空
+  const savedId=_mId||r.id;
+  const expectedVer=(_mOrig&&_mOrig.updated)?_mOrig.updated:'';
   // 应用到本地
   Object.assign(r,newVals);
   closeSchModal();
@@ -1453,16 +1456,14 @@ async function mSaveES(){
   if(!Object.keys(diff).length){setSyncStatus('（未改动）',null);return;}
   if(SHEETS_URL&&canSync()){
     setSyncStatus('⏳ 储存中…（'+Object.keys(diff).length+'个字段）','');
-    // v7.6: 带上 _mOrig.updated 让后端检查冲突
-    const expectedVer=(_mOrig&&_mOrig.updated)?_mOrig.updated:'';
-    const res=await gasUpdateRecord('schedule',_mId||r.id,diff,expectedVer);
+    const res=await gasUpdateRecord('schedule',savedId,diff,expectedVer);
     if(res&&res.success){
       // v7.6 fix: 同步本地 updated 时间戳，避免同人连续编辑同笔时误触冲突
       r.updated=new Date().toISOString();
       r.editor=currentEditor||r.editor;
       setSyncStatus('✅ 已储存 '+new Date().toLocaleTimeString(),true);
     }else if(res&&res.conflict){
-      handleEditConflict(res,'schedule',_mId||r.id,diff,newVals);
+      handleEditConflict(res,'schedule',savedId,diff,newVals);
     }else{
       handleRecordApiFail(res);setSyncStatus('❌ 储存失败',false);
     }
@@ -1799,22 +1800,23 @@ async function mpSaveESp(){
   ['sid','mr','nm','mj','co','en','cls','sem','tc','nt'].forEach(k=>{
     if(String(newVals[k]||'')!==String(orig[k]||''))diff[k]=newVals[k];
   });
+  // v7.6 fix #2: 先抢救 _mpId 和 _mpOrig.updated！closeSpModal 会清空
+  const savedId=_mpId||r.id;
+  const expectedVer=(_mpOrig&&_mpOrig.updated)?_mpOrig.updated:'';
   Object.assign(r,newVals);
   closeSpModal();
   renderSp();renderAllSum();renderSta();
   if(!Object.keys(diff).length){setSyncStatus('（未改动）',null);return;}
   if(SHEETS_URL&&canSync()){
     setSyncStatus('⏳ 储存中…（'+Object.keys(diff).length+'个字段）','');
-    // v7.6: 同样带上版本，处理冲突
-    const expectedVer=(_mpOrig&&_mpOrig.updated)?_mpOrig.updated:'';
-    const res=await gasUpdateRecord('special',_mpId||r.id,diff,expectedVer);
+    const res=await gasUpdateRecord('special',savedId,diff,expectedVer);
     if(res&&res.success){
       // v7.6 fix: 同步本地 updated 时间戳
       r.updated=new Date().toISOString();
       r.editor=currentEditor||r.editor;
       setSyncStatus('✅ 已储存 '+new Date().toLocaleTimeString(),true);
     }else if(res&&res.conflict){
-      handleEditConflict(res,'special',_mpId||r.id,diff,newVals);
+      handleEditConflict(res,'special',savedId,diff,newVals);
     }else{
       handleRecordApiFail(res);setSyncStatus('❌ 储存失败',false);
     }
