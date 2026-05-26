@@ -260,6 +260,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     <button class="btn btn-sm" id="btn-refresh" onclick="reloadRef()">↻ 刷新参考数据</button>
     <button class="btn btn-sm" onclick="showErrorLog()" style="color:#854F0B;border-color:#FCD34D" title="查看后端错误日志（最近 50 条）">🩺 错误日志</button>
     <span id="editor-badge" class="badge b5" style="font-size:11px;padding:5px 12px" title="当前操作人（每次新增/编辑/删除都会记录到 Sheet）">👤 —</span>
+    <span id="online-badge" class="badge b1" style="font-size:11px;padding:5px 12px;cursor:pointer" onclick="showOnlineList()" title="点击查看在线名单">👥 —</span>
     <button class="btn btn-sm" onclick="logout()" style="color:#a32d2d;border-color:#f7c1c1" title="登出系统">🔒 登出</button>
   </div>
 </div>
@@ -786,6 +787,9 @@ function checkAuth(){
 
 function logout(){
   if(!confirm('确认登出？'))return;
+  // v7.8: 通知后端清掉心跳
+  if(currentEditor&&SHEETS_URL){try{gasGoodbye();}catch(e){}}
+  stopHeartbeat();
   localStorage.removeItem(PIN_KEY);
   localStorage.removeItem(EDITOR_KEY);  // v7.4
   localStorage.removeItem(TOKEN_KEY);   // v7.5
@@ -1152,6 +1156,77 @@ function updateFreshness(){
   ind.style.color=color;ind.textContent='· '+label;
 }
 setInterval(updateFreshness,30000); // 每30秒更新一次显示
+
+// ════════════════════════════════════════
+// v7.8: 智慧心跳 —— 只在 tab 可见且 5 分钟内有活动时才发
+// ════════════════════════════════════════
+const HEARTBEAT_MS = 30000;       // 30 秒
+const ACTIVITY_TIMEOUT_MS = 5*60*1000;  // 5 分钟无活动停心跳
+let _lastActivity = Date.now();
+let _heartbeatTimer = null;
+let _onlineList = [];
+
+// 任何鼠标/键盘活动都视为「在」
+['mousedown','keydown','touchstart'].forEach(ev=>{
+  document.addEventListener(ev,()=>{_lastActivity=Date.now();},{passive:true});
+});
+
+function isActivelyUsing(){
+  return !document.hidden && (Date.now() - _lastActivity < ACTIVITY_TIMEOUT_MS);
+}
+
+async function heartbeatTick(){
+  if(!currentEditor||!SHEETS_URL)return;
+  if(isActivelyUsing()){
+    try{await gasHeartbeat();}catch(e){}
+  }
+  // 不管发不发，都拉一次 whoOnline 让 badge 显示
+  try{
+    const r=await gasWhoOnline();
+    if(r&&r.success){
+      _onlineList=r.users||[];
+      updateOnlineBadge();
+    }
+  }catch(e){}
+}
+
+function updateOnlineBadge(){
+  const b=document.getElementById('online-badge');if(!b)return;
+  const n=_onlineList.length;
+  b.textContent='👥 在线 '+n;
+  // 把名单放到 title 让 hover 看到
+  b.title=n?'在线: '+_onlineList.map(u=>u.editor).join('、'):'目前只有你在线';
+}
+
+function showOnlineList(){
+  if(!_onlineList.length){alert('目前只有你一人在线（或还没收到心跳）');return;}
+  const lines=_onlineList.map(u=>{
+    const beat=new Date(u.lastBeat);
+    const ago=Math.round((Date.now()-beat.getTime())/1000);
+    return '👤 '+u.editor+'  （'+ago+' 秒前活跃）';
+  }).join('\n');
+  alert('🟢 在线用户 ('+_onlineList.length+')\n\n'+lines);
+}
+
+function startHeartbeat(){
+  if(_heartbeatTimer)clearInterval(_heartbeatTimer);
+  heartbeatTick(); // 立即发一次
+  _heartbeatTimer=setInterval(heartbeatTick,HEARTBEAT_MS);
+}
+function stopHeartbeat(){
+  if(_heartbeatTimer){clearInterval(_heartbeatTimer);_heartbeatTimer=null;}
+}
+
+// 关页面/登出时发 goodbye
+window.addEventListener('beforeunload',()=>{
+  if(currentEditor&&SHEETS_URL){
+    // beforeunload 用 navigator.sendBeacon 才可靠
+    try{
+      const blob=new Blob([JSON.stringify({action:'goodbye',editor:currentEditor,token:currentToken})],{type:'text/plain'});
+      navigator.sendBeacon(SHEETS_URL,blob);
+    }catch(e){}
+  }
+});
 
 // ── 辅助 ──────────────────────────────────
 function sk(s){return String(s).replace(/[^a-zA-Z0-9]/g,'_');}
@@ -2140,6 +2215,11 @@ function handleTokenExpired(){
     _tokenExpiredAlerted=false;
   },200);
 }
+// v7.8: 在线用户 API
+async function gasHeartbeat(){return gasPost('heartbeat',{});}
+async function gasWhoOnline(){return gasGet({action:'whoOnline'});}
+async function gasGoodbye(){return gasPost('goodbye',{});}
+
 // 新增 1 笔，返回后端最终的 id（可能因碰撞被加 -N 后缀）
 async function gasAddRecord(type,record){return gasPost('addRecord',{type,record});}
 // 只改指定字段（fields 是 partial object），不动其他字段
@@ -2787,6 +2867,7 @@ async function init(){
   renderSch();renderSp();renderSta();
   startRemotePoll();  // FIX 多人协作：启动 30 秒轮询，发现别人改了东西就弹警告条
   updateFreshness();  // 立即显示一次时效
+  startHeartbeat();   // v7.8: 启动智慧心跳 + 在线列表轮询
   // ESC 关闭 Modal
   document.addEventListener('keydown',e=>{
     if(e.key==='Escape'){closeSchModal();closeSpModal();}
