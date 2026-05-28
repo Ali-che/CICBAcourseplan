@@ -376,6 +376,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     </div>
     <div class="tbl-wrap">
       <table><thead><tr>
+        <th style="width:34px;text-align:center" title="勾选所有可见行"><input type="checkbox" id="sch-master-chk" onclick="toggleAllVisible('sch',this.checked)" style="cursor:pointer"></th>
         <th>#</th>
         <th class="sort" onclick="sortSch('course')">课程代码 <span id="si-co">⇅</span></th>
         <th>课程英文名</th><th>类型</th><th class="sort" onclick="sortSch('sem')">学期 <span id="si-sem">⇅</span></th>
@@ -449,6 +450,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     </div>
     <div class="tbl-wrap">
       <table><thead><tr>
+        <th style="width:34px;text-align:center" title="勾选所有可见行"><input type="checkbox" id="sp-master-chk" onclick="toggleAllVisible('sp',this.checked)" style="cursor:pointer"></th>
         <th>#</th>
         <th class="sort" onclick="sortSp('sid')">学号 <span id="si-sid">⇅</span></th>
         <th>学生称谓</th><th>学生姓名</th><th>学生专业</th>
@@ -1872,7 +1874,8 @@ function renderSch(){
   tb.innerHTML=disp.map((r,i)=>{
     const tot=r.cc.reduce((s,x)=>s+(x.count||0),0);
     const tags=r.cc.map(cc=>cohortTag(cc.cohort,cc.count)).join(''); // v7.2: 按系别上色
-    return'<tr><td>'+(i+1)+'</td><td><span class="badge b0">'+r.course+'</span></td>'+
+    const _chk=_schSelected.has(String(r.id))?'checked':'';
+    return'<tr'+(_chk?' style="background:#FFF8E1"':'')+'><td style="text-align:center"><input type="checkbox" class="row-chk" '+_chk+' onclick="toggleRowSelect(\'sch\',\''+r.id+'\',this.checked)"></td><td>'+(i+1)+'</td><td><span class="badge b0">'+r.course+'</span></td>'+
       '<td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+eh(r.en)+'">'+eh(r.en)+'</td>'+
       '<td><span class="badge '+(TB[r.type]||'b4')+'">'+r.type+'</span></td>'+
       '<td><span class="badge b4">'+r.sem+'</span></td><td>'+halfBadge(r.half)+'</td>'+
@@ -2075,7 +2078,8 @@ function renderSp(){
   if(spSK==='sid')disp.sort((a,b)=>spSD*a.sid.localeCompare(b.sid));
   if(spSK==='tc')disp.sort((a,b)=>{const ta=T.find(x=>x.n===a.tc),tb2=T.find(x=>x.n===b.tc);return spSD*((ta?ta.d:'ZZ').localeCompare(tb2?tb2.d:'ZZ')||a.tc.localeCompare(b.tc));});
   tb.innerHTML=disp.map((r,i)=>{
-    return'<tr><td>'+(i+1)+'</td><td><code style="font-size:11px">'+eh(r.sid)+'</code></td>'+
+    const _chk=_spSelected.has(String(r.id))?'checked':'';
+    return'<tr'+(_chk?' style="background:#FFF8E1"':'')+'><td style="text-align:center"><input type="checkbox" class="row-chk" '+_chk+' onclick="toggleRowSelect(\'sp\',\''+r.id+'\',this.checked)"></td><td>'+(i+1)+'</td><td><code style="font-size:11px">'+eh(r.sid)+'</code></td>'+
       '<td><span class="badge b4">'+r.mr+'</span></td><td>'+eh(r.nm)+'</td>'+
       '<td><span class="badge b4">'+r.mj+'</span></td><td><span class="badge b0">'+r.co+'</span></td>'+
       '<td style="max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+eh(r.en)+'">'+eh(r.en)+'</td>'+
@@ -2379,38 +2383,86 @@ async function gasDeleteMultiple(type,ids){return gasPost('deleteMultiple',{type
 // v7.9: 记录当前筛选结果的 id 集合（renderSch/renderSp 更新）
 let _schFilteredIds=[];
 let _spFilteredIds=[];
+// v7.9+: 勾选状态（跨筛选/重渲染保留）
+let _schSelected=new Set();
+let _spSelected=new Set();
 
-// 更新批量删除按钮显示
-// 永远显示，但根据筛选状态变 enabled/disabled
+// 行 checkbox 点击
+function toggleRowSelect(prefix,id,checked){
+  const set=prefix==='sch'?_schSelected:_spSelected;
+  if(checked)set.add(String(id));else set.delete(String(id));
+  // 不重渲染整张表（避免破坏滚动位置），只更新按钮 + master 状态
+  if(prefix==='sch')updateBatchDelButton('sch',_schFilteredIds.length,schD.length);
+  else updateBatchDelButton('sp',_spFilteredIds.length,spD.length);
+  updateMasterCheckbox(prefix);
+  // 高亮当前行（黄底）
+  const tr=event&&event.target?event.target.closest('tr'):null;
+  if(tr)tr.style.background=checked?'#FFF8E1':'';
+}
+
+// 全选 / 取消所有可见行
+function toggleAllVisible(prefix,checked){
+  const ids=prefix==='sch'?_schFilteredIds:_spFilteredIds;
+  const set=prefix==='sch'?_schSelected:_spSelected;
+  ids.forEach(id=>{
+    if(checked)set.add(String(id));else set.delete(String(id));
+  });
+  // 重渲染该 panel（同步 checkbox 视觉）
+  if(prefix==='sch')renderSch();else renderSp();
+}
+
+// 同步 master checkbox 状态（3 状态：全选/部分/未选）
+function updateMasterCheckbox(prefix){
+  const master=document.getElementById(prefix+'-master-chk');if(!master)return;
+  const ids=prefix==='sch'?_schFilteredIds:_spFilteredIds;
+  const set=prefix==='sch'?_schSelected:_spSelected;
+  const visibleSelected=ids.filter(id=>set.has(String(id))).length;
+  if(visibleSelected===0){master.checked=false;master.indeterminate=false;}
+  else if(visibleSelected===ids.length){master.checked=true;master.indeterminate=false;}
+  else{master.checked=false;master.indeterminate=true;}
+}
+
+// 批量删除按钮：选中模式 > 筛选模式 > 禁用
 function updateBatchDelButton(prefix,dispLen,totalLen){
   const btn=document.getElementById(prefix+'-batch-del');
   const n=document.getElementById(prefix+'-batch-del-n');
   if(!btn||!n)return;
-  btn.style.display=''; // 永远显示
-  if(dispLen>0&&dispLen<totalLen){
-    // 有筛选缩减 → 启用
-    btn.disabled=false;
-    btn.style.opacity='1';
-    btn.style.cursor='pointer';
+  btn.style.display='';
+  const set=prefix==='sch'?_schSelected:_spSelected;
+
+  if(set.size>0){
+    // 模式 A：勾选优先
+    btn.disabled=false;btn.style.opacity='1';btn.style.cursor='pointer';
+    btn.style.background='#FEF2F2';
+    btn.title='删除勾选的 '+set.size+' 条记录';
+    n.textContent='勾选 '+set.size+' 条';
+  }else if(dispLen>0&&dispLen<totalLen){
+    // 模式 B：依筛选
+    btn.disabled=false;btn.style.opacity='1';btn.style.cursor='pointer';
+    btn.style.background='';
     btn.title='删除当前筛选的 '+dispLen+' 条记录';
-    n.textContent=dispLen+' 条';
+    n.textContent='筛选 '+dispLen+' 条';
   }else{
-    // 没筛选或筛选 = 全部 → 禁用
-    btn.disabled=true;
-    btn.style.opacity='0.4';
-    btn.style.cursor='not-allowed';
-    btn.title='请先用上方「学期/课程代码/搜索」筛选，缩小范围后才能批量删除';
-    n.textContent=dispLen===totalLen?'（先筛选）':'0 条';
+    btn.disabled=true;btn.style.opacity='0.4';btn.style.cursor='not-allowed';
+    btn.style.background='';
+    btn.title='请先勾选或筛选，缩小范围后才能批量删除';
+    n.textContent='（先筛选/勾选）';
   }
+  // 顺便同步 master checkbox
+  updateMasterCheckbox(prefix);
 }
 
 async function deleteFiltered(type){
-  const ids=type==='schedule'?_schFilteredIds:_spFilteredIds;
+  // v7.9+: 勾选优先；勾选为空才用筛选清单
+  const selected=type==='schedule'?_schSelected:_spSelected;
+  const filtered=type==='schedule'?_schFilteredIds:_spFilteredIds;
+  const isSelectionMode=selected.size>0;
+  const ids=isSelectionMode?[...selected]:filtered;
   if(!ids.length){alert('没有可删除的记录');return;}
-  // 二次防呆：再确认数字
+  // 二次防呆：要删 = 全部？
   const totalAll=type==='schedule'?schD.length:spD.length;
-  if(ids.length>=totalAll){
-    alert('⛔ 安全保护：要删的数量等于全部记录数。\n\n请先用筛选缩小范围（学期/课程代码/搜索），再点这个按钮。');
+  if(!isSelectionMode&&ids.length>=totalAll){
+    alert('⛔ 安全保护：要删的数量等于全部记录数。\n\n请先用筛选缩小范围（学期/课程代码/搜索）或勾选具体的记录。');
     return;
   }
   // 详细 confirm
@@ -2446,6 +2498,8 @@ async function deleteFiltered(type){
   try{
     const res=await gasDeleteMultiple(type,ids);
     if(res&&res.success){
+      // 清掉勾选状态
+      if(type==='schedule')_schSelected.clear();else _spSelected.clear();
       setSyncStatus('✅ 已删除 '+res.deleted+' 条 '+new Date().toLocaleTimeString(),true);
       alert('✅ 完成！\n\n成功删除：'+res.deleted+' 条'+(res.notFound?'\n找不到（可能早被删除）：'+res.notFound+' 条':''));
     }else{
