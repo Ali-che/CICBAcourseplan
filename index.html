@@ -370,6 +370,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <button class="btn btn-sm" onclick="syncFromSheets('schedule')">↓ 下载</button>
         <button class="btn btn-sm no-print" onclick="exportSchExcel()" style="color:#1a6b2f;border-color:#9ed4ae">📊 Excel</button>
         <button class="btn btn-sm no-print" onclick="openCsvImport()" style="color:#854F0B;border-color:#FCD34D">📥 批量导入</button>
+        <button id="sch-batch-del" class="btn btn-sm no-print" onclick="deleteFiltered('schedule')" style="color:#a32d2d;border-color:#f7c1c1;display:none" title="按目前筛选条件删除全部">🗑 批量删除 <span id="sch-batch-del-n">0</span></button>
         <button class="btn btn-sm no-print" onclick="printPanel('sch')">🖨️ 列印</button>
       </div>
     </div>
@@ -442,6 +443,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <button class="btn btn-sm" onclick="syncFromSheets('special')">↓ 下载</button>
         <button class="btn btn-sm no-print" onclick="exportSpExcel()" style="color:#1a6b2f;border-color:#9ed4ae">📊 Excel</button>
         <button class="btn btn-sm no-print" onclick="openCsvImportSp()" style="color:#854F0B;border-color:#FCD34D">📥 批量导入</button>
+        <button id="sp-batch-del" class="btn btn-sm no-print" onclick="deleteFiltered('special')" style="color:#a32d2d;border-color:#f7c1c1;display:none" title="按目前筛选条件删除全部">🗑 批量删除 <span id="sp-batch-del-n">0</span></button>
         <button class="btn btn-sm no-print" onclick="printPanel('sp')">🖨️ 列印</button>
       </div>
     </div>
@@ -1864,6 +1866,9 @@ function renderSch(){
   if(schSK==='course')disp.sort((a,b)=>schSD*a.course.localeCompare(b.course));
   if(schSK==='sem')disp.sort((a,b)=>schSD*a.sem.localeCompare(b.sem));
   if(schSK==='half'){const ho={'上半学期':0,'上半':0,'下半学期':1,'下半':1,'全学期':2};disp.sort((a,b)=>schSD*((ho[a.half]??2)-(ho[b.half]??2)));}
+  // v7.9: 批量删除按钮 —— 只在「有筛选 + 结果不是全部 + N > 0」时显示
+  _schFilteredIds=disp.map(r=>r.id);
+  updateBatchDelButton('sch',disp.length,schD.length);
   tb.innerHTML=disp.map((r,i)=>{
     const tot=r.cc.reduce((s,x)=>s+(x.count||0),0);
     const tags=r.cc.map(cc=>cohortTag(cc.cohort,cc.count)).join(''); // v7.2: 按系别上色
@@ -2064,6 +2069,9 @@ function renderSp(){
     const q=spSearchF.value.trim().toLowerCase();
     disp=disp.filter(r=>(r.co||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q));
   }
+  // v7.9: 批量删除按钮
+  _spFilteredIds=disp.map(r=>r.id);
+  updateBatchDelButton('sp',disp.length,spD.length);
   if(spSK==='sid')disp.sort((a,b)=>spSD*a.sid.localeCompare(b.sid));
   if(spSK==='tc')disp.sort((a,b)=>{const ta=T.find(x=>x.n===a.tc),tb2=T.find(x=>x.n===b.tc);return spSD*((ta?ta.d:'ZZ').localeCompare(tb2?tb2.d:'ZZ')||a.tc.localeCompare(b.tc));});
   tb.innerHTML=disp.map((r,i)=>{
@@ -2365,6 +2373,85 @@ async function gasAddRecord(type,record){return gasPost('addRecord',{type,record
 async function gasUpdateRecord(type,id,fields,expectedVersion){return gasPost('updateRecord',{type,id,fields,expectedVersion:expectedVersion||''});}
 // 按 id 删一列
 async function gasDeleteRecord(type,id){return gasPost('deleteRecord',{type,id});}
+// v7.9: 批量删除（一次一组 id）
+async function gasDeleteMultiple(type,ids){return gasPost('deleteMultiple',{type,ids});}
+
+// v7.9: 记录当前筛选结果的 id 集合（renderSch/renderSp 更新）
+let _schFilteredIds=[];
+let _spFilteredIds=[];
+
+// 更新批量删除按钮显示
+// 规则：只有「筛选有缩减（dispLen < totalLen）且 dispLen > 0」才显示，避免误删全部
+function updateBatchDelButton(prefix,dispLen,totalLen){
+  const btn=document.getElementById(prefix+'-batch-del');
+  const n=document.getElementById(prefix+'-batch-del-n');
+  if(!btn||!n)return;
+  if(dispLen>0&&dispLen<totalLen){
+    btn.style.display='';
+    n.textContent=dispLen+' 条';
+  }else{
+    btn.style.display='none';
+  }
+}
+
+async function deleteFiltered(type){
+  const ids=type==='schedule'?_schFilteredIds:_spFilteredIds;
+  if(!ids.length){alert('没有可删除的记录');return;}
+  // 二次防呆：再确认数字
+  const totalAll=type==='schedule'?schD.length:spD.length;
+  if(ids.length>=totalAll){
+    alert('⛔ 安全保护：要删的数量等于全部记录数。\n\n请先用筛选缩小范围（学期/课程代码/搜索），再点这个按钮。');
+    return;
+  }
+  // 详细 confirm
+  const sample=ids.slice(0,3).map(id=>{
+    const r=(type==='schedule'?schD:spD).find(x=>String(x.id)===String(id));
+    if(!r)return '?';
+    return type==='schedule'?(r.course+' / '+r.cls+' / '+r.sem):(r.sid+' '+r.nm+' / '+r.co);
+  }).join('\n  • ');
+  const more=ids.length>3?'\n  ... 还有 '+(ids.length-3)+' 条':'';
+  const typeLabel=type==='schedule'?'排课记录':'IS/SG 排课';
+  if(!confirm('⚠️ 批量删除确认\n\n即将删除 '+ids.length+' 条 '+typeLabel+'：\n  • '+sample+more+'\n\n此动作不可撤销（备份在 Sheet「_备份_xxx」分页可还原）。\n\n确定要删除吗？'))return;
+
+  // 二次输入确认（防误按）
+  const typed=prompt('为了避免误删，请输入数字「'+ids.length+'」确认：');
+  if(typed===null)return;
+  if(String(typed).trim()!==String(ids.length)){
+    alert('❌ 输入不符，已取消');return;
+  }
+
+  setSyncStatus('⏳ 批量删除中…','');
+  // 备份（万一）
+  const backup=ids.map(id=>{
+    const r=(type==='schedule'?schD:spD).find(x=>String(x.id)===String(id));
+    return r?JSON.parse(JSON.stringify(r)):null;
+  }).filter(Boolean);
+
+  // 先本地移除（乐观）
+  const idSet=new Set(ids.map(String));
+  if(type==='schedule')schD=schD.filter(r=>!idSet.has(String(r.id)));
+  else spD=spD.filter(r=>!idSet.has(String(r.id)));
+  renderSch();renderSp();renderAllSum();renderSta();
+
+  try{
+    const res=await gasDeleteMultiple(type,ids);
+    if(res&&res.success){
+      setSyncStatus('✅ 已删除 '+res.deleted+' 条 '+new Date().toLocaleTimeString(),true);
+      alert('✅ 完成！\n\n成功删除：'+res.deleted+' 条'+(res.notFound?'\n找不到（可能早被删除）：'+res.notFound+' 条':''));
+    }else{
+      // 失败 → 还原
+      if(type==='schedule')schD.push(...backup);else spD.push(...backup);
+      renderSch();renderSp();renderAllSum();renderSta();
+      handleRecordApiFail(res);
+      setSyncStatus('❌ 批量删除失败（已还原）',false);
+    }
+  }catch(e){
+    if(type==='schedule')schD.push(...backup);else spD.push(...backup);
+    renderSch();renderSp();renderAllSum();renderSta();
+    alert('❌ 批量删除失败：'+e.message+'\n（已还原本地）');
+    setSyncStatus('❌ 批量删除失败',false);
+  }
+}
 // BTEC/LA500 按老师名增改一格，0 视为删除
 async function gasUpsertBtec(name,value){
   if(Number(value)===0)return gasPost('deleteBtec',{name});
