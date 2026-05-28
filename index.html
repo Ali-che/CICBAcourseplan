@@ -1527,6 +1527,25 @@ function mBuildCohGrid(existCC){
       grid.appendChild(w);
     });
   });
+  // FIX: 渲染「孤儿屆别」—— 记录里有但屆别库已经没有的（被改名/删除）
+  // 不显示就等于丢失，黄色框警告让使用者知道
+  const renderedNames=new Set();
+  Object.values(CBD).forEach(arr=>arr.forEach(c=>renderedNames.add(c)));
+  const orphans=(existCC||[]).filter(x=>!renderedNames.has(x.cohort));
+  orphans.forEach(x=>{
+    const k=sk(x.cohort);
+    const m=String(x.cohort).match(/^[A-Za-z]+/);
+    const dept=m?m[0].substring(0,2).toUpperCase():'?';
+    const w=document.createElement('div');w.className='ei';w.dataset.d=dept;w.dataset.orphan='1';
+    w.style.cssText='border-left:3px solid #f59e0b;background:#FFFBEB';
+    w.innerHTML='<input type="checkbox" id="mc-'+k+'" value="'+eh(x.cohort)+'" checked>'+
+      '<label for="mc-'+k+'" title="⚠️ 此屆别不在「屆别库」分页中（可能被改名/删除）。记录仍保留它。" style="font-size:10px;color:#854F0B">⚠️ '+eh(x.cohort)+'</label>'+
+      '<input type="number" id="mn-'+k+'" min="0" value="'+(x.count||'')+'" style="width:40px;font-size:11px;padding:2px 4px;text-align:center">';
+    const cb=w.querySelector('input[type=checkbox]'),ni=w.querySelector('input[type=number]');
+    cb.onchange=()=>{ni.disabled=!cb.checked;if(!cb.checked)ni.value='';updateMCohTotal();};
+    ni.oninput=updateMCohTotal;
+    grid.appendChild(w);
+  });
   updateMCohTotal(); // 重建后立即刷新合计
 }
 
