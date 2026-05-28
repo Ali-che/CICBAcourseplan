@@ -436,8 +436,12 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       </span>
       <div style="display:flex;gap:6px;align-items:center">
         <select id="sp-sem-f" onchange="renderSp()" style="font-size:11px;padding:4px 8px;width:auto"><option value="">全部学期</option></select>
+        <select id="sp-dept-f" onchange="renderSp()" style="font-size:11px;padding:4px 8px;width:auto"><option value="">课程代码</option></select>
+        <input id="sp-search" type="text" oninput="renderSp()" placeholder="🔍 搜课程代码/英文名" style="font-size:11px;padding:4px 8px;width:170px">
         <button class="btn btn-sm" onclick="syncToSheets('special')">↑ 上传</button>
         <button class="btn btn-sm" onclick="syncFromSheets('special')">↓ 下载</button>
+        <button class="btn btn-sm no-print" onclick="exportSpExcel()" style="color:#1a6b2f;border-color:#9ed4ae">📊 Excel</button>
+        <button class="btn btn-sm no-print" onclick="openCsvImportSp()" style="color:#854F0B;border-color:#FCD34D">📥 批量导入</button>
         <button class="btn btn-sm no-print" onclick="printPanel('sp')">🖨️ 列印</button>
       </div>
     </div>
@@ -708,6 +712,32 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     <div class="modal-footer">
       <button class="btn" onclick="closeCsvImport()">取消</button>
       <button class="btn btn-p" id="csv-import-btn" onclick="confirmCsvImport()" disabled>请先选择 CSV 档案</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ IS/SG CSV 批量导入 Modal ════════════════════ -->
+<div class="modal-overlay" id="csv-sp-modal" onmousedown="modalMouseDown(event,this)" onclick="modalMaybeClose(event,this,closeCsvImportSp)">
+  <div class="modal-box" style="max-width:980px">
+    <div class="modal-hdr">
+      <h3>📥 CSV 批量导入 IS/SG 排课</h3>
+      <button class="modal-close" onclick="closeCsvImportSp()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-sec">操作步骤</div>
+      <ol style="margin-left:20px;font-size:12px;line-height:1.8;color:#444">
+        <li>下载模板（含表头与说明）<button class="btn btn-sm" style="margin-left:8px;color:#3B6D11;border-color:#C0DD97" onclick="downloadCsvSpTemplate()">📥 下载 CSV 模板</button></li>
+        <li>用 <strong>Excel</strong> 或 <strong>Google Sheet</strong> 编辑填写（每行 = 一笔 IS/SG 记录）</li>
+        <li>另存为 <strong style="color:#a32d2d">CSV UTF-8（逗号分隔）</strong>，避免中文乱码</li>
+        <li>下方选择档案 → 检查预览 → 确认导入</li>
+      </ol>
+      <div class="modal-sec">选择档案</div>
+      <input type="file" id="csv-sp-file" accept=".csv,text/csv" onchange="onCsvSpFileChosen(event)" style="font-size:12px;padding:6px;border:1px dashed #aaa;border-radius:6px;background:#fafafa;width:100%;cursor:pointer">
+      <div id="csv-sp-preview" style="margin-top:14px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeCsvImportSp()">取消</button>
+      <button class="btn btn-p" id="csv-sp-import-btn" onclick="confirmCsvImportSp()" disabled>请先选择 CSV 档案</button>
     </div>
   </div>
 </div>
@@ -1290,6 +1320,7 @@ function rebuildUI(){
   });
   buildDeptChips();buildEG('s-eg',null);
   buildSchDeptFilter(); // v7.1: 同步刷新排课表上方的专业筛选下拉
+  buildSpDeptFilter();  // IS/SG 同步刷新
   buildAllSemSelects(); // v7.3: 同步刷新所有学期下拉（来自「学期列表」分页）
 }
 
@@ -1757,6 +1788,13 @@ function buildSchDeptFilter(){
   sel.innerHTML='<option value="">课程代码</option>'+
     SCH_DEPT_OPTIONS.map(d=>'<option value="'+eh(d)+'"'+(cur===d?' selected':'')+'>'+eh(d)+'</option>').join('');
 }
+// IS/SG 用同一份选项
+function buildSpDeptFilter(){
+  const sel=document.getElementById('sp-dept-f');if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">课程代码</option>'+
+    SCH_DEPT_OPTIONS.map(d=>'<option value="'+eh(d)+'"'+(cur===d?' selected':'')+'>'+eh(d)+'</option>').join('');
+}
 
 // ════════════════════════════════════════
 // v7.3: 学期下拉动态填充（资料源：「学期列表」分页）
@@ -2017,8 +2055,15 @@ function renderSp(){
   if(!spD.length){tb.innerHTML='';em.style.display='block';return;}
   em.style.display='none';
   const spSemF=document.getElementById('sp-sem-f');
+  const spDeptF=document.getElementById('sp-dept-f');
+  const spSearchF=document.getElementById('sp-search');
   let disp=[...spD];
   if(spSemF&&spSemF.value)disp=disp.filter(r=>r.sem===spSemF.value);
+  if(spDeptF&&spDeptF.value)disp=disp.filter(r=>getCourseDept(r.co)===spDeptF.value);
+  if(spSearchF&&spSearchF.value.trim()){
+    const q=spSearchF.value.trim().toLowerCase();
+    disp=disp.filter(r=>(r.co||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q));
+  }
   if(spSK==='sid')disp.sort((a,b)=>spSD*a.sid.localeCompare(b.sid));
   if(spSK==='tc')disp.sort((a,b)=>{const ta=T.find(x=>x.n===a.tc),tb2=T.find(x=>x.n===b.tc);return spSD*((ta?ta.d:'ZZ').localeCompare(tb2?tb2.d:'ZZ')||a.tc.localeCompare(b.tc));});
   tb.innerHTML=disp.map((r,i)=>{
@@ -2667,6 +2712,58 @@ function exportSchExcel(){
 }
 
 // ════════════════════════════════════════
+// IS/SG Excel 导出
+// ════════════════════════════════════════
+function exportSpExcel(){
+  const now=new Date();
+  const dateStr=now.toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
+  const semEl=document.getElementById('sp-sem-f'),deptEl=document.getElementById('sp-dept-f'),searchEl=document.getElementById('sp-search');
+  const semVal=semEl?semEl.value:'';
+  const deptVal=deptEl?deptEl.value:'';
+  const searchVal=searchEl?searchEl.value.trim():'';
+  const semTxt=semVal||'全部学期';
+
+  // 跟随当前筛选条件
+  let data=[...spD];
+  if(semVal)data=data.filter(r=>r.sem===semVal);
+  if(deptVal)data=data.filter(r=>getCourseDept(r.co)===deptVal);
+  if(searchVal){const q=searchVal.toLowerCase();data=data.filter(r=>(r.co||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q));}
+
+  const headers=['#','学号','称谓','学生姓名','学生专业','课程代码','课程英文名','班级','学期','授课老师','备注'];
+  const rows=data.map((r,i)=>[
+    i+1, r.sid||'', r.mr||'', r.nm||'', r.mj||'', r.co||'', r.en||'',
+    r.cls||'', r.sem||'', r.tc||'待定', r.nt||''
+  ]);
+
+  let html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+  html+='<head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>';
+  html+='<x:Name>IS-SG排课</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>';
+  html+='</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>';
+  html+='<table border="1" style="border-collapse:collapse;font-size:11pt;font-family:Arial">';
+
+  html+='<tr><td colspan="'+headers.length+'" style="background:#534AB7;color:#fff;font-size:14pt;font-weight:bold;text-align:center;padding:8px">CIC 本科排课管理系统 · IS/SG 排课记录</td></tr>';
+  html+='<tr><td colspan="'+headers.length+'" style="font-size:9pt;color:#666;text-align:center;padding:4px">学期：'+semTxt+'　｜　列印日期：'+dateStr+'　｜　共 '+data.length+' 条记录</td></tr>';
+  html+='<tr><td colspan="'+headers.length+'" style="padding:2px"></td></tr>';
+  html+='<tr>'+headers.map(h=>'<td style="background:#534AB7;color:#fff;font-weight:bold;padding:6px 8px;white-space:nowrap">'+h+'</td>').join('')+'</tr>';
+
+  rows.forEach((row,ri)=>{
+    const bg=ri%2===0?'#ffffff':'#f5f4fe';
+    html+='<tr>'+row.map((cell,ci)=>{
+      const align=ci===0?'center':'left';
+      return'<td style="background:'+bg+';padding:4px 7px;text-align:'+align+';white-space:nowrap">'+String(cell||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</td>';
+    }).join('')+'</tr>';
+  });
+  html+='</table></body></html>';
+
+  const blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='IS-SG排课_'+(semVal||'全学期')+'_'+now.toISOString().slice(0,10)+'.xls';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ════════════════════════════════════════
 // v7.3+ CSV 批量导入
 // 模板栏位：课程代码,学期,上下半,班级,授课老师,届别1,人数1,...,届别5,人数5,备注,BTEC
 // 走跟手填表单完全一样的 gasAddRecord 路径 → 产出的记录 100% 一致
@@ -2884,6 +2981,182 @@ async function confirmCsvImport(){
   renderSch();renderAllSum();renderSta();
   alert('✅ 完成！\n\n成功：'+success+' 笔\n失败：'+fail+' 笔'+(fail?'\n（失败的记录已自本地回滚）':''));
   closeCsvImport();
+}
+
+// ════════════════════════════════════════
+// IS/SG CSV 批量导入（栏位不一样：学生 + 课程，没有屆别人数）
+// ════════════════════════════════════════
+const CSV_SP_HEADERS=['学号','称谓','学生姓名','学生专业','课程代码','班级','学期','授课老师','备注'];
+let _csvSpParsed=[];
+
+function openCsvImportSp(){
+  document.getElementById('csv-sp-modal').classList.add('open');
+  document.body.style.overflow='hidden';
+  document.getElementById('csv-sp-file').value='';
+  document.getElementById('csv-sp-preview').innerHTML='';
+  const btn=document.getElementById('csv-sp-import-btn');
+  btn.disabled=true;btn.textContent='请先选择 CSV 档案';
+  _csvSpParsed=[];
+}
+function closeCsvImportSp(){
+  document.getElementById('csv-sp-modal').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+function downloadCsvSpTemplate(){
+  const rows=[
+    CSV_SP_HEADERS,
+    ['# 范例（删除此行）','','','','','','','',''],
+    ['66111378','Ms.','Dong, Shujun','TM','KT330','IS-222','2569-1','Aj. Tsai, Chiu-Hui','跨学期补修'],
+    ['# 说明：','','','','','','','',''],
+    ['# 学号、姓名、专业、课程代码、班级、学期 = 必填','','','','','','','',''],
+    ['# 班级：IS-222 或 SG-222','','','','','','','',''],
+    ['# 称谓：Mr. / Ms.','','','','','','','',''],
+    ['# 姓名仅英文','','','','','','','',''],
+  ];
+  const csv=rows.map(r=>r.map(c=>{
+    const s=String(c==null?'':c);
+    return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+  }).join(',')).join('\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='IS-SG导入模板_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function onCsvSpFileChosen(ev){
+  const file=ev.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    let text=e.target.result;
+    if(/锟斤拷|�/.test(text)){
+      alert('⚠️ 档案似乎不是 UTF-8（出现乱码）。\n\n请在 Excel 重新「另存为 → CSV UTF-8（逗号分隔）」后再上传。');
+      return;
+    }
+    const rows=parseCsv(text);
+    if(rows.length<2){alert('❌ CSV 内容为空或只有表头');return;}
+    const headers=rows[0].map(h=>h.trim());
+    const missing=CSV_SP_HEADERS.filter(h=>!headers.includes(h));
+    if(missing.length){
+      alert('❌ CSV 表头不完整，缺少：'+missing.join('、')+'\n\n请下载模板取得正确表头。');
+      return;
+    }
+    const colIdx={};
+    CSV_SP_HEADERS.forEach(h=>colIdx[h]=headers.indexOf(h));
+    _csvSpParsed=rows.slice(1).map((r,i)=>parseAndValidateSpRow(r,colIdx,i+2));
+    buildCsvSpPreview();
+  };
+  reader.readAsText(file,'UTF-8');
+}
+
+function parseAndValidateSpRow(row,colIdx,lineNum){
+  const get=h=>(row[colIdx[h]]||'').trim();
+  const sid=get('学号');
+  const mr=get('称谓')||'Mr.';
+  const nm=get('学生姓名');
+  const mj=get('学生专业');
+  const co=get('课程代码').toUpperCase();
+  const cls=get('班级')||'IS-222';
+  const sem=get('学期');
+  const tc=get('授课老师');
+  const nt=get('备注');
+
+  const errors=[],warnings=[];
+  if(!sid)errors.push('学号必填');
+  if(!nm)errors.push('学生姓名必填');
+  else if(/[^\x00-\x7F]/.test(nm))errors.push('姓名只能英文');
+  if(!mj)errors.push('学生专业必填');
+  if(!co)errors.push('课程代码必填');
+  else if(!C.find(x=>x.c===co))errors.push('「'+co+'」不在课程库');
+  if(!sem)errors.push('学期必填');
+  else if(!SEMS.includes(sem))warnings.push('学期「'+sem+'」不在学期列表');
+  if(cls!=='IS-222'&&cls!=='SG-222')warnings.push('班级「'+cls+'」不是 IS-222 或 SG-222');
+  if(tc&&!T.find(x=>x.n===tc))warnings.push('老师「'+tc+'」不在老师库');
+
+  let en='';
+  const cInfo=C.find(x=>x.c===co);
+  if(cInfo)en=cInfo.en||'';
+
+  const isDup=!!spD.find(r=>r.sid===sid&&r.co===co&&r.sem===sem&&r.cls===cls);
+  if(isDup)warnings.push('本地已有同 学号+课程+学期+班级 的记录');
+
+  return{
+    line:lineNum,
+    record:{sid,mr,nm,mj,co,en,cls,sem,tc,nt,type:'SG'},
+    errors,warnings,isDup,
+    raw:row
+  };
+}
+
+function buildCsvSpPreview(){
+  const wrap=document.getElementById('csv-sp-preview');
+  if(!_csvSpParsed.length){wrap.innerHTML='<div style="color:#999;padding:14px;text-align:center">没有可解析的资料</div>';return;}
+  const okCount=_csvSpParsed.filter(x=>!x.errors.length).length;
+  const errCount=_csvSpParsed.filter(x=>x.errors.length).length;
+  const warnCount=_csvSpParsed.filter(x=>!x.errors.length&&x.warnings.length).length;
+  const html=[];
+  html.push('<div style="display:flex;gap:10px;font-size:12px;margin-bottom:8px">');
+  html.push('<span class="badge b1">🟢 可导入 '+okCount+'</span>');
+  if(warnCount)html.push('<span class="badge b2">🟡 含警告 '+warnCount+'</span>');
+  if(errCount)html.push('<span class="badge b3">🔴 不可导入 '+errCount+'</span>');
+  html.push('</div>');
+  html.push('<div style="max-height:380px;overflow-y:auto;border:1px solid #eee;border-radius:6px">');
+  html.push('<table style="font-size:11px;width:100%"><thead><tr style="background:#534AB7;color:#fff;position:sticky;top:0">');
+  html.push('<th style="padding:5px 8px">状态</th><th>行</th><th>学号</th><th>姓名</th><th>课程</th><th>学期</th><th>班级</th><th>老师</th><th>问题</th>');
+  html.push('</tr></thead><tbody>');
+  _csvSpParsed.forEach(p=>{
+    const icon=p.errors.length?'🔴':(p.warnings.length?'🟡':'🟢');
+    const bg=p.errors.length?'#FEF2F2':(p.warnings.length?'#FFFBEB':'');
+    const r=p.record;
+    const probs=[...p.errors.map(e=>'❌ '+e),...p.warnings.map(w=>'⚠️ '+w)].join('<br>');
+    html.push('<tr style="background:'+bg+'"><td style="padding:4px 8px;text-align:center">'+icon+'</td>');
+    html.push('<td style="color:#999">'+p.line+'</td>');
+    html.push('<td><code>'+eh(r.sid||'—')+'</code></td>');
+    html.push('<td>'+eh(r.mr)+' '+eh(r.nm)+'</td>');
+    html.push('<td><code>'+eh(r.co)+'</code></td>');
+    html.push('<td>'+eh(r.sem)+'</td><td>'+eh(r.cls)+'</td>');
+    html.push('<td>'+eh(r.tc||'—')+'</td>');
+    html.push('<td style="font-size:10px;color:'+(p.errors.length?'#a32d2d':'#854F0B')+'">'+probs+'</td>');
+    html.push('</tr>');
+  });
+  html.push('</tbody></table></div>');
+  wrap.innerHTML=html.join('');
+  const btn=document.getElementById('csv-sp-import-btn');
+  if(okCount===0){btn.disabled=true;btn.textContent='没有可导入的记录';}
+  else{btn.disabled=false;btn.textContent='✓ 确认导入 '+okCount+' 笔';}
+}
+
+async function confirmCsvImportSp(){
+  const valid=_csvSpParsed.filter(x=>!x.errors.length);
+  if(!valid.length){alert('没有可导入的记录');return;}
+  if(!SHEETS_URL){alert('未配置 SHEETS_URL，无法同步');return;}
+  if(!canSync())return;
+  if(!confirm('确定导入 '+valid.length+' 笔 IS/SG 记录？\n\n警告项（黄色）也会一并导入。'))return;
+  const btn=document.getElementById('csv-sp-import-btn');
+  btn.disabled=true;
+  let success=0,fail=0;
+  for(let i=0;i<valid.length;i++){
+    const v=valid[i];
+    btn.textContent='⏳ 导入中 '+(i+1)+'/'+valid.length+'…';
+    const localId=Date.now()+i;
+    const rec={id:localId,...v.record,editing:false};
+    spD.push(rec);
+    try{
+      const res=await gasAddRecord('special',rec);
+      if(res&&res.success){
+        if(res.id&&String(res.id)!==String(localId))rec.id=res.id;
+        success++;
+      }else{
+        spD=spD.filter(x=>x!==rec);
+        fail++;
+      }
+    }catch(e){spD=spD.filter(x=>x!==rec);fail++;}
+  }
+  renderSp();renderAllSum();renderSta();
+  alert('✅ 完成！\n\n成功：'+success+' 笔\n失败：'+fail+' 笔'+(fail?'\n（失败的记录已自本地回滚）':''));
+  closeCsvImportSp();
 }
 
 function switchTab(id){
