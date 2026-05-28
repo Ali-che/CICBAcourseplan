@@ -1383,20 +1383,32 @@ async function addSch(){
       // 后端可能因 id 碰撞改了 id，本地也同步更新
       if(r.id&&String(r.id)!==String(localId)){rec.id=r.id;renderSch();}
       setSyncStatus('✅ 已新增 '+new Date().toLocaleTimeString(),true);
-    }else{handleRecordApiFail(r);setSyncStatus('❌ 新增失败',false);}
+    }else{
+      // FIX: 新增失败 → 回滚本地（避免「鬼魂记录」）
+      schD=schD.filter(x=>x!==rec);
+      renderSch();renderAllSum();renderSta();
+      handleRecordApiFail(r);setSyncStatus('❌ 新增失败（已回滚）',false);
+    }
   }
 }
 async function delSch(id){
   id=String(id);const r=schD.find(x=>String(x.id)===id);if(!r)return;
   if(!confirm('确认删除以下排课？\n\n课程代码：'+r.course+'\n班级：'+r.cls+'\n授课老师：'+(r.tc||'待定')))return;
-  schD=schD.filter(r=>String(r.id)!==id);
+  // FIX: 保留备份，失败时可还原
+  const backup=JSON.parse(JSON.stringify(r));
+  schD=schD.filter(x=>String(x.id)!==id);
   renderSch();renderAllSum();renderSta();
   // v7: 按 id 删，不影响其他记录
   if(SHEETS_URL&&canSync()){
     setSyncStatus('⏳ 删除中…','');
     const res=await gasDeleteRecord('schedule',id);
     if(res&&res.success){setSyncStatus('✅ 已删除 '+new Date().toLocaleTimeString(),true);}
-    else{handleRecordApiFail(res);setSyncStatus('❌ 删除失败',false);}
+    else{
+      // FIX: 删除失败 → 还原本地
+      schD.push(backup);
+      renderSch();renderAllSum();renderSta();
+      handleRecordApiFail(res);setSyncStatus('❌ 删除失败（已还原）',false);
+    }
   }
 }
 // ── 排课 Modal 逻辑 ───────────────────────
@@ -1523,6 +1535,8 @@ async function mSaveES(){
   // v7.6 fix #2: 先抢救 _mId 和 _mOrig.updated！closeSchModal 会把它们清空
   const savedId=_mId||r.id;
   const expectedVer=(_mOrig&&_mOrig.updated)?_mOrig.updated:'';
+  // FIX: 保存 backup 让失败时能回滚（_mOrig 是深拷贝过的）
+  const backupOrig=_mOrig?JSON.parse(JSON.stringify(_mOrig)):null;
   // 应用到本地
   Object.assign(r,newVals);
   closeSchModal();
@@ -1540,7 +1554,9 @@ async function mSaveES(){
     }else if(res&&res.conflict){
       handleEditConflict(res,'schedule',savedId,diff,newVals);
     }else{
-      handleRecordApiFail(res);setSyncStatus('❌ 储存失败',false);
+      // FIX: 储存失败 → 把本地还原成 _mOrig 备份
+      if(backupOrig){Object.assign(r,backupOrig);renderSch();renderAllSum();renderSta();}
+      handleRecordApiFail(res);setSyncStatus('❌ 储存失败（已还原本地）',false);
     }
   }
 }
@@ -1797,19 +1813,30 @@ async function addSp(){
     if(res&&res.success){
       if(res.id&&String(res.id)!==String(localId)){rec.id=res.id;renderSp();}
       setSyncStatus('✅ 已新增 '+new Date().toLocaleTimeString(),true);
-    }else{handleRecordApiFail(res);setSyncStatus('❌ 新增失败',false);}
+    }else{
+      // FIX: 新增失败回滚
+      spD=spD.filter(x=>x!==rec);
+      renderSp();renderAllSum();renderSta();
+      handleRecordApiFail(res);setSyncStatus('❌ 新增失败（已回滚）',false);
+    }
   }
 }
 async function delSp(id){
   id=String(id);const r=spD.find(x=>String(x.id)===id);if(!r)return;
   if(!confirm('确认删除以下 IS/SG 排课？\n\n学生：'+(r.mr||'')+' '+r.nm+'\n课程：'+r.co+'\n授课老师：'+(r.tc||'待定')))return;
-  spD=spD.filter(r=>String(r.id)!==id);
+  // FIX: 备份
+  const backup=JSON.parse(JSON.stringify(r));
+  spD=spD.filter(x=>String(x.id)!==id);
   renderSp();renderAllSum();renderSta();
   if(SHEETS_URL&&canSync()){
     setSyncStatus('⏳ 删除中…','');
     const res=await gasDeleteRecord('special',id);
     if(res&&res.success){setSyncStatus('✅ 已删除 '+new Date().toLocaleTimeString(),true);}
-    else{handleRecordApiFail(res);setSyncStatus('❌ 删除失败',false);}
+    else{
+      // FIX: 还原
+      spD.push(backup);renderSp();renderAllSum();renderSta();
+      handleRecordApiFail(res);setSyncStatus('❌ 删除失败（已还原）',false);
+    }
   }
 }
 // ── IS/SG Modal 逻辑 ─────────────────────
@@ -1878,6 +1905,8 @@ async function mpSaveESp(){
   // v7.6 fix #2: 先抢救 _mpId 和 _mpOrig.updated！closeSpModal 会清空
   const savedId=_mpId||r.id;
   const expectedVer=(_mpOrig&&_mpOrig.updated)?_mpOrig.updated:'';
+  // FIX: backup 用于失败回滚
+  const backupOrig=_mpOrig?JSON.parse(JSON.stringify(_mpOrig)):null;
   Object.assign(r,newVals);
   closeSpModal();
   renderSp();renderAllSum();renderSta();
@@ -1893,7 +1922,9 @@ async function mpSaveESp(){
     }else if(res&&res.conflict){
       handleEditConflict(res,'special',savedId,diff,newVals);
     }else{
-      handleRecordApiFail(res);setSyncStatus('❌ 储存失败',false);
+      // FIX: 失败还原
+      if(backupOrig){Object.assign(r,backupOrig);renderSp();renderAllSum();renderSta();}
+      handleRecordApiFail(res);setSyncStatus('❌ 储存失败（已还原本地）',false);
     }
   }
 }
@@ -2145,7 +2176,7 @@ async function gasGet(params){
 // text/plain POST：不触发 preflight，数据量不受 URL 长度限制
 async function fetchWrite(type,data){
   if(!SHEETS_URL)return false;
-  // ★ 本地空数组的最后一道防线：永不发空 payload（Apps Script v6 也会拒，但前端先拦下更省 quota）
+  // ★ 本地空数组的最后一道防线：永不发空 payload
   const len = Array.isArray(data) ? data.length : Object.keys(data||{}).length;
   if(len===0){
     writeLocked=true;
@@ -2156,13 +2187,17 @@ async function fetchWrite(type,data){
     const res=await fetch(SHEETS_URL,{
       method:'POST',
       headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({action:'write',type:type,payload:data})
+      // v7.5 fix: 必须带 token 和 editor，否则 SCRIPT_SECRET 启用后会 UNAUTHORIZED
+      body:JSON.stringify({action:'write',type:type,payload:data,token:currentToken||'',editor:currentEditor||''})
     });
     const r=await res.json();
-    // Apps Script v6 用 blocked:'EMPTY_PAYLOAD' 标记被拒
     if(r.blocked==='EMPTY_PAYLOAD'){
       writeLocked=true;
       showSafeBanner('Apps Script 已拒绝空数组写入。这通常意味着本地数据丢失，请刷新或下载。');
+    }
+    // v7.5: token 失效 → 跳回登录
+    if(r&&r.error&&String(r.error).includes('UNAUTHORIZED')){
+      handleTokenExpired();
     }
     return r.success===true;
   }catch(e){return false;}
