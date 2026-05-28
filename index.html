@@ -353,6 +353,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
           <div style="display:flex;gap:4px;flex-wrap:wrap" id="dc-wrap"></div>
         </div>
         <div class="eg" id="s-eg"></div>
+        <div id="s-eg-total" style="margin-top:8px;padding:7px 12px;background:#F5F4FE;border-radius:6px;font-size:12px;color:#555;border-left:3px solid #534AB7"></div>
       </div>
     </div>
   </div>
@@ -630,6 +631,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <div class="modal-coh">
         <div class="modal-coh-chips" id="m-dept-chips"></div>
         <div class="modal-coh-grid" id="m-coh-grid"></div>
+        <div id="m-coh-total" style="margin-top:8px;padding:7px 12px;background:#F5F4FE;border-radius:6px;font-size:12px;color:#555;border-left:3px solid #534AB7"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -1321,9 +1323,41 @@ function buildDeptChips(){
   const w=document.getElementById('dc-wrap');if(!w)return;w.innerHTML='';
   Object.keys(CBD).forEach(d=>{
     const b=document.createElement('button');b.className='dc'+(selDpts.has(d)?' on':'');b.textContent=d;
-    b.onclick=()=>{if(selDpts.has(d))selDpts.delete(d);else selDpts.add(d);b.classList.toggle('on',selDpts.has(d));buildEG('s-eg',null);};
+    b.onclick=()=>{if(selDpts.has(d))selDpts.delete(d);else selDpts.add(d);b.classList.toggle('on',selDpts.has(d));buildEG('s-eg',null);updateSEGTotal();};
     w.appendChild(b);
   });
+}
+
+// 共用：根据可见性 + 是否勾选，加总人数
+function computeCohTotal(gridId, selectedDepts){
+  const grid=document.getElementById(gridId);if(!grid)return{count:0,total:0,showAll:true};
+  const showAll=!selectedDepts||selectedDepts.size===0;
+  let total=0,count=0;
+  grid.querySelectorAll('.ei').forEach(el=>{
+    const visible=showAll||(el.dataset.d&&selectedDepts.has(el.dataset.d));
+    if(!visible)return;
+    const cb=el.querySelector('input[type=checkbox]');
+    if(!cb||!cb.checked)return;
+    const n=el.querySelector('input[type=number]');
+    const cnt=n?(parseInt(n.value)||0):0;
+    total+=cnt;count++;
+  });
+  return{count,total,showAll};
+}
+function renderTotalBar(elId,r,deptSet){
+  const el=document.getElementById(elId);if(!el)return;
+  const label=r.showAll?'全部届别':[...deptSet].join('+')+' 系';
+  if(r.count===0){
+    el.innerHTML='<span style="color:#999">📊 '+label+' · 尚未勾选任何届别</span>';
+  }else{
+    el.innerHTML='📊 <strong>'+label+'</strong> · '+r.count+' 个届别 · 总人数 <strong style="color:#534AB7;font-size:14px">'+r.total+'</strong> 人';
+  }
+}
+function updateSEGTotal(){
+  renderTotalBar('s-eg-total',computeCohTotal('s-eg',selDpts),selDpts);
+}
+function updateMCohTotal(){
+  renderTotalBar('m-coh-total',computeCohTotal('m-coh-grid',_mSelDpts),_mSelDpts);
 }
 function buildEG(id,cc){
   const g=document.getElementById(id);if(!g)return;g.innerHTML='';
@@ -1333,15 +1367,17 @@ function buildEG(id,cc){
     if(!CBD[d])return;
     CBD[d].forEach(cohort=>{
       const k=sk(cohort),chk=cm.hasOwnProperty(cohort),cnt=cm[cohort]||'';
-      const w=document.createElement('div');w.className='ei';
+      const w=document.createElement('div');w.className='ei';w.dataset.d=d;
       w.innerHTML='<input type="checkbox" id="chk-'+k+'" value="'+eh(cohort)+'"'+(chk?' checked':'')+'>'+
         '<label for="chk-'+k+'" title="'+eh(cohort)+'">'+eh(cohort)+'</label>'+
         '<input type="number" id="cnt-'+k+'" min="0" value="'+cnt+'"'+(chk?'':' disabled')+' style="width:46px;font-size:12px;padding:2px 5px;text-align:center">';
       const cb=w.querySelector('input[type=checkbox]'),ni=w.querySelector('input[type=number]');
-      cb.onchange=()=>{ni.disabled=!cb.checked;if(!cb.checked)ni.value='';};
+      cb.onchange=()=>{ni.disabled=!cb.checked;if(!cb.checked)ni.value='';updateSEGTotal();};
+      ni.oninput=updateSEGTotal;
       g.appendChild(w);
     });
   });
+  updateSEGTotal(); // 重建后立即刷新合计
 }
 function getEG(){const r=[];document.querySelectorAll('#s-eg input[type=checkbox]:checked').forEach(cb=>{const k=sk(cb.value),n=document.getElementById('cnt-'+k);r.push({cohort:cb.value,count:n?parseInt(n.value)||0:0});});return r;}
 function cohEditHTML(rid,cc){
@@ -1486,16 +1522,19 @@ function mBuildCohGrid(existCC){
         '<label for="mc-'+k+'" title="'+eh(cohort)+'" style="font-size:10px">'+eh(cohort)+'</label>'+
         '<input type="number" id="mn-'+k+'" min="0" value="'+cnt+'"'+(chk?'':' disabled')+' style="width:40px;font-size:11px;padding:2px 4px;text-align:center">';
       const cb=w.querySelector('input[type=checkbox]'),ni=w.querySelector('input[type=number]');
-      cb.onchange=()=>{ni.disabled=!cb.checked;if(!cb.checked)ni.value='';};
+      cb.onchange=()=>{ni.disabled=!cb.checked;if(!cb.checked)ni.value='';updateMCohTotal();};
+      ni.oninput=updateMCohTotal;
       grid.appendChild(w);
     });
   });
+  updateMCohTotal(); // 重建后立即刷新合计
 }
 
 function mFilterCohGrid(){
   document.querySelectorAll('#m-coh-grid .ei').forEach(el=>{
     el.style.display=(_mSelDpts.size===0||_mSelDpts.has(el.dataset.d))?'':'none';
   });
+  updateMCohTotal(); // 切 chip 时刷新合计
 }
 
 function mCollectCoh(){
