@@ -2381,16 +2381,26 @@ let _schFilteredIds=[];
 let _spFilteredIds=[];
 
 // 更新批量删除按钮显示
-// 规则：只有「筛选有缩减（dispLen < totalLen）且 dispLen > 0」才显示，避免误删全部
+// 永远显示，但根据筛选状态变 enabled/disabled
 function updateBatchDelButton(prefix,dispLen,totalLen){
   const btn=document.getElementById(prefix+'-batch-del');
   const n=document.getElementById(prefix+'-batch-del-n');
   if(!btn||!n)return;
+  btn.style.display=''; // 永远显示
   if(dispLen>0&&dispLen<totalLen){
-    btn.style.display='';
+    // 有筛选缩减 → 启用
+    btn.disabled=false;
+    btn.style.opacity='1';
+    btn.style.cursor='pointer';
+    btn.title='删除当前筛选的 '+dispLen+' 条记录';
     n.textContent=dispLen+' 条';
   }else{
-    btn.style.display='none';
+    // 没筛选或筛选 = 全部 → 禁用
+    btn.disabled=true;
+    btn.style.opacity='0.4';
+    btn.style.cursor='not-allowed';
+    btn.title='请先用上方「学期/课程代码/搜索」筛选，缩小范围后才能批量删除';
+    n.textContent=dispLen===totalLen?'（先筛选）':'0 条';
   }
 }
 
