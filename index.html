@@ -2915,14 +2915,33 @@ function exportSpExcel(){
 }
 
 // ════════════════════════════════════════
-// v7.3+ CSV 批量导入
+// v7.3+ CSV 批量导入（patch 2026-05-29：加重复检测 + 合并/跳过/强制新增 三选项）
 // 模板栏位：课程代码,学期,上下半,班级,授课老师,届别1,人数1,...,届别5,人数5,备注,BTEC
-// 走跟手填表单完全一样的 gasAddRecord 路径 → 产出的记录 100% 一致
+// 走跟手填表单完全一样的 gasAddRecord / gasUpdateRecord 路径
 // ════════════════════════════════════════
 const CSV_HEADERS=['课程代码','学期','上下半','班级','授课老师',
   '届别1','人数1','届别2','人数2','届别3','人数3','届别4','人数4','届别5','人数5','备注','BTEC'];
 
-let _csvParsed=[]; // 解析+验证后的行 [{record, errors, warnings, isDup}]
+let _csvParsed=[]; // 解析+验证后的行 [{record, errors, warnings, dupKind, sheetMatchId, csvSiblings, action}]
+
+// ── 重复判定 helpers ───────────────────────────
+function _dupKey(r){return [r.course,r.sem,r.half,r.cls].join('|');}
+function _mergeCc(){
+  // 把多个 cc 数组合并；同 cohort 累加人数
+  const map={};
+  for(const cc of arguments){
+    if(!cc)continue;
+    cc.forEach(({cohort,count})=>{
+      if(!cohort)return;
+      map[cohort]=(map[cohort]||0)+(Number(count)||0);
+    });
+  }
+  return Object.entries(map).map(([cohort,count])=>({cohort,count}));
+}
+// 给预览表的下拉用：用户选了之后存进 _csvParsed
+function setCsvRowAction(idx,val){
+  if(_csvParsed[idx]) _csvParsed[idx].action=val;
+}
 
 function openCsvImport(){
   document.getElementById('csv-modal').classList.add('open');
@@ -2939,7 +2958,6 @@ function closeCsvImport(){
 }
 
 function downloadCsvTemplate(){
-  // 生成含表头 + 1 行范例的模板，附加注释行说明
   const rows=[
     CSV_HEADERS,
     ['# 范例（删除此行）','','','','','','','','','','','','','','','',''],
@@ -2949,12 +2967,12 @@ function downloadCsvTemplate(){
     ['# 上下半：留空 / 全学期 / 上半学期 / 下半学期','','','','','','','','','','','','','','','',''],
     ['# BTEC：TRUE / FALSE（留空=FALSE）','','','','','','','','','','','','','','','',''],
     ['# 一行 = 一筆排课，最多 5 个届别栏位','','','','','','','','','','','','','','','',''],
+    ['# 同 4 字段（课程+学期+上下半+班级）重复时上传后可选「合并/跳过/强制新增」','','','','','','','','','','','','','','','',''],
   ];
   const csv=rows.map(r=>r.map(c=>{
     const s=String(c==null?'':c);
     return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
   }).join(',')).join('\n');
-  // UTF-8 BOM 让 Excel 直接识别
   const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
@@ -2963,14 +2981,13 @@ function downloadCsvTemplate(){
   URL.revokeObjectURL(a.href);
 }
 
-// 简单但够用的 CSV 解析（支持引号、转义双引号）
 function parseCsv(text){
-  if(text.charCodeAt(0)===0xFEFF)text=text.slice(1); // strip BOM
+  if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
   const lines=text.split(/\r?\n/);
   const rows=[];
   for(const line of lines){
     if(!line.trim())continue;
-    if(line.trim().startsWith('#'))continue; // 跳过注释行
+    if(line.trim().startsWith('#'))continue;
     const row=[];let cur='',inQ=false;
     for(let i=0;i<line.length;i++){
       const c=line[i];
@@ -2991,7 +3008,6 @@ function onCsvFileChosen(ev){
   const reader=new FileReader();
   reader.onload=e=>{
     let text=e.target.result;
-    // 检测乱码：常见 Big5 标识
     if(/锟斤拷|�/.test(text)){
       alert('⚠️ 档案似乎不是 UTF-8（出现乱码）。\n\n请在 Excel 重新「另存为 → CSV UTF-8（逗号分隔）」后再上传。');
       return;
@@ -2999,7 +3015,6 @@ function onCsvFileChosen(ev){
     const rows=parseCsv(text);
     if(rows.length<2){alert('❌ CSV 内容为空或只有表头');return;}
     const headers=rows[0].map(h=>h.trim());
-    // 验证表头
     const missing=CSV_HEADERS.filter(h=>!headers.includes(h));
     if(missing.length){
       alert('❌ CSV 表头不完整，缺少：'+missing.join('、')+'\n\n请用「下载 CSV 模板」按钮取得正确表头。');
@@ -3008,6 +3023,28 @@ function onCsvFileChosen(ev){
     const colIdx={};
     CSV_HEADERS.forEach(h=>colIdx[h]=headers.indexOf(h));
     _csvParsed=rows.slice(1).map((r,i)=>parseAndValidateRow(r,colIdx,i+2));
+
+    // ── 新增：重复检测（4 字段：课程+学期+上下半+班级）──
+    // dupKind: 'none' | 'csv' | 'sheet' | 'both'
+    _csvParsed.forEach((p,i)=>{
+      p.dupKind='none';p.csvSiblings=[];p.sheetMatchId=null;p.action='merge';
+      if(p.errors.length)return;
+      const k=_dupKey(p.record);
+      // CSV 内部撞：找其他没 error 的、同 key 的索引
+      _csvParsed.forEach((q,j)=>{
+        if(i===j)return;
+        if(q.errors.length)return;
+        if(_dupKey(q.record)===k) p.csvSiblings.push(j);
+      });
+      // 跟 Sheet 既有数据撞
+      const sheetMatch=schD.find(r=>_dupKey(r)===k);
+      if(sheetMatch)p.sheetMatchId=String(sheetMatch.id);
+      // 标 kind
+      if(sheetMatch && p.csvSiblings.length) p.dupKind='both';
+      else if(sheetMatch) p.dupKind='sheet';
+      else if(p.csvSiblings.length) p.dupKind='csv';
+    });
+
     buildCsvPreview();
   };
   reader.readAsText(file,'UTF-8');
@@ -3024,7 +3061,6 @@ function parseAndValidateRow(row,colIdx,lineNum){
   const btecRaw=get('BTEC').toUpperCase();
   const btec=(btecRaw==='TRUE'||btecRaw==='1'||btecRaw==='Y'||btecRaw==='是');
 
-  // 蒐集 5 组届别+人数
   const cc=[];
   for(let i=1;i<=5;i++){
     const coh=get('届别'+i);
@@ -3042,24 +3078,19 @@ function parseAndValidateRow(row,colIdx,lineNum){
   if(!cls)errors.push('班级必填');
   if(!cc.length)errors.push('至少需要一个届别+人数');
   if(tc&&!T.find(x=>x.n===tc))warnings.push('老师「'+tc+'」不在老师库（可能拼错）');
-  cc.forEach((x,i)=>{
+  cc.forEach((x)=>{
     const allCoh=Object.values(CBD).flat();
     if(!allCoh.includes(x.cohort))warnings.push('届别「'+x.cohort+'」不在届别库');
   });
 
-  // 课程查得到 → 补 en + 自动 type
   let en='',type='正常';
   const cInfo=C.find(x=>x.c===course);
   if(cInfo){en=cInfo.en||'';type=detectType(course,cls);}
 
-  // 重复侦测：跟已存在记录撞 course+sem+half+cls
-  const isDup=!!schD.find(r=>r.course===course&&r.cls===cls&&r.sem===sem&&r.half===half);
-  if(isDup)warnings.push('本地已有同 课程+学期+半期+班级 的记录');
-
   return{
     line:lineNum,
     record:{course,en,sem,half,type,cls,tc,nt,cc,btec},
-    errors,warnings,isDup,
+    errors,warnings,
     raw:row
   };
 }
@@ -3069,37 +3100,104 @@ function buildCsvPreview(){
   if(!_csvParsed.length){wrap.innerHTML='<div style="color:#999;padding:14px;text-align:center">没有可解析的资料</div>';return;}
   const okCount=_csvParsed.filter(x=>!x.errors.length).length;
   const errCount=_csvParsed.filter(x=>x.errors.length).length;
-  const warnCount=_csvParsed.filter(x=>!x.errors.length&&x.warnings.length).length;
+  const dupCount=_csvParsed.filter(x=>!x.errors.length&&x.dupKind!=='none').length;
+  const warnCount=_csvParsed.filter(x=>!x.errors.length&&x.warnings.length&&x.dupKind==='none').length;
+
   const html=[];
-  html.push('<div style="display:flex;gap:10px;font-size:12px;margin-bottom:8px">');
+  html.push('<div style="display:flex;gap:10px;font-size:12px;margin-bottom:8px;flex-wrap:wrap">');
   html.push('<span class="badge b1">🟢 可导入 '+okCount+'</span>');
+  if(dupCount)html.push('<span class="badge b2">🔁 重复 '+dupCount+'（请选择处理方式）</span>');
   if(warnCount)html.push('<span class="badge b2">🟡 含警告 '+warnCount+'</span>');
   if(errCount)html.push('<span class="badge b3">🔴 不可导入 '+errCount+'</span>');
   html.push('</div>');
+
+  // 批量套用按钮（重复行群组操作）
+  if(dupCount){
+    html.push('<div style="font-size:11px;color:#666;margin-bottom:6px">批量套用到所有重复行：');
+    html.push('<button class="btn btn-sm" onclick="csvBulkSetAction(\'merge\')" style="font-size:10px;padding:2px 8px;margin-left:4px">全部合并</button>');
+    html.push('<button class="btn btn-sm" onclick="csvBulkSetAction(\'skip\')" style="font-size:10px;padding:2px 8px;margin-left:4px">全部跳过</button>');
+    html.push('<button class="btn btn-sm" onclick="csvBulkSetAction(\'append\')" style="font-size:10px;padding:2px 8px;margin-left:4px">全部强制新增</button>');
+    html.push('</div>');
+  }
+
   html.push('<div style="max-height:380px;overflow-y:auto;border:1px solid #eee;border-radius:6px">');
   html.push('<table style="font-size:11px;width:100%"><thead><tr style="background:#534AB7;color:#fff;position:sticky;top:0">');
-  html.push('<th style="padding:5px 8px">状态</th><th>行号</th><th>课程</th><th>学期</th><th>上下半</th><th>班级</th><th>老师</th><th>届别</th><th>问题</th>');
+  html.push('<th style="padding:5px 8px">状态</th><th>行号</th><th>课程</th><th>学期</th><th>上下半</th><th>班级</th><th>老师</th><th>届别</th><th>重复来源</th><th>处理方式</th><th>问题</th>');
   html.push('</tr></thead><tbody>');
-  _csvParsed.forEach(p=>{
-    const icon=p.errors.length?'🔴':(p.warnings.length?'🟡':'🟢');
-    const bg=p.errors.length?'#FEF2F2':(p.warnings.length?'#FFFBEB':'');
+  _csvParsed.forEach((p,idx)=>{
+    const isDup=!p.errors.length && p.dupKind!=='none';
+    const icon=p.errors.length?'🔴':(isDup?'🔁':(p.warnings.length?'🟡':'🟢'));
+    const bg=p.errors.length?'#FEF2F2':(isDup?'#FEF3C7':(p.warnings.length?'#FFFBEB':''));
     const r=p.record;
     const ccTxt=r.cc.map(c=>c.cohort+'·'+c.count+'人').join(' / ');
     const probs=[...p.errors.map(e=>'❌ '+e),...p.warnings.map(w=>'⚠️ '+w)].join('<br>');
+
+    // 重复来源描述
+    let dupSrc='—';
+    if(p.dupKind==='sheet') dupSrc='📋 Sheet 已有';
+    else if(p.dupKind==='csv') dupSrc='📄 文件内重复 '+(p.csvSiblings.length+1)+' 行';
+    else if(p.dupKind==='both') dupSrc='📋📄 双重重复';
+
+    // 处理方式下拉（只在 dup 时显示）
+    let actionCell='—';
+    if(isDup){
+      actionCell=
+        '<select onchange="setCsvRowAction('+idx+',this.value);buildCsvPreview();" style="font-size:11px;padding:2px 4px">'+
+        '<option value="merge"'+(p.action==='merge'?' selected':'')+'>🟢 合并 cohort</option>'+
+        '<option value="skip"'+(p.action==='skip'?' selected':'')+'>🟡 跳过</option>'+
+        '<option value="append"'+(p.action==='append'?' selected':'')+'>⚫ 强制新增</option>'+
+        '</select>';
+    }
+
     html.push('<tr style="background:'+bg+'"><td style="padding:4px 8px;text-align:center">'+icon+'</td>');
     html.push('<td style="color:#999">'+p.line+'</td>');
     html.push('<td><code>'+eh(r.course||'—')+'</code></td>');
     html.push('<td>'+eh(r.sem||'—')+'</td><td>'+eh(r.half||'—')+'</td><td>'+eh(r.cls||'—')+'</td>');
     html.push('<td>'+eh(r.tc||'—')+'</td>');
     html.push('<td style="max-width:200px">'+eh(ccTxt||'—')+'</td>');
+    html.push('<td style="font-size:10px;color:#854F0B">'+dupSrc+'</td>');
+    html.push('<td>'+actionCell+'</td>');
     html.push('<td style="font-size:10px;color:'+(p.errors.length?'#a32d2d':'#854F0B')+'">'+probs+'</td>');
     html.push('</tr>');
   });
   html.push('</tbody></table></div>');
   wrap.innerHTML=html.join('');
+
+  // 计算实际会写入的笔数（合并组会归并，跳过不算）
+  const actionable=_calcCsvOps();
   const btn=document.getElementById('csv-import-btn');
-  if(okCount===0){btn.disabled=true;btn.textContent='没有可导入的记录';}
-  else{btn.disabled=false;btn.textContent='✓ 确认导入 '+okCount+' 笔';}
+  if(actionable.totalRows===0){btn.disabled=true;btn.textContent='没有可导入的记录';}
+  else{
+    btn.disabled=false;
+    let txt='✓ 确认导入：写入 '+actionable.writes+' 笔';
+    if(actionable.merges) txt+='（含合并 '+actionable.merges+'）';
+    if(actionable.skips) txt+=' · 跳过 '+actionable.skips;
+    btn.textContent=txt;
+  }
+}
+
+// 批量套用同一处理方式到所有重复行
+function csvBulkSetAction(val){
+  _csvParsed.forEach(p=>{if(!p.errors.length && p.dupKind!=='none') p.action=val;});
+  buildCsvPreview();
+}
+
+// 计算最终写入操作数
+function _calcCsvOps(){
+  const valid=_csvParsed.filter(x=>!x.errors.length);
+  let writes=0,merges=0,skips=0;
+  const seenMergeKey=new Set();
+  valid.forEach(p=>{
+    if(p.dupKind==='none'){writes++;return;}
+    if(p.action==='skip'){skips++;return;}
+    if(p.action==='append'){writes++;return;}
+    if(p.action==='merge'){
+      // 同 key 合并组只算 1 次写
+      const k=_dupKey(p.record);
+      if(!seenMergeKey.has(k)){seenMergeKey.add(k);writes++;merges++;}
+    }
+  });
+  return {totalRows:valid.length,writes,merges,skips};
 }
 
 async function confirmCsvImport(){
@@ -3107,15 +3205,80 @@ async function confirmCsvImport(){
   if(!valid.length){alert('没有可导入的记录');return;}
   if(!SHEETS_URL){alert('未配置 SHEETS_URL，无法同步');return;}
   if(!canSync())return;
-  if(!confirm('确定导入 '+valid.length+' 笔排课？\n\n警告项（黄色）也会一并导入。'))return;
+
+  // 分组：merge 按 key 归并；skip 不处理；append 各自一笔
+  const mergeByKey={}; // key → [parsed rows...]
+  const appendList=[];
+  const skipCount=valid.filter(p=>p.dupKind!=='none'&&p.action==='skip').length;
+
+  valid.forEach(p=>{
+    if(p.dupKind==='none'){appendList.push(p);return;}
+    if(p.action==='skip')return;
+    if(p.action==='append'){appendList.push(p);return;}
+    // merge
+    const k=_dupKey(p.record);
+    if(!mergeByKey[k])mergeByKey[k]=[];
+    mergeByKey[k].push(p);
+  });
+
+  const mergeGroupCount=Object.keys(mergeByKey).length;
+  const totalOps=mergeGroupCount+appendList.length;
+  if(!totalOps){alert('全部都被跳过，没有写入操作');return;}
+
+  let confirmMsg='确认执行：\n';
+  if(appendList.length) confirmMsg+='  新增 '+appendList.length+' 笔\n';
+  if(mergeGroupCount) confirmMsg+='  合并 '+mergeGroupCount+' 个分组\n';
+  if(skipCount) confirmMsg+='  跳过 '+skipCount+' 笔\n';
+  if(!confirm(confirmMsg))return;
 
   const btn=document.getElementById('csv-import-btn');
   btn.disabled=true;
-  let success=0,fail=0;
-  for(let i=0;i<valid.length;i++){
-    const v=valid[i];
-    btn.textContent='⏳ 导入中 '+(i+1)+'/'+valid.length+'…';
-    const localId=Date.now()+i; // +i 避免同毫秒碰撞
+  let success=0,fail=0,opDone=0;
+
+  // ── Step 1：处理合并组 ──
+  for(const key in mergeByKey){
+    opDone++;
+    btn.textContent='⏳ 处理中 '+opDone+'/'+totalOps+'…';
+    const group=mergeByKey[key];
+    const first=group[0];
+    const sheetMatchId=first.sheetMatchId; // 同 key 所有 sibling 的 sheetMatchId 相同
+
+    // 把 group 里所有 record.cc 合并；如有 sheet 现有记录，也把它的 cc 一并合并
+    const sheetRec=sheetMatchId?schD.find(r=>String(r.id)===String(sheetMatchId)):null;
+    const allCcs=group.map(g=>g.record.cc);
+    if(sheetRec) allCcs.unshift(sheetRec.cc);
+    const mergedCc=_mergeCc.apply(null,allCcs);
+
+    if(sheetRec){
+      // 已有 → updateRecord 改 cc
+      try{
+        const res=await gasUpdateRecord('schedule',sheetRec.id,{cc:mergedCc});
+        if(res&&res.success){
+          sheetRec.cc=mergedCc;
+          success+=group.length;
+        }else{fail+=group.length;}
+      }catch(e){fail+=group.length;}
+    }else{
+      // 没有 → addRecord 合并后的新笔
+      const localId=Date.now()+opDone;
+      const rec={id:localId,...first.record,cc:mergedCc,editing:false};
+      schD.push(rec);
+      try{
+        const res=await gasAddRecord('schedule',rec);
+        if(res&&res.success){
+          if(res.id&&String(res.id)!==String(localId))rec.id=res.id;
+          success+=group.length;
+        }else{schD=schD.filter(x=>x!==rec);fail+=group.length;}
+      }catch(e){schD=schD.filter(x=>x!==rec);fail+=group.length;}
+    }
+  }
+
+  // ── Step 2：处理 append / 非 dup 行 ──
+  for(let i=0;i<appendList.length;i++){
+    opDone++;
+    btn.textContent='⏳ 处理中 '+opDone+'/'+totalOps+'…';
+    const v=appendList[i];
+    const localId=Date.now()+opDone;
     const rec={id:localId,...v.record,editing:false};
     schD.push(rec);
     try{
@@ -3123,22 +3286,33 @@ async function confirmCsvImport(){
       if(res&&res.success){
         if(res.id&&String(res.id)!==String(localId))rec.id=res.id;
         success++;
-      }else{
-        schD=schD.filter(x=>x!==rec); // 失败回滚
-        fail++;
-      }
+      }else{schD=schD.filter(x=>x!==rec);fail++;}
     }catch(e){schD=schD.filter(x=>x!==rec);fail++;}
   }
+
   renderSch();renderAllSum();renderSta();
-  alert('✅ 完成！\n\n成功：'+success+' 笔\n失败：'+fail+' 笔'+(fail?'\n（失败的记录已自本地回滚）':''));
+  let msg='✅ 完成！\n\n成功：'+success+' 笔';
+  if(fail)msg+='\n失败：'+fail+' 笔（失败的已自本地回滚）';
+  if(skipCount)msg+='\n跳过：'+skipCount+' 笔';
+  alert(msg);
   closeCsvImport();
 }
 
 // ════════════════════════════════════════
-// IS/SG CSV 批量导入（栏位不一样：学生 + 课程，没有屆别人数）
+
+// ════════════════════════════════════════
+// IS/SG CSV 批量导入（patch 2026-05-29：加重复检测 + 跳过/覆盖/强制新增 三选项）
+// 唯一性键：学号 + 课程代码 + 学期 + 班级
+// （IS/SG 没有 cohort，所以选项跟主排课不同：用「覆盖」代替「合并」）
 // ════════════════════════════════════════
 const CSV_SP_HEADERS=['学号','称谓','学生姓名','学生专业','课程代码','班级','学期','授课老师','备注'];
 let _csvSpParsed=[];
+
+// ── 重复判定 helpers ───────────────────────────
+function _dupKeySp(r){return [r.sid,r.co,r.cls,r.sem].join('|');}
+function setCsvSpRowAction(idx,val){
+  if(_csvSpParsed[idx]) _csvSpParsed[idx].action=val;
+}
 
 function openCsvImportSp(){
   document.getElementById('csv-sp-modal').classList.add('open');
@@ -3164,6 +3338,7 @@ function downloadCsvSpTemplate(){
     ['# 班级：IS-222 或 SG-222','','','','','','','',''],
     ['# 称谓：Mr. / Ms.','','','','','','','',''],
     ['# 姓名仅英文','','','','','','','',''],
+    ['# 同 4 字段（学号+课程+学期+班级）重复时上传后可选「跳过/覆盖/强制新增」','','','','','','','',''],
   ];
   const csv=rows.map(r=>r.map(c=>{
     const s=String(c==null?'':c);
@@ -3197,6 +3372,25 @@ function onCsvSpFileChosen(ev){
     const colIdx={};
     CSV_SP_HEADERS.forEach(h=>colIdx[h]=headers.indexOf(h));
     _csvSpParsed=rows.slice(1).map((r,i)=>parseAndValidateSpRow(r,colIdx,i+2));
+
+    // ── 重复检测（4 字段：学号+课程+学期+班级）──
+    // dupKind: 'none' | 'csv' | 'sheet' | 'both'
+    _csvSpParsed.forEach((p,i)=>{
+      p.dupKind='none';p.csvSiblings=[];p.sheetMatchId=null;p.action='skip'; // IS/SG 默认 skip
+      if(p.errors.length)return;
+      const k=_dupKeySp(p.record);
+      _csvSpParsed.forEach((q,j)=>{
+        if(i===j)return;
+        if(q.errors.length)return;
+        if(_dupKeySp(q.record)===k) p.csvSiblings.push(j);
+      });
+      const sheetMatch=spD.find(r=>_dupKeySp(r)===k);
+      if(sheetMatch)p.sheetMatchId=String(sheetMatch.id);
+      if(sheetMatch && p.csvSiblings.length) p.dupKind='both';
+      else if(sheetMatch) p.dupKind='sheet';
+      else if(p.csvSiblings.length) p.dupKind='csv';
+    });
+
     buildCsvSpPreview();
   };
   reader.readAsText(file,'UTF-8');
@@ -3230,13 +3424,10 @@ function parseAndValidateSpRow(row,colIdx,lineNum){
   const cInfo=C.find(x=>x.c===co);
   if(cInfo)en=cInfo.en||'';
 
-  const isDup=!!spD.find(r=>r.sid===sid&&r.co===co&&r.sem===sem&&r.cls===cls);
-  if(isDup)warnings.push('本地已有同 学号+课程+学期+班级 的记录');
-
   return{
     line:lineNum,
     record:{sid,mr,nm,mj,co,en,cls,sem,tc,nt,type:'SG'},
-    errors,warnings,isDup,
+    errors,warnings,
     raw:row
   };
 }
@@ -3246,22 +3437,51 @@ function buildCsvSpPreview(){
   if(!_csvSpParsed.length){wrap.innerHTML='<div style="color:#999;padding:14px;text-align:center">没有可解析的资料</div>';return;}
   const okCount=_csvSpParsed.filter(x=>!x.errors.length).length;
   const errCount=_csvSpParsed.filter(x=>x.errors.length).length;
-  const warnCount=_csvSpParsed.filter(x=>!x.errors.length&&x.warnings.length).length;
+  const dupCount=_csvSpParsed.filter(x=>!x.errors.length&&x.dupKind!=='none').length;
+  const warnCount=_csvSpParsed.filter(x=>!x.errors.length&&x.warnings.length&&x.dupKind==='none').length;
+
   const html=[];
-  html.push('<div style="display:flex;gap:10px;font-size:12px;margin-bottom:8px">');
+  html.push('<div style="display:flex;gap:10px;font-size:12px;margin-bottom:8px;flex-wrap:wrap">');
   html.push('<span class="badge b1">🟢 可导入 '+okCount+'</span>');
+  if(dupCount)html.push('<span class="badge b2">🔁 重复 '+dupCount+'（请选择处理方式）</span>');
   if(warnCount)html.push('<span class="badge b2">🟡 含警告 '+warnCount+'</span>');
   if(errCount)html.push('<span class="badge b3">🔴 不可导入 '+errCount+'</span>');
   html.push('</div>');
+
+  if(dupCount){
+    html.push('<div style="font-size:11px;color:#666;margin-bottom:6px">批量套用到所有重复行：');
+    html.push('<button class="btn btn-sm" onclick="csvSpBulkSetAction(\'skip\')" style="font-size:10px;padding:2px 8px;margin-left:4px">全部跳过</button>');
+    html.push('<button class="btn btn-sm" onclick="csvSpBulkSetAction(\'overwrite\')" style="font-size:10px;padding:2px 8px;margin-left:4px">全部覆盖</button>');
+    html.push('<button class="btn btn-sm" onclick="csvSpBulkSetAction(\'append\')" style="font-size:10px;padding:2px 8px;margin-left:4px">全部强制新增</button>');
+    html.push('</div>');
+  }
+
   html.push('<div style="max-height:380px;overflow-y:auto;border:1px solid #eee;border-radius:6px">');
   html.push('<table style="font-size:11px;width:100%"><thead><tr style="background:#534AB7;color:#fff;position:sticky;top:0">');
-  html.push('<th style="padding:5px 8px">状态</th><th>行</th><th>学号</th><th>姓名</th><th>课程</th><th>学期</th><th>班级</th><th>老师</th><th>问题</th>');
+  html.push('<th style="padding:5px 8px">状态</th><th>行</th><th>学号</th><th>姓名</th><th>课程</th><th>学期</th><th>班级</th><th>老师</th><th>重复来源</th><th>处理方式</th><th>问题</th>');
   html.push('</tr></thead><tbody>');
-  _csvSpParsed.forEach(p=>{
-    const icon=p.errors.length?'🔴':(p.warnings.length?'🟡':'🟢');
-    const bg=p.errors.length?'#FEF2F2':(p.warnings.length?'#FFFBEB':'');
+  _csvSpParsed.forEach((p,idx)=>{
+    const isDup=!p.errors.length && p.dupKind!=='none';
+    const icon=p.errors.length?'🔴':(isDup?'🔁':(p.warnings.length?'🟡':'🟢'));
+    const bg=p.errors.length?'#FEF2F2':(isDup?'#FEF3C7':(p.warnings.length?'#FFFBEB':''));
     const r=p.record;
     const probs=[...p.errors.map(e=>'❌ '+e),...p.warnings.map(w=>'⚠️ '+w)].join('<br>');
+
+    let dupSrc='—';
+    if(p.dupKind==='sheet') dupSrc='📋 Sheet 已有';
+    else if(p.dupKind==='csv') dupSrc='📄 文件内重复 '+(p.csvSiblings.length+1)+' 行';
+    else if(p.dupKind==='both') dupSrc='📋📄 双重重复';
+
+    let actionCell='—';
+    if(isDup){
+      actionCell=
+        '<select onchange="setCsvSpRowAction('+idx+',this.value);buildCsvSpPreview();" style="font-size:11px;padding:2px 4px">'+
+        '<option value="skip"'+(p.action==='skip'?' selected':'')+'>🟡 跳过</option>'+
+        '<option value="overwrite"'+(p.action==='overwrite'?' selected':'')+'>🔴 覆盖</option>'+
+        '<option value="append"'+(p.action==='append'?' selected':'')+'>⚫ 强制新增</option>'+
+        '</select>';
+    }
+
     html.push('<tr style="background:'+bg+'"><td style="padding:4px 8px;text-align:center">'+icon+'</td>');
     html.push('<td style="color:#999">'+p.line+'</td>');
     html.push('<td><code>'+eh(r.sid||'—')+'</code></td>');
@@ -3269,14 +3489,50 @@ function buildCsvSpPreview(){
     html.push('<td><code>'+eh(r.co)+'</code></td>');
     html.push('<td>'+eh(r.sem)+'</td><td>'+eh(r.cls)+'</td>');
     html.push('<td>'+eh(r.tc||'—')+'</td>');
+    html.push('<td style="font-size:10px;color:#854F0B">'+dupSrc+'</td>');
+    html.push('<td>'+actionCell+'</td>');
     html.push('<td style="font-size:10px;color:'+(p.errors.length?'#a32d2d':'#854F0B')+'">'+probs+'</td>');
     html.push('</tr>');
   });
   html.push('</tbody></table></div>');
   wrap.innerHTML=html.join('');
+
+  // 计算最终写入操作数
+  const ops=_calcCsvSpOps();
   const btn=document.getElementById('csv-sp-import-btn');
-  if(okCount===0){btn.disabled=true;btn.textContent='没有可导入的记录';}
-  else{btn.disabled=false;btn.textContent='✓ 确认导入 '+okCount+' 笔';}
+  if(ops.totalWrites===0){btn.disabled=true;btn.textContent='没有可导入的记录';}
+  else{
+    btn.disabled=false;
+    let txt='✓ 确认：新增 '+ops.adds+' / 覆盖 '+ops.overwrites;
+    if(ops.skips) txt+=' · 跳过 '+ops.skips;
+    btn.textContent=txt;
+  }
+}
+
+function csvSpBulkSetAction(val){
+  _csvSpParsed.forEach(p=>{if(!p.errors.length && p.dupKind!=='none') p.action=val;});
+  buildCsvSpPreview();
+}
+
+function _calcCsvSpOps(){
+  const valid=_csvSpParsed.filter(x=>!x.errors.length);
+  let adds=0,overwrites=0,skips=0;
+  // 文件内 dup 用 overwrite：只算 1 次覆盖（最后一行 wins）；append：每行都算 1 次新增
+  // 简化：每行根据 action 各自计数；csv 内 dup + overwrite 的话，重复组里最后一行覆盖前面的，前面的视为 skip
+  const overwriteSeenKey=new Set();
+  valid.forEach(p=>{
+    if(p.dupKind==='none'){adds++;return;}
+    if(p.action==='skip'){skips++;return;}
+    if(p.action==='append'){adds++;return;}
+    if(p.action==='overwrite'){
+      const k=_dupKeySp(p.record);
+      // CSV 内多行同 key，只算最后一次 overwrite
+      if(overwriteSeenKey.has(k)){skips++;return;}
+      overwriteSeenKey.add(k);
+      overwrites++;
+    }
+  });
+  return {totalWrites:adds+overwrites,adds,overwrites,skips};
 }
 
 async function confirmCsvImportSp(){
@@ -3284,14 +3540,67 @@ async function confirmCsvImportSp(){
   if(!valid.length){alert('没有可导入的记录');return;}
   if(!SHEETS_URL){alert('未配置 SHEETS_URL，无法同步');return;}
   if(!canSync())return;
-  if(!confirm('确定导入 '+valid.length+' 笔 IS/SG 记录？\n\n警告项（黄色）也会一并导入。'))return;
+
+  // 分组
+  const overwriteByKey={}; // 取「同 key 最后一行」为准
+  const appendList=[];
+  let skipCount=0;
+  valid.forEach(p=>{
+    if(p.dupKind==='none'){appendList.push(p);return;}
+    if(p.action==='skip'){skipCount++;return;}
+    if(p.action==='append'){appendList.push(p);return;}
+    if(p.action==='overwrite'){
+      const k=_dupKeySp(p.record);
+      overwriteByKey[k]=p; // 后面的会覆盖前面的（同 key 取最后）
+    }
+  });
+  const overwriteList=Object.values(overwriteByKey);
+  const totalOps=overwriteList.length+appendList.length;
+  if(!totalOps){alert('全部都被跳过，没有写入操作');return;}
+
+  let confirmMsg='确认执行：\n';
+  if(appendList.length) confirmMsg+='  新增 '+appendList.length+' 笔\n';
+  if(overwriteList.length) confirmMsg+='  覆盖 '+overwriteList.length+' 笔（旧记录字段会被替换）\n';
+  if(skipCount) confirmMsg+='  跳过 '+skipCount+' 笔\n';
+  if(!confirm(confirmMsg))return;
+
   const btn=document.getElementById('csv-sp-import-btn');
   btn.disabled=true;
-  let success=0,fail=0;
-  for(let i=0;i<valid.length;i++){
-    const v=valid[i];
-    btn.textContent='⏳ 导入中 '+(i+1)+'/'+valid.length+'…';
-    const localId=Date.now()+i;
+  let success=0,fail=0,opDone=0;
+
+  // ── Step 1：覆盖现有记录 ──
+  for(const p of overwriteList){
+    opDone++;
+    btn.textContent='⏳ 处理中 '+opDone+'/'+totalOps+'…';
+    const sheetRec=spD.find(r=>_dupKeySp(r)===_dupKeySp(p.record));
+    if(!sheetRec){
+      // Sheet 没有但被标 overwrite（CSV 内部 dup 且没有 sheet match）→ 退化为新增
+      const localId=Date.now()+opDone;
+      const rec={id:localId,...p.record,editing:false};
+      spD.push(rec);
+      try{
+        const res=await gasAddRecord('special',rec);
+        if(res&&res.success){if(res.id&&String(res.id)!==String(localId))rec.id=res.id;success++;}
+        else{spD=spD.filter(x=>x!==rec);fail++;}
+      }catch(e){spD=spD.filter(x=>x!==rec);fail++;}
+      continue;
+    }
+    // 用 Excel 行的字段更新 Sheet 记录
+    const fields={mr:p.record.mr,nm:p.record.nm,mj:p.record.mj,en:p.record.en,tc:p.record.tc,nt:p.record.nt};
+    try{
+      const res=await gasUpdateRecord('special',sheetRec.id,fields);
+      if(res&&res.success){
+        Object.assign(sheetRec,fields);
+        success++;
+      }else fail++;
+    }catch(e){fail++;}
+  }
+
+  // ── Step 2：新增 ──
+  for(const v of appendList){
+    opDone++;
+    btn.textContent='⏳ 处理中 '+opDone+'/'+totalOps+'…';
+    const localId=Date.now()+opDone;
     const rec={id:localId,...v.record,editing:false};
     spD.push(rec);
     try{
@@ -3299,14 +3608,15 @@ async function confirmCsvImportSp(){
       if(res&&res.success){
         if(res.id&&String(res.id)!==String(localId))rec.id=res.id;
         success++;
-      }else{
-        spD=spD.filter(x=>x!==rec);
-        fail++;
-      }
+      }else{spD=spD.filter(x=>x!==rec);fail++;}
     }catch(e){spD=spD.filter(x=>x!==rec);fail++;}
   }
+
   renderSp();renderAllSum();renderSta();
-  alert('✅ 完成！\n\n成功：'+success+' 笔\n失败：'+fail+' 笔'+(fail?'\n（失败的记录已自本地回滚）':''));
+  let msg='✅ 完成！\n\n成功：'+success+' 笔';
+  if(fail)msg+='\n失败：'+fail+' 笔（失败的已自本地回滚）';
+  if(skipCount)msg+='\n跳过：'+skipCount+' 笔';
+  alert(msg);
   closeCsvImportSp();
 }
 
