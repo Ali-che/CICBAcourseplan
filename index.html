@@ -3129,7 +3129,10 @@ function buildCsvPreview(){
     const icon=p.errors.length?'🔴':(isDup?'🔁':(p.warnings.length?'🟡':'🟢'));
     const bg=p.errors.length?'#FEF2F2':(isDup?'#FEF3C7':(p.warnings.length?'#FFFBEB':''));
     const r=p.record;
-    const ccTxt=r.cc.map(c=>c.cohort+'·'+c.count+'人').join(' / ');
+    // 届别用可换行 chip 渲染，避免长串溢出遮盖右侧列
+    const ccChips=r.cc.length
+      ? r.cc.map(c=>'<span style="display:inline-block;padding:1px 6px;margin:1px;background:#EEF;border:0.5px solid #CCE;border-radius:10px;font-size:10px;white-space:nowrap">'+eh(c.cohort)+'·'+c.count+'人</span>').join('')
+      : '—';
     const probs=[...p.errors.map(e=>'❌ '+e),...p.warnings.map(w=>'⚠️ '+w)].join('<br>');
 
     // 重复来源描述
@@ -3154,8 +3157,8 @@ function buildCsvPreview(){
     html.push('<td><code>'+eh(r.course||'—')+'</code></td>');
     html.push('<td>'+eh(r.sem||'—')+'</td><td>'+eh(r.half||'—')+'</td><td>'+eh(r.cls||'—')+'</td>');
     html.push('<td>'+eh(r.tc||'—')+'</td>');
-    html.push('<td style="max-width:200px">'+eh(ccTxt||'—')+'</td>');
-    html.push('<td style="font-size:10px;color:#854F0B">'+dupSrc+'</td>');
+    html.push('<td style="max-width:240px;white-space:normal;line-height:1.6;vertical-align:top">'+ccChips+'</td>');
+    html.push('<td style="font-size:10px;color:#854F0B;white-space:nowrap;vertical-align:top">'+dupSrc+'</td>');
     html.push('<td>'+actionCell+'</td>');
     html.push('<td style="font-size:10px;color:'+(p.errors.length?'#a32d2d':'#854F0B')+'">'+probs+'</td>');
     html.push('</tr>');
