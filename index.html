@@ -604,14 +604,17 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     <select id="sta-yr" onchange="renderSta()" style="width:auto;font-size:12px;padding:5px 8px"><option value="">— 请选择学年 —</option></select>
   </div>
 
-  <!-- v7.9.11: Top 10 可优先排课面板 -->
+  <!-- v7.9.11: Top 10 可优先排课面板（可折叠）-->
   <div id="sta-low-panel" style="display:none;background:#FFFBEB;border:0.5px solid #FDE68A;border-left:3px solid #F59E0B;border-radius:8px;padding:12px 16px;margin-bottom:14px">
-    <div style="font-size:13px;font-weight:600;color:#92400E;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <span>🔻 可优先排课</span>
+    <div style="font-size:13px;font-weight:600;color:#92400E;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span id="sta-low-toggle" onclick="toggleLowPanel()" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;user-select:none" title="点击展开/收起">
+        <span id="sta-low-arrow" style="display:inline-block;transition:transform .15s">🔻</span>
+        <span>可优先排课</span>
+      </span>
       <select id="sta-low-dept" onchange="renderLowPanel()" style="font-size:11px;padding:2px 8px;border:0.5px solid #FDE68A;border-radius:5px;background:#fff;color:#92400E;font-weight:500;cursor:pointer;height:24px;width:auto;min-width:100px"><option value="">全本科</option></select>
       <span style="font-size:11px;font-weight:400;color:#A16207">% 最低 10 位 · 点击跳到表格行</span>
     </div>
-    <div id="sta-low-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px"></div>
+    <div id="sta-low-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px;margin-top:8px"></div>
   </div>
 
   <div class="card">
@@ -3119,6 +3122,29 @@ function jumpToTeacherRow(k){
   setTimeout(()=>{row.style.background='';},2200);
 }
 window.jumpToTeacherRow=jumpToTeacherRow;
+
+// v7.9.12: 折叠 Top 10 面板（状态存 localStorage）
+function toggleLowPanel(){
+  const list=document.getElementById('sta-low-list');
+  const arrow=document.getElementById('sta-low-arrow');
+  if(!list||!arrow)return;
+  const isHidden=list.style.display==='none';
+  list.style.display=isHidden?'grid':'none';
+  arrow.style.transform=isHidden?'':'rotate(-90deg)';
+  try{localStorage.setItem('cic_lowpanel_collapsed',isHidden?'0':'1');}catch(e){}
+}
+window.toggleLowPanel=toggleLowPanel;
+// 启动时恢复折叠状态
+document.addEventListener('DOMContentLoaded',()=>{
+  try{
+    if(localStorage.getItem('cic_lowpanel_collapsed')==='1'){
+      const list=document.getElementById('sta-low-list');
+      const arrow=document.getElementById('sta-low-arrow');
+      if(list)list.style.display='none';
+      if(arrow)arrow.style.transform='rotate(-90deg)';
+    }
+  }catch(e){}
+});
 
 // ── JSON 导出/导入 ────────────────────────
 function exportData(){
