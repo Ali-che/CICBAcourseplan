@@ -589,6 +589,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <span class="ct" style="margin:0">各授课老师工作量</span>
       <div style="display:flex;gap:6px;align-items:center">
         <span style="font-size:11px;color:#888">BTEC/LA500 可直接在表格内填写，自动同步</span>
+        <button class="btn btn-sm no-print" onclick="showFormulaInfo()" style="color:#534AB7;border-color:#AFA9EC" title="查看工作量计算公式">ℹ️ 公式说明</button>
         <button class="btn btn-sm" onclick="renderSta()">↻ 刷新</button>
         <button class="btn btn-sm no-print" onclick="printPanel('sta')">🖨️ 列印</button>
       </div>
@@ -618,6 +619,74 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     <div class="empty" id="sta-em">暂无数据</div>
   </div>
 </div>
+
+<div id="formula-modal" style="display:none;position:fixed;inset:0;z-index:10000;align-items:center;justify-content:center">
+  <div onclick="closeFormulaModal()" style="position:absolute;inset:0;background:rgba(0,0,0,.45);cursor:pointer"></div>
+  <div style="position:relative;background:#fff;border-radius:12px;max-width:620px;width:92%;max-height:88vh;overflow:auto;padding:24px 28px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:inherit">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+      <div>
+        <h3 style="margin:0;font-size:16px;color:#333;font-weight:600">ℹ️ 教学工作量 · 计算公式</h3>
+        <div style="font-size:12px;color:#888;margin-top:3px">每个学期 · 每位老师的工作量怎么算</div>
+      </div>
+      <button onclick="closeFormulaModal()" style="background:transparent;border:0;font-size:20px;color:#888;cursor:pointer;line-height:1;padding:4px 8px;font-family:inherit">×</button>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:18px">
+      <thead>
+        <tr style="background:#534AB7;color:#fff">
+          <th style="text-align:left;padding:8px 12px;font-weight:600">课程类型</th>
+          <th style="text-align:left;padding:8px 12px;font-weight:600">权重 / 课</th>
+          <th style="text-align:left;padding:8px 12px;font-weight:600">说明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:0.5px solid #eee">
+          <td style="padding:8px 12px"><span class="badge b0">正常</span></td>
+          <td style="padding:8px 12px;font-family:ui-monospace,monospace">≤20 人 = 0.5<br>>20 人 = 1.0</td>
+          <td style="padding:8px 12px;color:#666">按总人数分档</td>
+        </tr>
+        <tr style="border-bottom:0.5px solid #eee">
+          <td style="padding:8px 12px"><span class="badge b6">英文</span></td>
+          <td style="padding:8px 12px;font-family:ui-monospace,monospace">≤20 人 = 0.25<br>>20 人 = 0.5</td>
+          <td style="padding:8px 12px;color:#666">英文课统一为正常课的一半</td>
+        </tr>
+        <tr style="border-bottom:0.5px solid #eee">
+          <td style="padding:8px 12px"><span class="badge b1">CD-实习</span></td>
+          <td style="padding:8px 12px;font-family:ui-monospace,monospace">人数 ÷ 20<br>封顶 1.0</td>
+          <td style="padding:8px 12px;color:#666">例：5 人 = 5/20 = 0.25 课</td>
+        </tr>
+        <tr style="border-bottom:0.5px solid #eee">
+          <td style="padding:8px 12px"><span class="badge b2">实习</span></td>
+          <td style="padding:8px 12px;font-family:ui-monospace,monospace">人数 ÷ 16<br>封顶 1.0</td>
+          <td style="padding:8px 12px;color:#666">例：5 人 = 5/16 ≈ 0.31 课</td>
+        </tr>
+        <tr style="border-bottom:0.5px solid #eee">
+          <td style="padding:8px 12px"><span class="badge b3">SG / IS</span></td>
+          <td style="padding:8px 12px;font-family:ui-monospace,monospace">学生数 × 1/6</td>
+          <td style="padding:8px 12px;color:#666">每个 IS/SG 学生 = 1/6 课<br>6 学生 = 1 门当量</td>
+        </tr>
+        <tr style="border-bottom:0.5px solid #eee">
+          <td style="padding:8px 12px"><span class="badge b5">Capstone</span></td>
+          <td style="padding:8px 12px;font-family:ui-monospace,monospace">0.75 / 课</td>
+          <td style="padding:8px 12px;color:#666">毕业项目固定权重</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="background:#F5F4FE;border-radius:8px;padding:12px 14px;margin-bottom:12px">
+      <div style="font-size:12.5px;font-weight:600;color:#3C3489;margin-bottom:6px">📊 学年总数 = 全部学期累加 + BTEC bonus + LA500 手填</div>
+      <div style="font-size:11.5px;color:#534AB7;line-height:1.7">
+        <strong>BTEC bonus</strong>：勾选 BTEC 的课，每门 +0.5（系统自动）<br>
+        <strong>LA500 手填</strong>：在表格内直接输入数字，立即同步
+      </div>
+    </div>
+    <div style="background:#FAEEDA;border-radius:8px;padding:10px 12px;font-size:11.5px;color:#854F0B;line-height:1.6">
+      <strong>⚠ 注意</strong>：CD-实习 是新增的课程类型。已存在的「实习」课程如果属于 CD 合作教育，需要手动编辑改成「CD-实习」才会用新公式（÷20）。
+    </div>
+    <div style="text-align:right;margin-top:14px">
+      <button onclick="closeFormulaModal()" class="btn">关闭</button>
+    </div>
+  </div>
+</div>
+
 </div><!-- /.app -->
 
 <!-- ══ 排课编辑 Modal ═══════════════════════ -->
@@ -1110,6 +1179,20 @@ function updateRefBar(){
 }
 
 // ── 常数与状态 ────────────────────────────
+// ── ℹ️ 教学工作量公式说明 modal ──────────
+function showFormulaInfo(){
+  const m=document.getElementById('formula-modal');
+  if(m){m.style.display='flex';document.body.style.overflow='hidden';}
+}
+function closeFormulaModal(){
+  const m=document.getElementById('formula-modal');
+  if(m){m.style.display='none';document.body.style.overflow='';}
+}
+window.showFormulaInfo=showFormulaInfo;
+window.closeFormulaModal=closeFormulaModal;
+// ESC 关 modal
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.getElementById('formula-modal');if(m&&m.style.display==='flex')closeFormulaModal();}});
+
 // v2 权重 — 按课程人数分档（正常/英文）或按人数 ÷ 上限封顶 1.0（CD-实习/实习）
 function courseWeight(type, students){
   switch(type){
