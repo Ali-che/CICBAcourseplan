@@ -252,6 +252,11 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 .toast button.dismiss{background:transparent;border:0;color:#9ca3af;cursor:pointer;font-size:18px;padding:0 4px;line-height:1;flex-shrink:0;font-family:inherit}
 .toast button.dismiss:hover{color:#374151}
 @keyframes toast-in{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ── 课程英文名 hover tooltip（立刻弹，不等 500ms 原生延迟）── */
+.cn-cell{position:relative}
+.cn-cell .cn-tip{display:none;position:absolute;top:calc(100% + 2px);left:0;z-index:200;background:#1f2937;color:#fff;padding:6px 10px;border-radius:6px;font-size:12.5px;font-weight:400;line-height:1.4;white-space:normal;max-width:380px;box-shadow:0 4px 14px rgba(0,0,0,.22);pointer-events:none}
+.cn-cell:hover .cn-tip{display:block}
 @keyframes toast-out{to{transform:translateX(20px);opacity:0}}
 .toast.fade-out{animation:toast-out .2s ease-in forwards}
 
@@ -1908,7 +1913,7 @@ function renderSch(){
     const tags=ccSorted.map(cc=>cohortTag(cc.cohort,cc.count)).join('');
     const _chk=_schSelected.has(String(r.id))?'checked':'';
     return'<tr'+(_chk?' style="background:#FFF8E1"':'')+'><td style="text-align:center"><input type="checkbox" class="row-chk" '+_chk+' onclick="toggleRowSelect(\'sch\',\''+r.id+'\',this.checked)"></td><td>'+(i+1)+'</td>'+
-      '<td style="min-width:180px;max-width:260px" title="'+eh(r.en)+'"><span class="badge b0">'+r.course+'</span><div style="font-size:11px;color:#888;margin-top:2px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div></td>'+
+      '<td class="cn-cell" style="min-width:180px;max-width:260px"><span class="badge b0">'+r.course+'</span><div style="font-size:11px;color:#888;margin-top:2px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
       '<td><span class="badge '+(TB[r.type]||'b4')+'">'+r.type+'</span></td>'+
       '<td><span class="badge b4">'+r.sem+'</span></td><td>'+halfBadge(r.half)+'</td>'+
       '<td>'+r.cls+'</td><td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
@@ -2114,7 +2119,7 @@ function renderSp(){
     return'<tr'+(_chk?' style="background:#FFF8E1"':'')+'><td style="text-align:center"><input type="checkbox" class="row-chk" '+_chk+' onclick="toggleRowSelect(\'sp\',\''+r.id+'\',this.checked)"></td><td>'+(i+1)+'</td><td><code style="font-size:11px">'+eh(r.sid)+'</code></td>'+
       '<td><span class="badge b4">'+r.mr+'</span></td><td>'+eh(r.nm)+'</td>'+
       '<td><span class="badge b4">'+r.mj+'</span></td>'+
-      '<td style="min-width:160px;max-width:240px" title="'+eh(r.en)+'"><span class="badge b0">'+r.co+'</span><div style="font-size:11px;color:#888;margin-top:2px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div></td>'+
+      '<td class="cn-cell" style="min-width:160px;max-width:240px"><span class="badge b0">'+r.co+'</span><div style="font-size:11px;color:#888;margin-top:2px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
       '<td>'+r.cls+'</td><td><span class="badge b4">'+r.sem+'</span></td>'+
       '<td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
       '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td>'+
