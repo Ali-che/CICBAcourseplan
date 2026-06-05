@@ -80,10 +80,10 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 .fbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:.875rem;align-items:center}
 .fbar label{font-size:11px;color:#666;font-weight:500}
 .fbar select,.fbar input{width:auto;font-size:12px;padding:5px 8px}
-.mgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1rem}
+.mgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:.75rem}
 @media(max-width:600px){.mgrid{grid-template-columns:repeat(3,1fr)}}
-.mc{background:#fff;border:0.5px solid #e0e0e0;border-radius:10px;padding:.875rem;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-.mv{font-size:22px;font-weight:600;color:#534AB7}.ml{font-size:11px;color:#888;margin-top:3px}
+.mc{background:#fff;border:0.5px solid #e0e0e0;border-radius:8px;padding:8px 12px;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.04);display:flex;align-items:center;justify-content:center;gap:8px}
+.mv{font-size:17px;font-weight:600;color:#534AB7;line-height:1}.ml{font-size:11px;color:#888;line-height:1}
 .empty{text-align:center;padding:2rem;color:#999;font-size:12px}
 .ew{border:0.5px solid #AFA9EC;border-radius:8px;padding:7px;background:#EEEDFE;min-width:260px}
 .ei-g{max-height:130px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:3px}
@@ -608,7 +608,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   <div id="sta-low-panel" style="display:none;background:#FFFBEB;border:0.5px solid #FDE68A;border-left:3px solid #F59E0B;border-radius:8px;padding:12px 16px;margin-bottom:14px">
     <div style="font-size:13px;font-weight:600;color:#92400E;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <span>🔻 可优先排课</span>
-      <select id="sta-low-dept" onchange="renderLowPanel()" style="font-size:11px;padding:2px 8px;border:0.5px solid #FDE68A;border-radius:5px;background:#fff;color:#92400E;font-weight:500;cursor:pointer;height:24px"><option value="">全本科</option></select>
+      <select id="sta-low-dept" onchange="renderLowPanel()" style="font-size:11px;padding:2px 8px;border:0.5px solid #FDE68A;border-radius:5px;background:#fff;color:#92400E;font-weight:500;cursor:pointer;height:24px;width:auto;min-width:100px"><option value="">全本科</option></select>
       <span style="font-size:11px;font-weight:400;color:#A16207">% 最低 10 位 · 点击跳到表格行</span>
     </div>
     <div id="sta-low-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px"></div>
