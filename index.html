@@ -438,7 +438,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <th class="sort" onclick="sortSch('course')">课程代码 / 类型 / 英文名 <span id="si-co">⇅</span></th>
         <th class="sort" onclick="sortSch('sem')">学期 <span id="si-sem">⇅</span></th>
         <th class="sort" onclick="sortSch('half')">上下半 <span id="si-hl">⇅</span></th>
-        <th>班级</th><th>授课老师</th><th>届别（人数）</th><th>总人数</th><th>备注</th><th class="sort" onclick="sortSch('btec')">BTEC<span id="th-btec-count" style="font-size:10px;color:#cbd5e1;font-weight:400;margin-left:2px"></span> <span id="si-btec">⇅</span></th><th>操作</th>
+        <th>班级</th><th>授课老师</th><th>届别（人数）</th><th class="sort" onclick="sortSch('total')">总人数 <span id="si-total">⇅</span></th><th>备注</th><th class="sort" onclick="sortSch('btec')">BTEC<span id="th-btec-count" style="font-size:10px;color:#cbd5e1;font-weight:400;margin-left:2px"></span> <span id="si-btec">⇅</span></th><th>操作</th>
       </tr></thead><tbody id="sch-tb"></tbody></table>
     </div>
     <div class="empty" id="sch-em">暂无排课记录</div>
@@ -2023,6 +2023,7 @@ function renderSch(){
   const el_sem=document.getElementById('si-sem');if(el_sem)el_sem.innerHTML=siIcon('sem',schSK,schSD);
   const el_hl=document.getElementById('si-hl');if(el_hl)el_hl.innerHTML=siIcon('half',schSK,schSD);
   const el_btec=document.getElementById('si-btec');if(el_btec)el_btec.innerHTML=siIcon('btec',schSK,schSD);
+  const el_tot=document.getElementById('si-total');if(el_tot)el_tot.innerHTML=siIcon('total',schSK,schSD);
   if(!schD.length){tb.innerHTML='';em.style.display='block';return;}
   em.style.display='none';
   const semF=document.getElementById('sch-sem-f');
@@ -2040,6 +2041,7 @@ function renderSch(){
   if(schSK==='sem')disp.sort((a,b)=>schSD*a.sem.localeCompare(b.sem));
   if(schSK==='half'){const ho={'上半学期':0,'上半':0,'下半学期':1,'下半':1,'全学期':2};disp.sort((a,b)=>schSD*((ho[a.half]??2)-(ho[b.half]??2)));}
   if(schSK==='btec'){const isB=r=>r.btec===true||r.btec==='TRUE'||r.btec==='true'?1:0;disp.sort((a,b)=>schSD*(isB(b)-isB(a)));}
+  if(schSK==='total'){const tot=r=>(r.cc||[]).reduce((s,x)=>s+(x.count||0),0);disp.sort((a,b)=>schSD*(tot(b)-tot(a)));}
   // v7.9: 批量删除按钮 —— 只在「有筛选 + 结果不是全部 + N > 0」时显示
   _schFilteredIds=disp.map(r=>r.id);
   updateBatchDelButton('sch',disp.length,schD.length);
