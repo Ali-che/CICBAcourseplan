@@ -1918,7 +1918,7 @@ function renderSch(){
       '<td><span class="badge b4">'+r.sem+'</span></td><td>'+halfBadge(r.half)+'</td>'+
       '<td>'+r.cls+'</td><td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
       '<td style="white-space:normal;min-width:260px;line-height:1.7">'+tags+'</td><td><strong>'+tot+'</strong></td>'+
-      '<td style="font-size:11px;color:#888;max-width:120px;white-space:normal;word-break:break-word">'+eh(r.nt||'—')+'</td>'+
+      '<td style="font-size:11px;color:#888;max-width:180px;white-space:normal;word-break:break-word">'+eh(r.nt||'—')+'</td>'+
       '<td>'+(r.btec===true||r.btec==='TRUE'||r.btec==='true'?'<span class="badge b4">✓</span>':'—')+'</td>'+
       '<td style="white-space:nowrap"><button class="btn btn-e" onclick="startES('+r.id+')">更动</button> <button class="btn btn-d" onclick="delSch('+r.id+')">删除</button></td></tr>';
   }).join('');
