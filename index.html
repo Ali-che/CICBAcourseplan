@@ -260,6 +260,27 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 .cn-cell{position:relative}
 .cn-cell .cn-tip{display:none;position:absolute;top:calc(100% + 2px);left:0;z-index:200;background:#1f2937;color:#fff;padding:6px 10px;border-radius:6px;font-size:12.5px;font-weight:400;line-height:1.4;white-space:normal;max-width:380px;box-shadow:0 4px 14px rgba(0,0,0,.22);pointer-events:none}
 .cn-cell:hover .cn-tip{display:block}
+
+.ss-grid{display:flex;flex-direction:column;gap:12px;padding:4px 0}
+.ss-card{background:#fff;border:0.5px solid #e0e0e0;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);transition:box-shadow .15s}
+.ss-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.ss-card-h{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F5F4FE;border-bottom:0.5px solid #e0e0e0;flex-wrap:wrap;font-size:12.5px}
+.ss-num{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;background:#fff;border:0.5px solid #AFA9EC;color:#534AB7;font-size:10.5px;font-weight:600;border-radius:50%;flex-shrink:0;font-family:ui-monospace,monospace;padding:0 5px}
+.ss-name{font-size:14px;font-weight:600;color:#333}
+.ss-meta{font-size:11.5px;color:#666;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.ss-cnt{font-size:11.5px;color:#888}
+.ss-cnt strong{color:#534AB7;font-weight:600}
+.ss-card-b{padding:6px 14px 10px}
+.ss-course{padding:9px 0;border-bottom:0.5px dashed #eee}
+.ss-course:last-child{border-bottom:0}
+.ss-line1{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.ss-line2{font-size:11px;color:#666;margin-top:4px;padding-left:9px;line-height:1.5}
+.ss-line2 .ss-sep{color:#ccc;margin:0 5px}
+.ss-line2 .ss-note{color:#9a3412;background:#FAEEDA;padding:1px 6px;border-radius:4px;font-size:10.5px;margin-left:4px}
+.ss-stulist{margin-top:6px;padding-left:9px}
+.ss-stuitem{font-size:11.5px;color:#444;padding:3px 0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ss-stuitem .ss-stunum{color:#888;font-size:10.5px;min-width:18px;font-family:ui-monospace,monospace}
+.ss-stuitem code{font-size:10.5px;color:#888;font-family:ui-monospace,monospace}
 @keyframes toast-out{to{transform:translateX(20px);opacity:0}}
 .toast.fade-out{animation:toast-out .2s ease-in forwards}
 
@@ -551,10 +572,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     </div>
     <div class="card">
       <div class="ct">SG/IS 排课总表 · 学生维度</div>
-      <div class="tbl-wrap">
-        <table><thead><tr><th>#</th><th>学号</th><th>称谓</th><th>学生姓名</th><th>学生专业</th><th>特别课数</th><th>课程代码 / 英文名 · 班级</th><th>授课老师</th><th>学期</th><th>备注</th></tr></thead>
-        <tbody id="ss-tb"></tbody></table>
-      </div>
+      <div id="ss-cards" class="ss-grid"></div>
       <div class="empty" id="ss-em">暂无数据</div>
     </div>
   </div>
@@ -568,10 +586,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     </div>
     <div class="card">
       <div class="ct">SG/IS 排课总表 · 老师维度</div>
-      <div class="tbl-wrap">
-        <table><thead><tr><th>#</th><th>课程代码 / 英文名</th><th>授课老师</th><th>学号</th><th>学生称谓</th><th>学生姓名</th><th>学生专业</th><th>学期</th><th>课程总人数</th></tr></thead>
-        <tbody id="st-tb"></tbody></table>
-      </div>
+      <div id="st-cards" class="ss-grid"></div>
       <div class="empty" id="st-em"></div>
     </div>
   </div>
@@ -2310,21 +2325,44 @@ function renderSpStu(){
   if(q)data=data.filter(r=>(r.nm+r.sid).toLowerCase().includes(q));
   if(mj)data=data.filter(r=>r.mj===mj);
   if(sem)data=data.filter(r=>r.sem===sem);
-  const tb=document.getElementById('ss-tb'),em=document.getElementById('ss-em');
-  if(!data.length){tb.innerHTML='';em.style.display='block';return;}em.style.display='none';
-  const map={};data.forEach(r=>{if(!map[r.sid])map[r.sid]={sid:r.sid,mr:r.mr,nm:r.nm,mj:r.mj,rows:[]};map[r.sid].rows.push(r);});
-  let idx=0;
-  tb.innerHTML=Object.values(map).map(s=>{idx++;
-    const noteAll=s.rows.filter(r=>r.nt).map(r=>r.nt).join('；');
-    return'<tr><td>'+idx+'</td><td><code style="font-size:11px">'+eh(s.sid)+'</code></td>'+
-      '<td>'+s.mr+'</td><td>'+eh(s.nm)+'</td><td><span class="badge b4">'+s.mj+'</span></td>'+
-      '<td><strong>'+s.rows.length+'</strong></td>'+
-      '<td style="min-width:180px;max-width:280px">'+s.rows.map((r,ri)=>
-        '<div style="'+(ri<s.rows.length-1?'border-bottom:0.5px dashed #eee;padding-bottom:5px;margin-bottom:5px':'')+'"><span class="badge b0">'+r.co+'</span><span class="badge b4" style="margin-left:3px">'+r.cls+'</span><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3" title="'+eh(r.en||'')+'">'+eh(r.en||'—')+'</div></div>'
-      ).join('')+'</td>'+
-      '<td style="font-size:11px;white-space:nowrap">'+s.rows.map(r=>r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>').join('<br>')+'</td>'+
-      '<td>'+s.rows.map(r=>'<span class="badge b4">'+r.sem+'</span>').join('<br>')+'</td>'+
-      '<td style="font-size:11px;color:#888;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"'+(noteAll?' title="'+eh(noteAll)+'"':'')+'>'+(noteAll||'—')+'</td></tr>';}).join('');
+  const wrap=document.getElementById('ss-cards'),em=document.getElementById('ss-em');
+  if(!data.length){wrap.innerHTML='';em.style.display='block';return;}
+  em.style.display='none';
+  const map={};
+  data.forEach(r=>{
+    if(!map[r.sid])map[r.sid]={sid:r.sid,mr:r.mr,nm:r.nm,mj:r.mj,rows:[]};
+    map[r.sid].rows.push(r);
+  });
+  wrap.innerHTML=Object.values(map).map((s,idx)=>
+    '<div class="ss-card">'+
+      '<div class="ss-card-h">'+
+        '<span class="ss-num">'+(idx+1)+'</span>'+
+        '<span class="ss-name">'+eh(s.nm)+'</span>'+
+        '<span class="badge b4">'+s.mr+'</span>'+
+        '<code style="font-size:11px;color:#666;font-family:ui-monospace,monospace">'+eh(s.sid)+'</code>'+
+        '<span class="badge b4">'+s.mj+'</span>'+
+        '<span style="flex:1"></span>'+
+        '<span class="ss-cnt"><strong>'+s.rows.length+'</strong> 门 SG/IS</span>'+
+      '</div>'+
+      '<div class="ss-card-b">'+
+        s.rows.map(r=>
+          '<div class="ss-course">'+
+            '<div class="ss-line1">'+
+              '<span class="badge b0">'+r.co+'</span>'+
+              '<span class="badge b4">'+r.cls+'</span>'+
+              '<span style="font-size:11.5px;color:#888;margin-left:6px">'+eh(r.en||'—')+'</span>'+
+            '</div>'+
+            '<div class="ss-line2">'+
+              (r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+
+              '<span class="ss-sep">·</span>'+
+              '<span class="badge b4">'+eh(r.sem)+'</span>'+
+              (r.nt?'<span class="ss-note">'+eh(r.nt)+'</span>':'')+
+            '</div>'+
+          '</div>'
+        ).join('')+
+      '</div>'+
+    '</div>'
+  ).join('');
 }
 function filterSpTchrByDept(){
   const dept=document.getElementById('f-st-d').value;const el=document.getElementById('f-st');const cur=el.value;
@@ -2337,29 +2375,59 @@ function renderSpTchr(){
   const tc=document.getElementById('f-st').value;
   const sem=document.getElementById('f-st-s')?document.getElementById('f-st-s').value:'';
   const dept=document.getElementById('f-st-d')?document.getElementById('f-st-d').value:'';
-  const tb=document.getElementById('st-tb'),em=document.getElementById('st-em');
+  const wrap=document.getElementById('st-cards'),em=document.getElementById('st-em');
   let data=[...spD];
   if(tc)data=data.filter(r=>r.tc===tc);
   if(sem)data=data.filter(r=>r.sem===sem);
   if(dept&&!tc){const deptTchrs=T.filter(t=>t.d===dept).map(t=>t.n);data=data.filter(r=>deptTchrs.includes(r.tc));}
-  if(!data.length){tb.innerHTML='';em.textContent='暂无符合条件的 SG/IS 排课记录';em.style.display='block';return;}
+  if(!data.length){wrap.innerHTML='';em.textContent='暂无符合条件的 SG/IS 排课记录';em.style.display='block';return;}
   em.style.display='none';
-  const cm={};
-  data.forEach(r=>{const k=r.co+'|'+r.tc;if(!cm[k])cm[k]={co:r.co,en:r.en,tc:r.tc,stus:[]};cm[k].stus.push({sid:r.sid,mr:r.mr,nm:r.nm,mj:r.mj,sem:r.sem});});
-  let rowNum=0;
-  tb.innerHTML=Object.values(cm).map(x=>{
-    const n=x.stus.length;rowNum++;
-    return x.stus.map((s,si)=>'<tr>'+
-      (si===0?'<td rowspan="'+n+'" style="color:#bbb;font-size:11px">'+rowNum+'</td>'+
-        '<td rowspan="'+n+'" class="cn-cell" style="min-width:144px;max-width:208px;vertical-align:middle"><span class="badge b0">'+x.co+'</span><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(x.en||'—')+'</div>'+(x.en?'<div class="cn-tip">'+eh(x.en)+'</div>':'')+'</td>'+
-        '<td rowspan="'+n+'" style="font-size:11px;white-space:nowrap">'+eh(x.tc)+'</td>':'')+
-      '<td><code style="font-size:11px">'+eh(s.sid||'—')+'</code></td>'+
-      '<td><span class="badge b4">'+eh(s.mr)+'</span></td>'+
-      '<td style="white-space:nowrap">'+eh(s.nm)+'</td>'+
-      '<td><span class="badge b4">'+eh(s.mj)+'</span></td>'+
-      '<td><span class="badge b4">'+eh(s.sem)+'</span></td>'+
-      (si===0?'<td rowspan="'+n+'"><strong>'+n+'</strong></td>':'')+
-      '</tr>').join('');
+  // 双层 group: 先按老师，再按课程
+  const teacherMap={};
+  data.forEach(r=>{
+    if(!teacherMap[r.tc])teacherMap[r.tc]={tc:r.tc,courses:{}};
+    const k=r.co+'|'+r.sem;
+    if(!teacherMap[r.tc].courses[k])teacherMap[r.tc].courses[k]={co:r.co,en:r.en,sem:r.sem,cls:r.cls,stus:[]};
+    teacherMap[r.tc].courses[k].stus.push({sid:r.sid,mr:r.mr,nm:r.nm,mj:r.mj});
+  });
+  wrap.innerHTML=Object.values(teacherMap).map((t,idx)=>{
+    const courses=Object.values(t.courses);
+    const totalStus=courses.reduce((s,c)=>s+c.stus.length,0);
+    return '<div class="ss-card">'+
+      '<div class="ss-card-h">'+
+        '<span class="ss-num">'+(idx+1)+'</span>'+
+        '<span class="ss-name">'+eh(t.tc)+'</span>'+
+        '<span style="flex:1"></span>'+
+        '<span class="ss-cnt"><strong>'+courses.length+'</strong> 门</span>'+
+        '<span style="color:#ccc">·</span>'+
+        '<span class="ss-cnt"><strong>'+totalStus+'</strong> 学生人次</span>'+
+      '</div>'+
+      '<div class="ss-card-b">'+
+        courses.map(c=>
+          '<div class="ss-course">'+
+            '<div class="ss-line1">'+
+              '<span class="badge b0">'+c.co+'</span>'+
+              '<span class="badge b4">'+c.cls+'</span>'+
+              '<span class="badge b4">'+eh(c.sem)+'</span>'+
+              '<span style="font-size:11.5px;color:#888;margin-left:6px">'+eh(c.en||'—')+'</span>'+
+              '<span style="flex:1"></span>'+
+              '<span class="ss-cnt"><strong>'+c.stus.length+'</strong> 人</span>'+
+            '</div>'+
+            '<div class="ss-stulist">'+
+              c.stus.map((s,si)=>
+                '<div class="ss-stuitem">'+
+                  '<span class="ss-stunum">'+(si+1)+'.</span>'+
+                  '<span class="badge b4">'+eh(s.mr)+'</span>'+
+                  '<span>'+eh(s.nm)+'</span>'+
+                  '<code>'+eh(s.sid)+'</code>'+
+                  '<span class="badge b4">'+eh(s.mj)+'</span>'+
+                '</div>'
+              ).join('')+
+            '</div>'+
+          '</div>'
+        ).join('')+
+      '</div>'+
+    '</div>';
   }).join('');
 }
 function renderAllSum(){renderTchr();renderCoh();renderSpStu();renderSpTchr();}
