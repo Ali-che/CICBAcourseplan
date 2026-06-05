@@ -2333,8 +2333,18 @@ function renderSpStu(){
     if(!map[r.sid])map[r.sid]={sid:r.sid,mr:r.mr,nm:r.nm,mj:r.mj,rows:[]};
     map[r.sid].rows.push(r);
   });
-  wrap.innerHTML=Object.values(map).map((s,idx)=>
-    '<div class="ss-card">'+
+  wrap.innerHTML=Object.values(map).map((s,idx)=>{
+    // v7.9.7: 共通信息上移到 header — 全部课同老师/同学期/同班级时不重复显示
+    const tc0=s.rows[0].tc,sem0=s.rows[0].sem,cls0=s.rows[0].cls;
+    const allSameTc=tc0&&s.rows.every(r=>r.tc===tc0);
+    const allSameSem=sem0&&s.rows.every(r=>r.sem===sem0);
+    const allSameCls=cls0&&s.rows.every(r=>r.cls===cls0);
+    const sharedParts=[];
+    if(allSameTc)sharedParts.push('<span style="font-size:12px;color:#444;font-weight:500">'+eh(tc0)+'</span>');
+    if(allSameSem)sharedParts.push('<span class="badge b4">'+eh(sem0)+'</span>');
+    if(allSameCls)sharedParts.push('<span class="badge b4">'+eh(cls0)+'</span>');
+    const sharedRow=sharedParts.length?'<div style="padding:7px 14px;background:#FAFAFD;border-bottom:0.5px solid #f0f0f0;display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+sharedParts.join('<span style="color:#ccc;font-size:10px">·</span>')+'</div>':'';
+    return '<div class="ss-card">'+
       '<div class="ss-card-h">'+
         '<span class="ss-num">'+(idx+1)+'</span>'+
         '<span class="ss-name">'+eh(s.nm)+'</span>'+
@@ -2344,25 +2354,26 @@ function renderSpStu(){
         '<span style="flex:1"></span>'+
         '<span class="ss-cnt"><strong>'+s.rows.length+'</strong> 门 SG/IS</span>'+
       '</div>'+
+      sharedRow+
       '<div class="ss-card-b">'+
-        s.rows.map(r=>
-          '<div class="ss-course">'+
+        s.rows.map(r=>{
+          // 每门课只显示「跟其他课不同」的字段
+          const variant=[];
+          if(!allSameCls)variant.push('<span class="badge b4">'+r.cls+'</span>');
+          if(!allSameSem)variant.push('<span class="badge b4">'+eh(r.sem)+'</span>');
+          if(!allSameTc)variant.push('<span style="font-size:11px;color:#666">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</span>');
+          return '<div class="ss-course">'+
             '<div class="ss-line1">'+
               '<span class="badge b0">'+r.co+'</span>'+
-              '<span class="badge b4">'+r.cls+'</span>'+
-              '<span style="font-size:11.5px;color:#888;margin-left:6px">'+eh(r.en||'—')+'</span>'+
+              variant.join('')+
+              '<span style="font-size:11.5px;color:#888;margin-left:'+(variant.length?'6px':'4px')+'">'+eh(r.en||'—')+'</span>'+
+              (r.nt?'<span class="ss-note" style="margin-left:auto">'+eh(r.nt)+'</span>':'')+
             '</div>'+
-            '<div class="ss-line2">'+
-              (r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+
-              '<span class="ss-sep">·</span>'+
-              '<span class="badge b4">'+eh(r.sem)+'</span>'+
-              (r.nt?'<span class="ss-note">'+eh(r.nt)+'</span>':'')+
-            '</div>'+
-          '</div>'
-        ).join('')+
+          '</div>';
+        }).join('')+
       '</div>'+
-    '</div>'
-  ).join('');
+    '</div>';
+  }).join('');
 }
 function filterSpTchrByDept(){
   const dept=document.getElementById('f-st-d').value;const el=document.getElementById('f-st');const cur=el.value;
@@ -2393,6 +2404,14 @@ function renderSpTchr(){
   wrap.innerHTML=Object.values(teacherMap).map((t,idx)=>{
     const courses=Object.values(t.courses);
     const totalStus=courses.reduce((s,c)=>s+c.stus.length,0);
+    // 共通 sem / cls 上移
+    const sem0=courses[0].sem,cls0=courses[0].cls;
+    const allSameSem=sem0&&courses.every(c=>c.sem===sem0);
+    const allSameCls=cls0&&courses.every(c=>c.cls===cls0);
+    const sharedParts=[];
+    if(allSameSem)sharedParts.push('<span class="badge b4">'+eh(sem0)+'</span>');
+    if(allSameCls)sharedParts.push('<span class="badge b4">'+eh(cls0)+'</span>');
+    const sharedRow=sharedParts.length?'<div style="padding:7px 14px;background:#FAFAFD;border-bottom:0.5px solid #f0f0f0;display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+sharedParts.join('<span style="color:#ccc;font-size:10px">·</span>')+'</div>':'';
     return '<div class="ss-card">'+
       '<div class="ss-card-h">'+
         '<span class="ss-num">'+(idx+1)+'</span>'+
@@ -2402,14 +2421,17 @@ function renderSpTchr(){
         '<span style="color:#ccc">·</span>'+
         '<span class="ss-cnt"><strong>'+totalStus+'</strong> 学生人次</span>'+
       '</div>'+
+      sharedRow+
       '<div class="ss-card-b">'+
-        courses.map(c=>
-          '<div class="ss-course">'+
+        courses.map(c=>{
+          const variant=[];
+          if(!allSameCls)variant.push('<span class="badge b4">'+c.cls+'</span>');
+          if(!allSameSem)variant.push('<span class="badge b4">'+eh(c.sem)+'</span>');
+          return '<div class="ss-course">'+
             '<div class="ss-line1">'+
               '<span class="badge b0">'+c.co+'</span>'+
-              '<span class="badge b4">'+c.cls+'</span>'+
-              '<span class="badge b4">'+eh(c.sem)+'</span>'+
-              '<span style="font-size:11.5px;color:#888;margin-left:6px">'+eh(c.en||'—')+'</span>'+
+              variant.join('')+
+              '<span style="font-size:11.5px;color:#888;margin-left:'+(variant.length?'6px':'4px')+'">'+eh(c.en||'—')+'</span>'+
               '<span style="flex:1"></span>'+
               '<span class="ss-cnt"><strong>'+c.stus.length+'</strong> 人</span>'+
             '</div>'+
@@ -2424,8 +2446,8 @@ function renderSpTchr(){
                 '</div>'
               ).join('')+
             '</div>'+
-          '</div>'
-        ).join('')+
+          '</div>';
+        }).join('')+
       '</div>'+
     '</div>';
   }).join('');
