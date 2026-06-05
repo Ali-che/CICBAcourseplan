@@ -234,6 +234,27 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 .sync-bar-inner.fail{background:#a32d2d;width:100%}
 @keyframes syncrun{0%{width:0%;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0%;margin-left:100%}}
 
+/* ── v7.9.3: Toast 通知 ── */
+.toast-container{position:fixed;bottom:18px;right:18px;z-index:10000;display:flex;flex-direction:column;gap:8px;pointer-events:none;max-width:360px}
+.toast{background:#fff;border:0.5px solid #e0e0e0;border-radius:8px;padding:10px 14px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.12);display:flex;align-items:center;gap:8px;pointer-events:auto;animation:toast-in .22s ease-out;min-width:240px}
+.toast.success{border-left:3px solid #16a34a}
+.toast.error{border-left:3px solid #dc2626}
+.toast.info{border-left:3px solid #2563eb}
+.toast.warn{border-left:3px solid #ea580c}
+.toast .toast-msg{flex:1;color:#111;line-height:1.4;font-size:12.5px}
+.toast .toast-icon{font-weight:700;font-size:14px;flex-shrink:0}
+.toast .toast-icon.success{color:#16a34a}
+.toast .toast-icon.error{color:#dc2626}
+.toast .toast-icon.info{color:#2563eb}
+.toast .toast-icon.warn{color:#ea580c}
+.toast button.retry{background:#f3f4f6;border:0.5px solid #d1d5db;border-radius:5px;padding:3px 10px;font-size:11px;cursor:pointer;color:#374151;font-weight:500;flex-shrink:0;font-family:inherit}
+.toast button.retry:hover{background:#e5e7eb}
+.toast button.dismiss{background:transparent;border:0;color:#9ca3af;cursor:pointer;font-size:18px;padding:0 4px;line-height:1;flex-shrink:0;font-family:inherit}
+.toast button.dismiss:hover{color:#374151}
+@keyframes toast-in{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes toast-out{to{transform:translateX(20px);opacity:0}}
+.toast.fade-out{animation:toast-out .2s ease-in forwards}
+
 </style>
 </head>
 <body>
@@ -2276,6 +2297,100 @@ async function saveBtec(el){
 // 写入：POST + text/plain（简单请求，无 preflight，GAS doPost 原生支持）
 
 // ════════════════════════════════════════════════════════
+// v7.9.3 Toast 通知系统：非阻塞、右下角、自动消失
+// 用法：showToast('已保存', {kind:'success'})
+//      showToast('失败', {kind:'error', onRetry: ()=>doIt()})
+// ════════════════════════════════════════════════════════
+function _ensureToastContainer(){
+  let c = document.getElementById('toast-container');
+  if(!c){
+    c = document.createElement('div');
+    c.id = 'toast-container';
+    c.className = 'toast-container';
+    document.body.appendChild(c);
+  }
+  return c;
+}
+function showToast(msg, opts){
+  opts = opts || {};
+  const kind = opts.kind || 'info';
+  const duration = opts.duration != null ? opts.duration : (kind === 'error' ? 8000 : 3000);
+  const c = _ensureToastContainer();
+  const t = document.createElement('div');
+  t.className = 'toast ' + kind;
+  const iconChar = kind === 'success' ? '✓' : kind === 'error' ? '✕' : kind === 'warn' ? '⚠' : 'ℹ';
+  const icon = document.createElement('span');
+  icon.className = 'toast-icon ' + kind;
+  icon.textContent = iconChar;
+  t.appendChild(icon);
+  const span = document.createElement('span');
+  span.className = 'toast-msg';
+  span.textContent = msg;
+  t.appendChild(span);
+  if(opts.onRetry){
+    const btn = document.createElement('button');
+    btn.className = 'retry';
+    btn.textContent = '🔁 重试';
+    btn.onclick = () => { t.remove(); try{opts.onRetry();}catch(e){console.error(e);} };
+    t.appendChild(btn);
+  }
+  const x = document.createElement('button');
+  x.className = 'dismiss';
+  x.textContent = '×';
+  x.title = '关闭';
+  x.onclick = () => { t.classList.add('fade-out'); setTimeout(()=>t.remove(), 200); };
+  t.appendChild(x);
+  c.appendChild(t);
+  if(duration > 0){
+    setTimeout(() => {
+      if(t.parentNode){ t.classList.add('fade-out'); setTimeout(()=>{ if(t.parentNode) t.remove(); }, 200); }
+    }, duration);
+  }
+  return t;
+}
+window.showToast = showToast;
+
+// ════════════════════════════════════════════════════════
+// v7.9.3 闲置自动恢复：窗口闲置 2 分钟回来 → 背后悄悄刷新数据
+// 避免「闲置太久 → 本地数据过期 → 上传被拒」的体验
+// ════════════════════════════════════════════════════════
+let _windowBlurredAt = null;
+window.addEventListener('blur', () => { _windowBlurredAt = Date.now(); });
+window.addEventListener('focus', async () => {
+  if(!_windowBlurredAt) return;
+  const idleMs = Date.now() - _windowBlurredAt;
+  _windowBlurredAt = null;
+  // 闲置 < 2 分钟 / 未配置 / 未成功载入过 → 不动
+  if(idleMs < 2 * 60 * 1000) return;
+  if(typeof SHEETS_URL === 'undefined' || !SHEETS_URL) return;
+  if(typeof loadOK === 'undefined' || !loadOK) return;
+  // 背后刷新数据
+  try{
+    const [r1, r2, r3] = await Promise.all([
+      gasGet({action:'read',type:'schedule'}),
+      gasGet({action:'read',type:'special'}),
+      gasGet({action:'read',type:'btec'})
+    ]);
+    if(r1 && r1.success && r1.data) schD = r1.data;
+    if(r2 && r2.success && r2.data) spD = r2.data;
+    if(r3 && r3.success && r3.data) btecD = r3.data;
+    if(typeof dataLoadTime !== 'undefined') dataLoadTime = Date.now();
+    if(typeof lastRemoteHash !== 'undefined') lastRemoteHash = hashRecords(schD);
+    if(typeof staleWarningShown !== 'undefined') staleWarningShown = false;
+    const b = document.getElementById('stale-banner');
+    if(b) b.style.display = 'none';
+    if(typeof renderSch === 'function') renderSch();
+    if(typeof renderSp === 'function') renderSp();
+    if(typeof renderAllSum === 'function') renderAllSum();
+    if(typeof renderSta === 'function') renderSta();
+    if(typeof updateFreshness === 'function') updateFreshness();
+    showToast('已自动刷新数据（闲置 ' + Math.round(idleMs/60000) + ' 分钟）', {kind:'info', duration:2500});
+  }catch(e){
+    console.warn('[auto-refresh on focus] failed:', e);
+  }
+});
+
+// ════════════════════════════════════════════════════════
 // v7.9.3 客户端自动重试：遇到「系统正忙」/ lock timeout
 // 自动后退 3 次（800ms / 1.5s / 2.5s）→ 99% 情况用户看不到错误
 // ════════════════════════════════════════════════════════
@@ -2742,7 +2857,7 @@ function setSyncStatus(msg,ok){
 // 改成「从云端拉最新」—— 0.5-1 秒、永不会失败、能看到其他老师的编辑
 // 你自己的编辑早就在按 ✓ 储存当下就 per-record 同步好了，不需要再「推一次」
 async function syncAll(){
-  if(!SHEETS_URL){alert('请先配置 SHEETS_URL');return;}
+  if(!SHEETS_URL){showToast('请先配置 SHEETS_URL', {kind:'error'});return;}
   setSyncStatus('⏳ 正在从云端刷新…','');
   try{
     // 并行抓 3 份：schedule + special + btec
@@ -2760,41 +2875,55 @@ async function syncAll(){
     dataLoadTime=Date.now();
     lastRemoteHash=hashRecords(schD);
     deletedIds.schedule.clear();deletedIds.special.clear();
-    // 隐藏可能的「云端有改动」黄色警告
     staleWarningShown=false;
     const b=document.getElementById('stale-banner');if(b)b.style.display='none';
     renderSch();renderSp();renderAllSum();renderSta();updateFreshness();
     const t=new Date().toLocaleTimeString();
     setSyncStatus('✅ 已刷新 '+t+'（'+schD.length+' 排课 / '+spD.length+' IS-SG）',true);
+    showToast('已刷新 · ' + schD.length + ' 排课 / ' + spD.length + ' IS-SG', {kind:'success', duration:2500});
   }catch(e){
     setSyncStatus('❌ 刷新失败：'+e.message,false);
-    alert('❌ 刷新失败：'+e.message);
+    showToast('刷新失败：' + e.message, {kind:'error', onRetry:()=>syncAll()});
   }
 }
 
 async function syncToSheets(type){
-  if(!SHEETS_URL){alert('请先配置 SHEETS_URL');return;}
+  if(!SHEETS_URL){showToast('请先配置 SHEETS_URL', {kind:'error'});return;}
   const data=type==='schedule'?schD:spD;
   setSyncStatus('⏳ 正在同步…','');
   try{
     const ok=await fetchWrite(type,data);
     const t=new Date().toLocaleTimeString();
     setSyncStatus(ok?'✅ 已同步 '+t:'❌ 同步失败',ok);
-    ok?alert('✅ 上传成功！'):alert('❌ 上传失败');
-  }catch(e){setSyncStatus('❌ 连线失败',false);alert('❌ 连线失败');}
+    if(ok){
+      showToast('已上传 ' + (data.length||0) + ' 条 · ' + t, {kind:'success', duration:2500});
+    }else{
+      showToast('上传失败 — 网络或服务器繁忙', {kind:'error', onRetry:()=>syncToSheets(type)});
+    }
+  }catch(e){
+    setSyncStatus('❌ 连线失败',false);
+    showToast('连线失败：' + e.message, {kind:'error', onRetry:()=>syncToSheets(type)});
+  }
 }
 
 async function syncFromSheets(type){
-  if(!SHEETS_URL){alert('请先配置 SHEETS_URL');return;}
+  if(!SHEETS_URL){showToast('请先配置 SHEETS_URL', {kind:'error'});return;}
   // FIX: 下載會覆蓋本地，給使用者一個煞車
   const local=type==='schedule'?schD.length:spD.length;
   const label=type==='schedule'?'排課記錄':'IS/SG 排課';
   if(!confirm('⚠️ 從 Google Sheets 下載「'+label+'」會覆蓋本地目前的 '+local+' 條資料。\n\n如果有未上傳的編輯會遺失。\n\n確定下載？'))return;
-  try{const r=await gasGet({action:'read',type:type});
-    if(r.success){if(type==='schedule')schD=r.data;else spD=r.data;
-      renderSch();renderSp();renderAllSum();renderSta();alert('✅ 下载成功！'+r.data.length+'条记录');
-    }else alert('❌ 下载失败：'+r.error);
-  }catch(e){alert('❌ 连线失败');}
+  try{
+    const r=await gasGet({action:'read',type:type});
+    if(r && r.success){
+      if(type==='schedule')schD=r.data;else spD=r.data;
+      renderSch();renderSp();renderAllSum();renderSta();
+      showToast('下载成功 · ' + r.data.length + ' 条记录', {kind:'success', duration:2500});
+    }else{
+      showToast('下载失败：' + ((r && r.error) || 'unknown'), {kind:'error', onRetry:()=>syncFromSheets(type)});
+    }
+  }catch(e){
+    showToast('连线失败：' + e.message, {kind:'error', onRetry:()=>syncFromSheets(type)});
+  }
 }
 
 // ── 标签切换 ──────────────────────────────
