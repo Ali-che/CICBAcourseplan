@@ -1757,14 +1757,14 @@ const DEPT_BADGE={CA:'b0',CD:'b3',FA:'b2',TM:'b1',IB:'b5',GE:'b4',IT:'b6',SE:'b0
 // 例：TM68(7) → TM 绿、IB66-1FAN-A → IB 蓝、CD69 → CD 桃红
 // 没列到的（SE 等）维持默认灰色 tag
 const COHORT_COLOR={
-  TM:{bg:'#E8F5E9',fg:'#2E7D32'}, // 绿（浅）
-  FA:{bg:'#FFF8DC',fg:'#A87800'}, // 黄（浅）
-  CD:{bg:'#FCE4EC',fg:'#C2185B'}, // 桃红（浅）
-  IB:{bg:'#E3F2FD',fg:'#1565C0'}, // 蓝（浅）
-  CA:{bg:'#F3E5F5',fg:'#6A1B9A'}, // 紫（浅）
-  EV:{bg:'#E65100',fg:'#FFFFFF'}, // 深橙白字（跟 TM 浅绿拉开）
-  IT:{bg:'#EFEBE9',fg:'#5D4037'}, // 咖啡（浅）
-  SC:{bg:'#B71C1C',fg:'#FFFFFF'}  // 深红白字（跟 FA 浅黄拉开）
+  TM:{bg:'#E8F5E9',fg:'#2E7D32'}, // 绿
+  FA:{bg:'#FFF8DC',fg:'#A87800'}, // 黄
+  CD:{bg:'#FCE4EC',fg:'#C2185B'}, // 桃红
+  IB:{bg:'#E3F2FD',fg:'#1565C0'}, // 蓝
+  CA:{bg:'#F3E5F5',fg:'#6A1B9A'}, // 紫
+  EV:{bg:'#FFE0B2',fg:'#BF360C'}, // 浅蜜桃（跟 TM 绿明显分开）
+  IT:{bg:'#EFEBE9',fg:'#5D4037'}, // 咖啡
+  SC:{bg:'#B2DFDB',fg:'#00695C'}  // 浅薄荷（跟 FA 黄明显分开）
 };
 function cohortPrefix(cohort){
   const m=String(cohort||'').match(/^[A-Za-z]+/);
