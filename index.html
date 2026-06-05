@@ -1770,9 +1770,9 @@ function closeSchModal(){
 // saveES / collectEC 保留兼容（不再用于 modal，可忽略）
 function saveES(id){}
 function halfBadge(h){
-  if(h==='上半学期'||h==='上半')return'<span class="badge b0" style="font-size:10px">上半</span>';
-  if(h==='下半学期'||h==='下半')return'<span class="badge b2" style="font-size:10px">下半</span>';
-  if(h==='全学期')return'<span class="badge b6" style="font-size:10px">全学期</span>';
+  if(h==='上半学期'||h==='上半')return'<span class="badge b0">上半</span>';
+  if(h==='下半学期'||h==='下半')return'<span class="badge b2">下半</span>';
+  if(h==='全学期')return'<span class="badge b6">全学期</span>';
   return'<span style="color:#bbb;font-style:italic;font-size:10px">待定</span>';
 }
 // v7.1: 课程→专业 查询 + badge（资料来自「课程库」D 栏）
@@ -1812,7 +1812,7 @@ function getCourseDept(courseCode){
 function deptBadge(dept){
   if(!dept)return'<span style="color:#bbb;font-style:italic;font-size:10px">—</span>';
   const cls=DEPT_BADGE[dept]||'b4';
-  return'<span class="badge '+cls+'" style="font-size:10px">'+eh(dept)+'</span>';
+  return'<span class="badge '+cls+'">'+eh(dept)+'</span>';
 }
 // v7.3: 排课记录上方「课程代码」筛选下拉 —— 固定 13 项，与课程库 D 栏对应
 // 选中某项时严格匹配（GE 跟 GE-KE/GE-KH/GE-LA 分别独立筛选）
@@ -1919,7 +1919,7 @@ function renderSch(){
       '<td>'+r.cls+'</td><td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
       '<td style="white-space:normal;min-width:260px;line-height:1.7">'+tags+'</td><td><strong>'+tot+'</strong></td>'+
       '<td style="font-size:11px;color:#888;max-width:100px;white-space:normal;word-break:break-word">'+eh(r.nt||'—')+'</td>'+
-      '<td>'+(r.btec===true||r.btec==='TRUE'||r.btec==='true'?'<span class="badge b4" style="font-size:10px">✓</span>':'—')+'</td>'+
+      '<td>'+(r.btec===true||r.btec==='TRUE'||r.btec==='true'?'<span class="badge b4">✓</span>':'—')+'</td>'+
       '<td style="white-space:nowrap"><button class="btn btn-e" onclick="startES('+r.id+')">更动</button> <button class="btn btn-d" onclick="delSch('+r.id+')">删除</button></td></tr>';
   }).join('');
   if(typeof syncTblHeight==='function')syncTblHeight();
@@ -2170,7 +2170,7 @@ function renderTchr(){
       '<td style="font-size:11px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
       '<td>'+r.cls+'</td><td><span class="badge b4">'+r.sem+'</span></td>'+
       '<td>'+halfBadge(r.half)+'</td><td>'+(tot||'—')+'</td>'+
-      '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td><td>'+(r.btec?'<span class="badge b4" style="font-size:10px">BTEC</span>':'—')+'</td></tr>';}).join('');
+      '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td><td>'+(r.btec?'<span class="badge b4">BTEC</span>':'—')+'</td></tr>';}).join('');
   const sgRows=spRows.map((r,i)=>
     '<tr style="background:#FFF8F0"><td>'+(data.length+i+1)+'</td>'+
     '<td><span class="badge b0">'+r.co+'</span></td>'+
@@ -2256,7 +2256,7 @@ function renderSpTchr(){
         '<td rowspan="'+n+'" style="max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(x.en)+'</td>'+
         '<td rowspan="'+n+'" style="font-size:12px;white-space:nowrap">'+eh(x.tc)+'</td>':'')+
       '<td><code style="font-size:11px">'+eh(s.sid||'—')+'</code></td>'+
-      '<td><span class="badge b4" style="font-size:10px">'+eh(s.mr)+'</span></td>'+
+      '<td><span class="badge b4">'+eh(s.mr)+'</span></td>'+
       '<td style="white-space:nowrap">'+eh(s.nm)+'</td>'+
       '<td><span class="badge b4">'+eh(s.mj)+'</span></td>'+
       '<td><span class="badge b4">'+eh(s.sem)+'</span></td>'+
