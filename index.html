@@ -603,6 +603,16 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     <label>学年筛选</label>
     <select id="sta-yr" onchange="renderSta()" style="width:auto;font-size:12px;padding:5px 8px"><option value="">— 请选择学年 —</option></select>
   </div>
+
+  <!-- v7.9.11: Top 10 可优先排课面板 -->
+  <div id="sta-low-panel" style="display:none;background:#FFFBEB;border:0.5px solid #FDE68A;border-left:3px solid #F59E0B;border-radius:8px;padding:12px 16px;margin-bottom:14px">
+    <div style="font-size:13px;font-weight:600;color:#92400E;margin-bottom:8px;display:flex;align-items:center;gap:8px">
+      <span>🔻 可优先排课</span>
+      <span style="font-size:11px;font-weight:400;color:#A16207">% 最低 10 位 · 点击跳到表格行</span>
+    </div>
+    <div id="sta-low-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px"></div>
+  </div>
+
   <div class="card">
     <div class="sechdr">
       <span class="ct" style="margin:0">各授课老师工作量</span>
@@ -3001,6 +3011,18 @@ function renderSta(){
     [actT,'参与老师'],[schD.filter(r=>r.type==='Capstone').length,'Capstone课程']
   ].map(([v,l])=>'<div class="mc"><div class="mv">'+v+'</div><div class="ml">'+l+'</div></div>').join('');
   const depts=[...new Set(T.filter(t=>t.l>0).map(t=>t.d))].sort();
+  // v7.9.11: 先算所有老师的 % 用于 Top 10 面板
+  const allTeacherStats=[];
+  T.filter(t=>t.l>0).forEach(t=>{
+    const totalSems=yr?activeSems:['2569-1','2569-2','2569-3','2570-1','2570-2','2570-3'];
+    const totalWt=totalSems.reduce((s,sem)=>s+semDetail(t.n,sem).wt,0);
+    const btec=btecD[t.n]||0;
+    const btecCount=totalSems.reduce((s,sem)=>s+schD.filter(r=>r.tc===t.n&&r.sem===sem&&r.btec).length,0);
+    const btecWt=btecCount*0.5;
+    const yearTotal=Math.round((totalWt+btecWt+btec)*100)/100;
+    const pct=t.l>0?Math.round(yearTotal/t.l*100):0;
+    allTeacherStats.push({n:t.n,d:t.d,l:t.l,yearTotal,pct,k:t.n.replace(/[^a-zA-Z0-9]/g,'_')});
+  });
   let rows='';let hasData=false;
   depts.forEach(dept=>{
     const dTchrs=T.filter(t=>t.d===dept&&t.l>0).sort((a,b)=>a.n.localeCompare(b.n));
@@ -3023,7 +3045,7 @@ function renderSta(){
       dWt+=yearTotal;
       const pct=t.l>0?Math.round(yearTotal/t.l*100):0;
       const over=t.l>0&&yearTotal>t.l;
-      rows+='<tr>'+
+      rows+='<tr id="tr-'+k+'" style="transition:background .8s">'+
         '<td style="color:#bbb;font-size:11px">'+idx+'</td>'+
         '<td style="font-size:12px;white-space:nowrap">'+eh(t.n)+'</td>'+
         '<td style="font-size:11px;color:#888;white-space:nowrap">'+t.r+'</td>'+
@@ -3047,11 +3069,43 @@ function renderSta(){
       '<td style="text-align:center;border-left:1px solid #eee"><strong>'+Math.round(dWt*100)/100+'</strong></td>'+
       '<td colspan="5"></td></tr>';
   });
-  if(!yr){document.getElementById('sta-em').textContent='请先选择学年';document.getElementById('sta-em').style.display='block';document.getElementById('sta-tb').innerHTML='';return;}
-  if(!hasData){document.getElementById('sta-em').style.display='block';document.getElementById('sta-tb').innerHTML='';return;}
+  if(!yr){document.getElementById('sta-em').textContent='请先选择学年';document.getElementById('sta-em').style.display='block';document.getElementById('sta-tb').innerHTML='';document.getElementById('sta-low-panel').style.display='none';return;}
+  if(!hasData){document.getElementById('sta-em').style.display='block';document.getElementById('sta-tb').innerHTML='';document.getElementById('sta-low-panel').style.display='none';return;}
   document.getElementById('sta-em').style.display='none';
   document.getElementById('sta-tb').innerHTML=rows;
+  // v7.9.11: Top 10 可优先排课面板
+  const top10=allTeacherStats.slice().sort((a,b)=>a.pct-b.pct).slice(0,10);
+  const panel=document.getElementById('sta-low-panel');
+  const list=document.getElementById('sta-low-list');
+  if(top10.length){
+    panel.style.display='block';
+    list.innerHTML=top10.map((t,i)=>{
+      const dColor=COHORT_COLOR[t.d];
+      const dStyle=dColor?'background:'+dColor.bg+';color:'+dColor.fg:'';
+      // 颜色按 % 分档
+      const pctColor=t.pct<50?'#1E40AF':t.pct<80?'#0369A1':t.pct<=110?'#15803D':t.pct<=130?'#C2410C':'#B91C1C';
+      const pctBg=t.pct<50?'#DBEAFE':t.pct<80?'#E0F2FE':t.pct<=110?'#DCFCE7':t.pct<=130?'#FED7AA':'#FECACA';
+      return '<div onclick="jumpToTeacherRow(\''+t.k+'\')" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 9px;background:#fff;border-radius:6px;border:0.5px solid #FDE68A;transition:transform .12s" onmouseover="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 2px 6px rgba(0,0,0,.08)\'" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'+
+        '<span style="font-size:11px;color:#888;min-width:18px;font-family:ui-monospace,monospace">'+(i+1)+'.</span>'+
+        '<span class="badge" style="'+dStyle+';font-size:9.5px;padding:1px 6px">'+eh(t.d)+'</span>'+
+        '<span style="font-size:12px;color:#333;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(t.n)+'</span>'+
+        '<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:'+pctBg+';color:'+pctColor+';white-space:nowrap">'+t.pct+'% / '+t.l+'</span>'+
+      '</div>';
+    }).join('');
+  }else{
+    panel.style.display='none';
+  }
 }
+
+// v7.9.11: 跳到老师行 + 短暂高亮
+function jumpToTeacherRow(k){
+  const row=document.getElementById('tr-'+k);
+  if(!row)return;
+  row.scrollIntoView({behavior:'smooth',block:'center'});
+  row.style.background='#FEF3C7';
+  setTimeout(()=>{row.style.background='';},2200);
+}
+window.jumpToTeacherRow=jumpToTeacherRow;
 
 // ── JSON 导出/导入 ────────────────────────
 function exportData(){
