@@ -196,10 +196,10 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   .card{page-break-inside:avoid}
   tr.dh{page-break-after:avoid}
 
-  /* ── 预设：A4 直式（其他 tab）── */
+  /* ── 预设：A4 横向（所有 tab 统一）── */
   @page{
-    size:A4 portrait;
-    margin:15mm 15mm 18mm 15mm;
+    size:A4 landscape;
+    margin:12mm 14mm 14mm 14mm;
     @top-center{content:'CIC 本科排课管理系统';font-size:8pt;color:#999;}
     @bottom-right{content:'第 ' counter(page) ' 页，共 ' counter(pages) ' 页';font-size:7.5pt;color:#aaa;}
   }
