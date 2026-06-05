@@ -2275,6 +2275,40 @@ async function saveBtec(el){
 // 读取：GET（无 preflight）
 // 写入：POST + text/plain（简单请求，无 preflight，GAS doPost 原生支持）
 
+// ════════════════════════════════════════════════════════
+// v7.9.3 客户端自动重试：遇到「系统正忙」/ lock timeout
+// 自动后退 3 次（800ms / 1.5s / 2.5s）→ 99% 情况用户看不到错误
+// ════════════════════════════════════════════════════════
+function _isBusyError(r){
+  if(!r) return false;
+  const m = String(r.error || r.message || '');
+  return /系统正忙|多人同时|繁忙|หมดเวลา|กระบวนการ|ล็อก|lock timeout|advisory lock|could not obtain lock/i.test(m);
+}
+async function _retryOnBusy(fn, label){
+  const delays = [0, 800, 1500, 2500];  // 第一次立刻、然后 800/1500/2500ms
+  let lastResp;
+  for(let attempt = 0; attempt < delays.length; attempt++){
+    if(attempt > 0) await new Promise(r => setTimeout(r, delays[attempt]));
+    try{
+      const r = await fn();
+      if(_isBusyError(r) && attempt < delays.length - 1){
+        console.warn('[' + (label||'sync') + ' retry ' + (attempt+1) + '/' + (delays.length-1) + '] busy, waiting ' + delays[attempt+1] + 'ms...', r.error);
+        lastResp = r;
+        continue;
+      }
+      return r;
+    }catch(e){
+      lastResp = {success:false, error:e.message||String(e)};
+      if(_isBusyError(lastResp) && attempt < delays.length - 1){
+        console.warn('[' + (label||'sync') + ' retry ' + (attempt+1) + '/' + (delays.length-1) + '] network busy', e.message);
+        continue;
+      }
+      if(attempt === delays.length - 1) return lastResp;
+    }
+  }
+  return lastResp || {success:false, error:'系统繁忙，请稍后再试'};
+}
+
 async function gasGet(params){
   // v7.5: 自动带 token（除非 params 已指定）
   const p=Object.assign({},params);
@@ -2282,13 +2316,15 @@ async function gasGet(params){
   const qs=Object.entries(p)
     .map(([k,v])=>k+'='+encodeURIComponent(typeof v==='object'?JSON.stringify(v):String(v)))
     .join('&');
-  const res=await fetch(SHEETS_URL+'?'+qs,{cache:'no-store'});
-  const r=await res.json();
-  // v7.5: token 失效 → 强制重新登入
-  if(r&&r.error&&String(r.error).includes('UNAUTHORIZED')){
-    handleTokenExpired();
-  }
-  return r;
+  return _retryOnBusy(async () => {
+    const res=await fetch(SHEETS_URL+'?'+qs,{cache:'no-store'});
+    const r=await res.json();
+    // v7.5: token 失效 → 强制重新登入
+    if(r&&r.error&&String(r.error).includes('UNAUTHORIZED')){
+      handleTokenExpired();
+    }
+    return r;
+  }, params.action || 'GET');
 }
 
 // text/plain POST：不触发 preflight，数据量不受 URL 长度限制
@@ -2301,24 +2337,22 @@ async function fetchWrite(type,data){
     showSafeBanner('检测到本地数据为空，已拒绝同步避免清空 Sheet。请按「↓ 下载」从 Sheet 重新载入。');
     return false;
   }
-  try{
+  const r = await _retryOnBusy(async () => {
     const res=await fetch(SHEETS_URL,{
       method:'POST',
       headers:{'Content-Type':'text/plain'},
-      // v7.5 fix: 必须带 token 和 editor，否则 SCRIPT_SECRET 启用后会 UNAUTHORIZED
       body:JSON.stringify({action:'write',type:type,payload:data,token:currentToken||'',editor:currentEditor||''})
     });
-    const r=await res.json();
-    if(r.blocked==='EMPTY_PAYLOAD'){
-      writeLocked=true;
-      showSafeBanner('Apps Script 已拒绝空数组写入。这通常意味着本地数据丢失，请刷新或下载。');
-    }
-    // v7.5: token 失效 → 跳回登录
-    if(r&&r.error&&String(r.error).includes('UNAUTHORIZED')){
-      handleTokenExpired();
-    }
-    return r.success===true;
-  }catch(e){return false;}
+    return await res.json();
+  }, 'write-'+type);
+  if(r && r.blocked==='EMPTY_PAYLOAD'){
+    writeLocked=true;
+    showSafeBanner('Apps Script 已拒绝空数组写入。这通常意味着本地数据丢失，请刷新或下载。');
+  }
+  if(r && r.error && String(r.error).includes('UNAUTHORIZED')){
+    handleTokenExpired();
+  }
+  return r && r.success===true;
 }
 
 // ════════════════════════════════════════
@@ -2328,7 +2362,7 @@ async function fetchWrite(type,data){
 // ════════════════════════════════════════
 async function gasPost(action, body){
   if(!SHEETS_URL)return{success:false,error:'未配置 SHEETS_URL'};
-  try{
+  return _retryOnBusy(async () => {
     // v7.4: editor，v7.5: token —— 都自动带上（除非 body 已指定）
     const payload=Object.assign({action,editor:currentEditor||'',token:currentToken||''},body);
     const res=await fetch(SHEETS_URL,{
@@ -2341,7 +2375,7 @@ async function gasPost(action, body){
       handleTokenExpired();
     }
     return r;
-  }catch(e){return{success:false,error:e.message};}
+  }, action);
 }
 
 // v7.5: token 失效 → 静悄悄清掉本地状态，跳回 PIN 画面（不弹一堆讨厌的红色横条）
