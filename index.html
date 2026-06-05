@@ -357,8 +357,8 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <div class="g4">
         <div class="fg"><label>课程类型（自动检测）</label>
           <select id="s-tp">
-            <option value="正常">正常 ×1.0</option><option value="英文">英文 ×0.5</option>
-            <option value="实习">实习 ×1.0</option><option value="SG">SG/IS ×0.167</option><option value="Capstone">Capstone ×0.75</option>
+            <option value="正常">正常</option><option value="英文">英文</option>
+            <option value="CD-实习">CD-实习</option><option value="实习">实习</option><option value="SG">SG/IS</option><option value="Capstone">Capstone</option>
           </select>
         </div>
         <div class="fg"><label>班级代码</label>
@@ -514,7 +514,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <label>学期</label>
       <select id="f-tc-s" onchange="renderTchr()"><option value="">全部</option></select>
       <label>课程类型</label>
-      <select id="f-tc-t" onchange="renderTchr()"><option value="">全部</option><option>正常</option><option>英文</option><option>实习</option><option>SG</option><option>Capstone</option></select>
+      <select id="f-tc-t" onchange="renderTchr()"><option value="">全部</option><option>正常</option><option>英文</option><option>CD-实习</option><option>实习</option><option>SG</option><option>Capstone</option></select>
     </div>
     <div class="card">
       <div class="ct" id="tc-ttl">任课老师课程总表</div>
@@ -636,8 +636,8 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <div class="fg"><label>课程英文名（自动）</label><input id="m-en" readonly placeholder="自动显示"></div>
         <div class="fg"><label>课程类型</label>
           <select id="m-tp">
-            <option value="正常">正常 ×1.0</option><option value="英文">英文 ×0.5</option>
-            <option value="实习">实习 ×1.0</option><option value="SG">SG/IS ×0.167</option><option value="Capstone">Capstone ×0.75</option>
+            <option value="正常">正常</option><option value="英文">英文</option>
+            <option value="CD-实习">CD-实习</option><option value="实习">实习</option><option value="SG">SG/IS</option><option value="Capstone">Capstone</option>
           </select>
         </div>
         <div class="fg"><label>BTEC 课程</label>
@@ -1110,8 +1110,20 @@ function updateRefBar(){
 }
 
 // ── 常数与状态 ────────────────────────────
-const WTS={正常:1,英文:.5,实习:1,SG:.167,Capstone:.75};
-const TB={正常:'b0',英文:'b6',实习:'b2',SG:'b3',Capstone:'b5'};
+// v2 权重 — 按课程人数分档（正常/英文）或按人数 ÷ 上限封顶 1.0（CD-实习/实习）
+function courseWeight(type, students){
+  switch(type){
+    case '正常':    return students<=20 ? 0.5 : 1.0;
+    case '英文':    return students<=20 ? 0.25 : 0.5;
+    case 'CD-实习': return Math.min(students/20, 1.0);
+    case '实习':    return Math.min(students/16, 1.0);
+    case 'Capstone':return 0.75;
+    default: return 0;
+  }
+}
+// 旧 WTS 保留供兼容（其他地方可能引用），新计算不用它
+const WTS={正常:1,英文:.5,'CD-实习':1,实习:1,SG:.167,Capstone:.75};
+const TB={正常:'b0',英文:'b6','CD-实习':'b1',实习:'b2',SG:'b3',Capstone:'b5'};
 const CLSS=['601','602','603','604','605','331','332','333','Capstone-971','Capstone-972','Capstone-973','Capstone-974','Capstone-975','Capstone-976','Capstone-977','Capstone-978'];
 // v7.3: SEMS 仍保留作为内建 fallback，但实际使用的是动态读取的 S
 const DEFAULT_SEMS=['2569-1','2569-2','2569-3','2570-1','2570-2','2570-3'];
@@ -2273,15 +2285,23 @@ function renderAllSum(){renderTchr();renderCoh();renderSpStu();renderSpTchr();}
 function semDetail(tc,sem){
   const sch=schD.filter(r=>r.tc===tc&&r.sem===sem);
   const sp=spD.filter(r=>r.tc===tc&&r.sem===sem);
-  const cnt={正常:0,英文:0,实习:0,SG:sp.length,Capstone:0};
-  sch.forEach(r=>cnt[r.type]=(cnt[r.type]||0)+1);
-  const wt=Math.round((cnt.正常*WTS.正常+cnt.英文*WTS.英文+cnt.实习*WTS.实习+cnt.SG*WTS.SG+cnt.Capstone*WTS.Capstone)*100)/100;
+  const cnt={正常:0,英文:0,'CD-实习':0,实习:0,SG:sp.length,Capstone:0};
+  // v2: 累加每门课的实际权重（按学生人数算）
+  let wt=0;
+  sch.forEach(r=>{
+    if(r.type in cnt) cnt[r.type]=(cnt[r.type]||0)+1;
+    const stus=(r.cc||[]).reduce((s,x)=>s+(x.count||0),0);
+    wt+=courseWeight(r.type,stus);
+  });
+  // SG: 每个学生 1/6
+  wt+=sp.length/6;
+  wt=Math.round(wt*100)/100;
   return{wt,cnt};
 }
 function sdCells(d,bl){
   const s=bl?'border-left:1px solid #eee;':'';
   const hasData=d.wt>0;
-  const tipRows=[['正常',d.cnt.正常,'b0'],['英文',d.cnt.英文,'b6'],['实习',d.cnt.实习,'b2'],['SG',d.cnt.SG,'b3'],['Cap',d.cnt.Capstone,'b5']]
+  const tipRows=[['正常',d.cnt.正常,'b0'],['英文',d.cnt.英文,'b6'],['CD-实习',d.cnt['CD-实习']||0,'b1'],['实习',d.cnt.实习,'b2'],['SG',d.cnt.SG,'b3'],['Cap',d.cnt.Capstone,'b5']]
     .filter(([,n])=>n>0).map(([k,n,b])=>'<div class="tip-row"><span class="badge '+b+'" style="font-size:10px">'+k+'</span><span>'+n+'门</span></div>').join('');
   const tip=hasData?'<div class="sem-tip"><div style="color:#888;font-size:11px;margin-bottom:4px">课程细项</div>'+tipRows+'</div>':'';
   return'<td class="sem-cell" style="text-align:center;'+s+'">'+(hasData?'<span class="sem-val">'+d.wt+'</span>':'<span class="sem-zero">—</span>')+tip+'</td>';
