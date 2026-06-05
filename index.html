@@ -1900,7 +1900,7 @@ function renderSch(){
     const tags=r.cc.map(cc=>cohortTag(cc.cohort,cc.count)).join(''); // v7.2: 按系别上色
     const _chk=_schSelected.has(String(r.id))?'checked':'';
     return'<tr'+(_chk?' style="background:#FFF8E1"':'')+'><td style="text-align:center"><input type="checkbox" class="row-chk" '+_chk+' onclick="toggleRowSelect(\'sch\',\''+r.id+'\',this.checked)"></td><td>'+(i+1)+'</td><td><span class="badge b0">'+r.course+'</span></td>'+
-      '<td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+eh(r.en)+'">'+eh(r.en)+'</td>'+
+      '<td style="min-width:200px;max-width:320px;white-space:normal;word-break:break-word;line-height:1.35" title="'+eh(r.en)+'">'+eh(r.en)+'</td>'+
       '<td><span class="badge '+(TB[r.type]||'b4')+'">'+r.type+'</span></td>'+
       '<td><span class="badge b4">'+r.sem+'</span></td><td>'+halfBadge(r.half)+'</td>'+
       '<td>'+r.cls+'</td><td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
@@ -2106,7 +2106,7 @@ function renderSp(){
     return'<tr'+(_chk?' style="background:#FFF8E1"':'')+'><td style="text-align:center"><input type="checkbox" class="row-chk" '+_chk+' onclick="toggleRowSelect(\'sp\',\''+r.id+'\',this.checked)"></td><td>'+(i+1)+'</td><td><code style="font-size:11px">'+eh(r.sid)+'</code></td>'+
       '<td><span class="badge b4">'+r.mr+'</span></td><td>'+eh(r.nm)+'</td>'+
       '<td><span class="badge b4">'+r.mj+'</span></td><td><span class="badge b0">'+r.co+'</span></td>'+
-      '<td style="max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+eh(r.en)+'">'+eh(r.en)+'</td>'+
+      '<td style="min-width:170px;max-width:280px;white-space:normal;word-break:break-word;line-height:1.35" title="'+eh(r.en)+'">'+eh(r.en)+'</td>'+
       '<td>'+r.cls+'</td><td><span class="badge b4">'+r.sem+'</span></td>'+
       '<td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
       '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td>'+
