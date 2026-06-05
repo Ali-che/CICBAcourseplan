@@ -93,7 +93,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 .tleg-i{display:flex;align-items:center;gap:5px;font-size:11px}
 .sem-cell{position:relative;cursor:default;padding:6px 14px!important}
 .sem-cell:hover .sem-tip{display:block}
-.sem-tip{display:none;position:absolute;top:110%;left:50%;transform:translateX(-50%);z-index:99;background:#fff;border:0.5px solid #ddd;border-radius:8px;padding:8px 12px;box-shadow:0 4px 16px rgba(0,0,0,.12);white-space:nowrap;margin-top:2px}
+.sem-tip{display:none;position:absolute;top:110%;left:50%;transform:translateX(-50%);z-index:99;background:#fff;border:0.5px solid #ddd;border-radius:8px;padding:10px 14px;box-shadow:0 4px 16px rgba(0,0,0,.12);white-space:nowrap;margin-top:2px;min-width:280px;text-align:left}
 .sem-val{font-size:15px;font-weight:600;color:#534AB7}
 .sem-zero{font-size:13px;color:#ccc}
 .tip-row{display:flex;gap:8px;align-items:center;margin-top:5px;font-size:12px}
@@ -136,8 +136,12 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   .header,.ref-bar,.tabs,.stabs,.fbar,
   .sechdr button,.sechdr .btn,.sechdr select,
   .btn,.btn-sm,.btn-p,.btn-e,.btn-ok,.btn-d,
-  .es-sec,.empty,.sem-tip,
+  .es-sec,.empty,
   .modal-overlay{display:none!important}
+  /* v7.9.9: 列印时 sem-tip 改成内嵌（不再是 hover 浮层） */
+  .sem-tip{display:block!important;position:static!important;transform:none!important;box-shadow:none!important;background:#fafafa!important;border:0.5px solid #ddd!important;margin-top:4px!important;padding:4pt 6pt!important;font-size:8pt!important;white-space:normal!important;line-height:1.4}
+  .sem-tip .tip-row{margin-top:2px;font-size:8pt}
+  .sem-tip .badge{font-size:7pt!important;padding:1pt 4pt!important}
   /* 列印时取消表格高度限制，完整展开 */
   .tbl-wrap{max-height:none!important;overflow:visible!important}
   .panel{display:none!important}
@@ -2465,25 +2469,40 @@ function semDetail(tc,sem){
   const sch=schD.filter(r=>r.tc===tc&&r.sem===sem);
   const sp=spD.filter(r=>r.tc===tc&&r.sem===sem);
   const cnt={正常:0,英文:0,'CD-实习':0,实习:0,SG:sp.length,Capstone:0};
-  // v2: 累加每门课的实际权重（按学生人数算）
+  const courses=[];
   let wt=0;
   sch.forEach(r=>{
     if(r.type in cnt) cnt[r.type]=(cnt[r.type]||0)+1;
     const stus=(r.cc||[]).reduce((s,x)=>s+(x.count||0),0);
-    wt+=courseWeight(r.type,stus);
+    const w=courseWeight(r.type,stus);
+    courses.push({code:r.course,type:r.type,students:stus,weight:Math.round(w*100)/100});
+    wt+=w;
   });
-  // SG: 每个学生 1/6
+  // SG: 每个学生 1/6（合并显示为一条）
+  if(sp.length){
+    const sgWt=Math.round(sp.length/6*100)/100;
+    courses.push({code:'SG/IS',type:'SG',students:sp.length,weight:sgWt});
+  }
   wt+=sp.length/6;
   wt=Math.round(wt*100)/100;
-  return{wt,cnt};
+  return{wt,cnt,courses};
 }
 function sdCells(d,bl){
   const s=bl?'border-left:1px solid #eee;':'';
   const hasData=d.wt>0;
-  const tipRows=[['正常',d.cnt.正常,'b0'],['英文',d.cnt.英文,'b6'],['CD-实习',d.cnt['CD-实习']||0,'b1'],['实习',d.cnt.实习,'b2'],['SG',d.cnt.SG,'b3'],['Cap',d.cnt.Capstone,'b5']]
-    .filter(([,n])=>n>0).map(([k,n,b])=>'<div class="tip-row"><span class="badge '+b+'" style="font-size:10px">'+k+'</span><span>'+n+'门</span></div>').join('');
-  const tip=hasData?'<div class="sem-tip"><div style="color:#888;font-size:11px;margin-bottom:4px">课程细项</div>'+tipRows+'</div>':'';
-  return'<td class="sem-cell" style="text-align:center;'+s+'">'+(hasData?'<span class="sem-val">'+d.wt+'</span>':'<span class="sem-zero">—</span>')+tip+'</td>';
+  // v7.9.9: 逐课明细 — 课程代码 + 类型 + 人数 + 权重
+  const courseRows=(d.courses||[]).map(c=>{
+    const tb=TB[c.type]||'b4';
+    return '<div class="tip-row">'+
+      '<span class="badge '+tb+'" style="min-width:46px;text-align:center">'+c.type+'</span>'+
+      '<span style="font-family:ui-monospace,monospace;color:#185FA5;min-width:54px">'+c.code+'</span>'+
+      '<span style="color:#888;min-width:46px;text-align:right">'+c.students+' 人</span>'+
+      '<span style="color:#ccc">→</span>'+
+      '<span style="font-weight:600;color:#534AB7;min-width:34px;text-align:right">'+c.weight+'</span>'+
+    '</div>';
+  }).join('');
+  const tip=hasData?'<div class="sem-tip"><div style="color:#888;font-size:11px;margin-bottom:6px;font-weight:600;border-bottom:0.5px solid #eee;padding-bottom:4px">课程明细 · 合计 <span style="color:#534AB7;font-weight:700">'+d.wt+'</span></div>'+courseRows+'</div>':'';
+  return'<td class="sem-cell" style="text-align:center;vertical-align:top;'+s+'">'+(hasData?'<span class="sem-val">'+d.wt+'</span>':'<span class="sem-zero">—</span>')+tip+'</td>';
 }
 async function saveBtec(el){
   const name=el.dataset.name;const val=parseFloat(el.value)||0;btecD[name]=val;
