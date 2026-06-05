@@ -37,6 +37,9 @@ input[readonly]{color:#888;background:#f2f2f2}
 .btn-p{background:#534AB7;color:#fff;border-color:#534AB7}.btn-p:hover{background:#3C3489}
 .btn-sm{padding:5px 10px;font-size:11px}
 .btn-e{color:#185FA5;border-color:#B5D4F4;font-size:11px;padding:3px 8px}.btn-e:hover{background:#E6F1FB}
+.btn-ic{width:26px;height:26px;padding:0;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border:0.5px solid;line-height:1;margin:0 1px;font-family:inherit}
+.btn-ic-edit{color:#185FA5;background:#E6F1FB;border-color:#B5D4F4}
+.btn-ic-del{color:#a32d2d;background:#FCEBEB;border-color:#f7c1c1}
 .btn-ok{color:#3B6D11;border-color:#C0DD97;font-size:11px;padding:3px 8px}.btn-ok:hover{background:#EAF3DE}
 .btn-d{color:#a32d2d;border-color:#f7c1c1;font-size:11px;padding:3px 8px}.btn-d:hover{background:#FCEBEB}
 .sechdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem}
@@ -1918,9 +1921,9 @@ function renderSch(){
       '<td><span class="badge b4">'+r.sem+'</span></td><td>'+halfBadge(r.half)+'</td>'+
       '<td>'+r.cls+'</td><td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
       '<td style="white-space:normal;min-width:260px;line-height:1.7">'+tags+'</td><td><strong>'+tot+'</strong></td>'+
-      '<td style="font-size:11px;color:#888;max-width:180px;white-space:normal;word-break:break-word">'+eh(r.nt||'—')+'</td>'+
+      '<td style="font-size:11px;color:#888;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"'+(r.nt?' title="'+eh(r.nt)+'"':'')+'>'+eh(r.nt||'—')+'</td>'+
       '<td>'+(r.btec===true||r.btec==='TRUE'||r.btec==='true'?'<span class="badge b4">✓</span>':'—')+'</td>'+
-      '<td style="white-space:nowrap"><button class="btn btn-e" onclick="startES('+r.id+')">更动</button> <button class="btn btn-d" onclick="delSch('+r.id+')">删除</button></td></tr>';
+      '<td style="white-space:nowrap"><button class="btn-ic btn-ic-edit" onclick="startES('+r.id+')" title="更动"><svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zm.708 1.06L11.5 2.5l2 2L14.5 3.5 12.854 1.207zM10.5 3.5l-9 9 1.5 1.5 9-9-1.5-1.5z"/></svg></button><button class="btn-ic btn-ic-del" onclick="delSch('+r.id+')" title="删除"><svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H3.5V0a1 1 0 0 1 1-1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg></button></td></tr>';
   }).join('');
   if(typeof syncTblHeight==='function')syncTblHeight();
 }
@@ -2123,7 +2126,7 @@ function renderSp(){
       '<td>'+r.cls+'</td><td><span class="badge b4">'+r.sem+'</span></td>'+
       '<td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
       '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td>'+
-      '<td style="white-space:nowrap"><button class="btn btn-e" onclick="startESp('+r.id+')">更动</button> <button class="btn btn-d" onclick="delSp('+r.id+')">删除</button></td></tr>';
+      '<td style="white-space:nowrap"><button class="btn-ic btn-ic-edit" onclick="startESp('+r.id+')" title="更动"><svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zm.708 1.06L11.5 2.5l2 2L14.5 3.5 12.854 1.207zM10.5 3.5l-9 9 1.5 1.5 9-9-1.5-1.5z"/></svg></button><button class="btn-ic btn-ic-del" onclick="delSp('+r.id+')" title="删除"><svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H3.5V0a1 1 0 0 1 1-1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg></button></td></tr>';
   }).join('');
 }
 function clearSpF(){
