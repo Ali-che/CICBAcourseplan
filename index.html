@@ -62,10 +62,10 @@ tr.ed td{background:#EEEDFE}
 tr:not(.ed):not(.dh):not(.dt):hover td{background:#fafafa}
 tr.dh td{background:#534AB7;color:#fff;font-weight:600;font-size:12px;padding:8px 9px}
 tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
-.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.badge,.tag{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:500;line-height:1.5;margin:1px;gap:3px}
 .b0{background:#E6F1FB;color:#0C447C}.b1{background:#EAF3DE;color:#3B6D11}.b2{background:#FAEEDA;color:#854F0B}
 .b3{background:#FAECE7;color:#993C1D}.b4{background:#F1EFE8;color:#444441}.b5{background:#EEEDFE;color:#3C3489}.b6{background:#E1F5EE;color:#0F6E56}
-.tag{display:inline-block;padding:1px 7px;border-radius:20px;font-size:11px;background:#f0f0f0;color:#666;margin:1px}
+.tag{background:#f0f0f0;color:#666}
 .es-sec{border:0.5px solid #ddd;border-radius:8px;padding:.875rem;margin-bottom:10px;background:#fafafa}
 .eg{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;margin-top:8px}
 .ei{display:flex;align-items:center;gap:4px;padding:4px 8px;border:0.5px solid #ddd;border-radius:6px;background:#fff;min-width:0}
@@ -1799,11 +1799,11 @@ function cohortPrefix(cohort){
 function cohortTag(cohort,count){
   const c=COHORT_COLOR[cohortPrefix(cohort)];
   const style=c?'background:'+c.bg+';color:'+c.fg:'';
-  // v7.9.5: 「CD68 ▸ 17」格式：代码 + 浅三角 + 人数加粗
+  // v7.9.6: 完全继承 .badge,.tag 统一尺寸，只覆盖颜色
   const fullTxt=eh(cohort)+(count?' · '+count+'人':'');
   const codeHtml='<span>'+eh(cohort)+'</span>';
-  const cntHtml=count?'<span style="opacity:.45;font-size:9.5px;margin:0 2px">▸</span><span style="font-weight:600">'+count+'</span>':'';
-  return'<span class="tag tag-coh" style="'+style+';padding:2px 9px;font-size:12px;display:inline-flex;align-items:center;line-height:1.35" title="'+fullTxt+'">'+codeHtml+cntHtml+'</span>';
+  const cntHtml=count?'<span style="opacity:.5;font-size:10px">▸</span><span>'+count+'</span>':'';
+  return'<span class="tag" style="'+style+'" title="'+fullTxt+'">'+codeHtml+cntHtml+'</span>';
 }
 function getCourseDept(courseCode){
   const f=C.find(x=>x.c===courseCode);
