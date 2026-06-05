@@ -2334,39 +2334,43 @@ function renderSpStu(){
     map[r.sid].rows.push(r);
   });
   wrap.innerHTML=Object.values(map).map((s,idx)=>{
-    // v7.9.7: 共通信息上移到 header — 全部课同老师/同学期/同班级时不重复显示
+    // v7.9.7: 共通信息上移到 header
     const tc0=s.rows[0].tc,sem0=s.rows[0].sem,cls0=s.rows[0].cls;
     const allSameTc=tc0&&s.rows.every(r=>r.tc===tc0);
     const allSameSem=sem0&&s.rows.every(r=>r.sem===sem0);
     const allSameCls=cls0&&s.rows.every(r=>r.cls===cls0);
+    // v7.9.8: shared 排序 — 学年 / 班级 / 老师
     const sharedParts=[];
-    if(allSameTc)sharedParts.push('<span style="font-size:12px;color:#444;font-weight:500">'+eh(tc0)+'</span>');
     if(allSameSem)sharedParts.push('<span class="badge b4">'+eh(sem0)+'</span>');
     if(allSameCls)sharedParts.push('<span class="badge b4">'+eh(cls0)+'</span>');
+    if(allSameTc)sharedParts.push('<span style="font-size:12px;color:#444;font-weight:500">'+eh(tc0)+'</span>');
     const sharedRow=sharedParts.length?'<div style="padding:7px 14px;background:#FAFAFD;border-bottom:0.5px solid #f0f0f0;display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+sharedParts.join('<span style="color:#ccc;font-size:10px">·</span>')+'</div>':'';
+    // v7.9.8: 专业用 COHORT_COLOR 上色（TM 绿 / FA 黄 / CD 桃红…）
+    const mjC=COHORT_COLOR[s.mj];
+    const mjStyle=mjC?'background:'+mjC.bg+';color:'+mjC.fg:'';
     return '<div class="ss-card">'+
       '<div class="ss-card-h">'+
         '<span class="ss-num">'+(idx+1)+'</span>'+
-        '<span class="ss-name">'+eh(s.nm)+'</span>'+
+        '<span class="badge" style="'+mjStyle+'">'+eh(s.mj)+'</span>'+
         '<span class="badge b4">'+s.mr+'</span>'+
+        '<span class="ss-name">'+eh(s.nm)+'</span>'+
         '<code style="font-size:11px;color:#666;font-family:ui-monospace,monospace">'+eh(s.sid)+'</code>'+
-        '<span class="badge b4">'+s.mj+'</span>'+
         '<span style="flex:1"></span>'+
         '<span class="ss-cnt"><strong>'+s.rows.length+'</strong> 门 SG/IS</span>'+
       '</div>'+
       sharedRow+
       '<div class="ss-card-b">'+
         s.rows.map(r=>{
-          // 每门课只显示「跟其他课不同」的字段
-          const variant=[];
-          if(!allSameCls)variant.push('<span class="badge b4">'+r.cls+'</span>');
-          if(!allSameSem)variant.push('<span class="badge b4">'+eh(r.sem)+'</span>');
-          if(!allSameTc)variant.push('<span style="font-size:11px;color:#666">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</span>');
+          // v7.9.8: 课程行排序 — 学年 / 课程代码 / 班级 / 课程名 / 老师
+          const parts=[];
+          if(!allSameSem)parts.push('<span class="badge b4">'+eh(r.sem)+'</span>');
+          parts.push('<span class="badge b0">'+r.co+'</span>');
+          if(!allSameCls)parts.push('<span class="badge b4">'+r.cls+'</span>');
+          parts.push('<span style="font-size:11.5px;color:#888;margin-left:4px">'+eh(r.en||'—')+'</span>');
+          if(!allSameTc)parts.push('<span style="font-size:11px;color:#666;margin-left:6px">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</span>');
           return '<div class="ss-course">'+
             '<div class="ss-line1">'+
-              '<span class="badge b0">'+r.co+'</span>'+
-              variant.join('')+
-              '<span style="font-size:11.5px;color:#888;margin-left:'+(variant.length?'6px':'4px')+'">'+eh(r.en||'—')+'</span>'+
+              parts.join('')+
               (r.nt?'<span class="ss-note" style="margin-left:auto">'+eh(r.nt)+'</span>':'')+
             '</div>'+
           '</div>';
@@ -2436,15 +2440,17 @@ function renderSpTchr(){
               '<span class="ss-cnt"><strong>'+c.stus.length+'</strong> 人</span>'+
             '</div>'+
             '<div class="ss-stulist">'+
-              c.stus.map((s,si)=>
-                '<div class="ss-stuitem">'+
+              c.stus.map((s,si)=>{
+                const mjC=COHORT_COLOR[s.mj];
+                const mjStyle=mjC?'background:'+mjC.bg+';color:'+mjC.fg:'';
+                return '<div class="ss-stuitem">'+
                   '<span class="ss-stunum">'+(si+1)+'.</span>'+
+                  '<span class="badge" style="'+mjStyle+'">'+eh(s.mj)+'</span>'+
                   '<span class="badge b4">'+eh(s.mr)+'</span>'+
                   '<span>'+eh(s.nm)+'</span>'+
                   '<code>'+eh(s.sid)+'</code>'+
-                  '<span class="badge b4">'+eh(s.mj)+'</span>'+
-                '</div>'
-              ).join('')+
+                '</div>';
+              }).join('')+
             '</div>'+
           '</div>';
         }).join('')+
