@@ -519,7 +519,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     <div class="card">
       <div class="ct" id="tc-ttl">任课老师课程总表</div>
       <div class="tbl-wrap">
-        <table><thead><tr><th>#</th><th>课程代码</th><th>课程英文名</th><th>类型</th><th>授课老师</th><th>班级</th><th>学期</th><th>上下半</th><th>总人数</th><th>备注</th><th>BTEC</th></tr></thead>
+        <table><thead><tr><th>#</th><th>课程代码 / 英文名</th><th>类型</th><th>授课老师</th><th>班级</th><th>学期</th><th>上下半</th><th>总人数</th><th>备注</th><th>BTEC</th></tr></thead>
         <tbody id="tc-tb"></tbody></table>
       </div>
       <div class="empty" id="tc-em"></div>
@@ -536,7 +536,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     <div class="card">
       <div class="ct" id="co-ttl">班级课程总表</div>
       <div class="tbl-wrap">
-        <table id="co-table"><thead><tr><th>#</th><th>课程代码</th><th>课程英文名</th><th>类型</th><th>班级代码</th><th>学期</th><th>上下半</th><th>任课老师</th><th id="co-th-coh" style="display:none">届别</th></tr></thead>
+        <table id="co-table"><thead><tr><th>#</th><th>课程代码 / 英文名</th><th>类型</th><th>班级代码</th><th>学期</th><th>上下半</th><th>任课老师</th><th>备注</th><th id="co-th-coh" style="display:none">届别</th></tr></thead>
         <tbody id="co-tb"></tbody></table>
       </div>
       <div class="empty" id="co-em"></div>
@@ -552,7 +552,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     <div class="card">
       <div class="ct">SG/IS 排课总表 · 学生维度</div>
       <div class="tbl-wrap">
-        <table><thead><tr><th>#</th><th>学号</th><th>称谓</th><th>学生姓名</th><th>学生专业</th><th>特别课数</th><th>课程代码（班级）</th><th>课程英文名</th><th>授课老师</th><th>学期</th><th>备注</th></tr></thead>
+        <table><thead><tr><th>#</th><th>学号</th><th>称谓</th><th>学生姓名</th><th>学生专业</th><th>特别课数</th><th>课程代码 / 英文名 · 班级</th><th>授课老师</th><th>学期</th><th>备注</th></tr></thead>
         <tbody id="ss-tb"></tbody></table>
       </div>
       <div class="empty" id="ss-em">暂无数据</div>
@@ -569,7 +569,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     <div class="card">
       <div class="ct">SG/IS 排课总表 · 老师维度</div>
       <div class="tbl-wrap">
-        <table><thead><tr><th>#</th><th>课程代码</th><th>课程英文名</th><th>授课老师</th><th>学号</th><th>学生称谓</th><th>学生姓名</th><th>学生专业</th><th>学期</th><th>课程总人数</th></tr></thead>
+        <table><thead><tr><th>#</th><th>课程代码 / 英文名</th><th>授课老师</th><th>学号</th><th>学生称谓</th><th>学生姓名</th><th>学生专业</th><th>学期</th><th>课程总人数</th></tr></thead>
         <tbody id="st-tb"></tbody></table>
       </div>
       <div class="empty" id="st-em"></div>
@@ -2167,22 +2167,21 @@ function renderTchr(){
   if(!data.length&&!spRows.length){tb.innerHTML='';em.textContent='暂无符合条件的排课记录';em.style.display='block';return;}
   em.style.display='none';
   const schRows=data.map((r,i)=>{const tot=r.cc.reduce((s,x)=>s+(x.count||0),0);
-    return'<tr><td>'+(i+1)+'</td><td><span class="badge b0">'+r.course+'</span></td>'+
-      '<td style="max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en)+'</td>'+
+    return'<tr><td>'+(i+1)+'</td>'+
+      '<td class="cn-cell" style="min-width:144px;max-width:208px"><span class="badge b0">'+r.course+'</span><div style="font-size:11px;color:#888;margin-top:2px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
       '<td><span class="badge '+(TB[r.type]||'b4')+'">'+r.type+'</span></td>'+
       '<td style="font-size:11px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
       '<td>'+r.cls+'</td><td><span class="badge b4">'+r.sem+'</span></td>'+
       '<td>'+halfBadge(r.half)+'</td><td>'+(tot||'—')+'</td>'+
-      '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td><td>'+(r.btec?'<span class="badge b4">BTEC</span>':'—')+'</td></tr>';}).join('');
+      '<td style="font-size:11px;color:#888;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"'+(r.nt?' title="'+eh(r.nt)+'"':'')+'>'+eh(r.nt||'—')+'</td><td>'+(r.btec?'<span class="badge b4">BTEC</span>':'—')+'</td></tr>';}).join('');
   const sgRows=spRows.map((r,i)=>
     '<tr style="background:#FFF8F0"><td>'+(data.length+i+1)+'</td>'+
-    '<td><span class="badge b0">'+r.co+'</span></td>'+
-    '<td style="max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en)+'</td>'+
+    '<td class="cn-cell" style="min-width:144px;max-width:208px"><span class="badge b0">'+r.co+'</span><div style="font-size:11px;color:#888;margin-top:2px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
     '<td><span class="badge b3">SG/IS</span></td>'+
     '<td style="font-size:11px;white-space:nowrap">'+eh(r.tc||'—')+'</td>'+
     '<td>'+r.cls+'</td><td><span class="badge b4">'+r.sem+'</span></td>'+
     '<td>—</td><td>'+r.stus.length+'</td>'+
-    '<td style="font-size:11px;color:#888">'+r.stus.map(s=>eh(s)).join('、')+'</td></tr>').join('');
+    '<td style="font-size:11px;color:#888;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+eh(r.stus.join('、'))+'">'+r.stus.map(s=>eh(s)).join('、')+'</td></tr>').join('');
   tb.innerHTML=schRows+sgRows;
 }
 function filterCohByDept(){
@@ -2201,11 +2200,12 @@ function renderCoh(){
   if(sem)data=data.filter(r=>r.sem===sem);
   if(!data.length){tb.innerHTML='';em.textContent='暂无符合条件的排课记录';em.style.display='block';return;}
   em.style.display='none';
-  tb.innerHTML=data.map((r,i)=>'<tr><td>'+(i+1)+'</td><td><span class="badge b0">'+r.course+'</span></td>'+
-    '<td style="max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en)+'</td>'+
+  tb.innerHTML=data.map((r,i)=>'<tr><td>'+(i+1)+'</td>'+
+    '<td class="cn-cell" style="min-width:144px;max-width:208px"><span class="badge b0">'+r.course+'</span><div style="font-size:11px;color:#888;margin-top:2px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
     '<td><span class="badge '+(TB[r.type]||'b4')+'">'+r.type+'</span></td>'+
     '<td>'+r.cls+'</td><td><span class="badge b4">'+r.sem+'</span></td>'+
-    '<td>'+halfBadge(r.half)+'</td><td style="font-size:12px">'+eh(r.tc)+'</td></tr>').join('');
+    '<td>'+halfBadge(r.half)+'</td><td style="font-size:11px">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
+    '<td style="font-size:11px;color:#888;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"'+(r.nt?' title="'+eh(r.nt)+'"':'')+'>'+eh(r.nt||'—')+'</td></tr>').join('');
 }
 function renderSpStu(){
   const q=(document.getElementById('f-stu').value||'').toLowerCase();
@@ -2220,15 +2220,16 @@ function renderSpStu(){
   const map={};data.forEach(r=>{if(!map[r.sid])map[r.sid]={sid:r.sid,mr:r.mr,nm:r.nm,mj:r.mj,rows:[]};map[r.sid].rows.push(r);});
   let idx=0;
   tb.innerHTML=Object.values(map).map(s=>{idx++;
+    const noteAll=s.rows.filter(r=>r.nt).map(r=>r.nt).join('；');
     return'<tr><td>'+idx+'</td><td><code style="font-size:11px">'+eh(s.sid)+'</code></td>'+
       '<td>'+s.mr+'</td><td>'+eh(s.nm)+'</td><td><span class="badge b4">'+s.mj+'</span></td>'+
       '<td><strong>'+s.rows.length+'</strong></td>'+
-      '<td>'+s.rows.map(r=>'<span class="badge b0" style="margin:1px">'+r.co+'</span><span class="tag" style="margin:1px">'+r.cls+'</span>').join('<br>')+'</td>'+
-      '<td>'+s.rows.map(r=>'<span style="font-size:11px">'+eh(r.en)+'</span>').join('<br>')+'</td>'+
-      // FIX: 新增「授課老師」欄，每門課對齊顯示
+      '<td style="min-width:180px;max-width:280px">'+s.rows.map((r,ri)=>
+        '<div style="'+(ri<s.rows.length-1?'border-bottom:0.5px dashed #eee;padding-bottom:5px;margin-bottom:5px':'')+'"><span class="badge b0">'+r.co+'</span><span class="badge b4" style="margin-left:3px">'+r.cls+'</span><div style="font-size:11px;color:#888;margin-top:2px;line-height:1.3" title="'+eh(r.en||'')+'">'+eh(r.en||'—')+'</div></div>'
+      ).join('')+'</td>'+
       '<td style="font-size:11px;white-space:nowrap">'+s.rows.map(r=>r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>').join('<br>')+'</td>'+
-      '<td>'+s.rows.map(r=>'<span class="badge b4" style="margin:1px">'+r.sem+'</span>').join('<br>')+'</td>'+
-      '<td style="font-size:11px;color:#888">'+(s.rows.filter(r=>r.nt).map(r=>r.nt).join('；')||'—')+'</td></tr>';}).join('');
+      '<td>'+s.rows.map(r=>'<span class="badge b4">'+r.sem+'</span>').join('<br>')+'</td>'+
+      '<td style="font-size:11px;color:#888;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"'+(noteAll?' title="'+eh(noteAll)+'"':'')+'>'+(noteAll||'—')+'</td></tr>';}).join('');
 }
 function filterSpTchrByDept(){
   const dept=document.getElementById('f-st-d').value;const el=document.getElementById('f-st');const cur=el.value;
@@ -2255,9 +2256,8 @@ function renderSpTchr(){
     const n=x.stus.length;rowNum++;
     return x.stus.map((s,si)=>'<tr>'+
       (si===0?'<td rowspan="'+n+'" style="color:#bbb;font-size:11px">'+rowNum+'</td>'+
-        '<td rowspan="'+n+'"><span class="badge b0">'+x.co+'</span></td>'+
-        '<td rowspan="'+n+'" style="max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(x.en)+'</td>'+
-        '<td rowspan="'+n+'" style="font-size:12px;white-space:nowrap">'+eh(x.tc)+'</td>':'')+
+        '<td rowspan="'+n+'" class="cn-cell" style="min-width:144px;max-width:208px;vertical-align:middle"><span class="badge b0">'+x.co+'</span><div style="font-size:11px;color:#888;margin-top:2px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(x.en||'—')+'</div>'+(x.en?'<div class="cn-tip">'+eh(x.en)+'</div>':'')+'</td>'+
+        '<td rowspan="'+n+'" style="font-size:11px;white-space:nowrap">'+eh(x.tc)+'</td>':'')+
       '<td><code style="font-size:11px">'+eh(s.sid||'—')+'</code></td>'+
       '<td><span class="badge b4">'+eh(s.mr)+'</span></td>'+
       '<td style="white-space:nowrap">'+eh(s.nm)+'</td>'+
