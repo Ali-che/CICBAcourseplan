@@ -1748,18 +1748,15 @@ function mLookupC(){
   document.getElementById('m-en').value=f?f.en:'';
 }
 
-// ═══ v8.5 ② · 转到其他课程 ═══
+// ═══ v8.5 ② · 转到其他课程（v8.5.1：开放所有课程 + 筛选）═══
 async function openTransferDialog(){
   if(!_mId)return;
   const cur=schD.find(x=>String(x.id)===String(_mId));
   if(!cur){alert('找不到当前记录');return;}
-  // 找候选：同班+同学期+同上下半，但课程代码不同
-  const candidates=schD.filter(r=>
-    String(r.id)!==String(_mId) &&
-    r.cls===cur.cls && r.sem===cur.sem && r.half===cur.half
-  );
+  // v8.5.1：候选 = 所有其他记录（让用户自由筛选）
+  const candidates=schD.filter(r=>String(r.id)!==String(_mId));
   if(!candidates.length){
-    alert('没有可合并的目标\n\n要并入的课程必须：同班级 + 同学期 + 同上下半 + 课程代码不同');
+    alert('暂无其他记录可作为转课目标');
     return;
   }
   const targetId=await _showTransferDialog(cur,candidates);
@@ -1929,25 +1926,33 @@ function _showTransferDialog(cur,candidates){
     modal.className='modal-overlay open';
     modal.style.zIndex=3000;
     const curCcTxt=cur.cc.map(c=>c.cohort+'·'+c.count+'人').join(', ')||'(无)';
-    const candHtml=candidates.map(c=>{
-      const ccTxt=c.cc.map(x=>x.cohort+'·'+x.count+'人').join(', ');
-      return '<label style="display:block;padding:8px 12px;border:0.5px solid #ddd;border-radius:6px;margin-bottom:5px;cursor:pointer;background:#fff" onmouseover="this.style.background=\'#f8f8ff\'" onmouseout="this.style.background=\'#fff\'">'+
-        '<input type="radio" name="transfer-target" value="'+c.id+'" style="margin-right:8px"> '+
-        '<b style="font-family:ui-monospace,monospace;color:#185FA5">'+eh(c.course)+'</b> '+
-        '<span style="color:#888;font-size:11px;margin-left:6px">'+eh(c.tc||'未指定老师')+'</span><br>'+
-        '<span style="font-size:11px;color:#666;margin-left:18px">'+eh(ccTxt)+'</span>'+
-      '</label>';
-    }).join('');
-    modal.innerHTML='<div class="modal-box" style="max-width:600px">'+
+    // v8.5.1：用筛选器收窄候选；默认所有筛选都「全部」
+    const allSems=[...new Set(candidates.map(c=>c.sem).filter(Boolean))].sort();
+    const allHalves=[...new Set(candidates.map(c=>c.half).filter(Boolean))];
+    const allCls=[...new Set(candidates.map(c=>c.cls).filter(Boolean))].sort();
+    const semOpts='<option value="">全部学期</option>'+allSems.map(s=>'<option value="'+eh(s)+'">'+eh(s)+'</option>').join('');
+    const halfOpts='<option value="">全部上下半</option>'+allHalves.map(h=>'<option value="'+eh(h)+'">'+eh(h)+'</option>').join('');
+    const clsOpts='<option value="">全部班级</option>'+allCls.map(c=>'<option value="'+eh(c)+'">'+eh(c)+'</option>').join('');
+
+    modal.innerHTML='<div class="modal-box" style="max-width:720px">'+
       '<div class="modal-hdr"><h3>↔ 转到其他课程</h3><button class="modal-close" data-action="cancel">✕</button></div>'+
       '<div class="modal-body">'+
-      '<div style="background:#EEEDFE;padding:10px 14px;border-radius:6px;margin-bottom:14px">'+
+      '<div style="background:#EEEDFE;padding:10px 14px;border-radius:6px;margin-bottom:12px">'+
       '<div style="font-size:11px;color:#3C3489;margin-bottom:4px"><b>当前记录（转出后将被删除）</b></div>'+
       '<div style="font-size:13px">'+eh(cur.course)+' · '+eh(cur.cls)+' · '+eh(cur.sem)+' · '+eh(cur.half||'(未指定)')+'</div>'+
       '<div style="font-size:11px;color:#666;margin-top:4px">届别人数: '+eh(curCcTxt)+'</div>'+
       '</div>'+
-      '<div style="font-size:12px;color:#666;margin-bottom:8px"><b>选要合并到的目标课程</b>（已自动筛同班+同学期+同上下半）：</div>'+
-      candHtml+
+      // 筛选器
+      '<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center">'+
+      '<span style="font-size:11px;color:#666">筛选：</span>'+
+      '<select id="tr-f-sem" style="font-size:12px;width:auto;padding:4px 8px" onchange="_filterTransferList()">'+semOpts+'</select>'+
+      '<select id="tr-f-half" style="font-size:12px;width:auto;padding:4px 8px" onchange="_filterTransferList()">'+halfOpts+'</select>'+
+      '<select id="tr-f-cls" style="font-size:12px;width:auto;padding:4px 8px" onchange="_filterTransferList()">'+clsOpts+'</select>'+
+      '<input id="tr-f-search" placeholder="🔍 搜课程代码 / 英文名" oninput="_filterTransferList()" style="font-size:12px;flex:1;min-width:180px;padding:5px 10px">'+
+      '<button class="btn btn-sm" onclick="_trMatchCurrent()" style="font-size:10px;padding:3px 8px;color:#534AB7;border-color:#AFA9EC" title="一键填入跟当前记录相同的学期/上下半/班级">📌 同当前</button>'+
+      '</div>'+
+      '<div style="font-size:11px;color:#888;margin-bottom:6px"><span id="tr-count">—</span></div>'+
+      '<div id="tr-list" style="max-height:320px;overflow-y:auto;background:#F8F8FA;padding:6px;border-radius:6px"></div>'+
       '</div>'+
       '<div class="modal-footer">'+
       '<button class="btn" data-action="cancel">取消</button>'+
@@ -1955,6 +1960,9 @@ function _showTransferDialog(cur,candidates){
       '</div>'+
       '</div>';
     document.body.appendChild(modal);
+    window._trCandidates=candidates;
+    window._trCur=cur;
+    _filterTransferList();
     modal.querySelectorAll('[data-action="cancel"]').forEach(b=>{
       b.onclick=()=>{document.body.removeChild(modal);resolve(null);};
     });
@@ -1966,6 +1974,44 @@ function _showTransferDialog(cur,candidates){
       resolve(id);
     };
   });
+}
+function _filterTransferList(){
+  const sem=document.getElementById('tr-f-sem').value;
+  const half=document.getElementById('tr-f-half').value;
+  const cls=document.getElementById('tr-f-cls').value;
+  const q=document.getElementById('tr-f-search').value.trim().toLowerCase();
+  const list=document.getElementById('tr-list');
+  const cntSpan=document.getElementById('tr-count');
+  if(!list)return;
+  let f=window._trCandidates||[];
+  if(sem) f=f.filter(r=>r.sem===sem);
+  if(half) f=f.filter(r=>r.half===half);
+  if(cls) f=f.filter(r=>r.cls===cls);
+  if(q) f=f.filter(r=>(r.course||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q));
+  if(!f.length){
+    list.innerHTML='<div style="text-align:center;color:#999;padding:24px;font-size:12px">没有符合条件的目标，请放宽筛选</div>';
+    cntSpan.textContent='0 笔';
+    return;
+  }
+  cntSpan.textContent=f.length+' 笔可选目标'+(window._trCandidates.length!==f.length?'（共 '+window._trCandidates.length+' 笔）':'');
+  list.innerHTML=f.map(c=>{
+    const ccTxt=c.cc.map(x=>x.cohort+'·'+x.count+'人').join(', ');
+    const tot=c.cc.reduce((s,x)=>s+(x.count||0),0);
+    return '<label style="display:block;padding:8px 12px;border:0.5px solid #ddd;border-radius:6px;margin-bottom:5px;cursor:pointer;background:#fff" onmouseover="this.style.background=\'#f8f8ff\'" onmouseout="this.style.background=\'#fff\'">'+
+      '<input type="radio" name="transfer-target" value="'+c.id+'" style="margin-right:8px">'+
+      '<b style="font-family:ui-monospace,monospace;color:#185FA5">'+eh(c.course)+'</b>'+
+      '<span style="font-size:10px;color:#888;margin-left:6px">'+eh(c.en||'')+'</span><br>'+
+      '<span style="font-size:11px;color:#666;margin-left:18px">'+eh(c.sem)+' · '+eh(c.half||'-')+' · '+eh(c.cls)+' · '+eh(c.tc||'未指定老师')+' · 共 '+tot+' 人</span><br>'+
+      '<span style="font-size:10px;color:#999;margin-left:18px">'+eh(ccTxt)+'</span>'+
+    '</label>';
+  }).join('');
+}
+function _trMatchCurrent(){
+  if(!window._trCur)return;
+  document.getElementById('tr-f-sem').value=window._trCur.sem||'';
+  document.getElementById('tr-f-half').value=window._trCur.half||'';
+  document.getElementById('tr-f-cls').value=window._trCur.cls||'';
+  _filterTransferList();
 }
 
 function mBuildDeptChips(){
