@@ -37,6 +37,9 @@ input[readonly]{color:#888;background:#f2f2f2}
 .btn-p{background:#534AB7;color:#fff;border-color:#534AB7}.btn-p:hover{background:#3C3489}
 .btn-sm{padding:5px 10px;font-size:11px}
 .btn-e{color:#185FA5;border-color:#B5D4F4;font-size:11px;padding:3px 8px}.btn-e:hover{background:#E6F1FB}
+.btn-ic{width:26px;height:26px;padding:0;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border:0.5px solid;background:transparent;line-height:1;margin:0 2px;font-family:inherit}
+.btn-ic-edit{color:#185FA5;border-color:#B5D4F4}
+.btn-ic-del{color:#a32d2d;border-color:#f7c1c1}
 .btn-ok{color:#3B6D11;border-color:#C0DD97;font-size:11px;padding:3px 8px}.btn-ok:hover{background:#EAF3DE}
 .btn-d{color:#a32d2d;border-color:#f7c1c1;font-size:11px;padding:3px 8px}.btn-d:hover{background:#FCEBEB}
 .sechdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem}
@@ -62,10 +65,10 @@ tr.ed td{background:#EEEDFE}
 tr:not(.ed):not(.dh):not(.dt):hover td{background:#fafafa}
 tr.dh td{background:#534AB7;color:#fff;font-weight:600;font-size:12px;padding:8px 9px}
 tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
-.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.badge,.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500;line-height:1.5;margin:1px;gap:3px}
 .b0{background:#E6F1FB;color:#0C447C}.b1{background:#EAF3DE;color:#3B6D11}.b2{background:#FAEEDA;color:#854F0B}
 .b3{background:#FAECE7;color:#993C1D}.b4{background:#F1EFE8;color:#444441}.b5{background:#EEEDFE;color:#3C3489}.b6{background:#E1F5EE;color:#0F6E56}
-.tag{display:inline-block;padding:1px 7px;border-radius:20px;font-size:11px;background:#f0f0f0;color:#666;margin:1px}
+.tag{background:#f0f0f0;color:#666}
 .es-sec{border:0.5px solid #ddd;border-radius:8px;padding:.875rem;margin-bottom:10px;background:#fafafa}
 .eg{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;margin-top:8px}
 .ei{display:flex;align-items:center;gap:4px;padding:4px 8px;border:0.5px solid #ddd;border-radius:6px;background:#fff;min-width:0}
@@ -77,10 +80,10 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 .fbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:.875rem;align-items:center}
 .fbar label{font-size:11px;color:#666;font-weight:500}
 .fbar select,.fbar input{width:auto;font-size:12px;padding:5px 8px}
-.mgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1rem}
+.mgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:.75rem}
 @media(max-width:600px){.mgrid{grid-template-columns:repeat(3,1fr)}}
-.mc{background:#fff;border:0.5px solid #e0e0e0;border-radius:10px;padding:.875rem;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-.mv{font-size:22px;font-weight:600;color:#534AB7}.ml{font-size:11px;color:#888;margin-top:3px}
+.mc{background:#fff;border:0.5px solid #e0e0e0;border-radius:8px;padding:8px 12px;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.04);display:flex;align-items:center;justify-content:center;gap:8px}
+.mv{font-size:17px;font-weight:600;color:#534AB7;line-height:1}.ml{font-size:11px;color:#888;line-height:1}
 .empty{text-align:center;padding:2rem;color:#999;font-size:12px}
 .ew{border:0.5px solid #AFA9EC;border-radius:8px;padding:7px;background:#EEEDFE;min-width:260px}
 .ei-g{max-height:130px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:3px}
@@ -90,7 +93,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 .tleg-i{display:flex;align-items:center;gap:5px;font-size:11px}
 .sem-cell{position:relative;cursor:default;padding:6px 14px!important}
 .sem-cell:hover .sem-tip{display:block}
-.sem-tip{display:none;position:absolute;top:110%;left:50%;transform:translateX(-50%);z-index:99;background:#fff;border:0.5px solid #ddd;border-radius:8px;padding:8px 12px;box-shadow:0 4px 16px rgba(0,0,0,.12);white-space:nowrap;margin-top:2px}
+.sem-tip{display:none;position:absolute;top:110%;left:50%;transform:translateX(-50%);z-index:99;background:#fff;border:0.5px solid #ddd;border-radius:8px;padding:10px 14px;box-shadow:0 4px 16px rgba(0,0,0,.12);white-space:nowrap;margin-top:2px;min-width:280px;text-align:left}
 .sem-val{font-size:15px;font-weight:600;color:#534AB7}
 .sem-zero{font-size:13px;color:#ccc}
 .tip-row{display:flex;gap:8px;align-items:center;margin-top:5px;font-size:12px}
@@ -133,8 +136,12 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   .header,.ref-bar,.tabs,.stabs,.fbar,
   .sechdr button,.sechdr .btn,.sechdr select,
   .btn,.btn-sm,.btn-p,.btn-e,.btn-ok,.btn-d,
-  .es-sec,.empty,.sem-tip,
+  .es-sec,.empty,
   .modal-overlay{display:none!important}
+  /* v7.9.9: 列印时 sem-tip 改成内嵌（不再是 hover 浮层） */
+  .sem-tip{display:block!important;position:static!important;transform:none!important;box-shadow:none!important;background:#fafafa!important;border:0.5px solid #ddd!important;margin-top:4px!important;padding:4pt 6pt!important;font-size:8pt!important;white-space:normal!important;line-height:1.4}
+  .sem-tip .tip-row{margin-top:2px;font-size:8pt}
+  .sem-tip .badge{font-size:7pt!important;padding:1pt 4pt!important}
   /* 列印时取消表格高度限制，完整展开 */
   .tbl-wrap{max-height:none!important;overflow:visible!important}
   .panel{display:none!important}
@@ -196,10 +203,10 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   .card{page-break-inside:avoid}
   tr.dh{page-break-after:avoid}
 
-  /* ── 预设：A4 直式（其他 tab）── */
+  /* ── 预设：A4 横向（所有 tab 统一）── */
   @page{
-    size:A4 portrait;
-    margin:15mm 15mm 18mm 15mm;
+    size:A4 landscape;
+    margin:12mm 14mm 14mm 14mm;
     @top-center{content:'CIC 本科排课管理系统';font-size:8pt;color:#999;}
     @bottom-right{content:'第 ' counter(page) ' 页，共 ' counter(pages) ' 页';font-size:7.5pt;color:#aaa;}
   }
@@ -233,6 +240,53 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 .sync-bar-inner.done{background:#3B6D11;width:100%}
 .sync-bar-inner.fail{background:#a32d2d;width:100%}
 @keyframes syncrun{0%{width:0%;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0%;margin-left:100%}}
+
+/* ── v7.9.3: Toast 通知 ── */
+.toast-container{position:fixed;bottom:18px;right:18px;z-index:10000;display:flex;flex-direction:column;gap:8px;pointer-events:none;max-width:360px}
+.toast{background:#fff;border:0.5px solid #e0e0e0;border-radius:8px;padding:10px 14px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.12);display:flex;align-items:center;gap:8px;pointer-events:auto;animation:toast-in .22s ease-out;min-width:240px}
+.toast.success{border-left:3px solid #16a34a}
+.toast.error{border-left:3px solid #dc2626}
+.toast.info{border-left:3px solid #2563eb}
+.toast.warn{border-left:3px solid #ea580c}
+.toast .toast-msg{flex:1;color:#111;line-height:1.4;font-size:12.5px}
+.toast .toast-icon{font-weight:700;font-size:14px;flex-shrink:0}
+.toast .toast-icon.success{color:#16a34a}
+.toast .toast-icon.error{color:#dc2626}
+.toast .toast-icon.info{color:#2563eb}
+.toast .toast-icon.warn{color:#ea580c}
+.toast button.retry{background:#f3f4f6;border:0.5px solid #d1d5db;border-radius:5px;padding:3px 10px;font-size:11px;cursor:pointer;color:#374151;font-weight:500;flex-shrink:0;font-family:inherit}
+.toast button.retry:hover{background:#e5e7eb}
+.toast button.dismiss{background:transparent;border:0;color:#9ca3af;cursor:pointer;font-size:18px;padding:0 4px;line-height:1;flex-shrink:0;font-family:inherit}
+.toast button.dismiss:hover{color:#374151}
+@keyframes toast-in{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ── 课程英文名 hover tooltip（立刻弹，不等 500ms 原生延迟）── */
+.cn-cell{position:relative}
+.cn-cell .cn-tip{display:none;position:absolute;top:calc(100% + 2px);left:0;z-index:200;background:#1f2937;color:#fff;padding:6px 10px;border-radius:6px;font-size:12.5px;font-weight:400;line-height:1.4;white-space:normal;max-width:380px;box-shadow:0 4px 14px rgba(0,0,0,.22);pointer-events:none}
+.cn-cell:hover .cn-tip{display:block}
+
+.ss-grid{display:flex;flex-direction:column;gap:12px;padding:4px 0}
+.ss-card{background:#fff;border:0.5px solid #e0e0e0;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);transition:box-shadow .15s}
+.ss-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.ss-card-h{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F5F4FE;border-bottom:0.5px solid #e0e0e0;flex-wrap:wrap;font-size:12.5px}
+.ss-num{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;background:#fff;border:0.5px solid #AFA9EC;color:#534AB7;font-size:10.5px;font-weight:600;border-radius:50%;flex-shrink:0;font-family:ui-monospace,monospace;padding:0 5px}
+.ss-name{font-size:14px;font-weight:600;color:#333}
+.ss-meta{font-size:11.5px;color:#666;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.ss-cnt{font-size:11.5px;color:#888}
+.ss-cnt strong{color:#534AB7;font-weight:600}
+.ss-card-b{padding:6px 14px 10px}
+.ss-course{padding:9px 0;border-bottom:0.5px dashed #eee}
+.ss-course:last-child{border-bottom:0}
+.ss-line1{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.ss-line2{font-size:11px;color:#666;margin-top:4px;padding-left:9px;line-height:1.5}
+.ss-line2 .ss-sep{color:#ccc;margin:0 5px}
+.ss-line2 .ss-note{color:#9a3412;background:#FAEEDA;padding:1px 6px;border-radius:4px;font-size:10.5px;margin-left:4px}
+.ss-stulist{margin-top:6px;padding-left:9px}
+.ss-stuitem{font-size:11.5px;color:#444;padding:3px 0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ss-stuitem .ss-stunum{color:#888;font-size:10.5px;min-width:18px;font-family:ui-monospace,monospace}
+.ss-stuitem code{font-size:10.5px;color:#888;font-family:ui-monospace,monospace}
+@keyframes toast-out{to{transform:translateX(20px);opacity:0}}
+.toast.fade-out{animation:toast-out .2s ease-in forwards}
 
 </style>
 </head>
@@ -328,8 +382,8 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <div class="g4">
         <div class="fg"><label>课程类型（自动检测）</label>
           <select id="s-tp">
-            <option value="正常">正常 ×1.0</option><option value="英文">英文 ×0.5</option>
-            <option value="实习">实习 ×1.0</option><option value="SG">SG/IS ×0.167</option><option value="Capstone">Capstone ×0.75</option>
+            <option value="正常">正常</option><option value="英文">英文</option>
+            <option value="CD-实习">CD-实习</option><option value="实习">实习</option><option value="SG">SG/IS</option><option value="Capstone">Capstone</option>
           </select>
         </div>
         <div class="fg"><label>班级代码</label>
@@ -381,10 +435,10 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <table><thead><tr>
         <th style="width:34px;text-align:center" title="勾选所有可见行"><input type="checkbox" id="sch-master-chk" onclick="toggleAllVisible('sch',this.checked)" style="cursor:pointer"></th>
         <th>#</th>
-        <th class="sort" onclick="sortSch('course')">课程代码 <span id="si-co">⇅</span></th>
-        <th>课程英文名</th><th>类型</th><th class="sort" onclick="sortSch('sem')">学期 <span id="si-sem">⇅</span></th>
+        <th class="sort" onclick="sortSch('course')">课程代码 / 类型 / 英文名 <span id="si-co">⇅</span></th>
+        <th class="sort" onclick="sortSch('sem')">学期 <span id="si-sem">⇅</span></th>
         <th class="sort" onclick="sortSch('half')">上下半 <span id="si-hl">⇅</span></th>
-        <th>班级</th><th>授课老师</th><th>届别（人数）</th><th>总人数</th><th>备注</th><th>BTEC</th><th>操作</th>
+        <th>班级</th><th>授课老师</th><th>届别（人数）</th><th class="sort" onclick="sortSch('total')">总人数 <span id="si-total">⇅</span></th><th>备注</th><th class="sort" onclick="sortSch('btec')">BTEC<span id="th-btec-count" style="font-size:10px;color:#cbd5e1;font-weight:400;margin-left:2px"></span> <span id="si-btec">⇅</span></th><th>操作</th>
       </tr></thead><tbody id="sch-tb"></tbody></table>
     </div>
     <div class="empty" id="sch-em">暂无排课记录</div>
@@ -457,7 +511,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <th>#</th>
         <th class="sort" onclick="sortSp('sid')">学号 <span id="si-sid">⇅</span></th>
         <th>学生称谓</th><th>学生姓名</th><th>学生专业</th>
-        <th>课程代码</th><th>课程英文名</th><th>班级</th><th>学期</th>
+        <th>课程代码 / 英文名</th><th>班级</th><th>学期</th>
         <th class="sort" onclick="sortSp('tc')">授课老师 <span id="si-tc">▼</span></th>
         <th>备注</th><th>操作</th>
       </tr></thead><tbody id="sp-tb"></tbody></table>
@@ -485,12 +539,12 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <label>学期</label>
       <select id="f-tc-s" onchange="renderTchr()"><option value="">全部</option></select>
       <label>课程类型</label>
-      <select id="f-tc-t" onchange="renderTchr()"><option value="">全部</option><option>正常</option><option>英文</option><option>实习</option><option>SG</option><option>Capstone</option></select>
+      <select id="f-tc-t" onchange="renderTchr()"><option value="">全部</option><option>正常</option><option>英文</option><option>CD-实习</option><option>实习</option><option>SG</option><option>Capstone</option></select>
     </div>
     <div class="card">
       <div class="ct" id="tc-ttl">任课老师课程总表</div>
       <div class="tbl-wrap">
-        <table><thead><tr><th>#</th><th>课程代码</th><th>课程英文名</th><th>类型</th><th>授课老师</th><th>班级</th><th>学期</th><th>上下半</th><th>总人数</th><th>备注</th><th>BTEC</th></tr></thead>
+        <table><thead><tr><th>#</th><th>课程代码 / 类型 / 英文名</th><th>授课老师</th><th>班级</th><th>学期</th><th>上下半</th><th>总人数</th><th>备注</th><th class="sort" onclick="sortTchr('btec')">BTEC <span id="si-tc-btec">⇅</span></th></tr></thead>
         <tbody id="tc-tb"></tbody></table>
       </div>
       <div class="empty" id="tc-em"></div>
@@ -507,7 +561,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     <div class="card">
       <div class="ct" id="co-ttl">班级课程总表</div>
       <div class="tbl-wrap">
-        <table id="co-table"><thead><tr><th>#</th><th>课程代码</th><th>课程英文名</th><th>类型</th><th>班级代码</th><th>学期</th><th>上下半</th><th>任课老师</th><th id="co-th-coh" style="display:none">届别</th></tr></thead>
+        <table id="co-table"><thead><tr><th>#</th><th>课程代码 / 类型 / 英文名</th><th>班级代码</th><th>学期</th><th>上下半</th><th>任课老师</th><th>备注</th><th id="co-th-coh" style="display:none">届别</th></tr></thead>
         <tbody id="co-tb"></tbody></table>
       </div>
       <div class="empty" id="co-em"></div>
@@ -522,10 +576,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     </div>
     <div class="card">
       <div class="ct">SG/IS 排课总表 · 学生维度</div>
-      <div class="tbl-wrap">
-        <table><thead><tr><th>#</th><th>学号</th><th>称谓</th><th>学生姓名</th><th>学生专业</th><th>特别课数</th><th>课程代码（班级）</th><th>课程英文名</th><th>授课老师</th><th>学期</th><th>备注</th></tr></thead>
-        <tbody id="ss-tb"></tbody></table>
-      </div>
+      <div id="ss-cards" class="ss-grid"></div>
       <div class="empty" id="ss-em">暂无数据</div>
     </div>
   </div>
@@ -539,10 +590,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     </div>
     <div class="card">
       <div class="ct">SG/IS 排课总表 · 老师维度</div>
-      <div class="tbl-wrap">
-        <table><thead><tr><th>#</th><th>课程代码</th><th>课程英文名</th><th>授课老师</th><th>学号</th><th>学生称谓</th><th>学生姓名</th><th>学生专业</th><th>学期</th><th>课程总人数</th></tr></thead>
-        <tbody id="st-tb"></tbody></table>
-      </div>
+      <div id="st-cards" class="ss-grid"></div>
       <div class="empty" id="st-em"></div>
     </div>
   </div>
@@ -555,11 +603,26 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     <label>学年筛选</label>
     <select id="sta-yr" onchange="renderSta()" style="width:auto;font-size:12px;padding:5px 8px"><option value="">— 请选择学年 —</option></select>
   </div>
+
+  <!-- v7.9.11: Top 10 可优先排课面板（可折叠）-->
+  <div id="sta-low-panel" style="display:none;background:#FFFBEB;border:0.5px solid #FDE68A;border-left:3px solid #F59E0B;border-radius:8px;padding:12px 16px;margin-bottom:14px">
+    <div style="font-size:13px;font-weight:600;color:#92400E;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span id="sta-low-toggle" onclick="toggleLowPanel()" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;user-select:none" title="点击展开/收起">
+        <span id="sta-low-arrow" style="display:inline-block;transition:transform .15s">🔻</span>
+        <span>可优先排课</span>
+      </span>
+      <select id="sta-low-dept" onchange="renderLowPanel()" style="font-size:11px;padding:2px 8px;border:0.5px solid #FDE68A;border-radius:5px;background:#fff;color:#92400E;font-weight:500;cursor:pointer;height:24px;width:auto;min-width:100px"><option value="">全本科</option></select>
+      <span style="font-size:11px;font-weight:400;color:#A16207">% 最低 10 位 · 点击跳到表格行</span>
+    </div>
+    <div id="sta-low-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px;margin-top:8px"></div>
+  </div>
+
   <div class="card">
     <div class="sechdr">
       <span class="ct" style="margin:0">各授课老师工作量</span>
       <div style="display:flex;gap:6px;align-items:center">
         <span style="font-size:11px;color:#888">BTEC/LA500 可直接在表格内填写，自动同步</span>
+        <button class="btn btn-sm no-print" onclick="showFormulaInfo()" style="color:#534AB7;border-color:#AFA9EC" title="查看工作量计算公式">ℹ️ 公式说明</button>
         <button class="btn btn-sm" onclick="renderSta()">↻ 刷新</button>
         <button class="btn btn-sm no-print" onclick="printPanel('sta')">🖨️ 列印</button>
       </div>
@@ -589,6 +652,74 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     <div class="empty" id="sta-em">暂无数据</div>
   </div>
 </div>
+
+<div id="formula-modal" style="display:none;position:fixed;inset:0;z-index:10000;align-items:center;justify-content:center">
+  <div onclick="closeFormulaModal()" style="position:absolute;inset:0;background:rgba(0,0,0,.45);cursor:pointer"></div>
+  <div style="position:relative;background:#fff;border-radius:12px;max-width:620px;width:92%;max-height:88vh;overflow:auto;padding:24px 28px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:inherit">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+      <div>
+        <h3 style="margin:0;font-size:16px;color:#333;font-weight:600">ℹ️ 教学工作量 · 计算公式</h3>
+        <div style="font-size:12px;color:#888;margin-top:3px">每个学期 · 每位老师的工作量怎么算</div>
+      </div>
+      <button onclick="closeFormulaModal()" style="background:transparent;border:0;font-size:20px;color:#888;cursor:pointer;line-height:1;padding:4px 8px;font-family:inherit">×</button>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:18px">
+      <thead>
+        <tr style="background:#534AB7;color:#fff">
+          <th style="text-align:left;padding:8px 12px;font-weight:600">课程类型</th>
+          <th style="text-align:left;padding:8px 12px;font-weight:600">权重 / 课</th>
+          <th style="text-align:left;padding:8px 12px;font-weight:600">说明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:0.5px solid #eee">
+          <td style="padding:8px 12px"><span class="badge b0">正常</span></td>
+          <td style="padding:8px 12px;font-family:ui-monospace,monospace">≤20 人 = 0.5<br>>20 人 = 1.0</td>
+          <td style="padding:8px 12px;color:#666">按总人数分档</td>
+        </tr>
+        <tr style="border-bottom:0.5px solid #eee">
+          <td style="padding:8px 12px"><span class="badge b6">英文</span></td>
+          <td style="padding:8px 12px;font-family:ui-monospace,monospace">≤20 人 = 0.25<br>>20 人 = 0.5</td>
+          <td style="padding:8px 12px;color:#666">英文课统一为正常课的一半</td>
+        </tr>
+        <tr style="border-bottom:0.5px solid #eee">
+          <td style="padding:8px 12px"><span class="badge b1">CD-实习</span></td>
+          <td style="padding:8px 12px;font-family:ui-monospace,monospace">人数 ÷ 20<br>封顶 1.0</td>
+          <td style="padding:8px 12px;color:#666">例：5 人 = 5/20 = 0.25 课</td>
+        </tr>
+        <tr style="border-bottom:0.5px solid #eee">
+          <td style="padding:8px 12px"><span class="badge b2">实习</span></td>
+          <td style="padding:8px 12px;font-family:ui-monospace,monospace">人数 ÷ 16<br>封顶 1.0</td>
+          <td style="padding:8px 12px;color:#666">例：5 人 = 5/16 ≈ 0.31 课</td>
+        </tr>
+        <tr style="border-bottom:0.5px solid #eee">
+          <td style="padding:8px 12px"><span class="badge b3">SG / IS</span></td>
+          <td style="padding:8px 12px;font-family:ui-monospace,monospace">≤6 学生 = 1/6 (0.167)<br>>6 学生 = 1/3 (0.333)</td>
+          <td style="padding:8px 12px;color:#666">按课程为单位<br>同门课多 1 个学生不另算<br>同一老师不同课分别算</td>
+        </tr>
+        <tr style="border-bottom:0.5px solid #eee">
+          <td style="padding:8px 12px"><span class="badge b5">Capstone</span></td>
+          <td style="padding:8px 12px;font-family:ui-monospace,monospace">0.75 / 课</td>
+          <td style="padding:8px 12px;color:#666">毕业项目固定权重</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="background:#F5F4FE;border-radius:8px;padding:12px 14px;margin-bottom:12px">
+      <div style="font-size:12.5px;font-weight:600;color:#3C3489;margin-bottom:6px">📊 学年总数 = 全部学期累加 + BTEC bonus + LA500 手填</div>
+      <div style="font-size:11.5px;color:#534AB7;line-height:1.7">
+        <strong>BTEC bonus</strong>：勾选 BTEC 的课，每门 +0.5（系统自动）<br>
+        <strong>LA500 手填</strong>：在表格内直接输入数字，立即同步
+      </div>
+    </div>
+    <div style="background:#FAEEDA;border-radius:8px;padding:10px 12px;font-size:11.5px;color:#854F0B;line-height:1.6">
+      <strong>⚠ 注意</strong>：CD-实习 是新增的课程类型。已存在的「实习」课程如果属于 CD 合作教育，需要手动编辑改成「CD-实习」才会用新公式（÷20）。
+    </div>
+    <div style="text-align:right;margin-top:14px">
+      <button onclick="closeFormulaModal()" class="btn">关闭</button>
+    </div>
+  </div>
+</div>
+
 </div><!-- /.app -->
 
 <!-- ══ 排课编辑 Modal ═══════════════════════ -->
@@ -607,8 +738,8 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <div class="fg"><label>课程英文名（自动）</label><input id="m-en" readonly placeholder="自动显示"></div>
         <div class="fg"><label>课程类型</label>
           <select id="m-tp">
-            <option value="正常">正常 ×1.0</option><option value="英文">英文 ×0.5</option>
-            <option value="实习">实习 ×1.0</option><option value="SG">SG/IS ×0.167</option><option value="Capstone">Capstone ×0.75</option>
+            <option value="正常">正常</option><option value="英文">英文</option>
+            <option value="CD-实习">CD-实习</option><option value="实习">实习</option><option value="SG">SG/IS</option><option value="Capstone">Capstone</option>
           </select>
         </div>
         <div class="fg"><label>BTEC 课程</label>
@@ -1081,14 +1212,40 @@ function updateRefBar(){
 }
 
 // ── 常数与状态 ────────────────────────────
-const WTS={正常:1,英文:.5,实习:1,SG:.167,Capstone:.75};
-const TB={正常:'b0',英文:'b6',实习:'b2',SG:'b3',Capstone:'b5'};
+// ── ℹ️ 教学工作量公式说明 modal ──────────
+function showFormulaInfo(){
+  const m=document.getElementById('formula-modal');
+  if(m){m.style.display='flex';document.body.style.overflow='hidden';}
+}
+function closeFormulaModal(){
+  const m=document.getElementById('formula-modal');
+  if(m){m.style.display='none';document.body.style.overflow='';}
+}
+window.showFormulaInfo=showFormulaInfo;
+window.closeFormulaModal=closeFormulaModal;
+// ESC 关 modal
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.getElementById('formula-modal');if(m&&m.style.display==='flex')closeFormulaModal();}});
+
+// v2 权重 — 按课程人数分档（正常/英文）或按人数 ÷ 上限封顶 1.0（CD-实习/实习）
+function courseWeight(type, students){
+  switch(type){
+    case '正常':    return students<=20 ? 0.5 : 1.0;
+    case '英文':    return students<=20 ? 0.25 : 0.5;
+    case 'CD-实习': return Math.min(students/20, 1.0);
+    case '实习':    return Math.min(students/16, 1.0);
+    case 'Capstone':return 0.75;
+    default: return 0;
+  }
+}
+// 旧 WTS 保留供兼容（其他地方可能引用），新计算不用它
+const WTS={正常:1,英文:.5,'CD-实习':1,实习:1,SG:.167,Capstone:.75};
+const TB={正常:'b0',英文:'b6','CD-实习':'b1',实习:'b2',SG:'b3',Capstone:'b5'};
 const CLSS=['601','602','603','604','605','331','332','333','Capstone-971','Capstone-972','Capstone-973','Capstone-974','Capstone-975','Capstone-976','Capstone-977','Capstone-978'];
 // v7.3: SEMS 仍保留作为内建 fallback，但实际使用的是动态读取的 S
 const DEFAULT_SEMS=['2569-1','2569-2','2569-3','2570-1','2570-2','2570-3'];
 let SEMS=[...DEFAULT_SEMS];   // 来自「学期列表」分页，loadRefFromSheets 会覆盖
 let schD=[],spD=[],selDpts=new Set(),btecD={};
-let schSK=null,schSD=1,spSK='tc',spSD=1;
+let schSK=null,schSD=1,spSK='tc',spSD=1,tchrSK=null,tchrSD=1;
 
 // ── 数据安全防护：加载失败时禁止写入，避免空数组覆盖整张 Sheet ──
 let loadOK=false;            // 启动时设 true，加载失败则保持 false
@@ -1286,6 +1443,8 @@ function tchrOptHTML(selectedName,placeholder){
   return html;
 }
 function sortSch(k){if(schSK===k)schSD=-schSD;else{schSK=k;schSD=1;}renderSch();}
+function sortTchr(k){if(tchrSK===k)tchrSD=-tchrSD;else{tchrSK=k;tchrSD=1;}renderTchr();}
+window.sortTchr=sortTchr;
 function sortSp(k){if(spSK===k)spSD=-spSD;else{spSK=k;spSD=1;}renderSp();}
 
 // ── 重建 UI ───────────────────────────────
@@ -1744,10 +1903,17 @@ function closeSchModal(){
 // saveES / collectEC 保留兼容（不再用于 modal，可忽略）
 function saveES(id){}
 function halfBadge(h){
-  if(h==='上半学期'||h==='上半')return'<span class="badge b0" style="font-size:10px">上半</span>';
-  if(h==='下半学期'||h==='下半')return'<span class="badge b2" style="font-size:10px">下半</span>';
-  if(h==='全学期')return'<span class="badge b6" style="font-size:10px">全学期</span>';
-  return'<span style="color:#bbb;font-style:italic;font-size:10px">待定</span>';
+  if(h==='上半学期'||h==='上半')return'<span class="badge b0">上半</span>';
+  if(h==='下半学期'||h==='下半')return'<span class="badge b2">下半</span>';
+  if(h==='全学期')return'<span class="badge b6">全学期</span>';
+  if(!h)return'<span style="color:#bbb;font-style:italic;font-size:10px">待定</span>';
+  return'<span class="badge b4">'+eh(h)+'</span>';
+}
+// v7.9.13: 学期按学期号上色（-1 蓝 / -2 紫 / -3 青）
+function semBadge(s){
+  const last=String(s||'').slice(-1);
+  const cls=last==='1'?'b0':last==='2'?'b5':last==='3'?'b6':'b4';
+  return'<span class="badge '+cls+'">'+eh(s||'')+'</span>';
 }
 // v7.1: 课程→专业 查询 + badge（资料来自「课程库」D 栏）
 // 配色：CA=蓝 CD=粉 FA=橘 TM=绿 IB=紫 GE=灰 IT=青 SE=蓝 IC=橘 EV=绿
@@ -1762,9 +1928,9 @@ const COHORT_COLOR={
   CD:{bg:'#FCE4EC',fg:'#C2185B'}, // 桃红
   IB:{bg:'#E3F2FD',fg:'#1565C0'}, // 蓝
   CA:{bg:'#F3E5F5',fg:'#6A1B9A'}, // 紫
-  EV:{bg:'#F1F8E9',fg:'#558B2F'}, // 黄绿
+  EV:{bg:'#FFE0B2',fg:'#BF360C'}, // 浅蜜桃（跟 TM 绿明显分开）
   IT:{bg:'#EFEBE9',fg:'#5D4037'}, // 咖啡
-  SC:{bg:'#FFF8E1',fg:'#B8860B'}  // 金
+  SC:{bg:'#B2DFDB',fg:'#00695C'}  // 浅薄荷（跟 FA 黄明显分开）
 };
 function cohortPrefix(cohort){
   const m=String(cohort||'').match(/^[A-Za-z]+/);
@@ -1773,8 +1939,11 @@ function cohortPrefix(cohort){
 function cohortTag(cohort,count){
   const c=COHORT_COLOR[cohortPrefix(cohort)];
   const style=c?'background:'+c.bg+';color:'+c.fg:'';
-  const txt=eh(cohort)+(count?' · '+count+'人':'');
-  return'<span class="tag" style="'+style+'">'+txt+'</span>';
+  // v7.9.6: 完全继承 .badge,.tag 统一尺寸，只覆盖颜色
+  const fullTxt=eh(cohort)+(count?' · '+count+'人':'');
+  const codeHtml='<span>'+eh(cohort)+'</span>';
+  const cntHtml=count?'<span style="opacity:.5;font-size:10px">▸</span><span>'+count+'</span>':'';
+  return'<span class="tag" style="'+style+'" title="'+fullTxt+'">'+codeHtml+cntHtml+'</span>';
 }
 function getCourseDept(courseCode){
   const f=C.find(x=>x.c===courseCode);
@@ -1783,7 +1952,7 @@ function getCourseDept(courseCode){
 function deptBadge(dept){
   if(!dept)return'<span style="color:#bbb;font-style:italic;font-size:10px">—</span>';
   const cls=DEPT_BADGE[dept]||'b4';
-  return'<span class="badge '+cls+'" style="font-size:10px">'+eh(dept)+'</span>';
+  return'<span class="badge '+cls+'">'+eh(dept)+'</span>';
 }
 // v7.3: 排课记录上方「课程代码」筛选下拉 —— 固定 13 项，与课程库 D 栏对应
 // 选中某项时严格匹配（GE 跟 GE-KE/GE-KH/GE-LA 分别独立筛选）
@@ -1855,6 +2024,8 @@ function renderSch(){
   const el_co=document.getElementById('si-co');if(el_co)el_co.innerHTML=siIcon('course',schSK,schSD);
   const el_sem=document.getElementById('si-sem');if(el_sem)el_sem.innerHTML=siIcon('sem',schSK,schSD);
   const el_hl=document.getElementById('si-hl');if(el_hl)el_hl.innerHTML=siIcon('half',schSK,schSD);
+  const el_btec=document.getElementById('si-btec');if(el_btec)el_btec.innerHTML=siIcon('btec',schSK,schSD);
+  const el_tot=document.getElementById('si-total');if(el_tot)el_tot.innerHTML=siIcon('total',schSK,schSD);
   if(!schD.length){tb.innerHTML='';em.style.display='block';return;}
   em.style.display='none';
   const semF=document.getElementById('sch-sem-f');
@@ -1871,22 +2042,33 @@ function renderSch(){
   if(schSK==='course')disp.sort((a,b)=>schSD*a.course.localeCompare(b.course));
   if(schSK==='sem')disp.sort((a,b)=>schSD*a.sem.localeCompare(b.sem));
   if(schSK==='half'){const ho={'上半学期':0,'上半':0,'下半学期':1,'下半':1,'全学期':2};disp.sort((a,b)=>schSD*((ho[a.half]??2)-(ho[b.half]??2)));}
+  if(schSK==='btec'){const isB=r=>r.btec===true||r.btec==='TRUE'||r.btec==='true'?1:0;disp.sort((a,b)=>schSD*(isB(b)-isB(a)));}
+  if(schSK==='total'){const tot=r=>(r.cc||[]).reduce((s,x)=>s+(x.count||0),0);disp.sort((a,b)=>schSD*(tot(b)-tot(a)));}
   // v7.9: 批量删除按钮 —— 只在「有筛选 + 结果不是全部 + N > 0」时显示
   _schFilteredIds=disp.map(r=>r.id);
   updateBatchDelButton('sch',disp.length,schD.length);
+  // v7.9.13: 表头 BTEC 数（届别/总人数 不显示统计）
+  let _btecN=0;
+  disp.forEach(r=>{if(r.btec===true||r.btec==='TRUE'||r.btec==='true')_btecN++;});
+  const _btecEl=document.getElementById('th-btec-count');
+  if(_btecEl)_btecEl.textContent=_btecN?'('+_btecN+')':'';
   tb.innerHTML=disp.map((r,i)=>{
     const tot=r.cc.reduce((s,x)=>s+(x.count||0),0);
-    const tags=r.cc.map(cc=>cohortTag(cc.cohort,cc.count)).join(''); // v7.2: 按系别上色
+    // v7.9.5: 届别按 dept 排序，同 dept 视觉成组
+    const ccSorted=[...r.cc].sort((a,b)=>{
+      const pa=cohortPrefix(a.cohort),pb=cohortPrefix(b.cohort);
+      return pa===pb ? String(a.cohort).localeCompare(String(b.cohort)) : pa.localeCompare(pb);
+    });
+    const tags=ccSorted.map(cc=>cohortTag(cc.cohort,cc.count)).join('');
     const _chk=_schSelected.has(String(r.id))?'checked':'';
-    return'<tr'+(_chk?' style="background:#FFF8E1"':'')+'><td style="text-align:center"><input type="checkbox" class="row-chk" '+_chk+' onclick="toggleRowSelect(\'sch\',\''+r.id+'\',this.checked)"></td><td>'+(i+1)+'</td><td><span class="badge b0">'+r.course+'</span></td>'+
-      '<td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+eh(r.en)+'">'+eh(r.en)+'</td>'+
-      '<td><span class="badge '+(TB[r.type]||'b4')+'">'+r.type+'</span></td>'+
-      '<td><span class="badge b4">'+r.sem+'</span></td><td>'+halfBadge(r.half)+'</td>'+
+    return'<tr'+(_chk?' style="background:#FFF8E1"':'')+'><td style="text-align:center"><input type="checkbox" class="row-chk" '+_chk+' onclick="toggleRowSelect(\'sch\',\''+r.id+'\',this.checked)"></td><td>'+(i+1)+'</td>'+
+      '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.course+'</span><span class="badge '+(TB[r.type]||'b4')+'" style="font-size:9.5px;padding:1px 6px;opacity:.85">'+r.type+'</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
+      '<td>'+semBadge(r.sem)+'</td><td>'+halfBadge(r.half)+'</td>'+
       '<td>'+r.cls+'</td><td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
-      '<td style="white-space:normal;min-width:120px">'+tags+'</td><td><strong>'+tot+'</strong></td>'+
-      '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td>'+
-      '<td>'+(r.btec===true||r.btec==='TRUE'||r.btec==='true'?'<span class="badge b4" style="font-size:10px">✓</span>':'—')+'</td>'+
-      '<td style="white-space:nowrap"><button class="btn btn-e" onclick="startES('+r.id+')">更动</button> <button class="btn btn-d" onclick="delSch('+r.id+')">删除</button></td></tr>';
+      '<td style="white-space:normal;min-width:340px;line-height:1.7">'+tags+'</td><td><strong>'+tot+'</strong></td>'+
+      '<td style="font-size:11px;color:#888;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"'+(r.nt?' title="'+eh(r.nt)+'"':'')+'>'+(r.nt?eh(r.nt):'')+'</td>'+
+      '<td>'+(r.btec===true||r.btec==='TRUE'||r.btec==='true'?'<span class="badge b4">✓</span>':'')+'</td>'+
+      '<td style="white-space:nowrap"><button class="btn-ic btn-ic-edit" onclick="startES('+r.id+')" title="更动"><svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zm.708 1.06L11.5 2.5l2 2L14.5 3.5 12.854 1.207zM10.5 3.5l-9 9 1.5 1.5 9-9-1.5-1.5z"/></svg></button><button class="btn-ic btn-ic-del" onclick="delSch('+r.id+')" title="删除"><svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H3.5V0a1 1 0 0 1 1-1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg></button></td></tr>';
   }).join('');
   if(typeof syncTblHeight==='function')syncTblHeight();
 }
@@ -2084,12 +2266,12 @@ function renderSp(){
     const _chk=_spSelected.has(String(r.id))?'checked':'';
     return'<tr'+(_chk?' style="background:#FFF8E1"':'')+'><td style="text-align:center"><input type="checkbox" class="row-chk" '+_chk+' onclick="toggleRowSelect(\'sp\',\''+r.id+'\',this.checked)"></td><td>'+(i+1)+'</td><td><code style="font-size:11px">'+eh(r.sid)+'</code></td>'+
       '<td><span class="badge b4">'+r.mr+'</span></td><td>'+eh(r.nm)+'</td>'+
-      '<td><span class="badge b4">'+r.mj+'</span></td><td><span class="badge b0">'+r.co+'</span></td>'+
-      '<td style="max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+eh(r.en)+'">'+eh(r.en)+'</td>'+
-      '<td>'+r.cls+'</td><td><span class="badge b4">'+r.sem+'</span></td>'+
+      '<td><span class="badge b4">'+r.mj+'</span></td>'+
+      '<td class="cn-cell" style="min-width:128px;max-width:192px"><span class="badge b0">'+r.co+'</span><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
+      '<td>'+r.cls+'</td><td>'+semBadge(r.sem)+'</td>'+
       '<td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
-      '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td>'+
-      '<td style="white-space:nowrap"><button class="btn btn-e" onclick="startESp('+r.id+')">更动</button> <button class="btn btn-d" onclick="delSp('+r.id+')">删除</button></td></tr>';
+      '<td style="font-size:11px;color:#888">'+(r.nt?eh(r.nt):'')+'</td>'+
+      '<td style="white-space:nowrap"><button class="btn-ic btn-ic-edit" onclick="startESp('+r.id+')" title="更动"><svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zm.708 1.06L11.5 2.5l2 2L14.5 3.5 12.854 1.207zM10.5 3.5l-9 9 1.5 1.5 9-9-1.5-1.5z"/></svg></button><button class="btn-ic btn-ic-del" onclick="delSp('+r.id+')" title="删除"><svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H3.5V0a1 1 0 0 1 1-1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg></button></td></tr>';
   }).join('');
 }
 function clearSpF(){
@@ -2129,23 +2311,27 @@ function renderTchr(){
   }
   if(!data.length&&!spRows.length){tb.innerHTML='';em.textContent='暂无符合条件的排课记录';em.style.display='block';return;}
   em.style.display='none';
+  // v7.9.14: BTEC 排序（只动 schRows 部分 — sg rows 没 btec 字段，永远摆最末）
+  if(tchrSK==='btec'){
+    const isB=r=>(r.btec===true||r.btec==='TRUE'||r.btec==='true')?1:0;
+    data.sort((a,b)=>tchrSD*(isB(b)-isB(a)));
+  }
+  const el_tc_btec=document.getElementById('si-tc-btec');
+  if(el_tc_btec)el_tc_btec.innerHTML=siIcon('btec',tchrSK,tchrSD);
   const schRows=data.map((r,i)=>{const tot=r.cc.reduce((s,x)=>s+(x.count||0),0);
-    return'<tr><td>'+(i+1)+'</td><td><span class="badge b0">'+r.course+'</span></td>'+
-      '<td style="max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en)+'</td>'+
-      '<td><span class="badge '+(TB[r.type]||'b4')+'">'+r.type+'</span></td>'+
+    return'<tr><td>'+(i+1)+'</td>'+
+      '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.course+'</span><span class="badge '+(TB[r.type]||'b4')+'" style="font-size:9.5px;padding:1px 6px;opacity:.85">'+r.type+'</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
       '<td style="font-size:11px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
-      '<td>'+r.cls+'</td><td><span class="badge b4">'+r.sem+'</span></td>'+
+      '<td>'+r.cls+'</td><td>'+semBadge(r.sem)+'</td>'+
       '<td>'+halfBadge(r.half)+'</td><td>'+(tot||'—')+'</td>'+
-      '<td style="font-size:11px;color:#888">'+eh(r.nt||'—')+'</td><td>'+(r.btec?'<span class="badge b4" style="font-size:10px">BTEC</span>':'—')+'</td></tr>';}).join('');
+      '<td style="font-size:11px;color:#888;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"'+(r.nt?' title="'+eh(r.nt)+'"':'')+'>'+(r.nt?eh(r.nt):'')+'</td><td>'+(r.btec?'<span class="badge b4">BTEC</span>':'')+'</td></tr>';}).join('');
   const sgRows=spRows.map((r,i)=>
     '<tr style="background:#FFF8F0"><td>'+(data.length+i+1)+'</td>'+
-    '<td><span class="badge b0">'+r.co+'</span></td>'+
-    '<td style="max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en)+'</td>'+
-    '<td><span class="badge b3">SG/IS</span></td>'+
+    '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.co+'</span><span class="badge b3" style="font-size:9.5px;padding:1px 6px;opacity:.85">SG/IS</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
     '<td style="font-size:11px;white-space:nowrap">'+eh(r.tc||'—')+'</td>'+
-    '<td>'+r.cls+'</td><td><span class="badge b4">'+r.sem+'</span></td>'+
+    '<td>'+r.cls+'</td><td>'+semBadge(r.sem)+'</td>'+
     '<td>—</td><td>'+r.stus.length+'</td>'+
-    '<td style="font-size:11px;color:#888">'+r.stus.map(s=>eh(s)).join('、')+'</td></tr>').join('');
+    '<td style="font-size:11px;color:#888;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+eh(r.stus.join('、'))+'">'+r.stus.map(s=>eh(s)).join('、')+'</td></tr>').join('');
   tb.innerHTML=schRows+sgRows;
 }
 function filterCohByDept(){
@@ -2164,11 +2350,11 @@ function renderCoh(){
   if(sem)data=data.filter(r=>r.sem===sem);
   if(!data.length){tb.innerHTML='';em.textContent='暂无符合条件的排课记录';em.style.display='block';return;}
   em.style.display='none';
-  tb.innerHTML=data.map((r,i)=>'<tr><td>'+(i+1)+'</td><td><span class="badge b0">'+r.course+'</span></td>'+
-    '<td style="max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en)+'</td>'+
-    '<td><span class="badge '+(TB[r.type]||'b4')+'">'+r.type+'</span></td>'+
-    '<td>'+r.cls+'</td><td><span class="badge b4">'+r.sem+'</span></td>'+
-    '<td>'+halfBadge(r.half)+'</td><td style="font-size:12px">'+eh(r.tc)+'</td></tr>').join('');
+  tb.innerHTML=data.map((r,i)=>'<tr><td>'+(i+1)+'</td>'+
+    '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.course+'</span><span class="badge '+(TB[r.type]||'b4')+'" style="font-size:9.5px;padding:1px 6px;opacity:.85">'+r.type+'</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
+    '<td>'+r.cls+'</td><td>'+semBadge(r.sem)+'</td>'+
+    '<td>'+halfBadge(r.half)+'</td><td style="font-size:11px">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
+    '<td style="font-size:11px;color:#888;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"'+(r.nt?' title="'+eh(r.nt)+'"':'')+'>'+(r.nt?eh(r.nt):'')+'</td></tr>').join('');
 }
 function renderSpStu(){
   const q=(document.getElementById('f-stu').value||'').toLowerCase();
@@ -2178,20 +2364,59 @@ function renderSpStu(){
   if(q)data=data.filter(r=>(r.nm+r.sid).toLowerCase().includes(q));
   if(mj)data=data.filter(r=>r.mj===mj);
   if(sem)data=data.filter(r=>r.sem===sem);
-  const tb=document.getElementById('ss-tb'),em=document.getElementById('ss-em');
-  if(!data.length){tb.innerHTML='';em.style.display='block';return;}em.style.display='none';
-  const map={};data.forEach(r=>{if(!map[r.sid])map[r.sid]={sid:r.sid,mr:r.mr,nm:r.nm,mj:r.mj,rows:[]};map[r.sid].rows.push(r);});
-  let idx=0;
-  tb.innerHTML=Object.values(map).map(s=>{idx++;
-    return'<tr><td>'+idx+'</td><td><code style="font-size:11px">'+eh(s.sid)+'</code></td>'+
-      '<td>'+s.mr+'</td><td>'+eh(s.nm)+'</td><td><span class="badge b4">'+s.mj+'</span></td>'+
-      '<td><strong>'+s.rows.length+'</strong></td>'+
-      '<td>'+s.rows.map(r=>'<span class="badge b0" style="margin:1px">'+r.co+'</span><span class="tag" style="margin:1px">'+r.cls+'</span>').join('<br>')+'</td>'+
-      '<td>'+s.rows.map(r=>'<span style="font-size:11px">'+eh(r.en)+'</span>').join('<br>')+'</td>'+
-      // FIX: 新增「授課老師」欄，每門課對齊顯示
-      '<td style="font-size:11px;white-space:nowrap">'+s.rows.map(r=>r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>').join('<br>')+'</td>'+
-      '<td>'+s.rows.map(r=>'<span class="badge b4" style="margin:1px">'+r.sem+'</span>').join('<br>')+'</td>'+
-      '<td style="font-size:11px;color:#888">'+(s.rows.filter(r=>r.nt).map(r=>r.nt).join('；')||'—')+'</td></tr>';}).join('');
+  const wrap=document.getElementById('ss-cards'),em=document.getElementById('ss-em');
+  if(!data.length){wrap.innerHTML='';em.style.display='block';return;}
+  em.style.display='none';
+  const map={};
+  data.forEach(r=>{
+    if(!map[r.sid])map[r.sid]={sid:r.sid,mr:r.mr,nm:r.nm,mj:r.mj,rows:[]};
+    map[r.sid].rows.push(r);
+  });
+  wrap.innerHTML=Object.values(map).map((s,idx)=>{
+    // v7.9.7: 共通信息上移到 header
+    const tc0=s.rows[0].tc,sem0=s.rows[0].sem,cls0=s.rows[0].cls;
+    const allSameTc=tc0&&s.rows.every(r=>r.tc===tc0);
+    const allSameSem=sem0&&s.rows.every(r=>r.sem===sem0);
+    const allSameCls=cls0&&s.rows.every(r=>r.cls===cls0);
+    // v7.9.8: shared 排序 — 学年 / 班级 / 老师
+    const sharedParts=[];
+    if(allSameSem)sharedParts.push(semBadge(sem0));
+    if(allSameCls)sharedParts.push('<span class="badge b4">'+eh(cls0)+'</span>');
+    if(allSameTc)sharedParts.push('<span style="font-size:12px;color:#444;font-weight:500">'+eh(tc0)+'</span>');
+    const sharedRow=sharedParts.length?'<div style="padding:7px 14px;background:#FAFAFD;border-bottom:0.5px solid #f0f0f0;display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+sharedParts.join('<span style="color:#ccc;font-size:10px">·</span>')+'</div>':'';
+    // v7.9.8: 专业用 COHORT_COLOR 上色（TM 绿 / FA 黄 / CD 桃红…）
+    const mjC=COHORT_COLOR[s.mj];
+    const mjStyle=mjC?'background:'+mjC.bg+';color:'+mjC.fg:'';
+    return '<div class="ss-card">'+
+      '<div class="ss-card-h">'+
+        '<span class="ss-num">'+(idx+1)+'</span>'+
+        '<span class="badge" style="'+mjStyle+'">'+eh(s.mj)+'</span>'+
+        '<span class="badge b4">'+s.mr+'</span>'+
+        '<span class="ss-name">'+eh(s.nm)+'</span>'+
+        '<code style="font-size:11px;color:#666;font-family:ui-monospace,monospace">'+eh(s.sid)+'</code>'+
+        '<span style="flex:1"></span>'+
+        '<span class="ss-cnt"><strong>'+s.rows.length+'</strong> 门 SG/IS</span>'+
+      '</div>'+
+      sharedRow+
+      '<div class="ss-card-b">'+
+        s.rows.map(r=>{
+          // v7.9.8: 课程行排序 — 学年 / 课程代码 / 班级 / 课程名 / 老师
+          const parts=[];
+          if(!allSameSem)parts.push(semBadge(r.sem));
+          parts.push('<span class="badge b0">'+r.co+'</span>');
+          if(!allSameCls)parts.push('<span class="badge b4">'+r.cls+'</span>');
+          parts.push('<span style="font-size:11.5px;color:#888;margin-left:4px">'+eh(r.en||'—')+'</span>');
+          if(!allSameTc)parts.push('<span style="font-size:11px;color:#666;margin-left:6px">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</span>');
+          return '<div class="ss-course">'+
+            '<div class="ss-line1">'+
+              parts.join('')+
+              (r.nt?'<span class="ss-note" style="margin-left:auto">'+eh(r.nt)+'</span>':'')+
+            '</div>'+
+          '</div>';
+        }).join('')+
+      '</div>'+
+    '</div>';
+  }).join('');
 }
 function filterSpTchrByDept(){
   const dept=document.getElementById('f-st-d').value;const el=document.getElementById('f-st');const cur=el.value;
@@ -2204,30 +2429,72 @@ function renderSpTchr(){
   const tc=document.getElementById('f-st').value;
   const sem=document.getElementById('f-st-s')?document.getElementById('f-st-s').value:'';
   const dept=document.getElementById('f-st-d')?document.getElementById('f-st-d').value:'';
-  const tb=document.getElementById('st-tb'),em=document.getElementById('st-em');
+  const wrap=document.getElementById('st-cards'),em=document.getElementById('st-em');
   let data=[...spD];
   if(tc)data=data.filter(r=>r.tc===tc);
   if(sem)data=data.filter(r=>r.sem===sem);
   if(dept&&!tc){const deptTchrs=T.filter(t=>t.d===dept).map(t=>t.n);data=data.filter(r=>deptTchrs.includes(r.tc));}
-  if(!data.length){tb.innerHTML='';em.textContent='暂无符合条件的 SG/IS 排课记录';em.style.display='block';return;}
+  if(!data.length){wrap.innerHTML='';em.textContent='暂无符合条件的 SG/IS 排课记录';em.style.display='block';return;}
   em.style.display='none';
-  const cm={};
-  data.forEach(r=>{const k=r.co+'|'+r.tc;if(!cm[k])cm[k]={co:r.co,en:r.en,tc:r.tc,stus:[]};cm[k].stus.push({sid:r.sid,mr:r.mr,nm:r.nm,mj:r.mj,sem:r.sem});});
-  let rowNum=0;
-  tb.innerHTML=Object.values(cm).map(x=>{
-    const n=x.stus.length;rowNum++;
-    return x.stus.map((s,si)=>'<tr>'+
-      (si===0?'<td rowspan="'+n+'" style="color:#bbb;font-size:11px">'+rowNum+'</td>'+
-        '<td rowspan="'+n+'"><span class="badge b0">'+x.co+'</span></td>'+
-        '<td rowspan="'+n+'" style="max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(x.en)+'</td>'+
-        '<td rowspan="'+n+'" style="font-size:12px;white-space:nowrap">'+eh(x.tc)+'</td>':'')+
-      '<td><code style="font-size:11px">'+eh(s.sid||'—')+'</code></td>'+
-      '<td><span class="badge b4" style="font-size:10px">'+eh(s.mr)+'</span></td>'+
-      '<td style="white-space:nowrap">'+eh(s.nm)+'</td>'+
-      '<td><span class="badge b4">'+eh(s.mj)+'</span></td>'+
-      '<td><span class="badge b4">'+eh(s.sem)+'</span></td>'+
-      (si===0?'<td rowspan="'+n+'"><strong>'+n+'</strong></td>':'')+
-      '</tr>').join('');
+  // 双层 group: 先按老师，再按课程
+  const teacherMap={};
+  data.forEach(r=>{
+    if(!teacherMap[r.tc])teacherMap[r.tc]={tc:r.tc,courses:{}};
+    const k=r.co+'|'+r.sem;
+    if(!teacherMap[r.tc].courses[k])teacherMap[r.tc].courses[k]={co:r.co,en:r.en,sem:r.sem,cls:r.cls,stus:[]};
+    teacherMap[r.tc].courses[k].stus.push({sid:r.sid,mr:r.mr,nm:r.nm,mj:r.mj});
+  });
+  wrap.innerHTML=Object.values(teacherMap).map((t,idx)=>{
+    const courses=Object.values(t.courses);
+    const totalStus=courses.reduce((s,c)=>s+c.stus.length,0);
+    // 共通 sem / cls 上移
+    const sem0=courses[0].sem,cls0=courses[0].cls;
+    const allSameSem=sem0&&courses.every(c=>c.sem===sem0);
+    const allSameCls=cls0&&courses.every(c=>c.cls===cls0);
+    const sharedParts=[];
+    if(allSameSem)sharedParts.push(semBadge(sem0));
+    if(allSameCls)sharedParts.push('<span class="badge b4">'+eh(cls0)+'</span>');
+    const sharedRow=sharedParts.length?'<div style="padding:7px 14px;background:#FAFAFD;border-bottom:0.5px solid #f0f0f0;display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+sharedParts.join('<span style="color:#ccc;font-size:10px">·</span>')+'</div>':'';
+    return '<div class="ss-card">'+
+      '<div class="ss-card-h">'+
+        '<span class="ss-num">'+(idx+1)+'</span>'+
+        '<span class="ss-name">'+eh(t.tc)+'</span>'+
+        '<span style="flex:1"></span>'+
+        '<span class="ss-cnt"><strong>'+courses.length+'</strong> 门</span>'+
+        '<span style="color:#ccc">·</span>'+
+        '<span class="ss-cnt"><strong>'+totalStus+'</strong> 学生人次</span>'+
+      '</div>'+
+      sharedRow+
+      '<div class="ss-card-b">'+
+        courses.map(c=>{
+          const variant=[];
+          if(!allSameCls)variant.push('<span class="badge b4">'+c.cls+'</span>');
+          if(!allSameSem)variant.push(semBadge(c.sem));
+          return '<div class="ss-course">'+
+            '<div class="ss-line1">'+
+              '<span class="badge b0">'+c.co+'</span>'+
+              variant.join('')+
+              '<span style="font-size:11.5px;color:#888;margin-left:'+(variant.length?'6px':'4px')+'">'+eh(c.en||'—')+'</span>'+
+              '<span style="flex:1"></span>'+
+              '<span class="ss-cnt"><strong>'+c.stus.length+'</strong> 人</span>'+
+            '</div>'+
+            '<div class="ss-stulist">'+
+              c.stus.map((s,si)=>{
+                const mjC=COHORT_COLOR[s.mj];
+                const mjStyle=mjC?'background:'+mjC.bg+';color:'+mjC.fg:'';
+                return '<div class="ss-stuitem">'+
+                  '<span class="ss-stunum">'+(si+1)+'.</span>'+
+                  '<span class="badge" style="'+mjStyle+'">'+eh(s.mj)+'</span>'+
+                  '<span class="badge b4">'+eh(s.mr)+'</span>'+
+                  '<span>'+eh(s.nm)+'</span>'+
+                  '<code>'+eh(s.sid)+'</code>'+
+                '</div>';
+              }).join('')+
+            '</div>'+
+          '</div>';
+        }).join('')+
+      '</div>'+
+    '</div>';
   }).join('');
 }
 function renderAllSum(){renderTchr();renderCoh();renderSpStu();renderSpTchr();}
@@ -2236,18 +2503,48 @@ function renderAllSum(){renderTchr();renderCoh();renderSpStu();renderSpTchr();}
 function semDetail(tc,sem){
   const sch=schD.filter(r=>r.tc===tc&&r.sem===sem);
   const sp=spD.filter(r=>r.tc===tc&&r.sem===sem);
-  const cnt={正常:0,英文:0,实习:0,SG:sp.length,Capstone:0};
-  sch.forEach(r=>cnt[r.type]=(cnt[r.type]||0)+1);
-  const wt=Math.round((cnt.正常*WTS.正常+cnt.英文*WTS.英文+cnt.实习*WTS.实习+cnt.SG*WTS.SG+cnt.Capstone*WTS.Capstone)*100)/100;
-  return{wt,cnt};
+  const cnt={正常:0,英文:0,'CD-实习':0,实习:0,SG:sp.length,Capstone:0};
+  const courses=[];
+  let wt=0;
+  sch.forEach(r=>{
+    if(r.type in cnt) cnt[r.type]=(cnt[r.type]||0)+1;
+    const stus=(r.cc||[]).reduce((s,x)=>s+(x.count||0),0);
+    const w=courseWeight(r.type,stus);
+    courses.push({code:r.course,type:r.type,students:stus,weight:Math.round(w*100)/100});
+    wt+=w;
+  });
+  // v7.9.10: SG 按课程为单位，按课程学生数选档
+  // ≤6 学生 → 课程权重 = 1/6 (0.167)
+  // >6 学生 → 课程权重 = 1/3 (0.333)
+  const sgByCourse={};
+  sp.forEach(r=>{
+    if(!sgByCourse[r.co])sgByCourse[r.co]={co:r.co,students:0};
+    sgByCourse[r.co].students++;
+  });
+  Object.values(sgByCourse).forEach(c=>{
+    const w=c.students<=6 ? 1/6 : 1/3;
+    courses.push({code:c.co,type:'SG',students:c.students,weight:Math.round(w*1000)/1000});
+    wt+=w;
+  });
+  wt=Math.round(wt*100)/100;
+  return{wt,cnt,courses};
 }
 function sdCells(d,bl){
   const s=bl?'border-left:1px solid #eee;':'';
   const hasData=d.wt>0;
-  const tipRows=[['正常',d.cnt.正常,'b0'],['英文',d.cnt.英文,'b6'],['实习',d.cnt.实习,'b2'],['SG',d.cnt.SG,'b3'],['Cap',d.cnt.Capstone,'b5']]
-    .filter(([,n])=>n>0).map(([k,n,b])=>'<div class="tip-row"><span class="badge '+b+'" style="font-size:10px">'+k+'</span><span>'+n+'门</span></div>').join('');
-  const tip=hasData?'<div class="sem-tip"><div style="color:#888;font-size:11px;margin-bottom:4px">课程细项</div>'+tipRows+'</div>':'';
-  return'<td class="sem-cell" style="text-align:center;'+s+'">'+(hasData?'<span class="sem-val">'+d.wt+'</span>':'<span class="sem-zero">—</span>')+tip+'</td>';
+  // v7.9.9: 逐课明细 — 课程代码 + 类型 + 人数 + 权重
+  const courseRows=(d.courses||[]).map(c=>{
+    const tb=TB[c.type]||'b4';
+    return '<div class="tip-row">'+
+      '<span class="badge '+tb+'" style="min-width:46px;text-align:center">'+c.type+'</span>'+
+      '<span style="font-family:ui-monospace,monospace;color:#185FA5;min-width:54px">'+c.code+'</span>'+
+      '<span style="color:#888;min-width:46px;text-align:right">'+c.students+' 人</span>'+
+      '<span style="color:#ccc">→</span>'+
+      '<span style="font-weight:600;color:#534AB7;min-width:34px;text-align:right">'+c.weight+'</span>'+
+    '</div>';
+  }).join('');
+  const tip=hasData?'<div class="sem-tip"><div style="color:#888;font-size:11px;margin-bottom:6px;font-weight:600;border-bottom:0.5px solid #eee;padding-bottom:4px">课程明细 · 合计 <span style="color:#534AB7;font-weight:700">'+d.wt+'</span></div>'+courseRows+'</div>':'';
+  return'<td class="sem-cell" style="text-align:center;vertical-align:top;'+s+'">'+(hasData?'<span class="sem-val">'+d.wt+'</span>':'<span class="sem-zero">—</span>')+tip+'</td>';
 }
 async function saveBtec(el){
   const name=el.dataset.name;const val=parseFloat(el.value)||0;btecD[name]=val;
@@ -2275,6 +2572,134 @@ async function saveBtec(el){
 // 读取：GET（无 preflight）
 // 写入：POST + text/plain（简单请求，无 preflight，GAS doPost 原生支持）
 
+// ════════════════════════════════════════════════════════
+// v7.9.3 Toast 通知系统：非阻塞、右下角、自动消失
+// 用法：showToast('已保存', {kind:'success'})
+//      showToast('失败', {kind:'error', onRetry: ()=>doIt()})
+// ════════════════════════════════════════════════════════
+function _ensureToastContainer(){
+  let c = document.getElementById('toast-container');
+  if(!c){
+    c = document.createElement('div');
+    c.id = 'toast-container';
+    c.className = 'toast-container';
+    document.body.appendChild(c);
+  }
+  return c;
+}
+function showToast(msg, opts){
+  opts = opts || {};
+  const kind = opts.kind || 'info';
+  const duration = opts.duration != null ? opts.duration : (kind === 'error' ? 8000 : 3000);
+  const c = _ensureToastContainer();
+  const t = document.createElement('div');
+  t.className = 'toast ' + kind;
+  const iconChar = kind === 'success' ? '✓' : kind === 'error' ? '✕' : kind === 'warn' ? '⚠' : 'ℹ';
+  const icon = document.createElement('span');
+  icon.className = 'toast-icon ' + kind;
+  icon.textContent = iconChar;
+  t.appendChild(icon);
+  const span = document.createElement('span');
+  span.className = 'toast-msg';
+  span.textContent = msg;
+  t.appendChild(span);
+  if(opts.onRetry){
+    const btn = document.createElement('button');
+    btn.className = 'retry';
+    btn.textContent = '🔁 重试';
+    btn.onclick = () => { t.remove(); try{opts.onRetry();}catch(e){console.error(e);} };
+    t.appendChild(btn);
+  }
+  const x = document.createElement('button');
+  x.className = 'dismiss';
+  x.textContent = '×';
+  x.title = '关闭';
+  x.onclick = () => { t.classList.add('fade-out'); setTimeout(()=>t.remove(), 200); };
+  t.appendChild(x);
+  c.appendChild(t);
+  if(duration > 0){
+    setTimeout(() => {
+      if(t.parentNode){ t.classList.add('fade-out'); setTimeout(()=>{ if(t.parentNode) t.remove(); }, 200); }
+    }, duration);
+  }
+  return t;
+}
+window.showToast = showToast;
+
+// ════════════════════════════════════════════════════════
+// v7.9.3 闲置自动恢复：窗口闲置 2 分钟回来 → 背后悄悄刷新数据
+// 避免「闲置太久 → 本地数据过期 → 上传被拒」的体验
+// ════════════════════════════════════════════════════════
+let _windowBlurredAt = null;
+window.addEventListener('blur', () => { _windowBlurredAt = Date.now(); });
+window.addEventListener('focus', async () => {
+  if(!_windowBlurredAt) return;
+  const idleMs = Date.now() - _windowBlurredAt;
+  _windowBlurredAt = null;
+  // 闲置 < 2 分钟 / 未配置 / 未成功载入过 → 不动
+  if(idleMs < 2 * 60 * 1000) return;
+  if(typeof SHEETS_URL === 'undefined' || !SHEETS_URL) return;
+  if(typeof loadOK === 'undefined' || !loadOK) return;
+  // 背后刷新数据
+  try{
+    const [r1, r2, r3] = await Promise.all([
+      gasGet({action:'read',type:'schedule'}),
+      gasGet({action:'read',type:'special'}),
+      gasGet({action:'read',type:'btec'})
+    ]);
+    if(r1 && r1.success && r1.data) schD = r1.data;
+    if(r2 && r2.success && r2.data) spD = r2.data;
+    if(r3 && r3.success && r3.data) btecD = r3.data;
+    if(typeof dataLoadTime !== 'undefined') dataLoadTime = Date.now();
+    if(typeof lastRemoteHash !== 'undefined') lastRemoteHash = hashRecords(schD);
+    if(typeof staleWarningShown !== 'undefined') staleWarningShown = false;
+    const b = document.getElementById('stale-banner');
+    if(b) b.style.display = 'none';
+    if(typeof renderSch === 'function') renderSch();
+    if(typeof renderSp === 'function') renderSp();
+    if(typeof renderAllSum === 'function') renderAllSum();
+    if(typeof renderSta === 'function') renderSta();
+    if(typeof updateFreshness === 'function') updateFreshness();
+    showToast('已自动刷新数据（闲置 ' + Math.round(idleMs/60000) + ' 分钟）', {kind:'info', duration:2500});
+  }catch(e){
+    console.warn('[auto-refresh on focus] failed:', e);
+  }
+});
+
+// ════════════════════════════════════════════════════════
+// v7.9.3 客户端自动重试：遇到「系统正忙」/ lock timeout
+// 自动后退 3 次（800ms / 1.5s / 2.5s）→ 99% 情况用户看不到错误
+// ════════════════════════════════════════════════════════
+function _isBusyError(r){
+  if(!r) return false;
+  const m = String(r.error || r.message || '');
+  return /系统正忙|多人同时|繁忙|หมดเวลา|กระบวนการ|ล็อก|lock timeout|advisory lock|could not obtain lock/i.test(m);
+}
+async function _retryOnBusy(fn, label){
+  const delays = [0, 800, 1500, 2500];  // 第一次立刻、然后 800/1500/2500ms
+  let lastResp;
+  for(let attempt = 0; attempt < delays.length; attempt++){
+    if(attempt > 0) await new Promise(r => setTimeout(r, delays[attempt]));
+    try{
+      const r = await fn();
+      if(_isBusyError(r) && attempt < delays.length - 1){
+        console.warn('[' + (label||'sync') + ' retry ' + (attempt+1) + '/' + (delays.length-1) + '] busy, waiting ' + delays[attempt+1] + 'ms...', r.error);
+        lastResp = r;
+        continue;
+      }
+      return r;
+    }catch(e){
+      lastResp = {success:false, error:e.message||String(e)};
+      if(_isBusyError(lastResp) && attempt < delays.length - 1){
+        console.warn('[' + (label||'sync') + ' retry ' + (attempt+1) + '/' + (delays.length-1) + '] network busy', e.message);
+        continue;
+      }
+      if(attempt === delays.length - 1) return lastResp;
+    }
+  }
+  return lastResp || {success:false, error:'系统繁忙，请稍后再试'};
+}
+
 async function gasGet(params){
   // v7.5: 自动带 token（除非 params 已指定）
   const p=Object.assign({},params);
@@ -2282,13 +2707,15 @@ async function gasGet(params){
   const qs=Object.entries(p)
     .map(([k,v])=>k+'='+encodeURIComponent(typeof v==='object'?JSON.stringify(v):String(v)))
     .join('&');
-  const res=await fetch(SHEETS_URL+'?'+qs,{cache:'no-store'});
-  const r=await res.json();
-  // v7.5: token 失效 → 强制重新登入
-  if(r&&r.error&&String(r.error).includes('UNAUTHORIZED')){
-    handleTokenExpired();
-  }
-  return r;
+  return _retryOnBusy(async () => {
+    const res=await fetch(SHEETS_URL+'?'+qs,{cache:'no-store'});
+    const r=await res.json();
+    // v7.5: token 失效 → 强制重新登入
+    if(r&&r.error&&String(r.error).includes('UNAUTHORIZED')){
+      handleTokenExpired();
+    }
+    return r;
+  }, params.action || 'GET');
 }
 
 // text/plain POST：不触发 preflight，数据量不受 URL 长度限制
@@ -2301,24 +2728,22 @@ async function fetchWrite(type,data){
     showSafeBanner('检测到本地数据为空，已拒绝同步避免清空 Sheet。请按「↓ 下载」从 Sheet 重新载入。');
     return false;
   }
-  try{
+  const r = await _retryOnBusy(async () => {
     const res=await fetch(SHEETS_URL,{
       method:'POST',
       headers:{'Content-Type':'text/plain'},
-      // v7.5 fix: 必须带 token 和 editor，否则 SCRIPT_SECRET 启用后会 UNAUTHORIZED
       body:JSON.stringify({action:'write',type:type,payload:data,token:currentToken||'',editor:currentEditor||''})
     });
-    const r=await res.json();
-    if(r.blocked==='EMPTY_PAYLOAD'){
-      writeLocked=true;
-      showSafeBanner('Apps Script 已拒绝空数组写入。这通常意味着本地数据丢失，请刷新或下载。');
-    }
-    // v7.5: token 失效 → 跳回登录
-    if(r&&r.error&&String(r.error).includes('UNAUTHORIZED')){
-      handleTokenExpired();
-    }
-    return r.success===true;
-  }catch(e){return false;}
+    return await res.json();
+  }, 'write-'+type);
+  if(r && r.blocked==='EMPTY_PAYLOAD'){
+    writeLocked=true;
+    showSafeBanner('Apps Script 已拒绝空数组写入。这通常意味着本地数据丢失，请刷新或下载。');
+  }
+  if(r && r.error && String(r.error).includes('UNAUTHORIZED')){
+    handleTokenExpired();
+  }
+  return r && r.success===true;
 }
 
 // ════════════════════════════════════════
@@ -2328,7 +2753,7 @@ async function fetchWrite(type,data){
 // ════════════════════════════════════════
 async function gasPost(action, body){
   if(!SHEETS_URL)return{success:false,error:'未配置 SHEETS_URL'};
-  try{
+  return _retryOnBusy(async () => {
     // v7.4: editor，v7.5: token —— 都自动带上（除非 body 已指定）
     const payload=Object.assign({action,editor:currentEditor||'',token:currentToken||''},body);
     const res=await fetch(SHEETS_URL,{
@@ -2341,7 +2766,7 @@ async function gasPost(action, body){
       handleTokenExpired();
     }
     return r;
-  }catch(e){return{success:false,error:e.message};}
+  }, action);
 }
 
 // v7.5: token 失效 → 静悄悄清掉本地状态，跳回 PIN 画面（不弹一堆讨厌的红色横条）
@@ -2611,6 +3036,18 @@ function renderSta(){
     [actT,'参与老师'],[schD.filter(r=>r.type==='Capstone').length,'Capstone课程']
   ].map(([v,l])=>'<div class="mc"><div class="mv">'+v+'</div><div class="ml">'+l+'</div></div>').join('');
   const depts=[...new Set(T.filter(t=>t.l>0).map(t=>t.d))].sort();
+  // v7.9.11: 先算所有老师的 % 用于 Top 10 面板
+  const allTeacherStats=[];
+  T.filter(t=>t.l>0).forEach(t=>{
+    const totalSems=yr?activeSems:['2569-1','2569-2','2569-3','2570-1','2570-2','2570-3'];
+    const totalWt=totalSems.reduce((s,sem)=>s+semDetail(t.n,sem).wt,0);
+    const btec=btecD[t.n]||0;
+    const btecCount=totalSems.reduce((s,sem)=>s+schD.filter(r=>r.tc===t.n&&r.sem===sem&&r.btec).length,0);
+    const btecWt=btecCount*0.5;
+    const yearTotal=Math.round((totalWt+btecWt+btec)*100)/100;
+    const pct=t.l>0?Math.round(yearTotal/t.l*100):0;
+    allTeacherStats.push({n:t.n,d:t.d,l:t.l,yearTotal,pct,k:t.n.replace(/[^a-zA-Z0-9]/g,'_')});
+  });
   let rows='';let hasData=false;
   depts.forEach(dept=>{
     const dTchrs=T.filter(t=>t.d===dept&&t.l>0).sort((a,b)=>a.n.localeCompare(b.n));
@@ -2633,7 +3070,7 @@ function renderSta(){
       dWt+=yearTotal;
       const pct=t.l>0?Math.round(yearTotal/t.l*100):0;
       const over=t.l>0&&yearTotal>t.l;
-      rows+='<tr>'+
+      rows+='<tr id="tr-'+k+'" style="transition:background .8s">'+
         '<td style="color:#bbb;font-size:11px">'+idx+'</td>'+
         '<td style="font-size:12px;white-space:nowrap">'+eh(t.n)+'</td>'+
         '<td style="font-size:11px;color:#888;white-space:nowrap">'+t.r+'</td>'+
@@ -2657,11 +3094,78 @@ function renderSta(){
       '<td style="text-align:center;border-left:1px solid #eee"><strong>'+Math.round(dWt*100)/100+'</strong></td>'+
       '<td colspan="5"></td></tr>';
   });
-  if(!yr){document.getElementById('sta-em').textContent='请先选择学年';document.getElementById('sta-em').style.display='block';document.getElementById('sta-tb').innerHTML='';return;}
-  if(!hasData){document.getElementById('sta-em').style.display='block';document.getElementById('sta-tb').innerHTML='';return;}
+  if(!yr){document.getElementById('sta-em').textContent='请先选择学年';document.getElementById('sta-em').style.display='block';document.getElementById('sta-tb').innerHTML='';document.getElementById('sta-low-panel').style.display='none';return;}
+  if(!hasData){document.getElementById('sta-em').style.display='block';document.getElementById('sta-tb').innerHTML='';document.getElementById('sta-low-panel').style.display='none';return;}
   document.getElementById('sta-em').style.display='none';
   document.getElementById('sta-tb').innerHTML=rows;
+  // v7.9.11: 缓存 + 填充专业下拉
+  window._staLowStats=allTeacherStats;
+  const deptSel=document.getElementById('sta-low-dept');
+  if(deptSel){
+    const prev=deptSel.value;
+    const uniqDepts=[...new Set(allTeacherStats.map(t=>t.d))].sort();
+    deptSel.innerHTML='<option value="">全本科</option>'+uniqDepts.map(d=>'<option value="'+eh(d)+'"'+(d===prev?' selected':'')+'>'+eh(d)+'</option>').join('');
+  }
+  renderLowPanel();
 }
+
+// v7.9.11: Top 10 可优先排课 — 渲染面板（独立函数，支持下拉刷新）
+function renderLowPanel(){
+  const stats=window._staLowStats||[];
+  const dept=document.getElementById('sta-low-dept')?.value||'';
+  const filtered=dept?stats.filter(t=>t.d===dept):stats;
+  const top10=filtered.slice().sort((a,b)=>a.pct-b.pct).slice(0,10);
+  const panel=document.getElementById('sta-low-panel');
+  const list=document.getElementById('sta-low-list');
+  if(!top10.length){panel.style.display='none';return;}
+  panel.style.display='block';
+  list.innerHTML=top10.map((t,i)=>{
+    const dColor=COHORT_COLOR[t.d];
+    const dStyle=dColor?'background:'+dColor.bg+';color:'+dColor.fg:'';
+    const pctColor=t.pct<50?'#1E40AF':t.pct<80?'#0369A1':t.pct<=110?'#15803D':t.pct<=130?'#C2410C':'#B91C1C';
+    const pctBg=t.pct<50?'#DBEAFE':t.pct<80?'#E0F2FE':t.pct<=110?'#DCFCE7':t.pct<=130?'#FED7AA':'#FECACA';
+    return '<div onclick="jumpToTeacherRow(\''+t.k+'\')" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 9px;background:#fff;border-radius:6px;border:0.5px solid #FDE68A;transition:transform .12s" onmouseover="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 2px 6px rgba(0,0,0,.08)\'" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'+
+      '<span style="font-size:11px;color:#888;min-width:18px;font-family:ui-monospace,monospace">'+(i+1)+'.</span>'+
+      '<span class="badge" style="'+dStyle+';font-size:9.5px;padding:1px 6px">'+eh(t.d)+'</span>'+
+      '<span style="font-size:12px;color:#333;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(t.n)+'</span>'+
+      '<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:'+pctBg+';color:'+pctColor+';white-space:nowrap">'+t.pct+'% / '+t.l+'</span>'+
+    '</div>';
+  }).join('');
+}
+window.renderLowPanel=renderLowPanel;
+
+// v7.9.11: 跳到老师行 + 短暂高亮
+function jumpToTeacherRow(k){
+  const row=document.getElementById('tr-'+k);
+  if(!row)return;
+  row.scrollIntoView({behavior:'smooth',block:'center'});
+  row.style.background='#FEF3C7';
+  setTimeout(()=>{row.style.background='';},2200);
+}
+window.jumpToTeacherRow=jumpToTeacherRow;
+
+// v7.9.12: 折叠 Top 10 面板（状态存 localStorage）
+function toggleLowPanel(){
+  const list=document.getElementById('sta-low-list');
+  const arrow=document.getElementById('sta-low-arrow');
+  if(!list||!arrow)return;
+  const isHidden=list.style.display==='none';
+  list.style.display=isHidden?'grid':'none';
+  arrow.style.transform=isHidden?'':'rotate(-90deg)';
+  try{localStorage.setItem('cic_lowpanel_collapsed',isHidden?'0':'1');}catch(e){}
+}
+window.toggleLowPanel=toggleLowPanel;
+// 启动时恢复折叠状态
+document.addEventListener('DOMContentLoaded',()=>{
+  try{
+    if(localStorage.getItem('cic_lowpanel_collapsed')==='1'){
+      const list=document.getElementById('sta-low-list');
+      const arrow=document.getElementById('sta-low-arrow');
+      if(list)list.style.display='none';
+      if(arrow)arrow.style.transform='rotate(-90deg)';
+    }
+  }catch(e){}
+});
 
 // ── JSON 导出/导入 ────────────────────────
 function exportData(){
@@ -2708,7 +3212,7 @@ function setSyncStatus(msg,ok){
 // 改成「从云端拉最新」—— 0.5-1 秒、永不会失败、能看到其他老师的编辑
 // 你自己的编辑早就在按 ✓ 储存当下就 per-record 同步好了，不需要再「推一次」
 async function syncAll(){
-  if(!SHEETS_URL){alert('请先配置 SHEETS_URL');return;}
+  if(!SHEETS_URL){showToast('请先配置 SHEETS_URL', {kind:'error'});return;}
   setSyncStatus('⏳ 正在从云端刷新…','');
   try{
     // 并行抓 3 份：schedule + special + btec
@@ -2726,41 +3230,55 @@ async function syncAll(){
     dataLoadTime=Date.now();
     lastRemoteHash=hashRecords(schD);
     deletedIds.schedule.clear();deletedIds.special.clear();
-    // 隐藏可能的「云端有改动」黄色警告
     staleWarningShown=false;
     const b=document.getElementById('stale-banner');if(b)b.style.display='none';
     renderSch();renderSp();renderAllSum();renderSta();updateFreshness();
     const t=new Date().toLocaleTimeString();
     setSyncStatus('✅ 已刷新 '+t+'（'+schD.length+' 排课 / '+spD.length+' IS-SG）',true);
+    showToast('已刷新 · ' + schD.length + ' 排课 / ' + spD.length + ' IS-SG', {kind:'success', duration:2500});
   }catch(e){
     setSyncStatus('❌ 刷新失败：'+e.message,false);
-    alert('❌ 刷新失败：'+e.message);
+    showToast('刷新失败：' + e.message, {kind:'error', onRetry:()=>syncAll()});
   }
 }
 
 async function syncToSheets(type){
-  if(!SHEETS_URL){alert('请先配置 SHEETS_URL');return;}
+  if(!SHEETS_URL){showToast('请先配置 SHEETS_URL', {kind:'error'});return;}
   const data=type==='schedule'?schD:spD;
   setSyncStatus('⏳ 正在同步…','');
   try{
     const ok=await fetchWrite(type,data);
     const t=new Date().toLocaleTimeString();
     setSyncStatus(ok?'✅ 已同步 '+t:'❌ 同步失败',ok);
-    ok?alert('✅ 上传成功！'):alert('❌ 上传失败');
-  }catch(e){setSyncStatus('❌ 连线失败',false);alert('❌ 连线失败');}
+    if(ok){
+      showToast('已上传 ' + (data.length||0) + ' 条 · ' + t, {kind:'success', duration:2500});
+    }else{
+      showToast('上传失败 — 网络或服务器繁忙', {kind:'error', onRetry:()=>syncToSheets(type)});
+    }
+  }catch(e){
+    setSyncStatus('❌ 连线失败',false);
+    showToast('连线失败：' + e.message, {kind:'error', onRetry:()=>syncToSheets(type)});
+  }
 }
 
 async function syncFromSheets(type){
-  if(!SHEETS_URL){alert('请先配置 SHEETS_URL');return;}
+  if(!SHEETS_URL){showToast('请先配置 SHEETS_URL', {kind:'error'});return;}
   // FIX: 下載會覆蓋本地，給使用者一個煞車
   const local=type==='schedule'?schD.length:spD.length;
   const label=type==='schedule'?'排課記錄':'IS/SG 排課';
   if(!confirm('⚠️ 從 Google Sheets 下載「'+label+'」會覆蓋本地目前的 '+local+' 條資料。\n\n如果有未上傳的編輯會遺失。\n\n確定下載？'))return;
-  try{const r=await gasGet({action:'read',type:type});
-    if(r.success){if(type==='schedule')schD=r.data;else spD=r.data;
-      renderSch();renderSp();renderAllSum();renderSta();alert('✅ 下载成功！'+r.data.length+'条记录');
-    }else alert('❌ 下载失败：'+r.error);
-  }catch(e){alert('❌ 连线失败');}
+  try{
+    const r=await gasGet({action:'read',type:type});
+    if(r && r.success){
+      if(type==='schedule')schD=r.data;else spD=r.data;
+      renderSch();renderSp();renderAllSum();renderSta();
+      showToast('下载成功 · ' + r.data.length + ' 条记录', {kind:'success', duration:2500});
+    }else{
+      showToast('下载失败：' + ((r && r.error) || 'unknown'), {kind:'error', onRetry:()=>syncFromSheets(type)});
+    }
+  }catch(e){
+    showToast('连线失败：' + e.message, {kind:'error', onRetry:()=>syncFromSheets(type)});
+  }
 }
 
 // ── 标签切换 ──────────────────────────────
@@ -3027,12 +3545,11 @@ function onCsvFileChosen(ev){
     CSV_HEADERS.forEach(h=>colIdx[h]=headers.indexOf(h));
     _csvParsed=rows.slice(1).map((r,i)=>parseAndValidateRow(r,colIdx,i+2));
 
-    // ── 重复检测（4 字段：课程+学期+上下半+班级）──
-    // dupKind: 'none' | 'csv' | 'sheet' | 'both'
+    // ── 重复检测（4 字段：课程+学期+上下半+班级）+ v8.2 智能填充老师 ──
     _csvParsed.forEach((p,i)=>{
       p.dupKind='none';p.csvSiblings=[];p.sheetMatchId=null;p.action='merge';
-      p.include=true;  // v8.2：默认导入，用户可在预览取消勾选
-      if(p.errors.length){p.include=false;return;}  // 有 error 不能导入
+      p.include=true;
+      if(p.errors.length){p.include=false;return;}
       const k=_dupKey(p.record);
       _csvParsed.forEach((q,j)=>{
         if(i===j)return;
@@ -3044,14 +3561,12 @@ function onCsvFileChosen(ev){
       if(sheetMatch && p.csvSiblings.length) p.dupKind='both';
       else if(sheetMatch) p.dupKind='sheet';
       else if(p.csvSiblings.length) p.dupKind='csv';
-
-      // ── v8.2 · A · 智能填充老师 ──
-      if(!p.record.tc){  // 老师空白
+      // v8.2 · A · 智能填充老师
+      if(!p.record.tc){
         if(sheetMatch && sheetMatch.tc){
           p.record.tc = sheetMatch.tc;
-          p.tcAutoFilled = true;  // 标记此行老师是自动填充的
+          p.tcAutoFilled = true;
         } else {
-          // 没有现有匹配 → 必填
           p.errors.push('老师空白且 Sheet 无匹配，请补填老师');
           p.include = false;
         }
@@ -3090,8 +3605,6 @@ function parseAndValidateRow(row,colIdx,lineNum){
   if(half&&!['全学期','上半学期','下半学期'].includes(half))warnings.push('上下半「'+half+'」不在预设值');
   if(!cls)errors.push('班级必填');
   if(!cc.length)errors.push('至少需要一个届别+人数');
-  // v8.2：老师空白时智能填充（在 onCsvFileChosen 的 dup 检测阶段处理）
-  // 这里只检查"有值但不在库"的情况
   if(tc&&!T.find(x=>x.n===tc))warnings.push('老师「'+tc+'」不在老师库（可能拼错）');
   cc.forEach((x)=>{
     const allCoh=Object.values(CBD).flat();
@@ -3150,16 +3663,19 @@ function buildCsvPreview(){
     const icon=p.errors.length?'🔴':(isDup?'🔁':(p.warnings.length?'🟡':'🟢'));
     const bg=p.errors.length?'#FEF2F2':(isDup?'#FEF3C7':(p.warnings.length?'#FFFBEB':''));
     const r=p.record;
+    // 届别用可换行 chip 渲染，避免长串溢出遮盖右侧列
     const ccChips=r.cc.length
       ? r.cc.map(c=>'<span style="display:inline-block;padding:1px 6px;margin:1px;background:#EEF;border:0.5px solid #CCE;border-radius:10px;font-size:10px;white-space:nowrap">'+eh(c.cohort)+'·'+c.count+'人</span>').join('')
       : '—';
     const probs=[...p.errors.map(e=>'❌ '+e),...p.warnings.map(w=>'⚠️ '+w)].join('<br>');
 
+    // 重复来源描述
     let dupSrc='—';
     if(p.dupKind==='sheet') dupSrc='📋 Sheet 已有';
     else if(p.dupKind==='csv') dupSrc='📄 文件内重复 '+(p.csvSiblings.length+1)+' 行';
     else if(p.dupKind==='both') dupSrc='📋📄 双重重复';
 
+    // 处理方式下拉（只在 dup 时显示）
     let actionCell='—';
     if(isDup){
       actionCell=
@@ -3172,14 +3688,12 @@ function buildCsvPreview(){
 
     // v8.2 · 导入勾选框
     const includeCheckbox = p.errors.length
-      ? '<span style="color:#ccc">—</span>'  // error 行不能勾
+      ? '<span style="color:#ccc">—</span>'
       : '<input type="checkbox" '+(p.include?'checked':'')+' onchange="toggleCsvRowInclude('+idx+');buildCsvPreview();" style="cursor:pointer">';
-
-    // 老师自动填充标记
+    // v8.2 · 老师自动填充标记
     const tcDisplay = r.tc
       ? (p.tcAutoFilled ? eh(r.tc)+' <span style="font-size:9px;color:#534AB7;background:#EEEDFE;padding:1px 4px;border-radius:6px;margin-left:2px">自动填</span>' : eh(r.tc))
       : '—';
-
     html.push('<tr style="background:'+bg+';'+(!p.include?'opacity:0.5':'')+'"><td style="text-align:center">'+includeCheckbox+'</td>');
     html.push('<td style="padding:4px 8px;text-align:center">'+icon+'</td>');
     html.push('<td style="color:#999">'+p.line+'</td>');
@@ -3214,11 +3728,10 @@ function csvBulkSetAction(val){
   _csvParsed.forEach(p=>{if(!p.errors.length && p.dupKind!=='none') p.action=val;});
   buildCsvPreview();
 }
-// v8.2 · 切换某行是否导入
+// v8.2 · 切换某行是否导入 + 全选/全不选
 function toggleCsvRowInclude(idx){
   if(_csvParsed[idx] && !_csvParsed[idx].errors.length) _csvParsed[idx].include = !_csvParsed[idx].include;
 }
-// v8.2 · 全选/全不选
 function csvSetAllInclude(val){
   _csvParsed.forEach(p=>{if(!p.errors.length) p.include = val;});
   buildCsvPreview();
@@ -3226,7 +3739,7 @@ function csvSetAllInclude(val){
 
 // 计算最终写入操作数
 function _calcCsvOps(){
-  // v8.2：只算「无 error 且 include=true」的行
+  // v8.2：只算「无 error 且 include=true」
   const valid=_csvParsed.filter(x=>!x.errors.length && x.include);
   const unchecked=_csvParsed.filter(x=>!x.errors.length && !x.include).length;
   let writes=0,merges=0,skips=0;
@@ -3417,10 +3930,10 @@ function onCsvSpFileChosen(ev){
     CSV_SP_HEADERS.forEach(h=>colIdx[h]=headers.indexOf(h));
     _csvSpParsed=rows.slice(1).map((r,i)=>parseAndValidateSpRow(r,colIdx,i+2));
 
-    // ── 重复检测（4 字段：学号+课程+学期+班级）──
+    // ── 重复检测（4 字段：学号+课程+学期+班级）+ v8.2 智能填充老师 ──
     _csvSpParsed.forEach((p,i)=>{
       p.dupKind='none';p.csvSiblings=[];p.sheetMatchId=null;p.action='skip';
-      p.include=true;  // v8.2 默认导入
+      p.include=true;
       if(p.errors.length){p.include=false;return;}
       const k=_dupKeySp(p.record);
       _csvSpParsed.forEach((q,j)=>{
@@ -3433,7 +3946,6 @@ function onCsvSpFileChosen(ev){
       if(sheetMatch && p.csvSiblings.length) p.dupKind='both';
       else if(sheetMatch) p.dupKind='sheet';
       else if(p.csvSiblings.length) p.dupKind='csv';
-
       // v8.2 · A · 智能填充老师
       if(!p.record.tc){
         if(sheetMatch && sheetMatch.tc){
@@ -3473,7 +3985,6 @@ function parseAndValidateSpRow(row,colIdx,lineNum){
   if(!sem)errors.push('学期必填');
   else if(!SEMS.includes(sem))warnings.push('学期「'+sem+'」不在学期列表');
   if(cls!=='IS-222'&&cls!=='SG-222')warnings.push('班级「'+cls+'」不是 IS-222 或 SG-222');
-  // v8.2：老师空白由智能填充处理（在 onCsvSpFileChosen 阶段）
   if(tc&&!T.find(x=>x.n===tc))warnings.push('老师「'+tc+'」不在老师库');
 
   let en='';
@@ -3548,12 +4059,10 @@ function buildCsvSpPreview(){
     const includeCheckbox = p.errors.length
       ? '<span style="color:#ccc">—</span>'
       : '<input type="checkbox" '+(p.include?'checked':'')+' onchange="toggleCsvSpRowInclude('+idx+');buildCsvSpPreview();" style="cursor:pointer">';
-
-    // 老师自动填充标记
+    // v8.2 · 老师自动填充标记
     const tcDisplay = r.tc
       ? (p.tcAutoFilled ? eh(r.tc)+' <span style="font-size:9px;color:#534AB7;background:#EEEDFE;padding:1px 4px;border-radius:6px;margin-left:2px">自动填</span>' : eh(r.tc))
       : '—';
-
     html.push('<tr style="background:'+bg+';'+(!p.include?'opacity:0.5':'')+'"><td style="text-align:center">'+includeCheckbox+'</td>');
     html.push('<td style="padding:4px 8px;text-align:center">'+icon+'</td>');
     html.push('<td style="color:#999">'+p.line+'</td>');
@@ -3570,6 +4079,7 @@ function buildCsvSpPreview(){
   html.push('</tbody></table></div>');
   wrap.innerHTML=html.join('');
 
+  // 计算最终写入操作数
   const ops=_calcCsvSpOps();
   const btn=document.getElementById('csv-sp-import-btn');
   if(ops.totalWrites===0){btn.disabled=true;btn.textContent='没有勾选要导入的记录';}
@@ -3586,7 +4096,7 @@ function csvSpBulkSetAction(val){
   _csvSpParsed.forEach(p=>{if(!p.errors.length && p.dupKind!=='none') p.action=val;});
   buildCsvSpPreview();
 }
-// v8.2 · 切换某行是否导入 + 全选/全不选
+// v8.2 · IS/SG 切换某行是否导入 + 全选/全不选
 function toggleCsvSpRowInclude(idx){
   if(_csvSpParsed[idx] && !_csvSpParsed[idx].errors.length) _csvSpParsed[idx].include = !_csvSpParsed[idx].include;
 }
@@ -3600,6 +4110,8 @@ function _calcCsvSpOps(){
   const valid=_csvSpParsed.filter(x=>!x.errors.length && x.include);
   const unchecked=_csvSpParsed.filter(x=>!x.errors.length && !x.include).length;
   let adds=0,overwrites=0,skips=0;
+  // 文件内 dup 用 overwrite：只算 1 次覆盖（最后一行 wins）；append：每行都算 1 次新增
+  // 简化：每行根据 action 各自计数；csv 内 dup + overwrite 的话，重复组里最后一行覆盖前面的，前面的视为 skip
   const overwriteSeenKey=new Set();
   valid.forEach(p=>{
     if(p.dupKind==='none'){adds++;return;}
@@ -3607,6 +4119,7 @@ function _calcCsvSpOps(){
     if(p.action==='append'){adds++;return;}
     if(p.action==='overwrite'){
       const k=_dupKeySp(p.record);
+      // CSV 内多行同 key，只算最后一次 overwrite
       if(overwriteSeenKey.has(k)){skips++;return;}
       overwriteSeenKey.add(k);
       overwrites++;
