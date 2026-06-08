@@ -674,12 +674,12 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <tbody>
         <tr style="border-bottom:0.5px solid #eee">
           <td style="padding:8px 12px"><span class="badge b0">正常</span></td>
-          <td style="padding:8px 12px;font-family:ui-monospace,monospace">≤20 人 = 0.5<br>>20 人 = 1.0</td>
+          <td style="padding:8px 12px;font-family:ui-monospace,monospace"><20 人 = 0.5<br>≥20 人 = 1.0</td>
           <td style="padding:8px 12px;color:#666">按总人数分档</td>
         </tr>
         <tr style="border-bottom:0.5px solid #eee">
           <td style="padding:8px 12px"><span class="badge b6">英文</span></td>
-          <td style="padding:8px 12px;font-family:ui-monospace,monospace">≤20 人 = 0.25<br>>20 人 = 0.5</td>
+          <td style="padding:8px 12px;font-family:ui-monospace,monospace"><20 人 = 0.25<br>≥20 人 = 0.5</td>
           <td style="padding:8px 12px;color:#666">英文课统一为正常课的一半</td>
         </tr>
         <tr style="border-bottom:0.5px solid #eee">
@@ -1229,8 +1229,8 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.ge
 // v2 权重 — 按课程人数分档（正常/英文）或按人数 ÷ 上限封顶 1.0（CD-实习/实习）
 function courseWeight(type, students){
   switch(type){
-    case '正常':    return students<=20 ? 0.5 : 1.0;
-    case '英文':    return students<=20 ? 0.25 : 0.5;
+    case '正常':    return students<20 ? 0.5 : 1.0;   // v8.4：含 20 人算 1 门
+    case '英文':    return students<20 ? 0.25 : 0.5;  // v8.4：含 20 人算 0.5 门
     case 'CD-实习': return Math.min(students/20, 1.0);
     case '实习':    return Math.min(students/16, 1.0);
     case 'Capstone':return 0.75;
