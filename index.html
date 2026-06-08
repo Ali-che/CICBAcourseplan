@@ -2503,7 +2503,7 @@ function renderAllSum(){renderTchr();renderCoh();renderSpStu();renderSpTchr();}
 function semDetail(tc,sem){
   const sch=schD.filter(r=>r.tc===tc&&r.sem===sem);
   const sp=spD.filter(r=>r.tc===tc&&r.sem===sem);
-  const cnt={正常:0,英文:0,'CD-实习':0,实习:0,SG:sp.length,Capstone:0};
+  const cnt={正常:0,英文:0,'CD-实习':0,实习:0,SG:0,Capstone:0};  // v8.3：SG 改成下面按课程去重后赋值
   const courses=[];
   let wt=0;
   sch.forEach(r=>{
@@ -2526,6 +2526,8 @@ function semDetail(tc,sem){
     courses.push({code:c.co,type:'SG',students:c.students,weight:Math.round(w*1000)/1000});
     wt+=w;
   });
+  // v8.3：SG 课程数按"课程代码去重"
+  cnt.SG = Object.keys(sgByCourse).length;
   wt=Math.round(wt*100)/100;
   return{wt,cnt,courses};
 }
