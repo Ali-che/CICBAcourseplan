@@ -3545,25 +3545,35 @@ function onCsvFileChosen(ev){
     CSV_HEADERS.forEach(h=>colIdx[h]=headers.indexOf(h));
     _csvParsed=rows.slice(1).map((r,i)=>parseAndValidateRow(r,colIdx,i+2));
 
-    // ── 新增：重复检测（4 字段：课程+学期+上下半+班级）──
+    // ── 重复检测（4 字段：课程+学期+上下半+班级）──
     // dupKind: 'none' | 'csv' | 'sheet' | 'both'
     _csvParsed.forEach((p,i)=>{
       p.dupKind='none';p.csvSiblings=[];p.sheetMatchId=null;p.action='merge';
-      if(p.errors.length)return;
+      p.include=true;  // v8.2：默认导入，用户可在预览取消勾选
+      if(p.errors.length){p.include=false;return;}  // 有 error 不能导入
       const k=_dupKey(p.record);
-      // CSV 内部撞：找其他没 error 的、同 key 的索引
       _csvParsed.forEach((q,j)=>{
         if(i===j)return;
         if(q.errors.length)return;
         if(_dupKey(q.record)===k) p.csvSiblings.push(j);
       });
-      // 跟 Sheet 既有数据撞
       const sheetMatch=schD.find(r=>_dupKey(r)===k);
       if(sheetMatch)p.sheetMatchId=String(sheetMatch.id);
-      // 标 kind
       if(sheetMatch && p.csvSiblings.length) p.dupKind='both';
       else if(sheetMatch) p.dupKind='sheet';
       else if(p.csvSiblings.length) p.dupKind='csv';
+
+      // ── v8.2 · A · 智能填充老师 ──
+      if(!p.record.tc){  // 老师空白
+        if(sheetMatch && sheetMatch.tc){
+          p.record.tc = sheetMatch.tc;
+          p.tcAutoFilled = true;  // 标记此行老师是自动填充的
+        } else {
+          // 没有现有匹配 → 必填
+          p.errors.push('老师空白且 Sheet 无匹配，请补填老师');
+          p.include = false;
+        }
+      }
     });
 
     buildCsvPreview();
@@ -3598,6 +3608,8 @@ function parseAndValidateRow(row,colIdx,lineNum){
   if(half&&!['全学期','上半学期','下半学期'].includes(half))warnings.push('上下半「'+half+'」不在预设值');
   if(!cls)errors.push('班级必填');
   if(!cc.length)errors.push('至少需要一个届别+人数');
+  // v8.2：老师空白时智能填充（在 onCsvFileChosen 的 dup 检测阶段处理）
+  // 这里只检查"有值但不在库"的情况
   if(tc&&!T.find(x=>x.n===tc))warnings.push('老师「'+tc+'」不在老师库（可能拼错）');
   cc.forEach((x)=>{
     const allCoh=Object.values(CBD).flat();
@@ -3642,27 +3654,30 @@ function buildCsvPreview(){
   }
 
   html.push('<div style="max-height:380px;overflow-y:auto;border:1px solid #eee;border-radius:6px">');
+  // v8.2 · 全选/全不选按钮
+  html.push('<div style="font-size:11px;color:#666;margin-bottom:6px">导入勾选：');
+  html.push('<button class="btn btn-sm" onclick="csvSetAllInclude(true)" style="font-size:10px;padding:2px 8px;margin-left:4px">全选</button>');
+  html.push('<button class="btn btn-sm" onclick="csvSetAllInclude(false)" style="font-size:10px;padding:2px 8px;margin-left:4px">全不选</button>');
+  html.push('</div>');
+
   html.push('<table style="font-size:11px;width:100%"><thead><tr style="background:#534AB7;color:#fff;position:sticky;top:0">');
-  html.push('<th style="padding:5px 8px">状态</th><th>行号</th><th>课程</th><th>学期</th><th>上下半</th><th>班级</th><th>老师</th><th>届别</th><th>重复来源</th><th>处理方式</th><th>问题</th>');
+  html.push('<th style="padding:5px 8px;width:28px">导入?</th><th style="padding:5px 8px">状态</th><th>行号</th><th>课程</th><th>学期</th><th>上下半</th><th>班级</th><th>老师</th><th>届别</th><th>重复来源</th><th>处理方式</th><th>问题</th>');
   html.push('</tr></thead><tbody>');
   _csvParsed.forEach((p,idx)=>{
     const isDup=!p.errors.length && p.dupKind!=='none';
     const icon=p.errors.length?'🔴':(isDup?'🔁':(p.warnings.length?'🟡':'🟢'));
     const bg=p.errors.length?'#FEF2F2':(isDup?'#FEF3C7':(p.warnings.length?'#FFFBEB':''));
     const r=p.record;
-    // 届别用可换行 chip 渲染，避免长串溢出遮盖右侧列
     const ccChips=r.cc.length
       ? r.cc.map(c=>'<span style="display:inline-block;padding:1px 6px;margin:1px;background:#EEF;border:0.5px solid #CCE;border-radius:10px;font-size:10px;white-space:nowrap">'+eh(c.cohort)+'·'+c.count+'人</span>').join('')
       : '—';
     const probs=[...p.errors.map(e=>'❌ '+e),...p.warnings.map(w=>'⚠️ '+w)].join('<br>');
 
-    // 重复来源描述
     let dupSrc='—';
     if(p.dupKind==='sheet') dupSrc='📋 Sheet 已有';
     else if(p.dupKind==='csv') dupSrc='📄 文件内重复 '+(p.csvSiblings.length+1)+' 行';
     else if(p.dupKind==='both') dupSrc='📋📄 双重重复';
 
-    // 处理方式下拉（只在 dup 时显示）
     let actionCell='—';
     if(isDup){
       actionCell=
@@ -3673,11 +3688,22 @@ function buildCsvPreview(){
         '</select>';
     }
 
-    html.push('<tr style="background:'+bg+'"><td style="padding:4px 8px;text-align:center">'+icon+'</td>');
+    // v8.2 · 导入勾选框
+    const includeCheckbox = p.errors.length
+      ? '<span style="color:#ccc">—</span>'  // error 行不能勾
+      : '<input type="checkbox" '+(p.include?'checked':'')+' onchange="toggleCsvRowInclude('+idx+');buildCsvPreview();" style="cursor:pointer">';
+
+    // 老师自动填充标记
+    const tcDisplay = r.tc
+      ? (p.tcAutoFilled ? eh(r.tc)+' <span style="font-size:9px;color:#534AB7;background:#EEEDFE;padding:1px 4px;border-radius:6px;margin-left:2px">自动填</span>' : eh(r.tc))
+      : '—';
+
+    html.push('<tr style="background:'+bg+';'+(!p.include?'opacity:0.5':'')+'"><td style="text-align:center">'+includeCheckbox+'</td>');
+    html.push('<td style="padding:4px 8px;text-align:center">'+icon+'</td>');
     html.push('<td style="color:#999">'+p.line+'</td>');
     html.push('<td><code>'+eh(r.course||'—')+'</code></td>');
     html.push('<td>'+eh(r.sem||'—')+'</td><td>'+eh(r.half||'—')+'</td><td>'+eh(r.cls||'—')+'</td>');
-    html.push('<td>'+eh(r.tc||'—')+'</td>');
+    html.push('<td>'+tcDisplay+'</td>');
     html.push('<td style="max-width:240px;white-space:normal;line-height:1.6;vertical-align:top">'+ccChips+'</td>');
     html.push('<td style="font-size:10px;color:#854F0B;white-space:nowrap;vertical-align:top">'+dupSrc+'</td>');
     html.push('<td>'+actionCell+'</td>');
@@ -3690,12 +3716,13 @@ function buildCsvPreview(){
   // 计算实际会写入的笔数（合并组会归并，跳过不算）
   const actionable=_calcCsvOps();
   const btn=document.getElementById('csv-import-btn');
-  if(actionable.totalRows===0){btn.disabled=true;btn.textContent='没有可导入的记录';}
+  if(actionable.totalRows===0){btn.disabled=true;btn.textContent='没有勾选要导入的记录';}
   else{
     btn.disabled=false;
     let txt='✓ 确认导入：写入 '+actionable.writes+' 笔';
     if(actionable.merges) txt+='（含合并 '+actionable.merges+'）';
     if(actionable.skips) txt+=' · 跳过 '+actionable.skips;
+    if(actionable.unchecked) txt+=' · 未勾 '+actionable.unchecked;
     btn.textContent=txt;
   }
 }
@@ -3705,10 +3732,21 @@ function csvBulkSetAction(val){
   _csvParsed.forEach(p=>{if(!p.errors.length && p.dupKind!=='none') p.action=val;});
   buildCsvPreview();
 }
+// v8.2 · 切换某行是否导入
+function toggleCsvRowInclude(idx){
+  if(_csvParsed[idx] && !_csvParsed[idx].errors.length) _csvParsed[idx].include = !_csvParsed[idx].include;
+}
+// v8.2 · 全选/全不选
+function csvSetAllInclude(val){
+  _csvParsed.forEach(p=>{if(!p.errors.length) p.include = val;});
+  buildCsvPreview();
+}
 
 // 计算最终写入操作数
 function _calcCsvOps(){
-  const valid=_csvParsed.filter(x=>!x.errors.length);
+  // v8.2：只算「无 error 且 include=true」的行
+  const valid=_csvParsed.filter(x=>!x.errors.length && x.include);
+  const unchecked=_csvParsed.filter(x=>!x.errors.length && !x.include).length;
   let writes=0,merges=0,skips=0;
   const seenMergeKey=new Set();
   valid.forEach(p=>{
@@ -3716,16 +3754,16 @@ function _calcCsvOps(){
     if(p.action==='skip'){skips++;return;}
     if(p.action==='append'){writes++;return;}
     if(p.action==='merge'){
-      // 同 key 合并组只算 1 次写
       const k=_dupKey(p.record);
       if(!seenMergeKey.has(k)){seenMergeKey.add(k);writes++;merges++;}
     }
   });
-  return {totalRows:valid.length,writes,merges,skips};
+  return {totalRows:valid.length,writes,merges,skips,unchecked};
 }
 
 async function confirmCsvImport(){
-  const valid=_csvParsed.filter(x=>!x.errors.length);
+  // v8.2：只取「无 error 且 include=true」
+  const valid=_csvParsed.filter(x=>!x.errors.length && x.include);
   if(!valid.length){alert('没有可导入的记录');return;}
   if(!SHEETS_URL){alert('未配置 SHEETS_URL，无法同步');return;}
   if(!canSync())return;
@@ -3898,10 +3936,10 @@ function onCsvSpFileChosen(ev){
     _csvSpParsed=rows.slice(1).map((r,i)=>parseAndValidateSpRow(r,colIdx,i+2));
 
     // ── 重复检测（4 字段：学号+课程+学期+班级）──
-    // dupKind: 'none' | 'csv' | 'sheet' | 'both'
     _csvSpParsed.forEach((p,i)=>{
-      p.dupKind='none';p.csvSiblings=[];p.sheetMatchId=null;p.action='skip'; // IS/SG 默认 skip
-      if(p.errors.length)return;
+      p.dupKind='none';p.csvSiblings=[];p.sheetMatchId=null;p.action='skip';
+      p.include=true;  // v8.2 默认导入
+      if(p.errors.length){p.include=false;return;}
       const k=_dupKeySp(p.record);
       _csvSpParsed.forEach((q,j)=>{
         if(i===j)return;
@@ -3913,6 +3951,17 @@ function onCsvSpFileChosen(ev){
       if(sheetMatch && p.csvSiblings.length) p.dupKind='both';
       else if(sheetMatch) p.dupKind='sheet';
       else if(p.csvSiblings.length) p.dupKind='csv';
+
+      // v8.2 · A · 智能填充老师
+      if(!p.record.tc){
+        if(sheetMatch && sheetMatch.tc){
+          p.record.tc = sheetMatch.tc;
+          p.tcAutoFilled = true;
+        } else {
+          p.errors.push('老师空白且 Sheet 无匹配，请补填老师');
+          p.include = false;
+        }
+      }
     });
 
     buildCsvSpPreview();
@@ -3942,6 +3991,7 @@ function parseAndValidateSpRow(row,colIdx,lineNum){
   if(!sem)errors.push('学期必填');
   else if(!SEMS.includes(sem))warnings.push('学期「'+sem+'」不在学期列表');
   if(cls!=='IS-222'&&cls!=='SG-222')warnings.push('班级「'+cls+'」不是 IS-222 或 SG-222');
+  // v8.2：老师空白由智能填充处理（在 onCsvSpFileChosen 阶段）
   if(tc&&!T.find(x=>x.n===tc))warnings.push('老师「'+tc+'」不在老师库');
 
   let en='';
@@ -3981,8 +4031,14 @@ function buildCsvSpPreview(){
   }
 
   html.push('<div style="max-height:380px;overflow-y:auto;border:1px solid #eee;border-radius:6px">');
+  // v8.2 · 全选/全不选
+  html.push('<div style="font-size:11px;color:#666;margin-bottom:6px">导入勾选：');
+  html.push('<button class="btn btn-sm" onclick="csvSpSetAllInclude(true)" style="font-size:10px;padding:2px 8px;margin-left:4px">全选</button>');
+  html.push('<button class="btn btn-sm" onclick="csvSpSetAllInclude(false)" style="font-size:10px;padding:2px 8px;margin-left:4px">全不选</button>');
+  html.push('</div>');
+
   html.push('<table style="font-size:11px;width:100%"><thead><tr style="background:#534AB7;color:#fff;position:sticky;top:0">');
-  html.push('<th style="padding:5px 8px">状态</th><th>行</th><th>学号</th><th>姓名</th><th>课程</th><th>学期</th><th>班级</th><th>老师</th><th>重复来源</th><th>处理方式</th><th>问题</th>');
+  html.push('<th style="padding:5px 8px;width:28px">导入?</th><th style="padding:5px 8px">状态</th><th>行</th><th>学号</th><th>姓名</th><th>课程</th><th>学期</th><th>班级</th><th>老师</th><th>重复来源</th><th>处理方式</th><th>问题</th>');
   html.push('</tr></thead><tbody>');
   _csvSpParsed.forEach((p,idx)=>{
     const isDup=!p.errors.length && p.dupKind!=='none';
@@ -4006,13 +4062,24 @@ function buildCsvSpPreview(){
         '</select>';
     }
 
-    html.push('<tr style="background:'+bg+'"><td style="padding:4px 8px;text-align:center">'+icon+'</td>');
+    // v8.2 · 导入勾选框
+    const includeCheckbox = p.errors.length
+      ? '<span style="color:#ccc">—</span>'
+      : '<input type="checkbox" '+(p.include?'checked':'')+' onchange="toggleCsvSpRowInclude('+idx+');buildCsvSpPreview();" style="cursor:pointer">';
+
+    // 老师自动填充标记
+    const tcDisplay = r.tc
+      ? (p.tcAutoFilled ? eh(r.tc)+' <span style="font-size:9px;color:#534AB7;background:#EEEDFE;padding:1px 4px;border-radius:6px;margin-left:2px">自动填</span>' : eh(r.tc))
+      : '—';
+
+    html.push('<tr style="background:'+bg+';'+(!p.include?'opacity:0.5':'')+'"><td style="text-align:center">'+includeCheckbox+'</td>');
+    html.push('<td style="padding:4px 8px;text-align:center">'+icon+'</td>');
     html.push('<td style="color:#999">'+p.line+'</td>');
     html.push('<td><code>'+eh(r.sid||'—')+'</code></td>');
     html.push('<td>'+eh(r.mr)+' '+eh(r.nm)+'</td>');
     html.push('<td><code>'+eh(r.co)+'</code></td>');
     html.push('<td>'+eh(r.sem)+'</td><td>'+eh(r.cls)+'</td>');
-    html.push('<td>'+eh(r.tc||'—')+'</td>');
+    html.push('<td>'+tcDisplay+'</td>');
     html.push('<td style="font-size:10px;color:#854F0B">'+dupSrc+'</td>');
     html.push('<td>'+actionCell+'</td>');
     html.push('<td style="font-size:10px;color:'+(p.errors.length?'#a32d2d':'#854F0B')+'">'+probs+'</td>');
@@ -4021,14 +4088,14 @@ function buildCsvSpPreview(){
   html.push('</tbody></table></div>');
   wrap.innerHTML=html.join('');
 
-  // 计算最终写入操作数
   const ops=_calcCsvSpOps();
   const btn=document.getElementById('csv-sp-import-btn');
-  if(ops.totalWrites===0){btn.disabled=true;btn.textContent='没有可导入的记录';}
+  if(ops.totalWrites===0){btn.disabled=true;btn.textContent='没有勾选要导入的记录';}
   else{
     btn.disabled=false;
     let txt='✓ 确认：新增 '+ops.adds+' / 覆盖 '+ops.overwrites;
     if(ops.skips) txt+=' · 跳过 '+ops.skips;
+    if(ops.unchecked) txt+=' · 未勾 '+ops.unchecked;
     btn.textContent=txt;
   }
 }
@@ -4037,12 +4104,20 @@ function csvSpBulkSetAction(val){
   _csvSpParsed.forEach(p=>{if(!p.errors.length && p.dupKind!=='none') p.action=val;});
   buildCsvSpPreview();
 }
+// v8.2 · 切换某行是否导入 + 全选/全不选
+function toggleCsvSpRowInclude(idx){
+  if(_csvSpParsed[idx] && !_csvSpParsed[idx].errors.length) _csvSpParsed[idx].include = !_csvSpParsed[idx].include;
+}
+function csvSpSetAllInclude(val){
+  _csvSpParsed.forEach(p=>{if(!p.errors.length) p.include = val;});
+  buildCsvSpPreview();
+}
 
 function _calcCsvSpOps(){
-  const valid=_csvSpParsed.filter(x=>!x.errors.length);
+  // v8.2：只算「无 error 且 include=true」
+  const valid=_csvSpParsed.filter(x=>!x.errors.length && x.include);
+  const unchecked=_csvSpParsed.filter(x=>!x.errors.length && !x.include).length;
   let adds=0,overwrites=0,skips=0;
-  // 文件内 dup 用 overwrite：只算 1 次覆盖（最后一行 wins）；append：每行都算 1 次新增
-  // 简化：每行根据 action 各自计数；csv 内 dup + overwrite 的话，重复组里最后一行覆盖前面的，前面的视为 skip
   const overwriteSeenKey=new Set();
   valid.forEach(p=>{
     if(p.dupKind==='none'){adds++;return;}
@@ -4050,17 +4125,17 @@ function _calcCsvSpOps(){
     if(p.action==='append'){adds++;return;}
     if(p.action==='overwrite'){
       const k=_dupKeySp(p.record);
-      // CSV 内多行同 key，只算最后一次 overwrite
       if(overwriteSeenKey.has(k)){skips++;return;}
       overwriteSeenKey.add(k);
       overwrites++;
     }
   });
-  return {totalWrites:adds+overwrites,adds,overwrites,skips};
+  return {totalWrites:adds+overwrites,adds,overwrites,skips,unchecked};
 }
 
 async function confirmCsvImportSp(){
-  const valid=_csvSpParsed.filter(x=>!x.errors.length);
+  // v8.2：只取「无 error 且 include=true」
+  const valid=_csvSpParsed.filter(x=>!x.errors.length && x.include);
   if(!valid.length){alert('没有可导入的记录');return;}
   if(!SHEETS_URL){alert('未配置 SHEETS_URL，无法同步');return;}
   if(!canSync())return;
