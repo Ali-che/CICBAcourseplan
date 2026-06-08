@@ -776,8 +776,11 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <div id="m-coh-total" style="margin-top:8px;padding:7px 12px;background:#F5F4FE;border-radius:6px;font-size:12px;color:#555;border-left:3px solid #534AB7"></div>
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-d" id="m-del-btn" onclick="mDelSch()">🗑 删除此排课</button>
+    <div class="modal-footer" style="flex-wrap:wrap;gap:6px">
+      <button class="btn btn-d" id="m-del-btn" onclick="mDelSch()">🗑 删除</button>
+      <button class="btn" onclick="openTransferDialog()" style="color:#3C3489;border-color:#AFA9EC" title="把当前届别人数合并进另一笔同班+同学期+同上下半的课程">↔ 转到其他课程</button>
+      <button class="btn" onclick="openSplitDialog()" style="color:#854F0B;border-color:#FCD34D" title="按届别/班级/上下半拆出一部分到新记录">✂️ 拆班</button>
+      <div style="flex:1"></div>
       <button class="btn" onclick="closeSchModal()">取消</button>
       <button class="btn btn-p" onclick="mSaveES()">✓ 储存变更</button>
     </div>
@@ -1595,6 +1598,43 @@ function egTgl(rid,k){const cb=document.getElementById('ec-'+rid+'-'+k),n=docume
 function collectEC(rid){const r=[];const g=document.getElementById('egi-'+rid);if(!g)return r;g.querySelectorAll('input[type=checkbox]:checked').forEach(cb=>{const k=sk(cb.value),n=document.getElementById('en-'+rid+'-'+k);r.push({cohort:cb.value,count:n?parseInt(n.value)||0:0});});return r;}
 
 // ── 排课 CRUD ──────────────────────────────
+// v8.5 ①：新增去重 3 选项弹窗（合并 / 强制新增 / 取消）
+function _showDupChoiceDialog(course,sem,half,cls,dupRec,newCc){
+  return new Promise(resolve=>{
+    const modal=document.createElement('div');
+    modal.className='modal-overlay open';
+    modal.style.zIndex=3000;
+    const dupCcTxt=(dupRec.cc||[]).map(c=>c.cohort+'·'+c.count+'人').join(', ')||'(无)';
+    const newCcTxt=(newCc||[]).map(c=>c.cohort+'·'+c.count+'人').join(', ')||'(无)';
+    modal.innerHTML=
+      '<div class="modal-box" style="max-width:560px">'+
+      '<div class="modal-hdr"><h3>🔁 重复课程检测</h3></div>'+
+      '<div class="modal-body">'+
+      '<div style="background:#FFF3CD;border-left:3px solid #856404;padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:14px;color:#664D03">'+
+      '你要新增的「<b>'+eh(course)+' · '+eh(cls)+' · '+eh(sem)+' · '+eh(half)+'</b>」<br>已经存在一笔同 4 字段的记录。'+
+      '</div>'+
+      '<div style="font-size:12px;color:#666;margin-bottom:8px"><b>现有记录的届别：</b></div>'+
+      '<div style="background:#F8F8FA;padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:10px">'+eh(dupCcTxt)+'</div>'+
+      '<div style="font-size:12px;color:#666;margin-bottom:8px"><b>你要新增的届别：</b></div>'+
+      '<div style="background:#EEF;padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:14px">'+eh(newCcTxt)+'</div>'+
+      '<div style="font-size:11px;color:#888">请选择处理方式：</div>'+
+      '</div>'+
+      '<div class="modal-footer" style="flex-direction:column;gap:6px;align-items:stretch">'+
+      '<button class="btn btn-p" data-action="merge" style="text-align:left;padding:10px 14px">🟢 合并到现有那笔（届别人数累加进同一笔）</button>'+
+      '<button class="btn" data-action="append" style="text-align:left;padding:10px 14px;color:#666">⚫ 强制新增（产生两笔同 4 字段，少用）</button>'+
+      '<button class="btn" data-action="cancel" style="text-align:left;padding:10px 14px;color:#a32d2d">🟡 取消，不新增</button>'+
+      '</div>'+
+      '</div>';
+    document.body.appendChild(modal);
+    modal.querySelectorAll('[data-action]').forEach(btn=>{
+      btn.onclick=()=>{
+        document.body.removeChild(modal);
+        resolve(btn.getAttribute('data-action'));
+      };
+    });
+  });
+}
+
 async function addSch(){
   const course=document.getElementById('s-co').value.trim().toUpperCase(),en=document.getElementById('s-en').value;
   const sem=document.getElementById('s-sem').value,half=document.getElementById('s-half').value;
@@ -1602,8 +1642,30 @@ async function addSch(){
   const tc=document.getElementById('s-tc').value,nt=document.getElementById('s-nt').value,cc=getEG();
   const btec=document.getElementById('s-btec')?document.getElementById('s-btec').checked:false;
   if(!course||!cls||!cc.length){alert('请填写：课程代码、班级，并至少勾选一个届别');return;}
+  // v8.5 ①：新增时去重 3 选项（合并 / 取消 / 强制新增）
   const dup=schD.find(r=>r.course===course&&r.cls===cls&&r.sem===sem&&r.half===half);
-  if(dup){const go=confirm('⚠️ 重复提醒\n\n「'+course+'」已在 '+sem+' '+half+' '+cls+' 班级新增过一次。\n\n确定要继续新增吗？');if(!go)return;}
+  if(dup){
+    const choice=await _showDupChoiceDialog(course,sem,half||'（未指定）',cls,dup,cc);
+    if(choice==='cancel')return;
+    if(choice==='merge'){
+      // 合并 cc 进 dup，调 updateRecord 改 cc
+      const mergedCc=_mergeCc(dup.cc,cc);
+      if(SHEETS_URL&&canSync()){
+        setSyncStatus('⏳ 合并中…','');
+        const r=await gasUpdateRecord('schedule',dup.id,{cc:mergedCc});
+        if(r&&r.success){
+          dup.cc=mergedCc;
+          clearSchF();toggleAddSch(false);renderSch();renderAllSum();renderSta();
+          setSyncStatus('✅ 已合并到现有 '+dup.course+' '+new Date().toLocaleTimeString(),true);
+          alert('✓ 已合并 cohort 到现有的 '+dup.course+' 排课');
+        }else{
+          handleRecordApiFail(r);setSyncStatus('❌ 合并失败',false);
+        }
+      }
+      return;
+    }
+    // choice === 'append' → 继续走原本的新增流程
+  }
   // v7: 直接呼叫 addRecord，不再全量同步
   const localId=Date.now();
   const rec={id:localId,course,en,sem,half,type,cls,tc,cc,nt,btec,editing:false};
@@ -1684,6 +1746,226 @@ function mLookupC(){
   const code=document.getElementById('m-co').value.trim().toUpperCase();
   const f=C.find(x=>x.c===code);
   document.getElementById('m-en').value=f?f.en:'';
+}
+
+// ═══ v8.5 ② · 转到其他课程 ═══
+async function openTransferDialog(){
+  if(!_mId)return;
+  const cur=schD.find(x=>String(x.id)===String(_mId));
+  if(!cur){alert('找不到当前记录');return;}
+  // 找候选：同班+同学期+同上下半，但课程代码不同
+  const candidates=schD.filter(r=>
+    String(r.id)!==String(_mId) &&
+    r.cls===cur.cls && r.sem===cur.sem && r.half===cur.half
+  );
+  if(!candidates.length){
+    alert('没有可合并的目标\n\n要并入的课程必须：同班级 + 同学期 + 同上下半 + 课程代码不同');
+    return;
+  }
+  const targetId=await _showTransferDialog(cur,candidates);
+  if(!targetId)return;
+  const target=schD.find(r=>String(r.id)===String(targetId));
+  if(!target){alert('目标已不存在');return;}
+  const mergedCc=_mergeCc(target.cc,cur.cc);
+  if(!SHEETS_URL||!canSync()){alert('未配置 SHEETS_URL 或同步锁定，无法转课');return;}
+  setSyncStatus('⏳ 转课中…','');
+  const r1=await gasUpdateRecord('schedule',target.id,{cc:mergedCc});
+  if(!r1||!r1.success){handleRecordApiFail(r1);setSyncStatus('❌ 转课失败：目标合并失败',false);return;}
+  target.cc=mergedCc;
+  const r2=await gasDeleteRecord('schedule',cur.id);
+  if(!r2||!r2.success){
+    // 目标已合并成功但原记录删除失败 → 提示用户手动删
+    handleRecordApiFail(r2);
+    setSyncStatus('⚠ 目标已合并但原记录删除失败，请手动删除',false);
+    return;
+  }
+  schD=schD.filter(x=>String(x.id)!==String(_mId));
+  closeSchModal();
+  renderSch();renderAllSum();renderSta();
+  setSyncStatus('✅ 已转到 '+target.course+' '+new Date().toLocaleTimeString(),true);
+  alert('✓ 已合并到 '+target.course+'，原记录已删除');
+}
+
+// ═══ v8.5 ④ · 拆班（3 维度）═══
+async function openSplitDialog(){
+  if(!_mId)return;
+  const cur=schD.find(x=>String(x.id)===String(_mId));
+  if(!cur){alert('找不到当前记录');return;}
+  if(!cur.cc||!cur.cc.length){alert('当前记录没有届别，无法拆分');return;}
+  const result=await _showSplitDialog(cur);
+  if(!result)return;
+  if(!SHEETS_URL||!canSync()){alert('未配置 SHEETS_URL 或同步锁定，无法拆分');return;}
+  setSyncStatus('⏳ 拆分中…','');
+  const r1=await gasUpdateRecord('schedule',cur.id,{cc:result.originalCcAdjusted});
+  if(!r1||!r1.success){handleRecordApiFail(r1);setSyncStatus('❌ 拆分失败：原记录更新失败',false);return;}
+  cur.cc=result.originalCcAdjusted;
+  const newRec={id:Date.now(),...result.newRecord,editing:false};
+  schD.push(newRec);
+  const r2=await gasAddRecord('schedule',newRec);
+  if(!r2||!r2.success){
+    schD=schD.filter(x=>x!==newRec);
+    handleRecordApiFail(r2);
+    setSyncStatus('❌ 拆分失败：新记录新增失败（原记录已改，请手动恢复 cc）',false);
+    return;
+  }
+  if(r2.id&&String(r2.id)!==String(newRec.id))newRec.id=r2.id;
+  closeSchModal();
+  renderSch();renderAllSum();renderSta();
+  setSyncStatus('✅ 已拆为 2 笔 '+new Date().toLocaleTimeString(),true);
+  alert('✓ 拆分成功：'+cur.course+'（保留）+ '+newRec.course+'（新增）');
+}
+
+function _showSplitDialog(cur){
+  return new Promise(resolve=>{
+    const modal=document.createElement('div');
+    modal.className='modal-overlay open';
+    modal.style.zIndex=3000;
+    const cohortCks=cur.cc.map((c,i)=>
+      '<label style="display:block;padding:4px 8px;font-size:12px;cursor:pointer"><input type="checkbox" class="split-coh" data-idx="'+i+'" style="margin-right:6px">'+eh(c.cohort)+' · '+c.count+'人</label>'
+    ).join('');
+    const classOpts=CLSS.filter(c=>c!==cur.cls).map(c=>'<option value="'+c+'">'+c+'</option>').join('');
+    const halfOpts=['全学期','上半学期','下半学期'].filter(h=>h!==cur.half).map(h=>'<option value="'+h+'">'+h+'</option>').join('');
+    const ccNumInputs=cur.cc.map((c,i)=>'<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;font-size:12px"><span style="flex:1">'+eh(c.cohort)+'（共 '+c.count+' 人）</span><input type="number" min="0" max="'+c.count+'" value="0" data-idx="'+i+'" class="split-num" style="width:60px;text-align:center"> 人拆出</div>').join('');
+
+    modal.innerHTML='<div class="modal-box" style="max-width:620px">'+
+      '<div class="modal-hdr"><h3>✂️ 拆分排课</h3><button class="modal-close" data-action="cancel">✕</button></div>'+
+      '<div class="modal-body">'+
+      '<div style="background:#FFF8E1;padding:10px 14px;border-radius:6px;margin-bottom:14px">'+
+      '<div style="font-size:11px;color:#854F0B;margin-bottom:2px"><b>当前记录</b></div>'+
+      '<div style="font-size:13px">'+eh(cur.course)+' · '+eh(cur.cls)+' · '+eh(cur.sem)+' · '+eh(cur.half||'(未指定)')+'</div>'+
+      '<div style="font-size:11px;color:#666;margin-top:4px">届别人数: '+cur.cc.map(c=>eh(c.cohort)+'·'+c.count+'人').join(', ')+'</div>'+
+      '</div>'+
+      '<div class="modal-sec">① 拆分维度</div>'+
+      '<div style="display:flex;gap:6px;margin-bottom:14px">'+
+      '<label class="dc on" data-dim-label="cohort" style="cursor:pointer"><input type="radio" name="split-dim" value="cohort" checked style="margin-right:4px;vertical-align:middle">拆届别</label>'+
+      '<label class="dc" data-dim-label="cls" style="cursor:pointer"><input type="radio" name="split-dim" value="cls" style="margin-right:4px;vertical-align:middle">拆班级</label>'+
+      '<label class="dc" data-dim-label="half" style="cursor:pointer"><input type="radio" name="split-dim" value="half" style="margin-right:4px;vertical-align:middle">拆上下半</label>'+
+      '</div>'+
+      // 拆届别 panel
+      '<div id="splitp-cohort" class="splitp">'+
+        '<div class="modal-sec">② 选要拆出的届别（这些变新记录，剩余留原）</div>'+
+        '<div style="background:#F8F8FA;padding:8px;border-radius:6px;max-height:200px;overflow-y:auto">'+cohortCks+'</div>'+
+      '</div>'+
+      // 拆班级 panel
+      '<div id="splitp-cls" class="splitp" style="display:none">'+
+        '<div class="modal-sec">② 拆到哪个班级</div>'+
+        '<select id="split-new-cls" style="width:100%">'+classOpts+'</select>'+
+        '<div class="modal-sec">③ 各届拆多少人到新班</div>'+
+        '<div style="background:#F8F8FA;padding:8px;border-radius:6px">'+ccNumInputs.replace(/split-num/g,'split-num-cls')+'</div>'+
+      '</div>'+
+      // 拆上下半 panel
+      '<div id="splitp-half" class="splitp" style="display:none">'+
+        '<div class="modal-sec">② 拆到哪个上下半</div>'+
+        '<select id="split-new-half" style="width:100%">'+halfOpts+'</select>'+
+        '<div class="modal-sec">③ 各届拆多少人到新上下半</div>'+
+        '<div style="background:#F8F8FA;padding:8px;border-radius:6px">'+ccNumInputs.replace(/split-num/g,'split-num-half')+'</div>'+
+      '</div>'+
+      // 共用：新课程代码
+      '<div class="modal-sec">新记录的课程代码（一般同原课，要换新课才改）</div>'+
+      '<input id="split-new-course" value="'+eh(cur.course)+'" style="width:100%">'+
+      '</div>'+
+      '<div class="modal-footer">'+
+      '<button class="btn" data-action="cancel">取消</button>'+
+      '<button class="btn btn-p" data-action="confirm">✂️ 确认拆分</button>'+
+      '</div>'+
+      '</div>';
+    document.body.appendChild(modal);
+    // dim 切换
+    modal.querySelectorAll('input[name="split-dim"]').forEach(r=>{
+      r.onchange=()=>{
+        const dim=r.value;
+        modal.querySelectorAll('.splitp').forEach(p=>p.style.display='none');
+        modal.querySelector('#splitp-'+dim).style.display='block';
+        modal.querySelectorAll('[data-dim-label]').forEach(l=>l.classList.toggle('on',l.getAttribute('data-dim-label')===dim));
+      };
+    });
+    modal.querySelectorAll('[data-action="cancel"]').forEach(b=>b.onclick=()=>{document.body.removeChild(modal);resolve(null);});
+    modal.querySelector('[data-action="confirm"]').onclick=()=>{
+      const dim=modal.querySelector('input[name="split-dim"]:checked').value;
+      const newCourse=modal.querySelector('#split-new-course').value.trim().toUpperCase()||cur.course;
+      let newCc=[],origAdjusted=[],newCls=cur.cls,newHalf=cur.half;
+      if(dim==='cohort'){
+        const checked=[...modal.querySelectorAll('.split-coh:checked')];
+        if(!checked.length){alert('至少勾一个届别');return;}
+        const sel=new Set(checked.map(c=>parseInt(c.dataset.idx)));
+        newCc=cur.cc.filter((_,i)=>sel.has(i)).map(c=>({...c}));
+        origAdjusted=cur.cc.filter((_,i)=>!sel.has(i)).map(c=>({...c}));
+        if(!origAdjusted.length){alert('不能把所有届别都拆走，至少留一个在原记录');return;}
+      } else {
+        const cls=dim==='cls'?'.split-num-cls':'.split-num-half';
+        const inputs=[...modal.querySelectorAll(cls)];
+        let total=0;
+        inputs.forEach(inp=>{
+          const idx=parseInt(inp.dataset.idx);
+          const n=parseInt(inp.value)||0;
+          if(n>0){newCc.push({cohort:cur.cc[idx].cohort,count:n});total+=n;}
+          const rem=cur.cc[idx].count-n;
+          if(rem>0)origAdjusted.push({cohort:cur.cc[idx].cohort,count:rem});
+        });
+        if(!total){alert('至少给一个届别填要拆出的人数');return;}
+        if(!origAdjusted.length){alert('不能把所有人都拆走，至少留一些');return;}
+        if(dim==='cls')newCls=modal.querySelector('#split-new-cls').value;
+        else newHalf=modal.querySelector('#split-new-half').value;
+      }
+      const newRecord={
+        course:newCourse,en:cur.en,sem:cur.sem,half:newHalf,
+        type:cur.type,cls:newCls,tc:cur.tc,cc:newCc,
+        nt:(cur.nt?cur.nt+' · ':'')+'拆自 '+cur.course,
+        btec:cur.btec
+      };
+      if(newCourse!==cur.course){
+        const f=C.find(x=>x.c===newCourse);
+        newRecord.en=f?f.en:'';
+      }
+      document.body.removeChild(modal);
+      resolve({dim,newRecord,originalCcAdjusted:origAdjusted});
+    };
+  });
+}
+
+function _showTransferDialog(cur,candidates){
+  return new Promise(resolve=>{
+    const modal=document.createElement('div');
+    modal.className='modal-overlay open';
+    modal.style.zIndex=3000;
+    const curCcTxt=cur.cc.map(c=>c.cohort+'·'+c.count+'人').join(', ')||'(无)';
+    const candHtml=candidates.map(c=>{
+      const ccTxt=c.cc.map(x=>x.cohort+'·'+x.count+'人').join(', ');
+      return '<label style="display:block;padding:8px 12px;border:0.5px solid #ddd;border-radius:6px;margin-bottom:5px;cursor:pointer;background:#fff" onmouseover="this.style.background=\'#f8f8ff\'" onmouseout="this.style.background=\'#fff\'">'+
+        '<input type="radio" name="transfer-target" value="'+c.id+'" style="margin-right:8px"> '+
+        '<b style="font-family:ui-monospace,monospace;color:#185FA5">'+eh(c.course)+'</b> '+
+        '<span style="color:#888;font-size:11px;margin-left:6px">'+eh(c.tc||'未指定老师')+'</span><br>'+
+        '<span style="font-size:11px;color:#666;margin-left:18px">'+eh(ccTxt)+'</span>'+
+      '</label>';
+    }).join('');
+    modal.innerHTML='<div class="modal-box" style="max-width:600px">'+
+      '<div class="modal-hdr"><h3>↔ 转到其他课程</h3><button class="modal-close" data-action="cancel">✕</button></div>'+
+      '<div class="modal-body">'+
+      '<div style="background:#EEEDFE;padding:10px 14px;border-radius:6px;margin-bottom:14px">'+
+      '<div style="font-size:11px;color:#3C3489;margin-bottom:4px"><b>当前记录（转出后将被删除）</b></div>'+
+      '<div style="font-size:13px">'+eh(cur.course)+' · '+eh(cur.cls)+' · '+eh(cur.sem)+' · '+eh(cur.half||'(未指定)')+'</div>'+
+      '<div style="font-size:11px;color:#666;margin-top:4px">届别人数: '+eh(curCcTxt)+'</div>'+
+      '</div>'+
+      '<div style="font-size:12px;color:#666;margin-bottom:8px"><b>选要合并到的目标课程</b>（已自动筛同班+同学期+同上下半）：</div>'+
+      candHtml+
+      '</div>'+
+      '<div class="modal-footer">'+
+      '<button class="btn" data-action="cancel">取消</button>'+
+      '<button class="btn btn-p" data-action="confirm">✓ 确认转课</button>'+
+      '</div>'+
+      '</div>';
+    document.body.appendChild(modal);
+    modal.querySelectorAll('[data-action="cancel"]').forEach(b=>{
+      b.onclick=()=>{document.body.removeChild(modal);resolve(null);};
+    });
+    modal.querySelector('[data-action="confirm"]').onclick=()=>{
+      const sel=modal.querySelector('input[name="transfer-target"]:checked');
+      if(!sel){alert('请先选一个目标课程');return;}
+      const id=sel.value;
+      document.body.removeChild(modal);
+      resolve(id);
+    };
+  });
 }
 
 function mBuildDeptChips(){
