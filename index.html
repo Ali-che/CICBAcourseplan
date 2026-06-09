@@ -2336,23 +2336,35 @@ function buildSpDeptFilter(){
     SCH_DEPT_OPTIONS.map(d=>'<option value="'+eh(d)+'"'+(cur===d?' selected':'')+'>'+eh(d)+'</option>').join('');
 }
 
-// v8.6 · 排课表「授课老师」筛选下拉（动态从 schD 提取实际出现过的老师 + 待定特项）
+// v8.6 · 排课表「授课老师」筛选下拉（动态从 schD 提取实际出现过的老师 + 常驻待定特项）
 function buildSchTcFilter(){
   const sel=document.getElementById('sch-tc-f');if(!sel)return;
   const cur=sel.value;
   // 拉出 schD 里所有出现过的老师（排除空），按系别分组
   const tcByDept={};
-  let hasPending=false;
+  let pendingN=0;     // 任一待定（OR）
+  let pendingTcN=0;   // 仅老师待定
+  let pendingHfN=0;   // 仅上下半待定
   schD.forEach(r=>{
-    if(!r.tc){hasPending=true;return;}
-    const tInfo=T.find(x=>x.n===r.tc);
-    const dept=tInfo?tInfo.d:'未分类';
-    if(!tcByDept[dept])tcByDept[dept]=new Set();
-    tcByDept[dept].add(r.tc);
+    // v8.6.2：待定 = 老师空 OR 上下半空
+    if(!r.tc || !r.half){
+      pendingN++;
+      if(!r.tc) pendingTcN++;
+      if(!r.half) pendingHfN++;
+    }
+    // 老师下拉：有老师就加进（不管上下半）
+    if(r.tc){
+      const tInfo=T.find(x=>x.n===r.tc);
+      const dept=tInfo?tInfo.d:'未分类';
+      if(!tcByDept[dept])tcByDept[dept]=new Set();
+      tcByDept[dept].add(r.tc);
+    }
   });
   let html='<option value="">全部老师</option>';
-  // 待定特项放最前
-  if(hasPending) html+='<option value="__PENDING__">⏳ 待定</option>';
+  // v8.6.2：3 个待定选项，分别筛
+  html+='<option value="__PENDING_ANY__">⏳ 任一待定'+(pendingN?' ('+pendingN+')':'')+'</option>';
+  html+='<option value="__PENDING_TC__">⏳ 老师待定'+(pendingTcN?' ('+pendingTcN+')':'')+'</option>';
+  html+='<option value="__PENDING_HALF__">⏳ 上下半待定'+(pendingHfN?' ('+pendingHfN+')':'')+'</option>';
   // 按系别分组 + 老师名字字母排序
   Object.keys(tcByDept).sort().forEach(d=>{
     html+='<optgroup label="─ '+eh(d)+' ─">';
@@ -2429,7 +2441,9 @@ function renderSch(){
   if(semF&&semF.value)disp=disp.filter(r=>r.sem===semF.value);
   if(deptF&&deptF.value)disp=disp.filter(r=>getCourseDept(r.course)===deptF.value); // v7.3: 严格匹配（GE 与 GE-KE 等分开筛）
   if(tcF&&tcF.value){
-    if(tcF.value==='__PENDING__') disp=disp.filter(r=>!r.tc);
+    if(tcF.value==='__PENDING_ANY__')  disp=disp.filter(r=>!r.tc||!r.half);
+    else if(tcF.value==='__PENDING_TC__')   disp=disp.filter(r=>!r.tc);
+    else if(tcF.value==='__PENDING_HALF__') disp=disp.filter(r=>!r.half);
     else disp=disp.filter(r=>r.tc===tcF.value);
   }
   // v7.4: 课程搜索框 —— 同时比对课程代码 + 英文名（不分大小写）
