@@ -415,21 +415,26 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     </div>
   </div>
   <div class="card">
-    <div class="sechdr">
-      <span class="ct" style="margin:0">排课记录 <span id="sch-n" style="font-weight:400;color:#888"></span>
-        <span style="font-size:10px;color:#ccc;margin-left:6px">点击「课程代码」或「上下半」可排序</span>
-      </span>
-      <div style="display:flex;gap:6px;align-items:center">
-        <select id="sch-sem-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto"><option value="">全部学期</option></select>
-        <select id="sch-dept-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto"><option value="">课程代码</option></select>
-        <select id="sch-tc-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto"><option value="">全部老师</option></select>
-        <input id="sch-search" type="text" oninput="renderSch()" placeholder="🔍 搜课程代码/英文名" style="font-size:11px;padding:4px 8px;width:170px">
-        <button class="btn btn-sm" onclick="syncToSheets('schedule')">↑ 上传</button>
-        <button class="btn btn-sm" onclick="syncFromSheets('schedule')">↓ 下载</button>
-        <button class="btn btn-sm no-print" onclick="exportSchExcel()" style="color:#1a6b2f;border-color:#9ed4ae">📊 Excel</button>
-        <button class="btn btn-sm no-print" onclick="openCsvImport()" style="color:#854F0B;border-color:#FCD34D">📥 批量导入</button>
+    <div class="sechdr" style="flex-wrap:wrap;gap:10px;align-items:center">
+      <span class="ct" style="margin:0;font-size:12px">排课记录<span id="sch-n" style="font-weight:400;color:#888;margin-left:4px"></span></span>
+      <!-- 🔍 筛选区（紫色淡底 + 圆角）-->
+      <div style="display:flex;gap:5px;align-items:center;background:#F5F4FE;border:0.5px solid #E5E3F8;border-radius:8px;padding:4px 8px">
+        <span style="font-size:10px;color:#888">筛选</span>
+        <select id="sch-sem-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">全部学期</option></select>
+        <select id="sch-dept-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">课程代码</option></select>
+        <select id="sch-tc-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">全部老师</option></select>
+        <input id="sch-search" type="text" oninput="renderSch()" placeholder="🔍 搜课程代码 / 英文名" style="font-size:11px;padding:4px 8px;width:180px;border-color:#E5E3F8">
+      </div>
+      <!-- 操作区 -->
+      <div style="display:flex;gap:4px;align-items:center;flex:1;justify-content:flex-end;flex-wrap:wrap">
+        <button class="btn btn-sm" onclick="syncToSheets('schedule')" title="把本地的全量推到 Sheet">↑ 上传</button>
+        <button class="btn btn-sm" onclick="syncFromSheets('schedule')" title="从 Sheet 拉最新覆盖本地">↓ 下载</button>
+        <span style="width:1px;height:18px;background:#e0e0e0;margin:0 2px"></span>
+        <button class="btn btn-sm no-print" onclick="exportSchExcel()" style="color:#1a6b2f;border-color:#9ed4ae" title="导出当前筛选结果为 Excel">📊 Excel</button>
+        <button class="btn btn-sm no-print" onclick="openCsvImport()" style="color:#854F0B;border-color:#FCD34D" title="从 CSV 批量导入">📥 批量导入</button>
         <button id="sch-batch-del" class="btn btn-sm no-print" onclick="deleteFiltered('schedule')" style="color:#a32d2d;border-color:#f7c1c1;display:none" title="按目前筛选条件删除全部">🗑 批量删除 <span id="sch-batch-del-n">0</span></button>
-        <button class="btn btn-sm no-print" onclick="printPanel('sch')">🖨️ 列印</button>
+        <span style="width:1px;height:18px;background:#e0e0e0;margin:0 2px"></span>
+        <button class="btn btn-sm no-print" onclick="printPanel('sch')" title="打印当前页">🖨️ 列印</button>
       </div>
     </div>
     <div class="tbl-wrap">
@@ -490,20 +495,25 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     </div>
   </div>
   <div class="card">
-    <div class="sechdr">
-      <span class="ct" style="margin:0">IS/SG 排课记录 <span id="sp-n" style="font-weight:400;color:#888"></span>
-        <span style="font-size:10px;color:#ccc;margin-left:6px">点击「学号」或「授课老师」可排序</span>
-      </span>
-      <div style="display:flex;gap:6px;align-items:center">
-        <select id="sp-sem-f" onchange="renderSp()" style="font-size:11px;padding:4px 8px;width:auto"><option value="">全部学期</option></select>
-        <select id="sp-dept-f" onchange="renderSp()" style="font-size:11px;padding:4px 8px;width:auto"><option value="">课程代码</option></select>
-        <input id="sp-search" type="text" oninput="renderSp()" placeholder="🔍 搜课程代码/英文名" style="font-size:11px;padding:4px 8px;width:170px">
-        <button class="btn btn-sm" onclick="syncToSheets('special')">↑ 上传</button>
-        <button class="btn btn-sm" onclick="syncFromSheets('special')">↓ 下载</button>
-        <button class="btn btn-sm no-print" onclick="exportSpExcel()" style="color:#1a6b2f;border-color:#9ed4ae">📊 Excel</button>
-        <button class="btn btn-sm no-print" onclick="openCsvImportSp()" style="color:#854F0B;border-color:#FCD34D">📥 批量导入</button>
+    <div class="sechdr" style="flex-wrap:wrap;gap:10px;align-items:center">
+      <span class="ct" style="margin:0;font-size:12px">IS/SG 排课记录<span id="sp-n" style="font-weight:400;color:#888;margin-left:4px"></span></span>
+      <!-- 🔍 筛选区 -->
+      <div style="display:flex;gap:5px;align-items:center;background:#F5F4FE;border:0.5px solid #E5E3F8;border-radius:8px;padding:4px 8px">
+        <span style="font-size:10px;color:#888">筛选</span>
+        <select id="sp-sem-f" onchange="renderSp()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">全部学期</option></select>
+        <select id="sp-dept-f" onchange="renderSp()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">课程代码</option></select>
+        <input id="sp-search" type="text" oninput="renderSp()" placeholder="🔍 搜课程代码 / 英文名" style="font-size:11px;padding:4px 8px;width:180px;border-color:#E5E3F8">
+      </div>
+      <!-- 操作区 -->
+      <div style="display:flex;gap:4px;align-items:center;flex:1;justify-content:flex-end;flex-wrap:wrap">
+        <button class="btn btn-sm" onclick="syncToSheets('special')" title="把本地的全量推到 Sheet">↑ 上传</button>
+        <button class="btn btn-sm" onclick="syncFromSheets('special')" title="从 Sheet 拉最新覆盖本地">↓ 下载</button>
+        <span style="width:1px;height:18px;background:#e0e0e0;margin:0 2px"></span>
+        <button class="btn btn-sm no-print" onclick="exportSpExcel()" style="color:#1a6b2f;border-color:#9ed4ae" title="导出当前筛选结果为 Excel">📊 Excel</button>
+        <button class="btn btn-sm no-print" onclick="openCsvImportSp()" style="color:#854F0B;border-color:#FCD34D" title="从 CSV 批量导入">📥 批量导入</button>
         <button id="sp-batch-del" class="btn btn-sm no-print" onclick="deleteFiltered('special')" style="color:#a32d2d;border-color:#f7c1c1;display:none" title="按目前筛选条件删除全部">🗑 批量删除 <span id="sp-batch-del-n">0</span></button>
-        <button class="btn btn-sm no-print" onclick="printPanel('sp')">🖨️ 列印</button>
+        <span style="width:1px;height:18px;background:#e0e0e0;margin:0 2px"></span>
+        <button class="btn btn-sm no-print" onclick="printPanel('sp')" title="打印当前页">🖨️ 列印</button>
       </div>
     </div>
     <div class="tbl-wrap">
