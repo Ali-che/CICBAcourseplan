@@ -422,6 +422,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <div style="display:flex;gap:6px;align-items:center">
         <select id="sch-sem-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto"><option value="">全部学期</option></select>
         <select id="sch-dept-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto"><option value="">课程代码</option></select>
+        <select id="sch-tc-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto"><option value="">全部老师</option></select>
         <input id="sch-search" type="text" oninput="renderSch()" placeholder="🔍 搜课程代码/英文名" style="font-size:11px;padding:4px 8px;width:170px">
         <button class="btn btn-sm" onclick="syncToSheets('schedule')">↑ 上传</button>
         <button class="btn btn-sm" onclick="syncFromSheets('schedule')">↓ 下载</button>
@@ -2335,6 +2336,35 @@ function buildSpDeptFilter(){
     SCH_DEPT_OPTIONS.map(d=>'<option value="'+eh(d)+'"'+(cur===d?' selected':'')+'>'+eh(d)+'</option>').join('');
 }
 
+// v8.6 · 排课表「授课老师」筛选下拉（动态从 schD 提取实际出现过的老师 + 待定特项）
+function buildSchTcFilter(){
+  const sel=document.getElementById('sch-tc-f');if(!sel)return;
+  const cur=sel.value;
+  // 拉出 schD 里所有出现过的老师（排除空），按系别分组
+  const tcByDept={};
+  let hasPending=false;
+  schD.forEach(r=>{
+    if(!r.tc){hasPending=true;return;}
+    const tInfo=T.find(x=>x.n===r.tc);
+    const dept=tInfo?tInfo.d:'未分类';
+    if(!tcByDept[dept])tcByDept[dept]=new Set();
+    tcByDept[dept].add(r.tc);
+  });
+  let html='<option value="">全部老师</option>';
+  // 待定特项放最前
+  if(hasPending) html+='<option value="__PENDING__">⏳ 待定</option>';
+  // 按系别分组 + 老师名字字母排序
+  Object.keys(tcByDept).sort().forEach(d=>{
+    html+='<optgroup label="─ '+eh(d)+' ─">';
+    [...tcByDept[d]].sort().forEach(n=>{
+      html+='<option value="'+eh(n)+'"'+(cur===n?' selected':'')+'>'+eh(n)+'</option>';
+    });
+    html+='</optgroup>';
+  });
+  sel.innerHTML=html;
+  if(cur && [...sel.options].some(o=>o.value===cur)) sel.value=cur;
+}
+
 // ════════════════════════════════════════
 // v7.3: 学期下拉动态填充（资料源：「学期列表」分页）
 // 把 SEMS 按学年（前 4 字）分组 → 用 optgroup 展示
@@ -2391,11 +2421,17 @@ function renderSch(){
   const el_tot=document.getElementById('si-total');if(el_tot)el_tot.innerHTML=siIcon('total',schSK,schSD);
   if(!schD.length){tb.innerHTML='';em.style.display='block';return;}
   em.style.display='none';
+  buildSchTcFilter(); // v8.6: 同步刷新老师下拉（schD 变了之后选项要重建）
   const semF=document.getElementById('sch-sem-f');
   const deptF=document.getElementById('sch-dept-f'); // v7.1
+  const tcF=document.getElementById('sch-tc-f');     // v8.6
   let disp=[...schD];
   if(semF&&semF.value)disp=disp.filter(r=>r.sem===semF.value);
   if(deptF&&deptF.value)disp=disp.filter(r=>getCourseDept(r.course)===deptF.value); // v7.3: 严格匹配（GE 与 GE-KE 等分开筛）
+  if(tcF&&tcF.value){
+    if(tcF.value==='__PENDING__') disp=disp.filter(r=>!r.tc);
+    else disp=disp.filter(r=>r.tc===tcF.value);
+  }
   // v7.4: 课程搜索框 —— 同时比对课程代码 + 英文名（不分大小写）
   const searchF=document.getElementById('sch-search');
   if(searchF&&searchF.value.trim()){
