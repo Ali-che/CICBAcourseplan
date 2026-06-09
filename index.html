@@ -2269,7 +2269,7 @@ function halfBadge(h){
   if(h==='上半学期'||h==='上半')return'<span class="badge b0">上半</span>';
   if(h==='下半学期'||h==='下半')return'<span class="badge b2">下半</span>';
   if(h==='全学期')return'<span class="badge b6">全学期</span>';
-  if(!h)return'<span style="color:#bbb;font-style:italic;font-size:10px">待定</span>';
+  if(!h)return'<span style="background:#FEF3C7;color:#854F0B;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:500;display:inline-block">⏳ 待定</span>';
   return'<span class="badge b4">'+eh(h)+'</span>';
 }
 // v7.9.13: 学期按学期号上色（-1 蓝 / -2 紫 / -3 青）
@@ -2427,7 +2427,7 @@ function renderSch(){
     return'<tr'+(_chk?' style="background:#FFF8E1"':'')+'><td style="text-align:center"><input type="checkbox" class="row-chk" '+_chk+' onclick="toggleRowSelect(\'sch\',\''+r.id+'\',this.checked)"></td><td>'+(i+1)+'</td>'+
       '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.course+'</span><span class="badge '+(TB[r.type]||'b4')+'" style="font-size:9.5px;padding:1px 6px;opacity:.85">'+r.type+'</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
       '<td>'+semBadge(r.sem)+'</td><td>'+halfBadge(r.half)+'</td>'+
-      '<td>'+r.cls+'</td><td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
+      '<td>'+r.cls+'</td><td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="background:#FEF3C7;color:#854F0B;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;display:inline-block">⏳ 待定</span>')+'</td>'+
       '<td style="white-space:normal;min-width:340px;line-height:1.7">'+tags+'</td><td><strong>'+tot+'</strong></td>'+
       '<td style="font-size:11px;color:#888;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"'+(r.nt?' title="'+eh(r.nt)+'"':'')+'>'+(r.nt?eh(r.nt):'')+'</td>'+
       '<td>'+(r.btec===true||r.btec==='TRUE'||r.btec==='true'?'<span class="badge b4">✓</span>':'')+'</td>'+
@@ -2632,7 +2632,7 @@ function renderSp(){
       '<td><span class="badge b4">'+r.mj+'</span></td>'+
       '<td class="cn-cell" style="min-width:128px;max-width:192px"><span class="badge b0">'+r.co+'</span><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
       '<td>'+r.cls+'</td><td>'+semBadge(r.sem)+'</td>'+
-      '<td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
+      '<td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="background:#FEF3C7;color:#854F0B;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;display:inline-block">⏳ 待定</span>')+'</td>'+
       '<td style="font-size:11px;color:#888">'+(r.nt?eh(r.nt):'')+'</td>'+
       '<td style="white-space:nowrap"><button class="btn-ic btn-ic-edit" onclick="startESp('+r.id+')" title="更动"><svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zm.708 1.06L11.5 2.5l2 2L14.5 3.5 12.854 1.207zM10.5 3.5l-9 9 1.5 1.5 9-9-1.5-1.5z"/></svg></button><button class="btn-ic btn-ic-del" onclick="delSp('+r.id+')" title="删除"><svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H3.5V0a1 1 0 0 1 1-1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg></button></td></tr>';
   }).join('');
@@ -2684,7 +2684,7 @@ function renderTchr(){
   const schRows=data.map((r,i)=>{const tot=r.cc.reduce((s,x)=>s+(x.count||0),0);
     return'<tr><td>'+(i+1)+'</td>'+
       '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.course+'</span><span class="badge '+(TB[r.type]||'b4')+'" style="font-size:9.5px;padding:1px 6px;opacity:.85">'+r.type+'</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
-      '<td style="font-size:11px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
+      '<td style="font-size:11px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="background:#FEF3C7;color:#854F0B;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;display:inline-block">⏳ 待定</span>')+'</td>'+
       '<td>'+r.cls+'</td><td>'+semBadge(r.sem)+'</td>'+
       '<td>'+halfBadge(r.half)+'</td><td>'+(tot||'—')+'</td>'+
       '<td style="font-size:11px;color:#888;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"'+(r.nt?' title="'+eh(r.nt)+'"':'')+'>'+(r.nt?eh(r.nt):'')+'</td><td>'+(r.btec?'<span class="badge b4">BTEC</span>':'')+'</td></tr>';}).join('');
@@ -2716,7 +2716,7 @@ function renderCoh(){
   tb.innerHTML=data.map((r,i)=>'<tr><td>'+(i+1)+'</td>'+
     '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.course+'</span><span class="badge '+(TB[r.type]||'b4')+'" style="font-size:9.5px;padding:1px 6px;opacity:.85">'+r.type+'</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
     '<td>'+r.cls+'</td><td>'+semBadge(r.sem)+'</td>'+
-    '<td>'+halfBadge(r.half)+'</td><td style="font-size:11px">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</td>'+
+    '<td>'+halfBadge(r.half)+'</td><td style="font-size:11px">'+(r.tc?eh(r.tc):'<span style="background:#FEF3C7;color:#854F0B;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;display:inline-block">⏳ 待定</span>')+'</td>'+
     '<td style="font-size:11px;color:#888;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"'+(r.nt?' title="'+eh(r.nt)+'"':'')+'>'+(r.nt?eh(r.nt):'')+'</td></tr>').join('');
 }
 function renderSpStu(){
@@ -2769,7 +2769,7 @@ function renderSpStu(){
           parts.push('<span class="badge b0">'+r.co+'</span>');
           if(!allSameCls)parts.push('<span class="badge b4">'+r.cls+'</span>');
           parts.push('<span style="font-size:11.5px;color:#888;margin-left:4px">'+eh(r.en||'—')+'</span>');
-          if(!allSameTc)parts.push('<span style="font-size:11px;color:#666;margin-left:6px">'+(r.tc?eh(r.tc):'<span style="color:#bbb;font-style:italic">待定</span>')+'</span>');
+          if(!allSameTc)parts.push('<span style="font-size:11px;color:#666;margin-left:6px">'+(r.tc?eh(r.tc):'<span style="background:#FEF3C7;color:#854F0B;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;display:inline-block">⏳ 待定</span>')+'</span>');
           return '<div class="ss-course">'+
             '<div class="ss-line1">'+
               parts.join('')+
