@@ -348,7 +348,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   <button class="tab active" onclick="switchTab('sch')">📋 排课表</button>
   <button class="tab" onclick="switchTab('sp')">👤 IS/SG 排课</button>
   <button class="tab" onclick="switchTab('sum')">📊 学期总表</button>
-  <button class="tab" onclick="switchTab('sta')">📈 教学统计</button>
+  <button class="tab" id="tab-sta" onclick="switchTab('sta')">📈 教学统计</button>
 </div>
 </div><!-- /.sticky-top -->
 
@@ -906,12 +906,15 @@ const PIN_KEY = 'cic_auth';
 const PIN_TTL = 24 * 60 * 60 * 1000;
 const EDITOR_KEY = 'cic_editor';     // v7.4: 当前操作人名字
 const TOKEN_KEY = 'cic_token';       // v7.5: 后端验证 token
+const ROLE_KEY = 'cic_role';         // v8.8: 当前用户角色（master/director/teacher）
 let currentEditor = '';              // v7.4: 当前操作人（每次 API 调用会带上）
 let currentToken = '';               // v7.5: 后端发的 token（每次 API 调用带上）
+let currentRole = 'teacher';         // v8.8: 当前角色，决定能看哪些功能
 
-// v7.4/v7.5: 启动时从 localStorage 读取上次的 editor + token
+// v7.4/v7.5/v8.8: 启动时从 localStorage 读取上次的 editor + token + role
 try { currentEditor = localStorage.getItem(EDITOR_KEY) || ''; } catch(e){}
 try { currentToken  = localStorage.getItem(TOKEN_KEY)  || ''; } catch(e){}
+try { currentRole   = localStorage.getItem(ROLE_KEY)   || 'teacher'; } catch(e){}
 
 // v7.5: PIN 验证整个搬到后端。前端不再持有 PIN 列表。
 async function checkPin(){
@@ -934,8 +937,10 @@ async function checkPin(){
       localStorage.setItem(PIN_KEY, Date.now());
       currentEditor = r.name || '';
       currentToken  = r.token || '';
+      currentRole   = r.role || 'teacher';   // v8.8
       try { localStorage.setItem(EDITOR_KEY, currentEditor); } catch(e){}
       try { localStorage.setItem(TOKEN_KEY,  currentToken); } catch(e){}
+      try { localStorage.setItem(ROLE_KEY,   currentRole); } catch(e){}
       err.textContent = '';
       unlockApp();
     } else {
@@ -955,7 +960,18 @@ async function checkPin(){
 function unlockApp(){
   document.getElementById('pin-overlay').style.display = 'none';
   document.getElementById('main-app').style.display = 'block';
+  applyRoleVisibility();  // v8.8：按当前角色隐藏不该看的 tab
   init();
+}
+
+// v8.8：根据 currentRole 隐藏 / 显示某些 tab
+function applyRoleVisibility(){
+  const staTabBtn = document.getElementById('tab-sta');
+  if(staTabBtn){
+    const canSeeStats = (currentRole==='director' || currentRole==='master');
+    staTabBtn.style.display = canSeeStats ? '' : 'none';
+    if(!canSeeStats && staTabBtn.classList.contains('active')) switchTab('sch');
+  }
 }
 
 function checkAuth(){
@@ -977,7 +993,8 @@ function logout(){
   localStorage.removeItem(PIN_KEY);
   localStorage.removeItem(EDITOR_KEY);  // v7.4
   localStorage.removeItem(TOKEN_KEY);   // v7.5
-  currentEditor='';currentToken='';
+  localStorage.removeItem(ROLE_KEY);    // v8.8
+  currentEditor='';currentToken='';currentRole='teacher';
   document.getElementById('pin-input').value='';
   document.getElementById('pin-err').textContent='';
   document.getElementById('pin-overlay').style.display='flex';
