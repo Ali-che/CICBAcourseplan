@@ -423,7 +423,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <select id="sch-sem-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">全部学期</option></select>
         <select id="sch-dept-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">课程代码</option></select>
         <select id="sch-tc-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">全部老师</option></select>
-        <input id="sch-search" type="text" oninput="renderSch()" placeholder="🔍 搜课程代码 / 英文名" style="font-size:11px;padding:4px 8px;width:180px;border-color:#E5E3F8">
+        <input id="sch-search" type="text" oninput="renderSch()" placeholder="🔍 搜课程代码 / 英文名 / 班级" style="font-size:11px;padding:4px 8px;width:220px;border-color:#E5E3F8">
       </div>
       <!-- 操作区 -->
       <div style="display:flex;gap:4px;align-items:center;flex:1;justify-content:flex-end;flex-wrap:wrap">
@@ -502,7 +502,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
         <span style="font-size:10px;color:#888">筛选</span>
         <select id="sp-sem-f" onchange="renderSp()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">全部学期</option></select>
         <select id="sp-dept-f" onchange="renderSp()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">课程代码</option></select>
-        <input id="sp-search" type="text" oninput="renderSp()" placeholder="🔍 搜课程代码 / 英文名" style="font-size:11px;padding:4px 8px;width:180px;border-color:#E5E3F8">
+        <input id="sp-search" type="text" oninput="renderSp()" placeholder="🔍 搜课程代码 / 英文名 / 学号 / 姓名 / 班级" style="font-size:11px;padding:4px 8px;width:260px;border-color:#E5E3F8">
       </div>
       <!-- 操作区 -->
       <div style="display:flex;gap:4px;align-items:center;flex:1;justify-content:flex-end;flex-wrap:wrap">
@@ -2473,11 +2473,15 @@ function renderSch(){
     else if(tcF.value==='__PENDING_HALF__') disp=disp.filter(r=>!r.half);
     else disp=disp.filter(r=>r.tc===tcF.value);
   }
-  // v7.4: 课程搜索框 —— 同时比对课程代码 + 英文名（不分大小写）
+  // v7.4 / v8.10: 搜索框 —— 同时比对课程代码 + 英文名 + 班级（不分大小写）
   const searchF=document.getElementById('sch-search');
   if(searchF&&searchF.value.trim()){
     const q=searchF.value.trim().toLowerCase();
-    disp=disp.filter(r=>(r.course||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q));
+    disp=disp.filter(r=>
+      (r.course||'').toLowerCase().includes(q)||
+      (r.en||'').toLowerCase().includes(q)||
+      String(r.cls||'').toLowerCase().includes(q)
+    );
   }
   if(schSK==='course')disp.sort((a,b)=>schSD*a.course.localeCompare(b.course));
   if(schSK==='sem')disp.sort((a,b)=>schSD*a.sem.localeCompare(b.sem));
@@ -2693,9 +2697,16 @@ function renderSp(){
   let disp=[...spD];
   if(spSemF&&spSemF.value)disp=disp.filter(r=>r.sem===spSemF.value);
   if(spDeptF&&spDeptF.value)disp=disp.filter(r=>getCourseDept(r.co)===spDeptF.value);
+  // v8.10：IS/SG 搜索同时匹配 课程代码 / 英文名 / 学号 / 姓名 / 班级
   if(spSearchF&&spSearchF.value.trim()){
     const q=spSearchF.value.trim().toLowerCase();
-    disp=disp.filter(r=>(r.co||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q));
+    disp=disp.filter(r=>
+      (r.co||'').toLowerCase().includes(q)||
+      (r.en||'').toLowerCase().includes(q)||
+      String(r.sid||'').toLowerCase().includes(q)||
+      (r.nm||'').toLowerCase().includes(q)||
+      String(r.cls||'').toLowerCase().includes(q)
+    );
   }
   // v7.9: 批量删除按钮
   _spFilteredIds=disp.map(r=>r.id);
