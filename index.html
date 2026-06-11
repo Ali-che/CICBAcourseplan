@@ -556,6 +556,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <select id="f-tc-s" onchange="renderTchr()"><option value="">全部</option></select>
       <label>课程类型</label>
       <select id="f-tc-t" onchange="renderTchr()"><option value="">全部</option><option>正常</option><option>英文</option><option>CD-实习</option><option>实习</option><option>SG</option><option>Capstone</option></select>
+      <input id="f-tc-q" oninput="renderTchr()" placeholder="🔍 课程代码 / 英文名 / 班级" style="width:200px">
     </div>
     <div class="card">
       <div class="ct" id="tc-ttl">任课老师课程总表</div>
@@ -573,6 +574,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <label>届别</label><select id="f-co" onchange="renderCoh()"><option value="">请选择</option></select>
       <label>学期</label>
       <select id="f-co-s" onchange="renderCoh()"><option value="">全部</option></select>
+      <input id="f-co-q" oninput="renderCoh()" placeholder="🔍 课程代码 / 英文名 / 班级" style="width:200px">
     </div>
     <div class="card">
       <div class="ct" id="co-ttl">班级课程总表</div>
@@ -585,10 +587,11 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   </div>
   <div id="sub-sss" class="spanel">
     <div class="fbar">
-      <label>搜索</label><input id="f-stu" placeholder="姓名/学号" style="width:150px" oninput="renderSpStu()">
+      <label>搜索</label><input id="f-stu" placeholder="🔍 姓名 / 学号" style="width:150px" oninput="renderSpStu()">
       <label>学生专业</label><select id="f-sm" onchange="renderSpStu()"><option value="">全部</option></select>
       <label>学期</label>
       <select id="f-sp-sem" onchange="renderSpStu()"><option value="">全部</option></select>
+      <input id="f-sss-q" oninput="renderSpStu()" placeholder="🔍 课程代码 / 英文名" style="width:170px">
     </div>
     <div class="card">
       <div class="ct">SG/IS 排课总表 · 学生维度</div>
@@ -603,6 +606,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <label>授课老师</label><select id="f-st" onchange="renderSpTchr()"><option value="">请选择</option></select>
       <label>学期</label>
       <select id="f-st-s" onchange="renderSpTchr()"><option value="">全部</option></select>
+      <input id="f-sst-q" oninput="renderSpTchr()" placeholder="🔍 课程代码 / 英文名" style="width:170px">
     </div>
     <div class="card">
       <div class="ct">SG/IS 排课总表 · 老师维度</div>
@@ -2750,17 +2754,22 @@ function renderTchr(){
   const tb=document.getElementById('tc-tb'),em=document.getElementById('tc-em');
   const lbl=(tc?tc:(dept?dept+'专业':'全部老师'))+(sem?' · '+sem:'');
   document.getElementById('tc-ttl').textContent='任课老师课程总表 · '+lbl;
+  // v8.12：课程代码 / 英文名 / 班级 搜索
+  const qEl=document.getElementById('f-tc-q');
+  const q=qEl?qEl.value.trim().toLowerCase():'';
   let data=[...schD];
   if(tc)data=data.filter(r=>r.tc===tc);
   else if(dept){const dTchrs=T.filter(t=>t.d===dept).map(t=>t.n);data=data.filter(r=>dTchrs.includes(r.tc));}
   if(sem)data=data.filter(r=>r.sem===sem);
   if(tp)data=data.filter(r=>r.type===tp);
+  if(q)data=data.filter(r=>(r.course||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q)||String(r.cls||'').toLowerCase().includes(q));
   let spRows=[];
   if(!tp||tp==='SG'){
     let spData=[...spD];
     if(tc)spData=spData.filter(r=>r.tc===tc);
     else if(dept){const dTchrs=T.filter(t=>t.d===dept).map(t=>t.n);spData=spData.filter(r=>dTchrs.includes(r.tc));}
     if(sem)spData=spData.filter(r=>r.sem===sem);
+    if(q)spData=spData.filter(r=>(r.co||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q)||String(r.cls||'').toLowerCase().includes(q));
     const spMap={};
     spData.forEach(r=>{const k=r.co+'|'+r.sem;if(!spMap[k])spMap[k]={co:r.co,en:r.en,sem:r.sem,cls:r.cls,tc:r.tc,stus:[]};spMap[k].stus.push(r.mr+' '+r.nm);});
     spRows=Object.values(spMap);
@@ -2800,11 +2809,14 @@ function filterCohByDept(){
 function renderCoh(){
   const co=document.getElementById('f-co').value,sem=document.getElementById('f-co-s').value;
   const dept=document.getElementById('f-co-d')?document.getElementById('f-co-d').value:'';
+  const qEl=document.getElementById('f-co-q');
+  const q=qEl?qEl.value.trim().toLowerCase():'';
   const tb=document.getElementById('co-tb'),em=document.getElementById('co-em');
   let data=[...schD];
   if(co)data=data.filter(r=>r.cc.some(x=>x.cohort===co));
   else if(dept)data=data.filter(r=>r.cc.some(x=>Object.keys(CBD).filter(d=>d===dept).flatMap(d=>CBD[d]).includes(x.cohort)));
   if(sem)data=data.filter(r=>r.sem===sem);
+  if(q)data=data.filter(r=>(r.course||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q)||String(r.cls||'').toLowerCase().includes(q));
   if(!data.length){tb.innerHTML='';em.textContent='暂无符合条件的排课记录';em.style.display='block';return;}
   em.style.display='none';
   tb.innerHTML=data.map((r,i)=>'<tr style="cursor:pointer" onclick="startES(\''+r.id+'\')" onmouseover="this.style.background=\'#F5F4FE\'" onmouseout="this.style.background=\'\'" title="点击编辑这笔排课"><td>'+(i+1)+'</td>'+
@@ -2817,10 +2829,13 @@ function renderSpStu(){
   const q=(document.getElementById('f-stu').value||'').toLowerCase();
   const mj=document.getElementById('f-sm').value;
   const sem=document.getElementById('f-sp-sem')?document.getElementById('f-sp-sem').value:'';
+  const qcEl=document.getElementById('f-sss-q');
+  const qc=qcEl?qcEl.value.trim().toLowerCase():'';
   let data=spD;
   if(q)data=data.filter(r=>(r.nm+r.sid).toLowerCase().includes(q));
   if(mj)data=data.filter(r=>r.mj===mj);
   if(sem)data=data.filter(r=>r.sem===sem);
+  if(qc)data=data.filter(r=>(r.co||'').toLowerCase().includes(qc)||(r.en||'').toLowerCase().includes(qc));
   const wrap=document.getElementById('ss-cards'),em=document.getElementById('ss-em');
   if(!data.length){wrap.innerHTML='';em.style.display='block';return;}
   em.style.display='none';
@@ -2886,11 +2901,14 @@ function renderSpTchr(){
   const tc=document.getElementById('f-st').value;
   const sem=document.getElementById('f-st-s')?document.getElementById('f-st-s').value:'';
   const dept=document.getElementById('f-st-d')?document.getElementById('f-st-d').value:'';
+  const qEl=document.getElementById('f-sst-q');
+  const q=qEl?qEl.value.trim().toLowerCase():'';
   const wrap=document.getElementById('st-cards'),em=document.getElementById('st-em');
   let data=[...spD];
   if(tc)data=data.filter(r=>r.tc===tc);
   if(sem)data=data.filter(r=>r.sem===sem);
   if(dept&&!tc){const deptTchrs=T.filter(t=>t.d===dept).map(t=>t.n);data=data.filter(r=>deptTchrs.includes(r.tc));}
+  if(q)data=data.filter(r=>(r.co||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q));
   if(!data.length){wrap.innerHTML='';em.textContent='暂无符合条件的 SG/IS 排课记录';em.style.display='block';return;}
   em.style.display='none';
   // 双层 group: 先按老师，再按课程
