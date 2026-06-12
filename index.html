@@ -718,9 +718,20 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
           <td style="padding:8px 12px;color:#666">按课程为单位<br>同门课多 1 个学生不另算<br>同一老师不同课分别算</td>
         </tr>
         <tr style="border-bottom:0.5px solid #eee">
-          <td style="padding:8px 12px"><span class="badge b5">Capstone</span></td>
+          <td style="padding:8px 12px;vertical-align:top">
+            <span class="badge b5">Capstone</span>
+            <div style="margin-top:4px"><span style="display:inline-block;font-size:10px;padding:1px 6px;border-radius:8px;background:#FCE4EC;color:#C2185B;font-weight:600">CD 系</span></div>
+          </td>
+          <td style="padding:8px 12px;font-family:ui-monospace,monospace">0.5 / 课</td>
+          <td style="padding:8px 12px;color:#666">CD Capstone 3 门 × 0.5 = 1.5<br><span style="font-size:11px;color:#999">识别：学生届别（cohort）前缀 = CD</span></td>
+        </tr>
+        <tr style="border-bottom:0.5px solid #eee">
+          <td style="padding:8px 12px;vertical-align:top">
+            <span class="badge b5">Capstone</span>
+            <div style="margin-top:4px"><span style="display:inline-block;font-size:10px;padding:1px 6px;border-radius:8px;background:#EEE;color:#666;font-weight:600">其他系</span></div>
+          </td>
           <td style="padding:8px 12px;font-family:ui-monospace,monospace">0.75 / 课</td>
-          <td style="padding:8px 12px;color:#666">毕业项目固定权重</td>
+          <td style="padding:8px 12px;color:#666">FA / IB / TM / CA … 2 门 × 0.75 = 1.5<br><span style="font-size:11px;color:#999">备注：以 21-35 人/班为基准</span></td>
         </tr>
       </tbody>
     </table>
@@ -1267,15 +1278,26 @@ window.closeFormulaModal=closeFormulaModal;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.getElementById('formula-modal');if(m&&m.style.display==='flex')closeFormulaModal();}});
 
 // v2 权重 — 按课程人数分档（正常/英文）或按人数 ÷ 上限封顶 1.0（CD-实习/实习）
-function courseWeight(type, students){
+// v8.13: Capstone 区分 CD vs 其他系
+//   CD Capstone（学生届别前缀=CD）: 3 门 × 0.5 = 1.5
+//   其他系 Capstone: 2 门 × 0.75 = 1.5
+// ⚠️ 此函数副本在 Apps Script Code.gs 的 courseWeight_()
+//    改规则时务必同步改两处，否则 BA 网页和 Sheet「_教学统计」分页会算出不一致的数字。
+//    校验方法：在 Apps Script 编辑器跑 verifyWeightConsistency()，跟此页面对照。
+function courseWeight(type, students, isCD){
   switch(type){
     case '正常':    return students<20 ? 0.5 : 1.0;   // v8.4：含 20 人算 1 门
     case '英文':    return students<20 ? 0.25 : 0.5;  // v8.4：含 20 人算 0.5 门
     case 'CD-实习': return Math.min(students/20, 1.0);
     case '实习':    return Math.min(students/16, 1.0);
-    case 'Capstone':return 0.75;
+    case 'Capstone':return isCD ? 0.5 : 0.75;        // v8.13：CD 0.5 / 其他 0.75
     default: return 0;
   }
+}
+// v8.13: cohort 前缀含 CD 即视为 CD Capstone（用于 courseWeight 第 3 个参数）
+function isCohortCD(cc){
+  if(!Array.isArray(cc))return false;
+  return cc.some(x => /^CD/i.test(String((x && x.cohort) || '')));
 }
 // 旧 WTS 保留供兼容（其他地方可能引用），新计算不用它
 const WTS={正常:1,英文:.5,'CD-实习':1,实习:1,SG:.167,Capstone:.75};
@@ -2984,8 +3006,9 @@ function semDetail(tc,sem){
   sch.forEach(r=>{
     if(r.type in cnt) cnt[r.type]=(cnt[r.type]||0)+1;
     const stus=(r.cc||[]).reduce((s,x)=>s+(x.count||0),0);
-    const w=courseWeight(r.type,stus);
-    courses.push({code:r.course,type:r.type,students:stus,weight:Math.round(w*100)/100});
+    const isCD=isCohortCD(r.cc);   // v8.13：CD Capstone 算 0.5 / 课
+    const w=courseWeight(r.type,stus,isCD);
+    courses.push({code:r.course,type:r.type,students:stus,weight:Math.round(w*100)/100,isCD:r.type==='Capstone'?isCD:undefined});
     wt+=w;
   });
   // v7.9.10: SG 按课程为单位，按课程学生数选档
