@@ -115,7 +115,7 @@ function initTabs(){
 }
 function sel(k){cur=k;document.getElementById('fq').value='';var fp=document.getElementById('fprog');if(k!=='CMP-CD')fp.value=k;render()}
 function selDrop(v){if(v!=='ALL')cur=v;render()}
-function tg(id){var e=document.getElementById(id);if(e)e.style.display=e.style.display==='none'?'block':'none'}
+function tg(id){var e=document.getElementById(id);if(!e)return;var show=e.style.display==='none';e.style.display=show?(e.tagName==='TR'?'table-row':'block'):'none';}
 let RID=0;
 function sheet(p,cmp){
   let secs='';
