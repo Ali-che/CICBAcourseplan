@@ -353,6 +353,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   <button class="tab active" onclick="switchTab('sch')">📋 排课表</button>
   <button class="tab" onclick="switchTab('sp')">👤 IS/SG 排课</button>
   <button class="tab" onclick="switchTab('sum')">📊 学期总表</button>
+  <button class="tab" onclick="switchTab('cs')">📚 课程结构</button>
   <button class="tab" id="tab-sta" onclick="switchTab('sta')">📈 教学统计</button>
 </div>
 </div><!-- /.sticky-top -->
@@ -619,6 +620,11 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
       <div class="empty" id="st-em"></div>
     </div>
   </div>
+</div>
+
+<!-- ══ 课程结构 ════════════════════════════ -->
+<div id="panel-cs" class="panel">
+  <iframe id="cs-frame" data-src="course_structure_online.html" title="课程结构" style="width:100%;height:82vh;border:0;border-radius:10px;background:#fff"></iframe>
 </div>
 
 <!-- ══ 教学统计 ════════════════════════════ -->
@@ -4720,9 +4726,10 @@ async function confirmCsvImportSp(){
 }
 
 function switchTab(id){
-  ['sch','sp','sum','sta'].forEach((x,i)=>{document.querySelectorAll('.tab')[i].classList.toggle('active',x===id);});
+  ['sch','sp','sum','cs','sta'].forEach((x,i)=>{document.querySelectorAll('.tab')[i].classList.toggle('active',x===id);});
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+id).classList.add('active');
+  if(id==='cs'){var _f=document.getElementById('cs-frame');if(_f&&!_f.src)_f.src=_f.dataset.src;}
   if(id==='sta')renderSta();if(id==='sum')renderAllSum();
   setTimeout(syncTblHeight,50); // 等 panel 显示后再算高度
 }
