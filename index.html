@@ -224,20 +224,22 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     @bottom-right{content:'第 ' counter(page) ' 页，共 ' counter(pages) ' 页';font-size:7.5pt;color:#aaa;}
   }
 
-  /* ══ v8.16.2: 所有 tab 统一列印模版 ══
-     A4 横向 · 完整置中 · 整表缩到一页宽(右侧不裁) · 栏位换行 · 干净跨页 · 不压日期 */
+  /* ══ v8.16.3: 所有 tab 统一列印模版 ══
+     照屏幕的自然排版，只缩小字体列印 —— A4 横向 · 置中 · 干净跨页 · 不压日期
+     关键教训：不要 width:100% + word-break，那会把窄栏挤成一字宽、逐字竖排(超丑) */
   .app{margin:0 auto!important;width:100%!important;max-width:100%!important}
-  .panel.active .card{page-break-inside:auto!important}            /* 长表允许自然跨页，别硬塞一页 */
-  .panel.active .tbl-wrap{overflow:visible!important}              /* 取消横向滚动容器，改为整表可见 */
-  .panel.active table{width:100%!important;table-layout:auto;margin:0 auto;font-size:7.5pt!important}
-  .panel.active th,.panel.active td{
-    padding:2pt 3pt!important;white-space:normal!important;word-break:break-word;overflow-wrap:anywhere;
-  }
-  .panel.active th{font-size:7pt!important}
-  .panel.active .badge{white-space:nowrap;font-size:6.8pt!important;padding:1pt 3pt!important}
+  .panel.active .card{page-break-inside:auto!important}            /* 长表允许自然跨页 */
+  .panel.active .tbl-wrap{overflow:visible!important}              /* 取消横向滚动容器 */
+  /* 自然宽度 + 单行不断字 + 置中，只把字体调小 */
+  .panel.active table{width:auto!important;max-width:100%;table-layout:auto!important;margin:0 auto!important;font-size:7pt}
+  .panel.active th,.panel.active td{white-space:nowrap!important;word-break:normal!important;overflow-wrap:normal!important;padding:2pt 4pt!important}
+  .panel.active th{font-size:6.8pt!important}
+  .panel.active .badge{white-space:nowrap}
+  /* 各学期的课程明细卡片：限个宽度、内部才换行，避免撑爆整表 */
+  .panel.active .sem-tip{max-width:180px!important;white-space:normal!important}
 
   /* ── 教学统计专属：LA500 输入框印成纯文字(固定窄宽,数值不塌缩)；辅助面板不印 ── */
-  body.print-sta #sta-tb input{border:none!important;background:transparent!important;box-shadow:none!important;text-align:center;width:26px!important;min-width:0!important;font-size:7pt!important;padding:0!important;-webkit-appearance:none;appearance:none}
+  body.print-sta #sta-tb input{border:none!important;background:transparent!important;box-shadow:none!important;text-align:center;width:30px!important;min-width:0!important;font-size:7pt!important;padding:0!important;-webkit-appearance:none;appearance:none}
   body.print-sta #sta-low-panel{display:none!important}
 }
 .print-header{display:none}
