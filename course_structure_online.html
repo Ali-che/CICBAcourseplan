@@ -46,9 +46,27 @@
 .srtb .en2{color:#999;font-size:10.5px}
 .srtb .dz2cell{padding:0 9px 8px}
 .srtb .dz2{font-size:11.5px;color:#555;background:rgba(83,74,183,.06);border-left:3px solid #cfc9ee;border-radius:0 6px 6px 0;padding:8px 12px;line-height:1.6}
+/* ── 列印：直式 A4 · 当前专业 · 干净双栏 · 尽量一页(不强求) ── */
+@media print{
+  @page{size:A4 portrait;margin:9mm 10mm}
+  html,body{background:#fff!important;font-size:9.5px}
+  .wrap{max-width:none!important;margin:0!important}
+  .tabs,.bar,.status,.note,.rf{display:none!important}          /* 只留课表本体 */
+  .sheet{box-shadow:none!important;padding:0!important;margin:0!important}
+  .hd{padding-bottom:7px;margin-bottom:6px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .hd .u{font-size:14px} .hd .t{font-size:12.5px} .hd .c,.hd .cr2{font-size:10.5px} .hd .p{font-size:11.5px}
+  .cols{column-count:2;column-gap:14px}                         /* 双栏塞更多，尽量一页 */
+  .sec{break-inside:avoid;margin-bottom:6px}                    /* 区块不被切开 */
+  .sh{-webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:10px;padding:3px 7px}
+  .r{font-size:10.5px;padding:2px 4px} .r .n .en{font-size:9.5px}
+  .dz{font-size:9.5px;padding:4px 7px}
+  .fx,.memo,.lk,.dot{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  /* 对照/搜索视图列印时也照原样(单栏)呈现 */
+  .cmpwrap{display:block} .cmpcol{min-width:0}
+}
 </style></head><body><div class="wrap">
 <div class="tabs" id="tabs"></div>
-<div class="bar"><select id="fprog" onchange="selDrop(this.value)"></select><input id="fq" placeholder="🔍 全专业搜索 · 代码 / 中文 / 英文 / 对接" oninput="render()"><button class="rf" onclick="loadSheet()">↻ 刷新数据</button></div>
+<div class="bar"><select id="fprog" onchange="selDrop(this.value)"></select><input id="fq" placeholder="🔍 全专业搜索 · 代码 / 中文 / 英文 / 对接" oninput="render()"><button class="rf" onclick="loadSheet()">↻ 刷新数据</button><button class="rf" onclick="window.print()" style="border-color:#AFA9EC;color:#534AB7" title="列印当前专业（直式 A4）">🖨️ 列印</button></div>
 <div class="status" id="status">载入中…</div>
 <div id="out"></div>
 </div>
