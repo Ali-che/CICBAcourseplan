@@ -224,25 +224,20 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     @bottom-right{content:'第 ' counter(page) ' 页，共 ' counter(pages) ' 页';font-size:7.5pt;color:#aaa;}
   }
 
-  /* ── v8.16: 教学统计专用 —— A4 横向 · 完整置中 · 长表可跨页 · 整表缩到一页宽（右侧不被切）── */
-  body.print-sta @page{ size:A4 landscape; margin:10mm 10mm 12mm 10mm; }
-  body.print-sta .app{width:100%!important;max-width:100%!important;margin:0 auto!important}
-  body.print-sta #panel-sta .card{page-break-inside:auto!important}  /* 表很长：允许跨页，别硬塞一页 */
-  /* 关键：整表压到页面宽度内，栏位允许换行，避免自然宽度超出被纸张边缘裁掉 */
-  body.print-sta #panel-sta .tbl-wrap{overflow:visible!important}
-  body.print-sta #panel-sta table{width:100%!important;table-layout:auto;margin:0 auto;font-size:7pt}
-  body.print-sta #panel-sta th,body.print-sta #panel-sta td{
-    padding:2pt 2.5pt!important;white-space:normal!important;word-break:break-word;overflow-wrap:anywhere;text-align:center;
+  /* ══ v8.16.2: 所有 tab 统一列印模版 ══
+     A4 横向 · 完整置中 · 整表缩到一页宽(右侧不裁) · 栏位换行 · 干净跨页 · 不压日期 */
+  .app{margin:0 auto!important;width:100%!important;max-width:100%!important}
+  .panel.active .card{page-break-inside:auto!important}            /* 长表允许自然跨页，别硬塞一页 */
+  .panel.active .tbl-wrap{overflow:visible!important}              /* 取消横向滚动容器，改为整表可见 */
+  .panel.active table{width:100%!important;table-layout:auto;margin:0 auto;font-size:7.5pt!important}
+  .panel.active th,.panel.active td{
+    padding:2pt 3pt!important;white-space:normal!important;word-break:break-word;overflow-wrap:anywhere;
   }
-  body.print-sta #panel-sta th{font-size:6.8pt!important}
-  /* 老师/职位 靠左，并给较宽比例；数值栏收窄 */
-  body.print-sta #panel-sta td:nth-child(2),body.print-sta #panel-sta th:nth-child(2),
-  body.print-sta #panel-sta td:nth-child(3),body.print-sta #panel-sta th:nth-child(3){text-align:left}
-  /* LA500 可编辑输入框 → 列印成纯文字（保留固定小宽度，数值才不会塌缩不见）*/
+  .panel.active th{font-size:7pt!important}
+  .panel.active .badge{white-space:nowrap;font-size:6.8pt!important;padding:1pt 3pt!important}
+
+  /* ── 教学统计专属：LA500 输入框印成纯文字(固定窄宽,数值不塌缩)；辅助面板不印 ── */
   body.print-sta #sta-tb input{border:none!important;background:transparent!important;box-shadow:none!important;text-align:center;width:26px!important;min-width:0!important;font-size:7pt!important;padding:0!important;-webkit-appearance:none;appearance:none}
-  /* 徽章（%）在窄栏里也别被截断 */
-  body.print-sta #panel-sta .badge{white-space:nowrap;font-size:6.5pt!important;padding:1pt 2pt!important}
-  /* 教学统计的辅助面板（可优先排课/低工时提示）不印 */
   body.print-sta #sta-low-panel{display:none!important}
 }
 .print-header{display:none}
@@ -3830,14 +3825,12 @@ function printPanel(id){
   const semTxt=semVal||(id==='sta'?'全部学年':'全部学期');
   const hdr=document.getElementById('print-header');
   if(hdr){
-    // v8.16: 教学统计不压列印日期（其它 tab 仍保留）
-    const dateSpan = (id==='sta') ? '' : '<span><span class="ph-label">列印日期</span>'+now+'</span>';
+    // v8.16.2: 所有 tab 统一不压列印日期
     hdr.innerHTML=
       '<h1>CIC 本科排课管理系统 · '+titles[id]+'</h1>'+
       '<div class="ph-meta">'+
         '<span><span class="ph-label">文件说明</span>'+subtitles[id]+'</span>'+
         '<span><span class="ph-label">学期</span>'+semTxt+'</span>'+
-        dateSpan+
       '</div>';
   }
   // 版面：排课表 / 教学统计 各有专属横向列印类
