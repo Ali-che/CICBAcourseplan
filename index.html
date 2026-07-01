@@ -202,6 +202,10 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   /* ── 分页 ── */
   .card{page-break-inside:avoid}
   tr.dh{page-break-after:avoid}
+  /* v8.16: 跨页更干净 —— 表头每页重复、行不被切半、小计不孤立 */
+  thead{display:table-header-group}
+  tr{page-break-inside:avoid}
+  tr.dt{page-break-before:avoid}
 
   /* ── 预设：A4 横向（所有 tab 统一）── */
   @page{
@@ -219,6 +223,19 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
     @top-center{content:'CIC 本科排课管理系统 · 排课记录';font-size:8pt;color:#999;}
     @bottom-right{content:'第 ' counter(page) ' 页，共 ' counter(pages) ' 页';font-size:7.5pt;color:#aaa;}
   }
+
+  /* ── v8.16: 教学统计专用 —— A4 横向 · 完整置中 · 长表可跨页 ── */
+  body.print-sta @page{ size:A4 landscape; margin:12mm 12mm 14mm 12mm; }
+  body.print-sta .app{width:100%!important;max-width:100%!important;margin:0 auto!important}
+  body.print-sta #panel-sta .card{page-break-inside:auto!important}  /* 表很长：允许跨页，别硬塞一页 */
+  body.print-sta #panel-sta table{margin-left:auto;margin-right:auto;width:100%}
+  body.print-sta #panel-sta td,body.print-sta #panel-sta th{text-align:center}
+  body.print-sta #panel-sta td:nth-child(2),body.print-sta #panel-sta th:nth-child(2),
+  body.print-sta #panel-sta td:nth-child(3),body.print-sta #panel-sta th:nth-child(3){text-align:left}  /* 老师/职位 靠左 */
+  /* LA500 可编辑输入框 → 列印成纯文字（不显示输入框边框）*/
+  body.print-sta #sta-tb input{border:none!important;background:transparent!important;box-shadow:none!important;text-align:center;width:auto!important;font-size:8pt!important;padding:0!important;-webkit-appearance:none;appearance:none}
+  /* 教学统计的辅助面板（可优先排课/低工时提示）不印 */
+  body.print-sta #sta-low-panel{display:none!important}
 }
 .print-header{display:none}
 /* 排课表横向列印 */
@@ -3805,23 +3822,23 @@ function printPanel(id){
   const semTxt=semVal||(id==='sta'?'全部学年':'全部学期');
   const hdr=document.getElementById('print-header');
   if(hdr){
+    // v8.16: 教学统计不压列印日期（其它 tab 仍保留）
+    const dateSpan = (id==='sta') ? '' : '<span><span class="ph-label">列印日期</span>'+now+'</span>';
     hdr.innerHTML=
       '<h1>CIC 本科排课管理系统 · '+titles[id]+'</h1>'+
       '<div class="ph-meta">'+
         '<span><span class="ph-label">文件说明</span>'+subtitles[id]+'</span>'+
         '<span><span class="ph-label">学期</span>'+semTxt+'</span>'+
-        '<span><span class="ph-label">列印日期</span>'+now+'</span>'+
+        dateSpan+
       '</div>';
   }
-  // 排课表：横向
-  if(id==='sch'){
-    document.body.classList.add('print-sch');
-  } else {
-    document.body.classList.remove('print-sch');
-  }
+  // 版面：排课表 / 教学统计 各有专属横向列印类
+  document.body.classList.remove('print-sch','print-sta');
+  if(id==='sch')      document.body.classList.add('print-sch');
+  else if(id==='sta') document.body.classList.add('print-sta');  // v8.16
   setTimeout(()=>{
     window.print();
-    document.body.classList.remove('print-sch');
+    document.body.classList.remove('print-sch','print-sta');
   },300);
 }
 
