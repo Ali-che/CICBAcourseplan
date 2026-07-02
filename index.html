@@ -1029,7 +1029,8 @@ function applyRoleVisibility(){
 
 function checkAuth(){
   const ts = localStorage.getItem(PIN_KEY);
-  if(ts && Date.now() - parseInt(ts) < PIN_TTL){
+  // v8.17: 除了「24h 内登入过」，还要求 token 真的在 —— 避免「空 token 假登入 → 第一个请求就被登出」
+  if(ts && Date.now() - parseInt(ts) < PIN_TTL && currentToken){
     unlockApp();
   } else {
     document.getElementById('pin-overlay').style.display = 'flex';
@@ -1393,9 +1394,10 @@ let pollTimer=null;
 function startRemotePoll(){
   if(!SHEETS_URL||pollTimer)return;
   pollTimer=setInterval(async()=>{
-    if(!loadOK||staleWarningShown)return; // 已经警告中就不再打扰
+    // v8.17: 编辑框开着时暂停轮询 —— 编辑中途不再被「云端有人编辑，储存暂停」横条打断
+    if(!loadOK||staleWarningShown||_anyModalOpen())return;
     try{
-      const r=await gasGet({action:'read',type:'schedule'});
+      const r=await gasGet({action:'read',type:'schedule'},{silent:true}); // v8.17: 后台，不登出
       if(!r.success)return;
       const remoteHash=hashRecords(r.data);
       const localHash=hashRecords(schD);
@@ -3233,22 +3235,20 @@ async function _retryOnBusy(fn, label){
   return lastResp || {success:false, error:'系统繁忙，请稍后再试'};
 }
 
-async function gasGet(params){
-  // v7.5: 自动带 token（除非 params 已指定）
+async function gasGet(params, opts){
+  // v7.5: 自动带 token（除非 params 已指定）；v8.17: opts.silent=后台请求，遇 UNAUTHORIZED 不登出
+  opts=opts||{};
   const p=Object.assign({},params);
   if(currentToken&&!('token' in p))p.token=currentToken;
   const qs=Object.entries(p)
     .map(([k,v])=>k+'='+encodeURIComponent(typeof v==='object'?JSON.stringify(v):String(v)))
     .join('&');
-  return _retryOnBusy(async () => {
+  const r = await _retryOnBusy(async () => {
     const res=await fetch(SHEETS_URL+'?'+qs,{cache:'no-store'});
-    const r=await res.json();
-    // v7.5: token 失效 → 强制重新登入
-    if(r&&r.error&&String(r.error).includes('UNAUTHORIZED')){
-      handleTokenExpired();
-    }
-    return r;
+    return await res.json();
   }, params.action || 'GET');
+  _afterApiCall(r, opts.silent);   // v8.17: 后台抖动不踢人；用户动作连错 3 次才登出
+  return r;
 }
 
 // text/plain POST：不触发 preflight，数据量不受 URL 长度限制
@@ -3273,9 +3273,7 @@ async function fetchWrite(type,data){
     writeLocked=true;
     showSafeBanner('Apps Script 已拒绝空数组写入。这通常意味着本地数据丢失，请刷新或下载。');
   }
-  if(r && r.error && String(r.error).includes('UNAUTHORIZED')){
-    handleTokenExpired();
-  }
+  _afterApiCall(r, false);   // v8.17: 整表写入是用户动作，走容错(连错3次才登出)
   return r && r.success===true;
 }
 
@@ -3284,9 +3282,10 @@ async function fetchWrite(type,data){
 // 后端 Apps Script v7 已部署对应 endpoint，前端这里包成 Promise
 // 任何一次写入只动 sheet 里那一列 / 那个字段，不会覆盖别人正在改的其他字段
 // ════════════════════════════════════════
-async function gasPost(action, body){
+async function gasPost(action, body, opts){
   if(!SHEETS_URL)return{success:false,error:'未配置 SHEETS_URL'};
-  return _retryOnBusy(async () => {
+  opts=opts||{};   // v8.17: opts.silent=后台请求，遇 UNAUTHORIZED 不登出
+  const r = await _retryOnBusy(async () => {
     // v7.4: editor，v7.5: token —— 都自动带上（除非 body 已指定）
     const payload=Object.assign({action,editor:currentEditor||'',token:currentToken||''},body);
     const res=await fetch(SHEETS_URL,{
@@ -3294,12 +3293,24 @@ async function gasPost(action, body){
       headers:{'Content-Type':'text/plain'},
       body:JSON.stringify(payload)
     });
-    const r=await res.json();
-    if(r&&r.error&&String(r.error).includes('UNAUTHORIZED')){
-      handleTokenExpired();
-    }
-    return r;
+    return await res.json();
   }, action);
+  _afterApiCall(r, opts.silent);   // v8.17
+  return r;
+}
+
+// ════════ v8.17: 稳定性 —— 别被后台抖动踢下线 ════════
+// 背景：token 就是常数 SCRIPT_SECRET，服务端永不过期；任何 UNAUTHORIZED 几乎都是
+// Apps Script 并发抖动。旧逻辑「一遇 UNAUTHORIZED 就登出」会在 8 人并发时随机踢人。
+let _unauthStreak = 0;   // 连续 UNAUTHORIZED（只计「用户主动动作」，后台请求不计）
+function _anyModalOpen(){ return !!document.querySelector('.modal-overlay.open'); }
+function _afterApiCall(r, silent){
+  const unauth = r && r.error && String(r.error).includes('UNAUTHORIZED');
+  if(!unauth){ if(r && r.success!==false) _unauthStreak=0; return; }  // 成功一次就清零
+  if(silent) return;                       // 后台(轮询/心跳/在线人数)：忽略，绝不登出
+  _unauthStreak++;
+  if(_unauthStreak>=3){ handleTokenExpired(); }   // 连续 3 次用户动作都失败 → 才真的重新登入
+  else if(typeof showToast==='function'){ showToast('连线暂时异常，动作可能未完成，请再试一次', {kind:'warn'}); }
 }
 
 // v7.5: token 失效 → 静悄悄清掉本地状态，跳回 PIN 画面（不弹一堆讨厌的红色横条）
@@ -3307,6 +3318,7 @@ let _tokenExpiredAlerted=false;
 function handleTokenExpired(){
   if(_tokenExpiredAlerted)return;
   _tokenExpiredAlerted=true;
+  _unauthStreak=0;   // v8.17
   // 直接清本地状态，不问 confirm
   try{
     localStorage.removeItem(PIN_KEY);
@@ -3327,8 +3339,8 @@ function handleTokenExpired(){
   },200);
 }
 // v7.8: 在线用户 API
-async function gasHeartbeat(){return gasPost('heartbeat',{});}
-async function gasWhoOnline(){return gasGet({action:'whoOnline'});}
+async function gasHeartbeat(){return gasPost('heartbeat',{},{silent:true});}   // v8.17: 后台，遇抖动不登出
+async function gasWhoOnline(){return gasGet({action:'whoOnline'},{silent:true});} // v8.17
 async function gasGoodbye(){return gasPost('goodbye',{});}
 
 // 新增 1 笔，返回后端最终的 id（可能因碰撞被加 -N 后缀）
