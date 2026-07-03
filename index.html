@@ -1865,28 +1865,36 @@ async function openTransferDialog(){
     alert('暂无其他记录可作为转课目标');
     return;
   }
-  const targetId=await _showTransferDialog(cur,candidates);
-  if(!targetId)return;
-  const target=schD.find(r=>String(r.id)===String(targetId));
+  const result=await _showTransferDialog(cur,candidates);
+  if(!result)return;
+  const target=schD.find(r=>String(r.id)===String(result.targetId));
   if(!target){alert('目标已不存在');return;}
-  const mergedCc=_mergeCc(target.cc,cur.cc);
+  const sel=new Set(result.cohortIdxs);
+  const moveCc=cur.cc.filter((_,i)=>sel.has(i)).map(c=>({...c}));
+  const remainCc=cur.cc.filter((_,i)=>!sel.has(i)).map(c=>({...c}));
+  const mergedCc=_mergeCc(target.cc,moveCc);
   if(!SHEETS_URL||!canSync()){alert('未配置 SHEETS_URL 或同步锁定，无法转课');return;}
   setSyncStatus('⏳ 转课中…','');
   const r1=await gasUpdateRecord('schedule',target.id,{cc:mergedCc});
   if(!r1||!r1.success){handleRecordApiFail(r1);setSyncStatus('❌ 转课失败：目标合并失败',false);return;}
   target.cc=mergedCc;
-  const r2=await gasDeleteRecord('schedule',cur.id);
-  if(!r2||!r2.success){
-    // 目标已合并成功但原记录删除失败 → 提示用户手动删
-    handleRecordApiFail(r2);
-    setSyncStatus('⚠ 目标已合并但原记录删除失败，请手动删除',false);
-    return;
+  if(remainCc.length){
+    // 部分转：原记录保留，只更新剩余届别
+    const r2=await gasUpdateRecord('schedule',cur.id,{cc:remainCc});
+    if(!r2||!r2.success){handleRecordApiFail(r2);setSyncStatus('⚠ 目标已合并但原记录更新失败，请手动核对',false);return;}
+    cur.cc=remainCc;
+    closeSchModal();renderSch();renderAllSum();renderSta();
+    setSyncStatus('✅ 已转部分届别到 '+target.course+' '+new Date().toLocaleTimeString(),true);
+    alert('✓ 已把选定届别并入 '+target.course+'，其余留在原记录 '+cur.course);
+  }else{
+    // 全部转：删除原记录
+    const r2=await gasDeleteRecord('schedule',cur.id);
+    if(!r2||!r2.success){handleRecordApiFail(r2);setSyncStatus('⚠ 目标已合并但原记录删除失败，请手动删除',false);return;}
+    schD=schD.filter(x=>String(x.id)!==String(_mId));
+    closeSchModal();renderSch();renderAllSum();renderSta();
+    setSyncStatus('✅ 已转到 '+target.course+' '+new Date().toLocaleTimeString(),true);
+    alert('✓ 已合并到 '+target.course+'，原记录已删除');
   }
-  schD=schD.filter(x=>String(x.id)!==String(_mId));
-  closeSchModal();
-  renderSch();renderAllSum();renderSta();
-  setSyncStatus('✅ 已转到 '+target.course+' '+new Date().toLocaleTimeString(),true);
-  alert('✓ 已合并到 '+target.course+'，原记录已删除');
 }
 
 // ═══ v8.5 ④ · 拆班（3 维度）═══
@@ -2078,6 +2086,7 @@ function _showTransferDialog(cur,candidates){
     modal.className='modal-overlay open';
     modal.style.zIndex=3000;
     const curCcTxt=cur.cc.map(c=>c.cohort+'·'+c.count+'人').join(', ')||'(无)';
+    const cohCks=cur.cc.map((c,i)=>'<label style="display:inline-block;padding:4px 10px;font-size:12px;cursor:pointer;margin:2px 4px 2px 0;border:0.5px solid #ddd;border-radius:6px;background:#fff"><input type="checkbox" class="tr-coh" data-idx="'+i+'" checked style="margin-right:5px">'+eh(c.cohort)+'·'+c.count+'人</label>').join('');
     // v8.5.1：用筛选器收窄候选；默认所有筛选都「全部」
     const allSems=[...new Set(candidates.map(c=>c.sem).filter(Boolean))].sort();
     const allHalves=[...new Set(candidates.map(c=>c.half).filter(Boolean))];
@@ -2090,10 +2099,13 @@ function _showTransferDialog(cur,candidates){
       '<div class="modal-hdr"><h3>↔ 转到其他课程</h3><button class="modal-close" data-action="cancel">✕</button></div>'+
       '<div class="modal-body">'+
       '<div style="background:#EEEDFE;padding:10px 14px;border-radius:6px;margin-bottom:12px">'+
-      '<div style="font-size:11px;color:#3C3489;margin-bottom:4px"><b>当前记录（转出后将被删除）</b></div>'+
+      '<div style="font-size:11px;color:#3C3489;margin-bottom:4px"><b>当前记录（转走全部届别则删除；只转部分则保留剩余）</b></div>'+
       '<div style="font-size:13px">'+eh(cur.course)+' · '+eh(cur.cls)+' · '+eh(cur.sem)+' · '+eh(cur.half||'(未指定)')+'</div>'+
       '<div style="font-size:11px;color:#666;margin-top:4px">届别人数: '+eh(curCcTxt)+'</div>'+
       '</div>'+
+      '<div class="modal-sec">① 选要转走的届别（不勾的留在原记录）</div>'+
+      '<div style="background:#F8F8FA;padding:8px;border-radius:6px;margin-bottom:12px">'+cohCks+'</div>'+
+      '<div class="modal-sec">② 选目标课程（可筛学期/上下半，含新学期新上下半的已开课）</div>'+
       // 筛选器
       '<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center">'+
       '<span style="font-size:11px;color:#666">筛选：</span>'+
@@ -2121,9 +2133,11 @@ function _showTransferDialog(cur,candidates){
     modal.querySelector('[data-action="confirm"]').onclick=()=>{
       const sel=modal.querySelector('input[name="transfer-target"]:checked');
       if(!sel){alert('请先选一个目标课程');return;}
+      const cohIdxs=[...modal.querySelectorAll('.tr-coh:checked')].map(c=>parseInt(c.dataset.idx));
+      if(!cohIdxs.length){alert('至少勾一个要转走的届别');return;}
       const id=sel.value;
       document.body.removeChild(modal);
-      resolve(id);
+      resolve({targetId:id,cohortIdxs:cohIdxs});
     };
   });
 }
