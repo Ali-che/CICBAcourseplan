@@ -4906,7 +4906,14 @@ function syncTblHeight(){
   const SUPA_URL='https://ahygebtmavcmzqdwwhbs.supabase.co';
   const SUPA_KEY='sb_publishable_hWK78P_LTzHgKcuFMI2FVg_44Yw_tsZ';
   const H={'apikey':SUPA_KEY,'Content-Type':'application/json'};
-  let _pin=localStorage.getItem('cic_pin')||'';
+  // 隔离存储：测试页 localStorage 全部加前缀，跟正式页完全不共享（避免沿用旧 session / 本地缓存 / 触发误上传）
+  try{const _ls=localStorage,_P='supatest_',_g=_ls.getItem.bind(_ls),_s=_ls.setItem.bind(_ls),_r=_ls.removeItem.bind(_ls);
+    localStorage.getItem=function(k){return _g(_P+k);};
+    localStorage.setItem=function(k,v){return _s(_P+k,v);};
+    localStorage.removeItem=function(k){return _r(_P+k);};
+  }catch(e){}
+  currentToken='';currentEditor='';currentRole='teacher';   // 清掉脚本前段用共享key读进来的正式页 session
+  let _pin=localStorage.getItem('cic_pin')||'';             // 现在读的是隔离后的 key，首次为空 → 会要求登入
   async function sget(p){const r=await fetch(SUPA_URL+'/rest/v1/'+p,{headers:H,cache:'no-store'});return r.json();}
   async function srpc(fn,b){const r=await fetch(SUPA_URL+'/rest/v1/rpc/'+fn,{method:'POST',headers:H,body:JSON.stringify(b)});return r.json();}
   const mSch=r=>({id:r.id,course:r.course_code||'',en:r.course_en||'',sem:r.sem||'',half:r.half||'',type:r.type||'',cls:String(r.class_code||''),tc:r.teacher||'',cc:r.cohorts||[],nt:r.note||'',btec:r.btec===true,updated:r.updated_at||'',editor:r.editor||'',editing:false});
