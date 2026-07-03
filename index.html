@@ -4900,6 +4900,90 @@ function syncTblHeight(){
   });
 }
 
+// ═══════════════ Supabase 适配器（测试版）═══════════════
+// 只把跟后端讲话的 4 个函数改成讲 Supabase；其余前端一律不动。
+(function(){
+  const SUPA_URL='https://ahygebtmavcmzqdwwhbs.supabase.co';
+  const SUPA_KEY='sb_publishable_hWK78P_LTzHgKcuFMI2FVg_44Yw_tsZ';
+  const H={'apikey':SUPA_KEY,'Content-Type':'application/json'};
+  // 隔离存储：测试页 localStorage 全部加前缀，跟正式页完全不共享（避免沿用旧 session / 本地缓存 / 触发误上传）
+  try{const _ls=localStorage,_P='supatest_',_g=_ls.getItem.bind(_ls),_s=_ls.setItem.bind(_ls),_r=_ls.removeItem.bind(_ls);
+    localStorage.getItem=function(k){return _g(_P+k);};
+    localStorage.setItem=function(k,v){return _s(_P+k,v);};
+    localStorage.removeItem=function(k){return _r(_P+k);};
+  }catch(e){}
+  currentToken='';currentEditor='';currentRole='teacher';   // 清掉脚本前段用共享key读进来的正式页 session
+  let _pin=localStorage.getItem('cic_pin')||'';             // 现在读的是隔离后的 key，首次为空 → 会要求登入
+  async function sget(p){const r=await fetch(SUPA_URL+'/rest/v1/'+p,{headers:H,cache:'no-store'});return r.json();}
+  async function srpc(fn,b){const r=await fetch(SUPA_URL+'/rest/v1/rpc/'+fn,{method:'POST',headers:H,body:JSON.stringify(b)});return r.json();}
+  const mSch=r=>({id:r.id,course:r.course_code||'',en:r.course_en||'',sem:r.sem||'',half:r.half||'',type:r.type||'',cls:String(r.class_code||''),tc:r.teacher||'',cc:r.cohorts||[],nt:r.note||'',btec:r.btec===true,updated:r.updated_at||'',editor:r.editor||'',editing:false});
+  const mSp=r=>({id:r.id,sid:r.student_id||'',mr:r.title||'',nm:r.name||'',mj:r.major||'',co:r.course_code||'',en:r.course_en||'',cls:String(r.class_code||''),sem:r.sem||'',tc:r.teacher||'',nt:r.note||'',updated:r.updated_at||'',editor:r.editor||'',type:'SG',editing:false});
+  const uSch=r=>({course_code:r.course,course_en:r.en,sem:r.sem,half:r.half,type:r.type,class_code:r.cls,teacher:r.tc,cohorts:r.cc||[],total:(r.cc||[]).reduce((s,x)=>s+(+x.count||0),0),note:r.nt,btec:!!r.btec,id:r.id});
+  const uSp=r=>({student_id:r.sid,title:r.mr,name:r.nm,major:r.mj,course_code:r.co,course_en:r.en,class_code:r.cls,sem:r.sem,teacher:r.tc,note:r.nt,id:r.id});
+  const uSchF=f=>{const o={},m={course:'course_code',en:'course_en',sem:'sem',half:'half',type:'type',cls:'class_code',tc:'teacher',nt:'note'};for(const k in m)if(k in f)o[m[k]]=f[k];if('cc'in f){o.cohorts=f.cc;o.total=(f.cc||[]).reduce((s,x)=>s+(+x.count||0),0);}if('btec'in f)o.btec=!!f.btec;return o;};
+  const uSpF=f=>{const o={},m={sid:'student_id',mr:'title',nm:'name',mj:'major',co:'course_code',en:'course_en',cls:'class_code',sem:'sem',tc:'teacher',nt:'note'};for(const k in m)if(k in f)o[m[k]]=f[k];return o;};
+
+  checkPin=async function(){
+    const el=document.getElementById('pin-input'),val=(el.value||'').trim();if(!val)return;
+    const err=document.getElementById('pin-err');err.textContent='⏳ 验证中…';err.style.color='#666';
+    try{const r=await srpc('authenticate',{p_pin:val});
+      if(r&&r.success){_pin=val;localStorage.setItem('cic_pin',val);localStorage.setItem(PIN_KEY,Date.now());
+        currentEditor=r.name||'';currentToken=val;currentRole=r.role||'teacher';
+        try{localStorage.setItem(EDITOR_KEY,currentEditor);localStorage.setItem(TOKEN_KEY,val);localStorage.setItem(ROLE_KEY,currentRole);}catch(e){}
+        err.textContent='';unlockApp();
+      }else{err.textContent=(r&&r.error)||'PIN 错误';err.style.color='#e53e3e';el.value='';}
+    }catch(e){err.textContent='⚠️ 连线失败：'+e.message;err.style.color='#e53e3e';}
+  };
+
+  // 测试页与正式页同域共用 localStorage：只有「在测试页用 PIN 登入过(_pin 存在)」才自动解锁，
+  // 否则强制重输 PIN，避免沿用正式页旧 session 导致 _pin 为空、写入报「缺少有效 PIN」。
+  checkAuth=function(){
+    const ts=localStorage.getItem(PIN_KEY);
+    if(ts&&Date.now()-parseInt(ts)<PIN_TTL&&_pin){unlockApp();}
+    else{
+      var ov=document.getElementById('pin-overlay'),ma=document.getElementById('main-app');
+      if(ov)ov.style.display='flex'; if(ma)ma.style.display='none';
+      setTimeout(function(){var i=document.getElementById('pin-input');if(i)i.focus();},100);
+    }
+  };
+
+  gasGet=async function(params){
+    const a=(params||{}).action;
+    if(a==='authenticate')return srpc('authenticate',{p_pin:params.pin||''});
+    if(a==='readRef'){
+      const[co,te,ch,de,se]=await Promise.all([sget('courses?select=code,en,dept'),sget('teachers?select=name,dept,position,quota'),sget('cohorts?select=dept,cohort'),sget('depts?select=code,name'),sget('semesters?select=sem')]);
+      return{success:true,
+        courses:(co||[]).map(x=>({c:x.code,en:x.en||'',dept:x.dept||''})),
+        teachers:(te||[]).map(x=>({n:x.name,d:x.dept||'',r:x.position||'',l:+x.quota||0})),
+        cohorts:(ch||[]).map(x=>({dept:x.dept,cohort:x.cohort})),
+        depts:(de||[]).map(x=>({code:x.code,name:x.name||''})),
+        sems:(se||[]).map(x=>x.sem),directors:[]};
+    }
+    if(a==='read'){
+      if(params.type==='special'){const d=await sget('special?select=*&order=id.asc');return{success:true,data:(d||[]).map(mSp)};}
+      if(params.type==='btec'){const d=await sget('btec?select=*');const o={};(d||[]).forEach(x=>o[x.name]=+x.la500||0);return{success:true,data:o};}
+      const d=await sget('schedule?select=*&order=id.asc');return{success:true,data:(d||[]).map(mSch)};
+    }
+    if(a==='whoOnline')return{success:true,users:[]};
+    if(a==='listBackups')return{success:true,snapshots:[]};
+    return{success:true};
+  };
+
+  gasPost=async function(action,body){
+    body=body||{};const t=body.type||'schedule';
+    if(action==='authenticate')return srpc('authenticate',{p_pin:body.pin||''});
+    if(action==='addRecord'){const rec=t==='special'?uSp(body.record||{}):uSch(body.record||{});return srpc('add_record',{p_pin:_pin,p_type:t,p_rec:rec});}
+    if(action==='updateRecord'){const f=t==='special'?uSpF(body.fields||{}):uSchF(body.fields||{});return srpc('update_record',{p_pin:_pin,p_type:t,p_id:String(body.id),p_fields:f});}
+    if(action==='deleteRecord')return srpc('delete_record',{p_pin:_pin,p_type:t,p_id:String(body.id)});
+    if(action==='deleteMultiple')return srpc('delete_multiple',{p_pin:_pin,p_type:t,p_ids:body.ids||[]});
+    if(action==='upsertBtec')return srpc('upsert_btec',{p_pin:_pin,p_name:body.name,p_value:+body.value||0});
+    if(action==='deleteBtec')return srpc('delete_btec',{p_pin:_pin,p_name:body.name});
+    if(action==='heartbeat'||action==='goodbye')return{success:true};
+    return{success:false,error:'未知 action '+action};
+  };
+
+  fetchWrite=async function(){try{showToast('「整张上传」已停用，请用单笔增删改（更安全）',{kind:'warn'});}catch(e){}return false;};
+})();
 </script>
 </body>
 </html>
