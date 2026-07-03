@@ -2581,8 +2581,11 @@ function renderSch(){
     });
     const tags=ccSorted.map(cc=>cohortTag(cc.cohort,cc.count)).join('');
     const _chk=_schSelected.has(String(r.id))?'checked':'';
+    const _cf=C.find(x=>x.c===r.course);
+    const _mpv=_cf&&_cf.mapping?String(_cf.mapping).trim():'';
+    const _mp=(_mpv&&_mpv!=='待定')?'<div style="font-size:10.5px;color:#185FA5;margin-top:1px;padding-left:9px;line-height:1.3">🔗 对接 '+eh(_mpv)+'</div>':'';
     return'<tr'+(_chk?' style="background:#FFF8E1"':'')+'><td style="text-align:center"><input type="checkbox" class="row-chk" '+_chk+' onclick="toggleRowSelect(\'sch\',\''+r.id+'\',this.checked)"></td><td>'+(i+1)+'</td>'+
-      '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.course+'</span><span class="badge '+(TB[r.type]||'b4')+'" style="font-size:9.5px;padding:1px 6px;opacity:.85">'+r.type+'</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
+      '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.course+'</span><span class="badge '+(TB[r.type]||'b4')+'" style="font-size:9.5px;padding:1px 6px;opacity:.85">'+r.type+'</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+_mp+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
       '<td>'+semBadge(r.sem)+'</td><td>'+halfBadge(r.half)+'</td>'+
       '<td>'+r.cls+'</td><td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="background:#FEE2E2;color:#B91C1C;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;display:inline-block">⏳ 待定</span>')+'</td>'+
       '<td style="white-space:normal;min-width:340px;line-height:1.7">'+tags+'</td><td><strong>'+tot+'</strong></td>'+
