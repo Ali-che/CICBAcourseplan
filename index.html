@@ -1928,6 +1928,9 @@ function _showSplitDialog(cur){
     ).join('');
     const classOpts=CLSS.filter(c=>c!==cur.cls).map(c=>'<option value="'+c+'">'+c+'</option>').join('');
     const halfOpts=['全学期','上半学期','下半学期'].filter(h=>h!==cur.half).map(h=>'<option value="'+h+'">'+h+'</option>').join('');
+    // 拆届别时可改新学期 / 新上下半（默认同原记录）
+    const cohSemOpts=SEMS.map(s=>'<option value="'+s+'"'+(s===cur.sem?' selected':'')+'>'+s+'</option>').join('');
+    const cohHalfOpts=[['','— 待定 —'],['全学期','全学期'],['上半学期','上半'],['下半学期','下半']].map(function(h){return '<option value="'+h[0]+'"'+(h[0]===(cur.half||'')?' selected':'')+'>'+h[1]+'</option>';}).join('');
     const ccNumInputs=cur.cc.map((c,i)=>'<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;font-size:12px"><span style="flex:1">'+eh(c.cohort)+'（共 '+c.count+' 人）</span><input type="number" min="0" max="'+c.count+'" value="0" data-idx="'+i+'" class="split-num" style="width:60px;text-align:center"> 人拆出</div>').join('');
 
     modal.innerHTML='<div class="modal-box" style="max-width:620px">'+
@@ -1944,7 +1947,7 @@ function _showSplitDialog(cur){
       '<input type="radio" name="split-dim" value="cohort" checked style="display:none">'+
       '<div style="font-size:22px;line-height:1;margin-bottom:6px">🎓</div>'+
       '<div style="font-size:13px;font-weight:600;color:#3C3489">拆届别</div>'+
-      '<div style="font-size:10px;color:#888;margin-top:3px;line-height:1.3">同课同班<br>分届到新课</div>'+
+      '<div style="font-size:10px;color:#888;margin-top:3px;line-height:1.3">整批届别拆到<br>新课/新学期/新上下半</div>'+
       '</label>'+
       '<label class="split-dim-card" data-dim-label="cls" style="border:1.5px solid #ddd;background:#fafafa;border-radius:10px;padding:14px 10px;text-align:center;cursor:pointer;transition:all .15s">'+
       '<input type="radio" name="split-dim" value="cls" style="display:none">'+
@@ -1963,6 +1966,11 @@ function _showSplitDialog(cur){
       '<div id="splitp-cohort" class="splitp">'+
         '<div class="modal-sec">② 选要拆出的届别（这些变新记录，剩余留原）</div>'+
         '<div style="background:#F8F8FA;padding:8px;border-radius:6px;max-height:200px;overflow-y:auto">'+cohortCks+'</div>'+
+        '<div class="modal-sec">③ 拆出后放到（默认同原记录，可改）</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+          '<div class="fg"><label style="font-size:11px;color:#888">新学期</label><select id="split-coh-sem" style="width:100%">'+cohSemOpts+'</select></div>'+
+          '<div class="fg"><label style="font-size:11px;color:#888">新上下半</label><select id="split-coh-half" style="width:100%">'+cohHalfOpts+'</select></div>'+
+        '</div>'+
       '</div>'+
       // 拆班级 panel
       '<div id="splitp-cls" class="splitp" style="display:none">'+
@@ -2021,7 +2029,7 @@ function _showSplitDialog(cur){
     modal.querySelector('[data-action="confirm"]').onclick=()=>{
       const dim=modal.querySelector('input[name="split-dim"]:checked').value;
       const newCourse=modal.querySelector('#split-new-course').value.trim().toUpperCase()||cur.course;
-      let newCc=[],origAdjusted=[],newCls=cur.cls,newHalf=cur.half;
+      let newCc=[],origAdjusted=[],newCls=cur.cls,newHalf=cur.half,newSem=cur.sem;
       if(dim==='cohort'){
         const checked=[...modal.querySelectorAll('.split-coh:checked')];
         if(!checked.length){alert('至少勾一个届别');return;}
@@ -2029,6 +2037,9 @@ function _showSplitDialog(cur){
         newCc=cur.cc.filter((_,i)=>sel.has(i)).map(c=>({...c}));
         origAdjusted=cur.cc.filter((_,i)=>!sel.has(i)).map(c=>({...c}));
         if(!origAdjusted.length){alert('不能把所有届别都拆走，至少留一个在原记录');return;}
+        newSem=modal.querySelector('#split-coh-sem').value||cur.sem;
+        newHalf=modal.querySelector('#split-coh-half').value;
+        if(newCourse===cur.course&&newSem===cur.sem&&newHalf===(cur.half||'')){alert('拆届别时，新课程代码 / 新学期 / 新上下半 至少要改一项，否则新旧记录会重复');return;}
       } else {
         const cls=dim==='cls'?'.split-num-cls':'.split-num-half';
         const inputs=[...modal.querySelectorAll(cls)];
@@ -2046,7 +2057,7 @@ function _showSplitDialog(cur){
         else newHalf=modal.querySelector('#split-new-half').value;
       }
       const newRecord={
-        course:newCourse,en:cur.en,sem:cur.sem,half:newHalf,
+        course:newCourse,en:cur.en,sem:newSem,half:newHalf,
         type:cur.type,cls:newCls,tc:cur.tc,cc:newCc,
         nt:(cur.nt?cur.nt+' · ':'')+'拆自 '+cur.course,
         btec:cur.btec
