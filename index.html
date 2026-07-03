@@ -605,7 +605,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     <div class="card">
       <div class="ct" id="tc-ttl">任课老师课程总表</div>
       <div class="tbl-wrap">
-        <table><thead><tr><th>#</th><th>课程代码 / 类型 / 英文名</th><th>授课老师</th><th>班级</th><th>学期</th><th>上下半</th><th>总人数</th><th>备注</th><th class="sort" onclick="sortTchr('btec')">BTEC <span id="si-tc-btec">⇅</span></th></tr></thead>
+        <table><thead><tr><th>#</th><th>课程代码 / 类型 / 英文名</th><th>授课老师</th><th>班级</th><th>学期</th><th>上下半</th><th>总人数</th><th>备注</th></tr></thead>
         <tbody id="tc-tb"></tbody></table>
       </div>
       <div class="empty" id="tc-em"></div>
@@ -2916,11 +2916,11 @@ function renderTchr(){
   const schRows=data.map((r,i)=>{const tot=r.cc.reduce((s,x)=>s+(x.count||0),0);
     // v8.9：整行点击 → 直接弹排课编辑 modal（不切 tab）
     return'<tr style="cursor:pointer" onclick="startES(\''+r.id+'\')" onmouseover="this.style.background=\'#F5F4FE\'" onmouseout="this.style.background=\'\'" title="点击编辑这笔排课"><td>'+(i+1)+'</td>'+
-      '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.course+'</span><span class="badge '+(TB[r.type]||'b4')+'" style="font-size:9.5px;padding:1px 6px;opacity:.85">'+r.type+'</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+mpHint(r.course)+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
+      '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.course+'</span><span class="badge '+(TB[r.type]||'b4')+'" style="font-size:9.5px;padding:1px 6px;opacity:.85">'+r.type+'</span>'+(r.btec?'<span class="badge b4" style="font-size:9px;padding:1px 5px;margin-left:2px">BTEC</span>':'')+'</div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+mpHint(r.course)+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
       '<td style="font-size:11px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="background:#FEE2E2;color:#B91C1C;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;display:inline-block">⏳ 待定</span>')+'</td>'+
       '<td>'+r.cls+'</td><td>'+semBadge(r.sem)+'</td>'+
       '<td>'+halfBadge(r.half)+'</td><td>'+(tot||'—')+'</td>'+
-      '<td class="note-cell" style="font-size:11px;color:#888;max-width:130px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(r.nt?eh(r.nt):'')+'</div>'+(r.nt?'<div class="note-tip">'+eh(r.nt)+'</div>':'')+'</td><td>'+(r.btec?'<span class="badge b4">BTEC</span>':'')+'</td></tr>';}).join('');
+      '<td class="note-cell" style="font-size:11px;color:#888;max-width:130px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(r.nt?eh(r.nt):'')+'</div>'+(r.nt?'<div class="note-tip">'+eh(r.nt)+'</div>':'')+'</td></tr>';}).join('');
   const sgRows=spRows.map((r,i)=>
     '<tr style="background:#FFF8F0"><td>'+(data.length+i+1)+'</td>'+
     '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.co+'</span><span class="badge b3" style="font-size:9.5px;padding:1px 6px;opacity:.85">SG/IS</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+mpHint(r.co)+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
@@ -2950,7 +2950,7 @@ function renderCoh(){
   if(!data.length){tb.innerHTML='';em.textContent='暂无符合条件的排课记录';em.style.display='block';return;}
   em.style.display='none';
   tb.innerHTML=data.map((r,i)=>'<tr style="cursor:pointer" onclick="startES(\''+r.id+'\')" onmouseover="this.style.background=\'#F5F4FE\'" onmouseout="this.style.background=\'\'" title="点击编辑这笔排课"><td>'+(i+1)+'</td>'+
-    '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.course+'</span><span class="badge '+(TB[r.type]||'b4')+'" style="font-size:9.5px;padding:1px 6px;opacity:.85">'+r.type+'</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+mpHint(r.course)+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
+    '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.course+'</span><span class="badge '+(TB[r.type]||'b4')+'" style="font-size:9.5px;padding:1px 6px;opacity:.85">'+r.type+'</span>'+(r.btec?'<span class="badge b4" style="font-size:9px;padding:1px 5px;margin-left:2px">BTEC</span>':'')+'</div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+mpHint(r.course)+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
     '<td>'+r.cls+'</td><td>'+semBadge(r.sem)+'</td>'+
     '<td>'+halfBadge(r.half)+'</td><td style="font-size:11px">'+(r.tc?eh(r.tc):'<span style="background:#FEE2E2;color:#B91C1C;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;display:inline-block">⏳ 待定</span>')+'</td>'+
     '<td class="note-cell" style="font-size:11px;color:#888;max-width:130px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(r.nt?eh(r.nt):'')+'</div>'+(r.nt?'<div class="note-tip">'+eh(r.nt)+'</div>':'')+'</td></tr>').join('');
