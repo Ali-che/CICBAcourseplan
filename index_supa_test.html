@@ -4928,6 +4928,18 @@ function syncTblHeight(){
     }catch(e){err.textContent='⚠️ 连线失败：'+e.message;err.style.color='#e53e3e';}
   };
 
+  // 测试页与正式页同域共用 localStorage：只有「在测试页用 PIN 登入过(_pin 存在)」才自动解锁，
+  // 否则强制重输 PIN，避免沿用正式页旧 session 导致 _pin 为空、写入报「缺少有效 PIN」。
+  checkAuth=function(){
+    const ts=localStorage.getItem(PIN_KEY);
+    if(ts&&Date.now()-parseInt(ts)<PIN_TTL&&_pin){unlockApp();}
+    else{
+      var ov=document.getElementById('pin-overlay'),ma=document.getElementById('main-app');
+      if(ov)ov.style.display='flex'; if(ma)ma.style.display='none';
+      setTimeout(function(){var i=document.getElementById('pin-input');if(i)i.focus();},100);
+    }
+  };
+
   gasGet=async function(params){
     const a=(params||{}).action;
     if(a==='authenticate')return srpc('authenticate',{p_pin:params.pin||''});
