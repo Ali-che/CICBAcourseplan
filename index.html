@@ -239,8 +239,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   .panel.active th{font-size:6.8pt!important}
   .panel.active .badge{white-space:nowrap}
 
-  /* ── 教学统计专属：LA500 输入框印成纯文字(固定窄宽,数值不塌缩)；辅助面板不印 ── */
-  body.print-sta #sta-tb input{border:none!important;background:transparent!important;box-shadow:none!important;text-align:center;width:30px!important;min-width:0!important;font-size:7pt!important;padding:0!important;-webkit-appearance:none;appearance:none}
+  /* ── 教学统计专属：列印时辅助面板不印 ── */
   body.print-sta #sta-low-panel{display:none!important}
 }
 .print-header{display:none}
@@ -675,7 +674,6 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     <div class="sechdr">
       <span class="ct" style="margin:0">各授课老师工作量</span>
       <div style="display:flex;gap:6px;align-items:center">
-        <span style="font-size:11px;color:#888">BTEC/LA500 可直接在表格内填写，自动同步</span>
         <button class="btn btn-sm no-print" onclick="showFormulaInfo()" style="color:#534AB7;border-color:#AFA9EC" title="查看工作量计算公式">ℹ️ 公式说明</button>
         <button class="btn btn-sm" onclick="renderSta()">↻ 刷新</button>
         <button class="btn btn-sm no-print" onclick="printPanel('sta')">🖨️ 列印</button>
@@ -693,7 +691,6 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
             <th style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">第三学期</th>
             <th rowspan="2" style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">教学<br>总数</th>
             <th rowspan="2" style="text-align:center;background:#3C3489">BTEC<br>×0.5</th>
-            <th rowspan="2" style="text-align:center;background:#3C3489">LA500<br>手填</th>
             <th rowspan="2" style="text-align:center">学年<br>规定</th>
             <th rowspan="2" style="text-align:center">学年<br>总数</th>
             <th rowspan="2" style="text-align:center">%</th>
@@ -752,28 +749,19 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
           <td style="padding:8px 12px;color:#666">按课程为单位<br>同门课多 1 个学生不另算<br>同一老师不同课分别算</td>
         </tr>
         <tr style="border-bottom:0.5px solid #eee">
-          <td style="padding:8px 12px;vertical-align:top">
-            <span class="badge b5">Capstone</span>
-            <div style="margin-top:4px"><span style="display:inline-block;font-size:10px;padding:1px 6px;border-radius:8px;background:#FCE4EC;color:#C2185B;font-weight:600">CD 系</span></div>
+          <td style="padding:8px 12px;vertical-align:top"><span class="badge b5">Capstone</span></td>
+          <td style="padding:8px 12px;font-family:ui-monospace,monospace;font-size:11.5px">1–20 人 = 1.25<br>21–35 人 = 1.5<br>36–50 人 = 2.0<br>51+ 人 = 2.25</td>
+          <td style="padding:8px 12px;color:#666">
+            全学期 Capstone 学生数（届别去重加总）<strong>÷ 授课老师数</strong> → 查左表<br>
+            <span style="font-size:11px;color:#999">每位带 Capstone 的老师同得此值；总课数 = BA103/104(5周) + Capstone(10周) 合并<br>例：全学期 118 人 ÷ 3 位老师 ≈ 39 人 → 落 36–50 档 → 每位 2.0</span>
           </td>
-          <td style="padding:8px 12px;font-family:ui-monospace,monospace">0.5 / 课</td>
-          <td style="padding:8px 12px;color:#666">CD Capstone 3 门 × 0.5 = 1.5<br><span style="font-size:11px;color:#999">识别：学生届别（cohort）前缀 = CD</span></td>
-        </tr>
-        <tr style="border-bottom:0.5px solid #eee">
-          <td style="padding:8px 12px;vertical-align:top">
-            <span class="badge b5">Capstone</span>
-            <div style="margin-top:4px"><span style="display:inline-block;font-size:10px;padding:1px 6px;border-radius:8px;background:#EEE;color:#666;font-weight:600">其他系</span></div>
-          </td>
-          <td style="padding:8px 12px;font-family:ui-monospace,monospace">0.75 / 课</td>
-          <td style="padding:8px 12px;color:#666">FA / IB / TM / CA … 2 门 × 0.75 = 1.5<br><span style="font-size:11px;color:#999">备注：以 21-35 人/班为基准</span></td>
         </tr>
       </tbody>
     </table>
     <div style="background:#F5F4FE;border-radius:8px;padding:12px 14px;margin-bottom:12px">
-      <div style="font-size:12.5px;font-weight:600;color:#3C3489;margin-bottom:6px">📊 学年总数 = 全部学期累加 + BTEC bonus + LA500 手填</div>
+      <div style="font-size:12.5px;font-weight:600;color:#3C3489;margin-bottom:6px">📊 学年总数 = 全部学期累加 + BTEC bonus</div>
       <div style="font-size:11.5px;color:#534AB7;line-height:1.7">
-        <strong>BTEC bonus</strong>：勾选 BTEC 的课，每门 +0.5（系统自动）<br>
-        <strong>LA500 手填</strong>：在表格内直接输入数字，立即同步
+        <strong>BTEC bonus</strong>：勾选 BTEC 的课，每门 +0.5（系统自动）
       </div>
     </div>
     <div style="background:#FAEEDA;border-radius:8px;padding:10px 12px;font-size:11.5px;color:#854F0B;line-height:1.6">
@@ -3643,18 +3631,17 @@ function renderSta(){
   T.filter(t=>t.l>0).forEach(t=>{
     const totalSems=yr?activeSems:['2569-1','2569-2','2569-3','2570-1','2570-2','2570-3'];
     const totalWt=totalSems.reduce((s,sem)=>s+semDetail(t.n,sem).wt,0);
-    const btec=btecD[t.n]||0;
     const btecCount=totalSems.reduce((s,sem)=>s+schD.filter(r=>r.tc===t.n&&r.sem===sem&&r.btec).length,0);
     const btecWt=btecCount*0.5;
-    const yearTotal=Math.round((totalWt+btecWt+btec)*100)/100;
+    const yearTotal=Math.round((totalWt+btecWt)*100)/100;
     const pct=t.l>0?Math.round(yearTotal/t.l*100):0;
     allTeacherStats.push({n:t.n,d:t.d,l:t.l,yearTotal,pct,k:t.n.replace(/[^a-zA-Z0-9]/g,'_')});
   });
   let rows='';let hasData=false;
   depts.forEach(dept=>{
     const dTchrs=T.filter(t=>t.d===dept&&t.l>0).sort((a,b)=>a.n.localeCompare(b.n));
-    // FIX: 表頭實際是 9 + activeSems.length 欄（#/老師/職位/各學期/教學總數/BTEC/LA500/規定/年總/%）
-    rows+='<tr class="dh"><td colspan="'+(9+activeSems.length)+'">▸ '+dept+' · '+dTchrs.length+'位老师</td></tr>';
+    // 表頭 = 8 + activeSems.length 欄（#/老師/職位/各學期/教學總數/BTEC/規定/年總/%）
+    rows+='<tr class="dh"><td colspan="'+(8+activeSems.length)+'">▸ '+dept+' · '+dTchrs.length+'位老师</td></tr>';
     let dWt=0;let idx=0;
     dTchrs.forEach(t=>{
       idx++;hasData=true;
@@ -3666,10 +3653,9 @@ function renderSta(){
       const totalSems=yr?activeSems:['2569-1','2569-2','2569-3','2570-1','2570-2','2570-3'];
       const totalSemDetails=totalSems.map(s=>({sem:s,d:semDetail(t.n,s)}));
       const totalWt=Math.round(totalSems.reduce((s,sem)=>{const d=semDetail(t.n,sem);return s+d.wt;},0)*100)/100;
-      const btec=btecD[t.n]||0;
       const btecCount=totalSems.reduce((s,sem)=>s+schD.filter(r=>r.tc===t.n&&r.sem===sem&&r.btec).length,0);
       const btecWt=Math.round(btecCount*0.5*100)/100;
-      const yearTotal=Math.round((totalWt+btecWt+btec)*100)/100;
+      const yearTotal=Math.round((totalWt+btecWt)*100)/100;
       dWt+=yearTotal;
       const pct=t.l>0?Math.round(yearTotal/t.l*100):0;
       const over=t.l>0&&yearTotal>t.l;
@@ -3680,24 +3666,19 @@ function renderSta(){
         sdCells(d1,true)+sdCells(d2,true)+sdCells(d3,true)+
         '<td style="text-align:center;border-left:1px solid #eee;font-weight:500">'+totalWt+'</td>'+
         '<td style="text-align:center;background:#F5F4FE;padding:3px">'+(btecCount>0?'<span style="font-size:13px;font-weight:600;color:#534AB7">'+btecWt+'</span>':'<span style="color:#ddd">—</span>')+'</td>'+
-        '<td style="text-align:center;background:#F5F4FE;padding:3px">'+
-          '<input type="number" id="btec-'+k+'" value="'+(btec||'')+'" min="0" step="0.5" '+
-          'style="width:58px;font-size:12px;padding:2px 4px;text-align:center;background:#fff;border:0.5px solid #AFA9EC;border-radius:5px" '+
-          'onchange="saveBtec(this)" data-name="'+eh(t.n)+'" placeholder="0">'+
-        '</td>'+
         '<td style="text-align:center;color:#888;font-size:11px">'+t.l+'</td>'+
         '<td style="text-align:center"><strong id="yt-'+k+'">'+yearTotal+'</strong></td>'+
         '<td><span class="badge '+(over?'b3':'b1')+'" id="pct-'+k+'">'+pct+'% / '+t.l+'</span></td>'+
         '</tr>';
-      rows+='<tr class="sta-acc" id="acc-'+k+'"><td colspan="'+(9+activeSems.length)+'" style="padding:0;border:0">'+
+      rows+='<tr class="sta-acc" id="acc-'+k+'"><td colspan="'+(8+activeSems.length)+'" style="padding:0;border:0">'+
         '<div class="acc-wrap">'+accBlock(totalSemDetails)+'</div></td></tr>';
     });
-    // FIX: 小計列總欄數要等於 9 + activeSems.length（3+sems+1總+4尾）
+    // 小計列總欄數 = 8 + activeSems.length（3+sems+1總+4尾：BTEC/規定/年總/%）
     rows+='<tr class="dt">'+
       '<td colspan="3" style="text-align:right;padding-right:12px">'+dept+' 小计</td>'+
       '<td colspan="'+activeSems.length+'"></td>'+
       '<td style="text-align:center;border-left:1px solid #eee"><strong>'+Math.round(dWt*100)/100+'</strong></td>'+
-      '<td colspan="5"></td></tr>';
+      '<td colspan="4"></td></tr>';
   });
   if(!yr){document.getElementById('sta-em').textContent='请先选择学年';document.getElementById('sta-em').style.display='block';document.getElementById('sta-tb').innerHTML='';document.getElementById('sta-low-panel').style.display='none';return;}
   if(!hasData){document.getElementById('sta-em').style.display='block';document.getElementById('sta-tb').innerHTML='';document.getElementById('sta-low-panel').style.display='none';return;}
@@ -3890,7 +3871,7 @@ async function syncFromSheets(type){
 function printPanel(id){
   switchTab(id);
   const titles={sch:'排课记录',sp:'IS/SG 排课记录',sum:'学期总表',sta:'教学统计 · 各授课老师工作量'};
-  const subtitles={sch:'课程安排总览',sp:'IS/SG 特别排课学生名单',sum:'学期课程综合总表',sta:'专业分组工作量统计（含BTEC/LA500）'};
+  const subtitles={sch:'课程安排总览',sp:'IS/SG 特别排课学生名单',sum:'学期课程综合总表',sta:'专业分组工作量统计（含BTEC）'};
   const now=new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
   // 取目前筛选的学期
   const semSelMap={sch:'sch-sem-f',sp:'sp-sem-f',sum:'f-tc-s',sta:'sta-yr'};
