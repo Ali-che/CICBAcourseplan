@@ -2561,7 +2561,12 @@ function buildAllSemSelects(){
   // 学年下拉（sta-yr 只要年）
   buildYearSelect('sta-yr');
 }
+// v8.18 P0: 只渲染当前激活的 Tab，隐藏的表打脏标记，switchTab 切过去时才渲染（消除每次编辑白烧看不见的表）
+const _tabDirty={sch:true,sp:true,sum:true,sta:true};
+function _panelActive(id){const p=document.getElementById('panel-'+id);return !!(p&&p.classList.contains('active'));}
 function renderSch(){
+  if(!_panelActive('sch')){_tabDirty.sch=true;return;}
+  _tabDirty.sch=false;
   const tb=document.getElementById('sch-tb'),em=document.getElementById('sch-em');
   document.getElementById('sch-n').textContent='('+schD.length+'条)';
   const el_co=document.getElementById('si-co');if(el_co)el_co.innerHTML=siIcon('course',schSK,schSD);
@@ -2799,6 +2804,8 @@ function closeSpModal(){
 
 function saveESp(id){}
 function renderSp(){
+  if(!_panelActive('sp')){_tabDirty.sp=true;return;}
+  _tabDirty.sp=false;
   const tb=document.getElementById('sp-tb'),em=document.getElementById('sp-em');
   document.getElementById('sp-n').textContent='('+spD.length+'条)';
   const el_sid=document.getElementById('si-sid');if(el_sid)el_sid.innerHTML=siIcon('sid',spSK,spSD);
@@ -3077,7 +3084,7 @@ function renderSpTchr(){
     '</div>';
   }).join('');
 }
-function renderAllSum(){renderTchr();renderCoh();renderSpStu();renderSpTchr();}
+function renderAllSum(){if(!_panelActive('sum')){_tabDirty.sum=true;return;}_tabDirty.sum=false;renderTchr();renderCoh();renderSpStu();renderSpTchr();}
 
 // ── 教学统计 ──────────────────────────────
 // v8.17: Capstone 课时 = 全学期 Capstone 学生数(届别去重加总) ÷ 授课老师数 → 查官方表
@@ -3674,6 +3681,8 @@ function autoSyncBtec(){
 }
 
 function renderSta(){
+  if(!_panelActive('sta')){_tabDirty.sta=true;return;}
+  _tabDirty.sta=false;
   const yr=document.getElementById('sta-yr')?document.getElementById('sta-yr').value:'';
   const activeSems=yr?['1','2','3'].map(s=>yr+'-'+s):[];
   const actT=[...new Set([...schD.map(r=>r.tc),...spD.map(r=>r.tc)])].filter(Boolean).length;
@@ -4860,7 +4869,11 @@ function switchTab(id){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+id).classList.add('active');
   if(id==='cs'){var _f=document.getElementById('cs-frame');if(_f&&!_f.src)_f.src=_f.dataset.src;}
-  if(id==='sta')renderSta();if(id==='sum')renderAllSum();
+  // v8.18 P0: 切到某 Tab 时，若它在隐藏期间被标脏才渲染（否则保留现有 DOM/滚动位置）
+  if(id==='sch'&&_tabDirty.sch)renderSch();
+  else if(id==='sp'&&_tabDirty.sp)renderSp();
+  else if(id==='sum'&&_tabDirty.sum)renderAllSum();
+  else if(id==='sta'&&_tabDirty.sta)renderSta();
   setTimeout(syncTblHeight,50); // 等 panel 显示后再算高度
 }
 function switchSub(id){
