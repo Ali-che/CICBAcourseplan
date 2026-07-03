@@ -690,6 +690,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
           <tr>
             <th rowspan="2">#</th>
             <th rowspan="2">老师</th>
+            <th rowspan="2">员工号</th>
             <th rowspan="2">职位</th>
             <th style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">第一学期</th>
             <th style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">第二学期</th>
@@ -3707,7 +3708,7 @@ function renderSta(){
   depts.forEach(dept=>{
     const dTchrs=T.filter(t=>t.d===dept&&t.l>0).sort((a,b)=>a.n.localeCompare(b.n));
     // 表頭 = 8 + activeSems.length 欄（#/老師/職位/各學期/教學總數/BTEC/規定/年總/%）
-    rows+='<tr class="dh"><td colspan="'+(8+activeSems.length)+'">▸ '+dept+' · '+dTchrs.length+'位老师</td></tr>';
+    rows+='<tr class="dh"><td colspan="'+(9+activeSems.length)+'">▸ '+dept+' · '+dTchrs.length+'位老师</td></tr>';
     let dWt=0;let idx=0;
     dTchrs.forEach(t=>{
       idx++;hasData=true;
@@ -3728,6 +3729,7 @@ function renderSta(){
       rows+='<tr id="tr-'+k+'" class="sta-trow" style="transition:background .8s;cursor:pointer" onclick="toggleAcc(event,\''+k+'\')">'+
         '<td style="color:#bbb;font-size:11px">'+idx+'</td>'+
         '<td style="font-size:12px;white-space:nowrap"><span class="acc-caret">▸</span>'+eh(t.n)+'</td>'+
+        '<td style="font-size:11px;color:#666;font-family:ui-monospace,monospace;white-space:nowrap">'+(t.eid?eh(t.eid):'<span style="color:#ddd">—</span>')+'</td>'+
         '<td style="font-size:11px;color:#888;white-space:nowrap">'+t.r+'</td>'+
         sdCells(d1,true)+sdCells(d2,true)+sdCells(d3,true)+
         '<td style="text-align:center;border-left:1px solid #eee;font-weight:500">'+totalWt+'</td>'+
@@ -3736,12 +3738,12 @@ function renderSta(){
         '<td style="text-align:center"><strong id="yt-'+k+'">'+yearTotal+'</strong></td>'+
         '<td><span class="badge '+(over?'b3':'b1')+'" id="pct-'+k+'">'+pct+'% / '+t.l+'</span></td>'+
         '</tr>';
-      rows+='<tr class="sta-acc" id="acc-'+k+'"><td colspan="'+(8+activeSems.length)+'" style="padding:0;border:0">'+
+      rows+='<tr class="sta-acc" id="acc-'+k+'"><td colspan="'+(9+activeSems.length)+'" style="padding:0;border:0">'+
         '<div class="acc-wrap">'+accBlock(totalSemDetails)+'</div></td></tr>';
     });
     // 小計列總欄數 = 8 + activeSems.length（3+sems+1總+4尾：BTEC/規定/年總/%）
     rows+='<tr class="dt">'+
-      '<td colspan="3" style="text-align:right;padding-right:12px">'+dept+' 小计</td>'+
+      '<td colspan="4" style="text-align:right;padding-right:12px">'+dept+' 小计</td>'+
       '<td colspan="'+activeSems.length+'"></td>'+
       '<td style="text-align:center;border-left:1px solid #eee"><strong>'+Math.round(dWt*100)/100+'</strong></td>'+
       '<td colspan="4"></td></tr>';
@@ -5075,10 +5077,10 @@ function syncTblHeight(){
     const a=(params||{}).action;
     if(a==='authenticate')return srpc('authenticate',{p_pin:params.pin||''});
     if(a==='readRef'){
-      const[co,te,ch,de,se]=await Promise.all([sget('courses?select=code,en,dept,note,mapping'),sget('teachers?select=name,dept,position,quota'),sget('cohorts?select=dept,cohort'),sget('depts?select=code,name'),sget('semesters?select=sem')]);
+      const[co,te,ch,de,se]=await Promise.all([sget('courses?select=code,en,dept,note,mapping'),sget('teachers?select=name,dept,position,quota,employee_id'),sget('cohorts?select=dept,cohort'),sget('depts?select=code,name'),sget('semesters?select=sem')]);
       return{success:true,
         courses:(co||[]).map(x=>({c:x.code,en:x.en||'',dept:x.dept||'',note:x.note||'',mapping:x.mapping||''})),
-        teachers:(te||[]).map(x=>({n:x.name,d:x.dept||'',r:x.position||'',l:+x.quota||0})),
+        teachers:(te||[]).map(x=>({n:x.name,d:x.dept||'',r:x.position||'',l:+x.quota||0,eid:x.employee_id||''})),
         cohorts:(ch||[]).map(x=>({dept:x.dept,cohort:x.cohort})),
         depts:(de||[]).map(x=>({code:x.code,name:x.name||''})),
         sems:(se||[]).map(x=>x.sem),directors:[]};
