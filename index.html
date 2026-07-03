@@ -1275,11 +1275,19 @@ async function loadRefFromSheets(){
 async function reloadRef(){
   const ok=await loadRefFromSheets();rebuildUI();updateRefBar();
   if(ok){
-    let updated=0;
-    schD.forEach(r=>{const f=C.find(x=>x.c===r.course);if(f&&f.en&&f.en!==r.en){r.en=f.en;updated++;}});
-    spD.forEach(r=>{const f=C.find(x=>x.c===r.co);if(f&&f.en&&f.en!==r.co){r.en=f.en;updated++;}});
-    if(updated>0){renderSch();renderSp();renderAllSum();syncNow('schedule');syncNow('special');}
-    alert('✅ 参考数据已刷新！\n课程：'+C.length+'条　老师：'+T.length+'位　届别：'+Object.values(CBD).flat().length+'条'+(updated>0?'\n\n已更新 '+updated+' 笔排课记录的课程英文名':''));
+    const changedSch=[],changedSp=[];
+    schD.forEach(r=>{const f=C.find(x=>x.c===r.course);if(f&&f.en&&f.en!==r.en){r.en=f.en;changedSch.push(r);}});
+    spD.forEach(r=>{const f=C.find(x=>x.c===r.co);if(f&&f.en&&f.en!==r.en){r.en=f.en;changedSp.push(r);}});   // FIX: 原为 f.en!==r.co 笔误
+    const updated=changedSch.length+changedSp.length;
+    if(updated>0){
+      renderSch();renderSp();renderAllSum();
+      // FIX v8.18: 英文名变更要 per-record 落库（syncNow 在 Supabase 下是 no-op，之前改了但没存进云端）
+      if(SHEETS_URL&&canSync()){
+        for(const r of changedSch){try{await gasUpdateRecord('schedule',r.id,{en:r.en});}catch(e){}}
+        for(const r of changedSp){try{await gasUpdateRecord('special',r.id,{en:r.en});}catch(e){}}
+      }
+    }
+    alert('✅ 参考数据已刷新！\n课程：'+C.length+'条　老师：'+T.length+'位　届别：'+Object.values(CBD).flat().length+'条'+(updated>0?'\n\n已更新并存回 '+updated+' 笔排课记录的课程英文名':''));
   }else alert('⚠ 未配置 SHEETS_URL 或连线失败，目前使用内建预设数据。');
 }
 function updateRefBar(){
@@ -1401,7 +1409,7 @@ function startRemotePoll(){
     // v8.17: 编辑框开着时暂停轮询 —— 编辑中途不再被「云端有人编辑，储存暂停」横条打断
     if(!loadOK||staleWarningShown||_anyModalOpen())return;
     try{
-      const r=await gasGet({action:'read',type:'schedule'},{silent:true}); // v8.17: 后台，不登出
+      const r=await gasGet({action:'read',type:'schedule',idsOnly:true},{silent:true}); // v8.18: 只取 id 算 hash，减少后台流量
       if(!r.success)return;
       const remoteHash=hashRecords(r.data);
       const localHash=hashRecords(schD);
@@ -5003,8 +5011,22 @@ function syncTblHeight(){
   }catch(e){}
   currentToken='';currentEditor='';currentRole='teacher';   // 清掉脚本前段用共享key读进来的正式页 session
   let _pin=localStorage.getItem('cic_pin')||'';             // 现在读的是隔离后的 key，首次为空 → 会要求登入
-  async function sget(p){const r=await fetch(SUPA_URL+'/rest/v1/'+p,{headers:H,cache:'no-store'});return r.json();}
-  async function srpc(fn,b){const r=await fetch(SUPA_URL+'/rest/v1/rpc/'+fn,{method:'POST',headers:H,body:JSON.stringify(b)});return r.json();}
+  function _sleep(ms){return new Promise(res=>setTimeout(res,ms));}
+  // 退避重试：idem=幂等(网络抖动/5xx 可安全重试);slide=成功时刷新登录时效(仅写入/登录，轮询读不刷)
+  async function _fetchJSON(url,opts,idem,slide){
+    let last;
+    for(let i=0;i<(idem?3:1);i++){
+      try{
+        const r=await fetch(url,opts);
+        if(r.status>=500&&idem&&i<2){await _sleep(300*(i+1));continue;}
+        if(slide&&_pin&&r.ok){try{localStorage.setItem(PIN_KEY,Date.now());}catch(e){}}
+        return r.json();
+      }catch(e){last=e;if(idem&&i<2){await _sleep(300*(i+1));continue;}throw e;}
+    }
+    throw last;
+  }
+  async function sget(p){return _fetchJSON(SUPA_URL+'/rest/v1/'+p,{headers:H,cache:'no-store'},true,false);}                 // 读=幂等可重试，不刷时效
+  async function srpc(fn,b){return _fetchJSON(SUPA_URL+'/rest/v1/rpc/'+fn,{method:'POST',headers:H,body:JSON.stringify(b)},fn!=='add_record',true);} // 写=除 add_record 外幂等；成功滑动续期
   const mSch=r=>({id:r.id,course:r.course_code||'',en:r.course_en||'',sem:r.sem||'',half:r.half||'',type:r.type||'',cls:String(r.class_code||''),tc:r.teacher||'',cc:r.cohorts||[],nt:r.note||'',btec:r.btec===true,updated:r.updated_at||'',editor:r.editor||'',editing:false});
   const mSp=r=>({id:r.id,sid:r.student_id||'',mr:r.title||'',nm:r.name||'',mj:r.major||'',co:r.course_code||'',en:r.course_en||'',cls:String(r.class_code||''),sem:r.sem||'',tc:r.teacher||'',nt:r.note||'',updated:r.updated_at||'',editor:r.editor||'',type:'SG',editing:false});
   const uSch=r=>({course_code:r.course,course_en:r.en,sem:r.sem,half:r.half,type:r.type,class_code:r.cls,teacher:r.tc,cohorts:r.cc||[],total:(r.cc||[]).reduce((s,x)=>s+(+x.count||0),0),note:r.nt,btec:!!r.btec,id:r.id});
@@ -5051,6 +5073,8 @@ function syncTblHeight(){
     if(a==='read'){
       if(params.type==='special'){const d=await sget('special?select=*&order=id.asc');return{success:true,data:(d||[]).map(mSp)};}
       if(params.type==='btec'){const d=await sget('btec?select=*');const o={};(d||[]).forEach(x=>o[x.name]=+x.la500||0);return{success:true,data:o};}
+      // 轮询只需要 id 算 hash（hashRecords 只用 id）→ 只取 id，payload 大幅缩小
+      if(params.idsOnly){const d=await sget('schedule?select=id&order=id.asc');return{success:true,data:(d||[]).map(x=>({id:x.id}))};}
       const d=await sget('schedule?select=*&order=id.asc');return{success:true,data:(d||[]).map(mSch)};
     }
     if(a==='whoOnline')return{success:true,users:[]};
