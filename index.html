@@ -91,10 +91,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 .ei-chip{padding:2px 8px;font-size:10px;border:0.5px solid #AFA9EC;border-radius:20px;background:#fff;cursor:pointer;font-family:inherit}
 .tleg{display:flex;gap:8px;flex-wrap:wrap;padding:.75rem 1rem;background:#fff;border-radius:10px;border:0.5px solid #e0e0e0;margin-bottom:.875rem;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .tleg-i{display:flex;align-items:center;gap:5px;font-size:11px}
-.sem-cell{position:relative;cursor:pointer;padding:6px 14px!important}
-.sem-cell.open{background:#EEEDFE}
-.sem-cell.open .sem-tip{display:block}
-.sem-tip{display:none;position:absolute;top:110%;left:50%;transform:translateX(-50%);z-index:99;background:#fff;border:0.5px solid #ddd;border-radius:8px;padding:10px 14px;box-shadow:0 4px 16px rgba(0,0,0,.12);white-space:nowrap;margin-top:2px;min-width:280px;text-align:left;pointer-events:none}
+.sem-cell{padding:6px 14px!important}
 .sem-val{font-size:15px;font-weight:600;color:#534AB7}
 .sem-zero{font-size:13px;color:#ccc}
 .tip-row{display:flex;gap:8px;align-items:center;margin-top:5px;font-size:12px}
@@ -148,10 +145,6 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   .btn,.btn-sm,.btn-p,.btn-e,.btn-ok,.btn-d,
   .es-sec,.empty,
   .modal-overlay{display:none!important}
-  /* v7.9.9: 列印时 sem-tip 改成内嵌（不再是 hover 浮层） */
-  .sem-tip{display:block!important;position:static!important;transform:none!important;box-shadow:none!important;background:#fafafa!important;border:0.5px solid #ddd!important;margin-top:4px!important;padding:4pt 6pt!important;font-size:8pt!important;white-space:normal!important;line-height:1.4}
-  .sem-tip .tip-row{margin-top:2px;font-size:8pt}
-  .sem-tip .badge{font-size:7pt!important;padding:1pt 4pt!important}
   /* 列印时取消表格高度限制，完整展开 */
   .tbl-wrap{max-height:none!important;overflow:visible!important}
   .panel{display:none!important}
@@ -245,8 +238,6 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   .panel.active th,.panel.active td{white-space:nowrap!important;word-break:normal!important;overflow-wrap:normal!important;padding:2pt 4pt!important}
   .panel.active th{font-size:6.8pt!important}
   .panel.active .badge{white-space:nowrap}
-  /* 各学期的课程明细卡片：限个宽度、内部才换行，避免撑爆整表 */
-  .panel.active .sem-tip{max-width:180px!important;white-space:normal!important}
 
   /* ── 教学统计专属：LA500 输入框印成纯文字(固定窄宽,数值不塌缩)；辅助面板不印 ── */
   body.print-sta #sta-tb input{border:none!important;background:transparent!important;box-shadow:none!important;text-align:center;width:30px!important;min-width:0!important;font-size:7pt!important;padding:0!important;-webkit-appearance:none;appearance:none}
@@ -331,7 +322,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 <div class="pin-overlay" id="pin-overlay">
   <div class="pin-box">
     <div class="pin-logo">CIC 本科排课管理系统</div>
-    <div class="pin-sub">v2569 · 2026年5月更新</div>
+    <div class="pin-sub">v2569 · 2026年7月更新</div>
     <input class="pin-input" id="pin-input" type="password" placeholder="••••••••"
       maxlength="20" onkeydown="if(event.key==='Enter')checkPin()">
     <button class="pin-btn" onclick="checkPin()">进入系统</button>
