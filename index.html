@@ -1389,7 +1389,7 @@ function canSync(){
 }
 
 // ── 远端轮询 + 警告条 ────────────────────
-const POLL_INTERVAL_MS=30000;
+const POLL_INTERVAL_MS=120000;  // v8.18: 30s→2min，多人时大幅减少后台读表塞车（只是「别人改了」提醒晚点出现）
 let pollTimer=null;
 function startRemotePoll(){
   if(!SHEETS_URL||pollTimer)return;
@@ -1453,7 +1453,7 @@ setInterval(updateFreshness,30000); // 每30秒更新一次显示
 // ════════════════════════════════════════
 // v7.8: 智慧心跳 —— 只在 tab 可见且 5 分钟内有活动时才发
 // ════════════════════════════════════════
-const HEARTBEAT_MS = 30000;       // 30 秒
+const HEARTBEAT_MS = 60000;       // v8.18: 30s→60s，减少心跳/在线人数请求（后端在线判定 2 分钟内，仍准）
 const ACTIVITY_TIMEOUT_MS = 5*60*1000;  // 5 分钟无活动停心跳
 let _lastActivity = Date.now();
 let _heartbeatTimer = null;
