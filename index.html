@@ -65,6 +65,17 @@ tr.ed td{background:#EEEDFE}
 tr:not(.ed):not(.dh):not(.dt):hover td{background:#fafafa}
 tr.dh td{background:#534AB7;color:#fff;font-weight:600;font-size:12px;padding:8px 9px}
 tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
+/* v8.19 斑马纹(仅平表;教学统计表有分组/手风琴行,不套) */
+#sch-tb tr:nth-child(even),#sp-tb tr:nth-child(even),#tc-tb tr:nth-child(even),#co-tb tr:nth-child(even){background:#FAF8FF}
+/* v8.19 排课表:③列分组分隔线(学期/授课老师/备注 三组起点) */
+#sch-table thead th:nth-child(4),#sch-table thead th:nth-child(7),#sch-table thead th:nth-child(10){border-left:1px solid rgba(255,255,255,.28)}
+#sch-table tbody td:nth-child(4),#sch-table tbody td:nth-child(7),#sch-table tbody td:nth-child(10){border-left:1px solid #ECEAF6}
+/* v8.19 排课表:④横向滚动时冻结前三列(勾选/#/课程) */
+#sch-table th:nth-child(1),#sch-table td:nth-child(1){position:sticky;left:0;z-index:6;width:34px;min-width:34px}
+#sch-table th:nth-child(2),#sch-table td:nth-child(2){position:sticky;left:34px;z-index:6;width:38px;min-width:38px}
+#sch-table th:nth-child(3),#sch-table td:nth-child(3){position:sticky;left:72px;z-index:6}
+#sch-table tbody td:nth-child(1),#sch-table tbody td:nth-child(2),#sch-table tbody td:nth-child(3){background:#fff}
+#sch-table thead th:nth-child(1),#sch-table thead th:nth-child(2),#sch-table thead th:nth-child(3){z-index:16}
 .badge,.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500;line-height:1.5;margin:1px;gap:3px}
 .b0{background:#E6F1FB;color:#0C447C}.b1{background:#EAF3DE;color:#3B6D11}.b2{background:#FAEEDA;color:#854F0B}
 .b3{background:#FAECE7;color:#993C1D}.b4{background:#F1EFE8;color:#444441}.b5{background:#EEEDFE;color:#3C3489}.b6{background:#E1F5EE;color:#0F6E56}
@@ -471,7 +482,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       </div>
     </div>
     <div class="tbl-wrap">
-      <table><thead><tr>
+      <table id="sch-table"><thead><tr>
         <th style="width:34px;text-align:center" title="勾选所有可见行"><input type="checkbox" id="sch-master-chk" onclick="toggleAllVisible('sch',this.checked)" style="cursor:pointer"></th>
         <th>#</th>
         <th class="sort" onclick="sortSch('course')">课程代码 / 类型 / 英文名 <span id="si-co">⇅</span></th>
@@ -2565,6 +2576,12 @@ function buildAllSemSelects(){
 // v8.18 P0: 只渲染当前激活的 Tab，隐藏的表打脏标记，switchTab 切过去时才渲染（消除每次编辑白烧看不见的表）
 const _tabDirty={sch:true,sp:true,sum:true,sta:true};
 function _panelActive(id){const p=document.getElementById('panel-'+id);return !!(p&&p.classList.contains('active'));}
+// 课程「对接」提示(来自 catalog mapping;过滤待定/空)——排课表/学期总表共用
+function mpHint(code){
+  const cf=C.find(x=>x.c===code);
+  const v=cf&&cf.mapping?String(cf.mapping).trim():'';
+  return (v&&v!=='待定')?'<div style="font-size:10.5px;color:#185FA5;margin-top:1px;padding-left:9px;line-height:1.3">🔗 对接 '+eh(v)+'</div>':'';
+}
 function renderSch(){
   if(!_panelActive('sch')){_tabDirty.sch=true;return;}
   _tabDirty.sch=false;
@@ -2899,14 +2916,14 @@ function renderTchr(){
   const schRows=data.map((r,i)=>{const tot=r.cc.reduce((s,x)=>s+(x.count||0),0);
     // v8.9：整行点击 → 直接弹排课编辑 modal（不切 tab）
     return'<tr style="cursor:pointer" onclick="startES(\''+r.id+'\')" onmouseover="this.style.background=\'#F5F4FE\'" onmouseout="this.style.background=\'\'" title="点击编辑这笔排课"><td>'+(i+1)+'</td>'+
-      '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.course+'</span><span class="badge '+(TB[r.type]||'b4')+'" style="font-size:9.5px;padding:1px 6px;opacity:.85">'+r.type+'</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
+      '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.course+'</span><span class="badge '+(TB[r.type]||'b4')+'" style="font-size:9.5px;padding:1px 6px;opacity:.85">'+r.type+'</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+mpHint(r.course)+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
       '<td style="font-size:11px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="background:#FEE2E2;color:#B91C1C;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;display:inline-block">⏳ 待定</span>')+'</td>'+
       '<td>'+r.cls+'</td><td>'+semBadge(r.sem)+'</td>'+
       '<td>'+halfBadge(r.half)+'</td><td>'+(tot||'—')+'</td>'+
       '<td class="note-cell" style="font-size:11px;color:#888;max-width:130px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(r.nt?eh(r.nt):'')+'</div>'+(r.nt?'<div class="note-tip">'+eh(r.nt)+'</div>':'')+'</td><td>'+(r.btec?'<span class="badge b4">BTEC</span>':'')+'</td></tr>';}).join('');
   const sgRows=spRows.map((r,i)=>
     '<tr style="background:#FFF8F0"><td>'+(data.length+i+1)+'</td>'+
-    '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.co+'</span><span class="badge b3" style="font-size:9.5px;padding:1px 6px;opacity:.85">SG/IS</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
+    '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.co+'</span><span class="badge b3" style="font-size:9.5px;padding:1px 6px;opacity:.85">SG/IS</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+mpHint(r.co)+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
     '<td style="font-size:11px;white-space:nowrap">'+eh(r.tc||'—')+'</td>'+
     '<td>'+r.cls+'</td><td>'+semBadge(r.sem)+'</td>'+
     '<td>—</td><td>'+r.stus.length+'</td>'+
@@ -2933,7 +2950,7 @@ function renderCoh(){
   if(!data.length){tb.innerHTML='';em.textContent='暂无符合条件的排课记录';em.style.display='block';return;}
   em.style.display='none';
   tb.innerHTML=data.map((r,i)=>'<tr style="cursor:pointer" onclick="startES(\''+r.id+'\')" onmouseover="this.style.background=\'#F5F4FE\'" onmouseout="this.style.background=\'\'" title="点击编辑这笔排课"><td>'+(i+1)+'</td>'+
-    '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.course+'</span><span class="badge '+(TB[r.type]||'b4')+'" style="font-size:9.5px;padding:1px 6px;opacity:.85">'+r.type+'</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
+    '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.course+'</span><span class="badge '+(TB[r.type]||'b4')+'" style="font-size:9.5px;padding:1px 6px;opacity:.85">'+r.type+'</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+mpHint(r.course)+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
     '<td>'+r.cls+'</td><td>'+semBadge(r.sem)+'</td>'+
     '<td>'+halfBadge(r.half)+'</td><td style="font-size:11px">'+(r.tc?eh(r.tc):'<span style="background:#FEE2E2;color:#B91C1C;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;display:inline-block">⏳ 待定</span>')+'</td>'+
     '<td class="note-cell" style="font-size:11px;color:#888;max-width:130px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(r.nt?eh(r.nt):'')+'</div>'+(r.nt?'<div class="note-tip">'+eh(r.nt)+'</div>':'')+'</td></tr>').join('');
