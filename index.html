@@ -3050,6 +3050,24 @@ function renderSpTchr(){
 function renderAllSum(){renderTchr();renderCoh();renderSpStu();renderSpTchr();}
 
 // ── 教学统计 ──────────────────────────────
+// v8.17: Capstone 课时 = 全学期 Capstone 学生数(届别去重加总) ÷ 授课老师数 → 查官方表
+//   总课数 = BA103/BA104(5周) + Capstone(10周)：1-20→1.25, 21-35→1.5, 36-50→2.0, 51+→2.25
+//   每位带 Capstone 的老师同得此值（不再按单门 0.75/0.5）。届别去重解决同批学生跨课代码重复计数。
+function capstoneSemLoad(sem){
+  const rows=schD.filter(r=>r.type==='Capstone'&&r.sem===sem);
+  if(!rows.length)return{total:0,teachers:0,perTeacher:0,load:0};
+  const coh={},tset=new Set();
+  rows.forEach(r=>{
+    if(r.tc)tset.add(r.tc);
+    (r.cc||[]).forEach(x=>{const nm=String((x&&x.cohort)||'').trim();if(nm)coh[nm]=Math.max(coh[nm]||0,+x.count||0);});
+  });
+  const total=Object.values(coh).reduce((s,v)=>s+v,0);
+  const nT=tset.size||1;
+  const per=total/nT;
+  let load=0;
+  if(per>0)load=per<=20?1.25:per<=35?1.5:per<=50?2.0:2.25;
+  return{total,teachers:tset.size,perTeacher:per,load};
+}
 function semDetail(tc,sem){
   const sch=schD.filter(r=>r.tc===tc&&r.sem===sem);
   const sp=spD.filter(r=>r.tc===tc&&r.sem===sem);
@@ -3057,13 +3075,21 @@ function semDetail(tc,sem){
   const courses=[];
   let wt=0;
   sch.forEach(r=>{
+    if(r.type==='Capstone')return;   // v8.17: Capstone 改整学期统一算，见下方
     if(r.type in cnt) cnt[r.type]=(cnt[r.type]||0)+1;
     const stus=(r.cc||[]).reduce((s,x)=>s+(x.count||0),0);
-    const isCD=isCohortCD(r.cc);   // v8.13：CD Capstone 算 0.5 / 课
-    const w=courseWeight(r.type,stus,isCD);
-    courses.push({code:r.course,type:r.type,students:stus,weight:Math.round(w*100)/100,isCD:r.type==='Capstone'?isCD:undefined,half:r.half});
+    const w=courseWeight(r.type,stus,false);
+    courses.push({code:r.course,type:r.type,students:stus,weight:Math.round(w*100)/100,half:r.half});
     wt+=w;
   });
+  // v8.17: Capstone — 该老师若有 Capstone 排课，加一份「全学期总人数÷师 查表」的课时（每位同值）
+  const capRows=sch.filter(r=>r.type==='Capstone');
+  if(capRows.length){
+    const cs=capstoneSemLoad(sem);
+    cnt.Capstone=capRows.length;
+    courses.push({code:'全学期 '+cs.total+'人÷'+cs.teachers+'师',type:'Capstone',students:Math.round(cs.perTeacher),weight:cs.load,half:''});
+    wt+=cs.load;
+  }
   // v7.9.10: SG 按课程为单位，按课程学生数选档
   // ≤6 学生 → 课程权重 = 1/6 (0.167)
   // >6 学生 → 课程权重 = 1/3 (0.333)
