@@ -94,18 +94,20 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 .sem-cell{padding:6px 14px!important}
 .sem-val{font-size:15px;font-weight:600;color:#534AB7}
 .sem-zero{font-size:13px;color:#ccc}
-.tip-row{display:flex;gap:8px;align-items:center;margin-top:5px;font-size:12px}
+.tip-row{display:flex;gap:7px;align-items:center;padding:3px 1px;font-size:12px;border-bottom:0.5px solid #F3F2FB}
+.tip-row:last-child{border-bottom:0}
 tr.sta-acc{display:none}
 tr.sta-acc.open{display:table-row}
 tr.sta-trow:hover{background:#FAFAFF}
 tr.sta-trow.acc-on{background:#EEEDFE}
 .acc-caret{display:inline-block;color:#8b84d8;font-size:10px;margin-right:5px;transition:transform .15s}
 tr.acc-on .acc-caret{transform:rotate(90deg)}
-.acc-wrap{background:#F7F6FE;padding:12px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px 22px;border-bottom:1px solid #E6E3F7}
-.acc-sec{min-width:0;padding-right:14px;border-right:1px solid #E6E3F7}
-.acc-sec:last-child{border-right:0}
-.acc-sec-h{font-size:11px;font-weight:700;margin-bottom:6px;border-bottom:0.5px solid #DAD6F5;padding-bottom:4px;color:#333}
-.acc-empty{color:#c4c0dd;font-size:11px;padding:5px 2px}
+.acc-wrap{background:#EAE8F7;padding:14px 16px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;border-left:3px solid #7C74D6;border-bottom:1px solid #D8D4EF}
+.acc-sec{min-width:0;background:#fff;border:0.5px solid #E4E1F3;border-radius:10px;padding:10px 12px;box-shadow:0 1px 3px rgba(83,74,183,.06)}
+.acc-sec.empty{background:#F5F4FB;border-style:dashed;border-color:#DAD6F0;display:flex;align-items:center;justify-content:center;min-height:56px}
+.acc-sec-h{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;font-weight:700;margin-bottom:7px;padding-bottom:6px;border-bottom:0.5px solid #EEEBF8;color:#4A4470}
+.acc-tot{background:#EEEDFE;color:#534AB7;font-weight:700;font-size:10.5px;padding:1px 8px;border-radius:10px;white-space:nowrap}
+.acc-empty{color:#a9a3d0;font-size:11.5px;text-align:center}
 /* ── 编辑 Modal ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .2s}
 .modal-overlay.open{opacity:1;pointer-events:all}
@@ -3124,13 +3126,14 @@ function semAccLabel(sem){
 }
 // 明细排序：上半→下半→全学期→待定；同档再按课程代码
 function halfRank(c){const h=(c.half||'').charAt(0);return h==='上'?0:h==='下'?1:h==='全'?2:3;}
-// 手风琴明细块：三学期各一等宽列，按上/下排序；空学期也占位对齐
+// 手风琴明细块：三学期各一张白卡片，按上/下排序；空学期显示低调空卡片
 function accBlock(sd){
   return sd.map(x=>{
     const d=x.d||{wt:0,courses:[]};
     const cs=(d.courses||[]).slice().sort((a,b)=>halfRank(a)-halfRank(b)||String(a.code).localeCompare(String(b.code)));
-    const body=cs.length?cs.map(courseRowHtml).join(''):'<div class="acc-empty">— 无排课 —</div>';
-    return '<div class="acc-sec"><div class="acc-sec-h">'+semAccLabel(x.sem)+' · 合计 <b style="color:#534AB7">'+(Math.round((d.wt||0)*100)/100)+'</b></div>'+body+'</div>';
+    if(!cs.length)return '<div class="acc-sec empty"><div class="acc-empty">'+semAccLabel(x.sem)+'<br>无排课</div></div>';
+    const tot=Math.round((d.wt||0)*100)/100;
+    return '<div class="acc-sec"><div class="acc-sec-h"><span>'+semAccLabel(x.sem)+'</span><span class="acc-tot">合计 '+tot+'</span></div>'+cs.map(courseRowHtml).join('')+'</div>';
   }).join('');
 }
 // 点老师整行 → 下方手风琴展开/收起（互斥，一次只开一位）
