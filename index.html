@@ -91,8 +91,9 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 .ei-chip{padding:2px 8px;font-size:10px;border:0.5px solid #AFA9EC;border-radius:20px;background:#fff;cursor:pointer;font-family:inherit}
 .tleg{display:flex;gap:8px;flex-wrap:wrap;padding:.75rem 1rem;background:#fff;border-radius:10px;border:0.5px solid #e0e0e0;margin-bottom:.875rem;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .tleg-i{display:flex;align-items:center;gap:5px;font-size:11px}
-.sem-cell{position:relative;cursor:default;padding:6px 14px!important}
-.sem-cell:hover .sem-tip{display:block}
+.sem-cell{position:relative;cursor:pointer;padding:6px 14px!important}
+.sem-cell.open{background:#EEEDFE}
+.sem-cell.open .sem-tip{display:block}
 .sem-tip{display:none;position:absolute;top:110%;left:50%;transform:translateX(-50%);z-index:99;background:#fff;border:0.5px solid #ddd;border-radius:8px;padding:10px 14px;box-shadow:0 4px 16px rgba(0,0,0,.12);white-space:nowrap;margin-top:2px;min-width:280px;text-align:left;pointer-events:none}
 .sem-val{font-size:15px;font-weight:600;color:#534AB7}
 .sem-zero{font-size:13px;color:#ccc}
@@ -3820,7 +3821,7 @@ async function syncFromSheets(type){
   // FIX: 下載會覆蓋本地，給使用者一個煞車
   const local=type==='schedule'?schD.length:spD.length;
   const label=type==='schedule'?'排課記錄':'IS/SG 排課';
-  if(!confirm('⚠️ 從 Google Sheets 下載「'+label+'」會覆蓋本地目前的 '+local+' 條資料。\n\n如果有未上傳的編輯會遺失。\n\n確定下載？'))return;
+  if(!confirm('⚠️ 从 Supabase 重新载入「'+label+'」，会用云端最新覆盖本地目前的 '+local+' 条。\n\n确定重新载入？'))return;
   try{
     const r=await gasGet({action:'read',type:type});
     if(r && r.success){
@@ -4999,6 +5000,13 @@ function syncTblHeight(){
     // schedule/special 的整张 push：per-record 已实时写入 Supabase，这里视为成功(no-op)，不再报「同步失败」
     return true;
   };
+
+  // 教学统计课程明细：改「点击展开」，不再 hover（修抖动）。点单元格→固定显示；再点/点别处→关。
+  document.addEventListener('click',function(e){
+    const cell=e.target.closest('.sem-cell');
+    document.querySelectorAll('.sem-cell.open').forEach(c=>{if(c!==cell)c.classList.remove('open');});
+    if(cell&&cell.querySelector('.sem-tip'))cell.classList.toggle('open');
+  });
 })();
 </script>
 </body>
