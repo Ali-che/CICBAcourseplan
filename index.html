@@ -101,9 +101,11 @@ tr.sta-trow:hover{background:#FAFAFF}
 tr.sta-trow.acc-on{background:#EEEDFE}
 .acc-caret{display:inline-block;color:#8b84d8;font-size:10px;margin-right:5px;transition:transform .15s}
 tr.acc-on .acc-caret{transform:rotate(90deg)}
-.acc-wrap{background:#F7F6FE;padding:12px 16px;display:flex;flex-wrap:wrap;gap:14px 26px;border-bottom:1px solid #E6E3F7}
-.acc-sec{min-width:230px;flex:0 1 auto}
-.acc-sec-h{font-size:11px;font-weight:700;margin-bottom:5px;border-bottom:0.5px solid #DAD6F5;padding-bottom:4px;color:#333}
+.acc-wrap{background:#F7F6FE;padding:12px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px 22px;border-bottom:1px solid #E6E3F7}
+.acc-sec{min-width:0;padding-right:14px;border-right:1px solid #E6E3F7}
+.acc-sec:last-child{border-right:0}
+.acc-sec-h{font-size:11px;font-weight:700;margin-bottom:6px;border-bottom:0.5px solid #DAD6F5;padding-bottom:4px;color:#333}
+.acc-empty{color:#c4c0dd;font-size:11px;padding:5px 2px}
 /* ── 编辑 Modal ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .2s}
 .modal-overlay.open{opacity:1;pointer-events:all}
@@ -251,10 +253,11 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 .load-banner{display:none;align-items:center;gap:10px;padding:.75rem 1rem;background:#EEEDFE;border:0.5px solid #AFA9EC;border-radius:10px;margin-bottom:.875rem;font-size:13px;color:#3C3489;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .load-dot{width:9px;height:9px;border-radius:50%;background:#534AB7;flex-shrink:0;animation:blink .7s infinite alternate}
 @keyframes blink{from{opacity:.25}to{opacity:1}}
-.ref-bar{background:#fff;border:0.5px solid #e0e0e0;border-radius:10px;padding:.625rem 1rem;margin-bottom:.875rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-.src-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 10px;border-radius:20px;border:0.5px solid #ddd;font-weight:500}
-.src-sheets{background:#E1F5EE;color:#0F6E56;border-color:#9ADDC5}
-.src-local{background:#F1EFE8;color:#6B5E4E;border-color:#D4C8B8}
+.ref-bar{background:transparent;border:0;border-radius:0;padding:0 2px;margin:0 0 .55rem;display:flex;align-items:center;gap:6px;flex-wrap:wrap;box-shadow:none}
+.ref-bar .badge{font-size:10px!important;padding:2px 7px;background:#F1F0F9;color:#8983B0;border:0}
+.src-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:20px;border:0.5px solid #ddd;font-weight:500}
+.src-sheets{background:#EDF7F2;color:#4A9179;border-color:#D3EBE1}
+.src-local{background:#F3F1EA;color:#8A7E6D;border-color:#E0D6C8}
 /* ── 同步进度条 ── */
 .sync-bar{height:3px;background:#eee;border-radius:2px;overflow:hidden;margin-top:4px;transition:opacity .3s}
 .sync-bar-inner{height:100%;width:0%;background:linear-gradient(90deg,#534AB7,#AFA9EC);border-radius:2px;transition:width .3s ease}
@@ -3090,13 +3093,15 @@ function semDetail(tc,sem){
 // v7.9.9: 逐课明细行 — 类型 + 课程代码 + 上/下 + 人数 + 权重
 function courseRowHtml(c){
   const tb=TB[c.type]||'b4';
+  const hc=(c.half||'').charAt(0);
+  const hcolor=hc==='上'?'#1F7A4D':hc==='下'?'#a06000':'#888';
   return '<div class="tip-row">'+
-    '<span class="badge '+tb+'" style="min-width:46px;text-align:center">'+c.type+'</span>'+
-    '<span style="font-family:ui-monospace,monospace;color:#185FA5;min-width:54px">'+c.code+'</span>'+
-    '<span style="color:#a06000;min-width:16px;font-size:11px">'+(c.half||'').charAt(0)+'</span>'+
-    '<span style="color:#888;min-width:46px;text-align:right">'+c.students+' 人</span>'+
+    '<span class="badge '+tb+'" style="min-width:44px;text-align:center">'+c.type+'</span>'+
+    '<span style="font-family:ui-monospace,monospace;color:#185FA5;min-width:50px">'+c.code+'</span>'+
+    '<span style="color:'+hcolor+';min-width:14px;font-size:11px;font-weight:600;text-align:center">'+hc+'</span>'+
+    '<span style="color:#888;min-width:40px;text-align:right;margin-left:auto">'+c.students+' 人</span>'+
     '<span style="color:#ccc">→</span>'+
-    '<span style="font-weight:600;color:#534AB7;min-width:34px;text-align:right">'+c.weight+'</span>'+
+    '<span style="font-weight:600;color:#534AB7;min-width:30px;text-align:right">'+c.weight+'</span>'+
   '</div>';
 }
 function semAccLabel(sem){
@@ -3104,13 +3109,16 @@ function semAccLabel(sem){
   const p=(sem||'').split('-');
   return (m[p[1]]||'')+' <span style="color:#aaa;font-weight:400">'+sem+'</span>';
 }
-// 手风琴明细块：按学期分区，列出该老师该期间每门课
+// 明细排序：上半→下半→全学期→待定；同档再按课程代码
+function halfRank(c){const h=(c.half||'').charAt(0);return h==='上'?0:h==='下'?1:h==='全'?2:3;}
+// 手风琴明细块：三学期各一等宽列，按上/下排序；空学期也占位对齐
 function accBlock(sd){
-  const secs=sd.filter(x=>x.d&&(x.d.wt>0||(x.d.courses&&x.d.courses.length))).map(x=>
-    '<div class="acc-sec"><div class="acc-sec-h">'+semAccLabel(x.sem)+' · 合计 <b style="color:#534AB7">'+x.d.wt+'</b></div>'+
-    (x.d.courses||[]).map(courseRowHtml).join('')+'</div>'
-  ).join('');
-  return secs||'<div style="color:#aaa;padding:6px 2px;font-size:12px">此期间无排课记录</div>';
+  return sd.map(x=>{
+    const d=x.d||{wt:0,courses:[]};
+    const cs=(d.courses||[]).slice().sort((a,b)=>halfRank(a)-halfRank(b)||String(a.code).localeCompare(String(b.code)));
+    const body=cs.length?cs.map(courseRowHtml).join(''):'<div class="acc-empty">— 无排课 —</div>';
+    return '<div class="acc-sec"><div class="acc-sec-h">'+semAccLabel(x.sem)+' · 合计 <b style="color:#534AB7">'+(Math.round((d.wt||0)*100)/100)+'</b></div>'+body+'</div>';
+  }).join('');
 }
 // 点老师整行 → 下方手风琴展开/收起（互斥，一次只开一位）
 function toggleAcc(e,k){
