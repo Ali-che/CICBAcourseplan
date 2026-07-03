@@ -342,7 +342,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   <div style="display:flex;gap:8px;flex-wrap:wrap">
     <button class="btn btn-sm" onclick="exportData()">💾 导出 JSON</button>
     <button class="btn btn-sm" onclick="importData()">📂 导入 JSON</button>
-    <button class="btn btn-sm" id="btn-refresh" onclick="reloadRef()">↻ 刷新参考数据</button>
+    <button class="btn btn-sm" id="btn-refresh" onclick="reloadRef()" style="display:none">↻ 刷新参考数据</button>
     <button class="btn btn-sm" onclick="showErrorLog()" style="color:#854F0B;border-color:#FCD34D;display:none" title="查看后端错误日志（最近 50 条）">🩺 错误日志</button>
     <span id="editor-badge" class="badge b5" style="font-size:11px;padding:5px 12px" title="当前操作人（每次新增/编辑/删除都会记录到 Sheet）">👤 —</span>
     <span id="online-badge" class="badge b1" style="font-size:11px;padding:5px 12px;cursor:pointer;display:none" onclick="showOnlineList()" title="点击查看在线名单">👥 —</span>
