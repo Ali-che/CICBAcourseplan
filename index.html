@@ -4990,7 +4990,15 @@ function syncTblHeight(){
     return{success:false,error:'未知 action '+action};
   };
 
-  fetchWrite=async function(){try{showToast('「整张上传」已停用，请用单笔增删改（更安全）',{kind:'warn'});}catch(e){}return false;};
+  fetchWrite=async function(type,data){
+    // BTEC/LA500：逐笔 upsert 到 Supabase（真正存进去）
+    if(type==='btec'){
+      try{ for(const n of Object.keys(data||{})){ await gasPost('upsertBtec',{name:n,value:data[n]}); } return true; }
+      catch(e){ return false; }
+    }
+    // schedule/special 的整张 push：per-record 已实时写入 Supabase，这里视为成功(no-op)，不再报「同步失败」
+    return true;
+  };
 })();
 </script>
 </body>
