@@ -3043,7 +3043,7 @@ function semDetail(tc,sem){
     const stus=(r.cc||[]).reduce((s,x)=>s+(x.count||0),0);
     const isCD=isCohortCD(r.cc);   // v8.13：CD Capstone 算 0.5 / 课
     const w=courseWeight(r.type,stus,isCD);
-    courses.push({code:r.course,type:r.type,students:stus,weight:Math.round(w*100)/100,isCD:r.type==='Capstone'?isCD:undefined});
+    courses.push({code:r.course,type:r.type,students:stus,weight:Math.round(w*100)/100,isCD:r.type==='Capstone'?isCD:undefined,half:r.half});
     wt+=w;
   });
   // v7.9.10: SG 按课程为单位，按课程学生数选档
@@ -3073,6 +3073,7 @@ function sdCells(d,bl){
     return '<div class="tip-row">'+
       '<span class="badge '+tb+'" style="min-width:46px;text-align:center">'+c.type+'</span>'+
       '<span style="font-family:ui-monospace,monospace;color:#185FA5;min-width:54px">'+c.code+'</span>'+
+      '<span style="color:#a06000;min-width:30px;font-size:11px">'+(c.half||'')+'</span>'+
       '<span style="color:#888;min-width:46px;text-align:right">'+c.students+' 人</span>'+
       '<span style="color:#ccc">→</span>'+
       '<span style="font-weight:600;color:#534AB7;min-width:34px;text-align:right">'+c.weight+'</span>'+
