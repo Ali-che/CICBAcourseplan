@@ -93,7 +93,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 .tleg-i{display:flex;align-items:center;gap:5px;font-size:11px}
 .sem-cell{position:relative;cursor:default;padding:6px 14px!important}
 .sem-cell:hover .sem-tip{display:block}
-.sem-tip{display:none;position:absolute;top:110%;left:50%;transform:translateX(-50%);z-index:99;background:#fff;border:0.5px solid #ddd;border-radius:8px;padding:10px 14px;box-shadow:0 4px 16px rgba(0,0,0,.12);white-space:nowrap;margin-top:2px;min-width:280px;text-align:left}
+.sem-tip{display:none;position:absolute;top:110%;left:50%;transform:translateX(-50%);z-index:99;background:#fff;border:0.5px solid #ddd;border-radius:8px;padding:10px 14px;box-shadow:0 4px 16px rgba(0,0,0,.12);white-space:nowrap;margin-top:2px;min-width:280px;text-align:left;pointer-events:none}
 .sem-val{font-size:15px;font-weight:600;color:#534AB7}
 .sem-zero{font-size:13px;color:#ccc}
 .tip-row{display:flex;gap:8px;align-items:center;margin-top:5px;font-size:12px}
@@ -336,7 +336,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
   <div>
     <div style="font-size:17px;font-weight:600;cursor:pointer" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="点击回到顶部">CIC 本科排课管理系统</div>
     <div class="print-header" id="print-header"></div>
-    <div style="font-size:11px;color:#888;margin-top:3px">数据储存于浏览器；导出 JSON 可备份；配置 SHEETS_URL 可双向同步</div>
+    <div style="font-size:11px;color:#888;margin-top:3px">数据实时存于 Supabase · 多人协作即时 · 导出 JSON 可备份</div>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
     <button class="btn btn-sm" onclick="exportData()">💾 导出 JSON</button>
@@ -352,7 +352,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 <!-- ══ 加载进度条 ══════════════════════════ -->
 <div class="load-banner" id="load-banner">
   <span class="load-dot"></span>
-  <span id="load-msg">正在从 Google Sheets 加载参考数据…</span>
+  <span id="load-msg">正在从 Supabase 加载参考数据…</span>
 </div>
 
 <!-- ══ 参考数据状态栏 ══════════════════════ -->
@@ -1243,7 +1243,7 @@ async function loadRefFromSheets(){
   const banner=document.getElementById('load-banner');
   const msg=document.getElementById('load-msg');
   if(banner)banner.style.display='flex';
-  const steps=['正在连接 Google Sheets…','正在加载课程库…','正在加载老师库…','正在加载届别库…'];
+  const steps=['正在连接 Supabase…','正在加载课程库…','正在加载老师库…','正在加载届别库…'];
   let si=0;const ticker=setInterval(()=>{if(msg)msg.textContent=steps[Math.min(si++,steps.length-1)];},700);
   try{
     const data=await gasGet({action:'readRef'});clearInterval(ticker);
@@ -1293,7 +1293,7 @@ function updateRefBar(){
   document.getElementById('ref-time').textContent=refLoadTime?'更新：'+refLoadTime.toLocaleTimeString():'';
   const b=document.getElementById('src-badge');
   if(b){b.className='src-badge '+(refSource==='sheets'?'src-sheets':'src-local');
-    b.textContent=refSource==='sheets'?'⬤ Google Sheets 数据':'⬤ 内建预设数据';}
+    b.textContent=refSource==='sheets'?'⬤ Supabase 数据':'⬤ 内建预设数据';}
 }
 
 // ── 常数与状态 ────────────────────────────
