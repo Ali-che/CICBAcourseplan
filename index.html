@@ -399,7 +399,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
           <input id="s-co" list="co-dl" placeholder="输入代码，如 KL305" oninput="lookupC('s-co','s-en','s-tp')" autocomplete="off">
           <datalist id="co-dl"></datalist>
         </div>
-        <div class="fg"><label>课程英文名（自动）</label><input id="s-en" readonly placeholder="自动显示"></div>
+        <div class="fg"><label>课程英文名（自动）</label><input id="s-en" readonly placeholder="自动显示"><div id="s-hint" style="display:none;font-size:11px;color:#a06000;margin-top:3px;line-height:1.4"></div></div>
         <div class="fg"><label>学期</label>
           <select id="s-sem"></select>
         </div>
@@ -1592,6 +1592,14 @@ function lookupC(ci,ei,ti){
   const code=document.getElementById(ci).value.trim().toUpperCase();
   const f=C.find(x=>x.c===code);
   if(ei)document.getElementById(ei).value=f?f.en:'';
+  // 显示课程的「对接课程 / 备注」提示（从 catalog 带出）
+  const hintEl=document.getElementById(ci.replace(/-co$/,'-hint'));
+  if(hintEl){
+    const parts=[];
+    if(f&&f.mapping)parts.push('🔗 对接 '+f.mapping);
+    if(f&&f.note)parts.push('📝 '+f.note);
+    hintEl.innerHTML=parts.join('　·　'); hintEl.style.display=parts.length?'block':'none';
+  }
   // FIX: 讀取當前 cls 值，否則 IS-222/SG-222/Capstone-*/331-333 會被誤判為「正常」
   if(ti&&f){
     const clsEl=ci==='s-co'?document.getElementById('s-cls'):null;
@@ -4951,9 +4959,9 @@ function syncTblHeight(){
     const a=(params||{}).action;
     if(a==='authenticate')return srpc('authenticate',{p_pin:params.pin||''});
     if(a==='readRef'){
-      const[co,te,ch,de,se]=await Promise.all([sget('courses?select=code,en,dept'),sget('teachers?select=name,dept,position,quota'),sget('cohorts?select=dept,cohort'),sget('depts?select=code,name'),sget('semesters?select=sem')]);
+      const[co,te,ch,de,se]=await Promise.all([sget('courses?select=code,en,dept,note,mapping'),sget('teachers?select=name,dept,position,quota'),sget('cohorts?select=dept,cohort'),sget('depts?select=code,name'),sget('semesters?select=sem')]);
       return{success:true,
-        courses:(co||[]).map(x=>({c:x.code,en:x.en||'',dept:x.dept||''})),
+        courses:(co||[]).map(x=>({c:x.code,en:x.en||'',dept:x.dept||'',note:x.note||'',mapping:x.mapping||''})),
         teachers:(te||[]).map(x=>({n:x.name,d:x.dept||'',r:x.position||'',l:+x.quota||0})),
         cohorts:(ch||[]).map(x=>({dept:x.dept,cohort:x.cohort})),
         depts:(de||[]).map(x=>({code:x.code,name:x.name||''})),
