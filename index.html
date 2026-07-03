@@ -98,6 +98,15 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 .sem-val{font-size:15px;font-weight:600;color:#534AB7}
 .sem-zero{font-size:13px;color:#ccc}
 .tip-row{display:flex;gap:8px;align-items:center;margin-top:5px;font-size:12px}
+tr.sta-acc{display:none}
+tr.sta-acc.open{display:table-row}
+tr.sta-trow:hover{background:#FAFAFF}
+tr.sta-trow.acc-on{background:#EEEDFE}
+.acc-caret{display:inline-block;color:#8b84d8;font-size:10px;margin-right:5px;transition:transform .15s}
+tr.acc-on .acc-caret{transform:rotate(90deg)}
+.acc-wrap{background:#F7F6FE;padding:12px 16px;display:flex;flex-wrap:wrap;gap:14px 26px;border-bottom:1px solid #E6E3F7}
+.acc-sec{min-width:230px;flex:0 1 auto}
+.acc-sec-h{font-size:11px;font-weight:700;margin-bottom:5px;border-bottom:0.5px solid #DAD6F5;padding-bottom:4px;color:#333}
 /* ── 编辑 Modal ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .2s}
 .modal-overlay.open{opacity:1;pointer-events:all}
@@ -3073,23 +3082,44 @@ function semDetail(tc,sem){
   wt=Math.round(wt*100)/100;
   return{wt,cnt,courses};
 }
+// v7.9.9: 逐课明细行 — 类型 + 课程代码 + 上/下 + 人数 + 权重
+function courseRowHtml(c){
+  const tb=TB[c.type]||'b4';
+  return '<div class="tip-row">'+
+    '<span class="badge '+tb+'" style="min-width:46px;text-align:center">'+c.type+'</span>'+
+    '<span style="font-family:ui-monospace,monospace;color:#185FA5;min-width:54px">'+c.code+'</span>'+
+    '<span style="color:#a06000;min-width:16px;font-size:11px">'+(c.half||'').charAt(0)+'</span>'+
+    '<span style="color:#888;min-width:46px;text-align:right">'+c.students+' 人</span>'+
+    '<span style="color:#ccc">→</span>'+
+    '<span style="font-weight:600;color:#534AB7;min-width:34px;text-align:right">'+c.weight+'</span>'+
+  '</div>';
+}
+function semAccLabel(sem){
+  const m={'1':'第一学期','2':'第二学期','3':'第三学期'};
+  const p=(sem||'').split('-');
+  return (m[p[1]]||'')+' <span style="color:#aaa;font-weight:400">'+sem+'</span>';
+}
+// 手风琴明细块：按学期分区，列出该老师该期间每门课
+function accBlock(sd){
+  const secs=sd.filter(x=>x.d&&(x.d.wt>0||(x.d.courses&&x.d.courses.length))).map(x=>
+    '<div class="acc-sec"><div class="acc-sec-h">'+semAccLabel(x.sem)+' · 合计 <b style="color:#534AB7">'+x.d.wt+'</b></div>'+
+    (x.d.courses||[]).map(courseRowHtml).join('')+'</div>'
+  ).join('');
+  return secs||'<div style="color:#aaa;padding:6px 2px;font-size:12px">此期间无排课记录</div>';
+}
+// 点老师整行 → 下方手风琴展开/收起（互斥，一次只开一位）
+function toggleAcc(e,k){
+  if(e&&e.target&&e.target.closest&&e.target.closest('input'))return;  // 点 LA500 输入框不触发
+  const row=document.getElementById('acc-'+k);if(!row)return;
+  const willOpen=!row.classList.contains('open');
+  document.querySelectorAll('tr.sta-acc.open').forEach(r=>r.classList.remove('open'));
+  document.querySelectorAll('tr.sta-trow.acc-on').forEach(r=>r.classList.remove('acc-on'));
+  if(willOpen){row.classList.add('open');const tr=document.getElementById('tr-'+k);if(tr)tr.classList.add('acc-on');}
+}
 function sdCells(d,bl){
   const s=bl?'border-left:1px solid #eee;':'';
   const hasData=d.wt>0;
-  // v7.9.9: 逐课明细 — 课程代码 + 类型 + 人数 + 权重
-  const courseRows=(d.courses||[]).map(c=>{
-    const tb=TB[c.type]||'b4';
-    return '<div class="tip-row">'+
-      '<span class="badge '+tb+'" style="min-width:46px;text-align:center">'+c.type+'</span>'+
-      '<span style="font-family:ui-monospace,monospace;color:#185FA5;min-width:54px">'+c.code+'</span>'+
-      '<span style="color:#a06000;min-width:16px;font-size:11px">'+(c.half||'').charAt(0)+'</span>'+
-      '<span style="color:#888;min-width:46px;text-align:right">'+c.students+' 人</span>'+
-      '<span style="color:#ccc">→</span>'+
-      '<span style="font-weight:600;color:#534AB7;min-width:34px;text-align:right">'+c.weight+'</span>'+
-    '</div>';
-  }).join('');
-  const tip=hasData?'<div class="sem-tip"><div style="color:#888;font-size:11px;margin-bottom:6px;font-weight:600;border-bottom:0.5px solid #eee;padding-bottom:4px">课程明细 · 合计 <span style="color:#534AB7;font-weight:700">'+d.wt+'</span></div>'+courseRows+'</div>':'';
-  return'<td class="sem-cell" style="text-align:center;vertical-align:top;'+s+'">'+(hasData?'<span class="sem-val">'+d.wt+'</span>':'<span class="sem-zero">—</span>')+tip+'</td>';
+  return'<td class="sem-cell" style="text-align:center;vertical-align:top;'+s+'">'+(hasData?'<span class="sem-val">'+d.wt+'</span>':'<span class="sem-zero">—</span>')+'</td>';
 }
 async function saveBtec(el){
   const name=el.dataset.name;const val=parseFloat(el.value)||0;btecD[name]=val;
@@ -3617,6 +3647,7 @@ function renderSta(){
       const d2=semDetails[1]||{wt:0,cnt:{正常:0,英文:0,实习:0,SG:0,Capstone:0}};
       const d3=semDetails[2]||{wt:0,cnt:{正常:0,英文:0,实习:0,SG:0,Capstone:0}};
       const totalSems=yr?activeSems:['2569-1','2569-2','2569-3','2570-1','2570-2','2570-3'];
+      const totalSemDetails=totalSems.map(s=>({sem:s,d:semDetail(t.n,s)}));
       const totalWt=Math.round(totalSems.reduce((s,sem)=>{const d=semDetail(t.n,sem);return s+d.wt;},0)*100)/100;
       const btec=btecD[t.n]||0;
       const btecCount=totalSems.reduce((s,sem)=>s+schD.filter(r=>r.tc===t.n&&r.sem===sem&&r.btec).length,0);
@@ -3625,9 +3656,9 @@ function renderSta(){
       dWt+=yearTotal;
       const pct=t.l>0?Math.round(yearTotal/t.l*100):0;
       const over=t.l>0&&yearTotal>t.l;
-      rows+='<tr id="tr-'+k+'" style="transition:background .8s">'+
+      rows+='<tr id="tr-'+k+'" class="sta-trow" style="transition:background .8s;cursor:pointer" onclick="toggleAcc(event,\''+k+'\')">'+
         '<td style="color:#bbb;font-size:11px">'+idx+'</td>'+
-        '<td style="font-size:12px;white-space:nowrap">'+eh(t.n)+'</td>'+
+        '<td style="font-size:12px;white-space:nowrap"><span class="acc-caret">▸</span>'+eh(t.n)+'</td>'+
         '<td style="font-size:11px;color:#888;white-space:nowrap">'+t.r+'</td>'+
         sdCells(d1,true)+sdCells(d2,true)+sdCells(d3,true)+
         '<td style="text-align:center;border-left:1px solid #eee;font-weight:500">'+totalWt+'</td>'+
@@ -3641,6 +3672,8 @@ function renderSta(){
         '<td style="text-align:center"><strong id="yt-'+k+'">'+yearTotal+'</strong></td>'+
         '<td><span class="badge '+(over?'b3':'b1')+'" id="pct-'+k+'">'+pct+'% / '+t.l+'</span></td>'+
         '</tr>';
+      rows+='<tr class="sta-acc" id="acc-'+k+'"><td colspan="'+(9+activeSems.length)+'" style="padding:0;border:0">'+
+        '<div class="acc-wrap">'+accBlock(totalSemDetails)+'</div></td></tr>';
     });
     // FIX: 小計列總欄數要等於 9 + activeSems.length（3+sems+1總+4尾）
     rows+='<tr class="dt">'+
@@ -5001,12 +5034,7 @@ function syncTblHeight(){
     return true;
   };
 
-  // 教学统计课程明细：改「点击展开」，不再 hover（修抖动）。点单元格→固定显示；再点/点别处→关。
-  document.addEventListener('click',function(e){
-    const cell=e.target.closest('.sem-cell');
-    document.querySelectorAll('.sem-cell.open').forEach(c=>{if(c!==cell)c.classList.remove('open');});
-    if(cell&&cell.querySelector('.sem-tip'))cell.classList.toggle('open');
-  });
+  // 教学统计课程明细：改为「点老师整行 → 下方手风琴展开」，见 toggleAcc()。旧的 sem-cell tooltip 已移除。
 })();
 </script>
 </body>
