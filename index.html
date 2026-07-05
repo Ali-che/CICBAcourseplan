@@ -810,6 +810,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <button class="ops-tab" data-sec="dept" onclick="opsSwitch('dept')">专业</button>
       <button class="ops-tab" data-sec="coh" onclick="opsSwitch('coh')">届别</button>
       <button class="ops-tab" data-sec="tch" onclick="opsSwitch('tch')">老师库</button>
+      <button class="ops-tab" data-sec="pos" onclick="opsSwitch('pos')">职位</button>
       <button class="ops-tab" data-sec="cat" onclick="opsSwitch('cat')">课程总库</button>
       <button class="btn btn-sm" onclick="renderOps(true)" style="margin-left:auto">↻ 重载</button>
     </div>
@@ -1073,6 +1074,14 @@ function opsEV(sec,f){return (opsEdit&&opsEdit.sec===sec&&opsEdit.vals&&opsEdit.
 function opsStartEdit(sec,key,vals){opsEdit={sec:sec,key:key,vals:vals};opsRenderSec();try{document.getElementById('panel-ops').scrollIntoView({block:'start'});}catch(e){}}
 function opsCancelEdit(){opsEdit=null;opsRenderSec();}
 function opsDeptOpts(sel){return (opsD.depts||[]).map(d=>'<option value="'+eh(d.code)+'"'+(d.code===sel?' selected':'')+'>'+eh(d.code)+'</option>').join('');}
+function opsPosOpts(sel){
+  const list=opsD.positions||[];
+  let opts=list.map(p=>'<option value="'+eh(p.position)+'"'+(p.position===sel?' selected':'')+'>'+eh(p.position)+'（'+p.quota+'）</option>').join('');
+  if(sel&&!list.some(p=>p.position===sel))opts='<option value="'+eh(sel)+'" selected>'+eh(sel)+'（未登记）</option>'+opts;
+  return '<option value="">— 选职位 —</option>'+opts;
+}
+function opsPosQuota(pos){const p=(opsD.positions||[]).find(x=>x.position===pos);return p?p.quota:'';}
+function opsFillQuota(){const pos=document.getElementById('ops-tch-pos').value;const q=opsPosQuota(pos);if(q!==''){const el=document.getElementById('ops-tch-quota');if(el)el.value=q;}}
 async function renderOps(force){
   if(force)opsD=null;
   const b=document.getElementById('ops-body');
@@ -1089,7 +1098,7 @@ async function renderOps(force){
 function opsSwitch(sec){opsSec=sec;document.querySelectorAll('.ops-tab').forEach(x=>x.classList.toggle('active',x.dataset.sec===sec));opsRenderSec();}
 function opsRenderSec(){
   const b=document.getElementById('ops-body');if(!b||!opsD)return;
-  b.innerHTML= opsSec==='sem'?opsSemView(): opsSec==='dept'?opsDeptView(): opsSec==='coh'?opsCohView(): opsSec==='tch'?opsTchView(): opsSec==='cat'?opsCatView(): '';
+  b.innerHTML= opsSec==='sem'?opsSemView(): opsSec==='dept'?opsDeptView(): opsSec==='coh'?opsCohView(): opsSec==='tch'?opsTchView(): opsSec==='pos'?opsPosView(): opsSec==='cat'?opsCatView(): '';
 }
 // 使用中检查(用已加载的 schD/spD)
 function opsUsedBySem(s){return schD.filter(r=>r.sem===s).length+spD.filter(r=>r.sem===s).length;}
@@ -1135,18 +1144,33 @@ async function opsDelCoh(id,coh){const n=opsUsedByCohort(coh);if(!confirm('删�
 // ── 老师库 ──
 function opsTchView(){
   const ed=opsIsEdit('tch');
+  const defPos=opsEV('tch','position')||(((opsD.positions||[])[0]||{}).position||'');
+  const defQuota=ed?(opsEV('tch','quota')||''):opsPosQuota(defPos);
   const body=(opsD.teachers||[]).slice().sort((a,b)=>a.name.localeCompare(b.name)).map(t=>'<tr><td style="white-space:nowrap">'+eh(t.name)+'</td><td>'+eh(t.dept)+'</td><td style="font-size:11px">'+eh(t.position)+'</td><td style="text-align:center">'+t.quota+'</td><td style="font-family:ui-monospace,monospace;font-size:11px">'+(t.employee_id?eh(t.employee_id):'—')+'</td><td style="text-align:right;white-space:nowrap"><button class="ops-edit" onclick="opsStartEdit(\'tch\',\''+jsq(t.name)+'\',{name:\''+jsq(t.name)+'\',dept:\''+jsq(t.dept)+'\',position:\''+jsq(t.position)+'\',quota:'+(t.quota||0)+',employee_id:\''+jsq(t.employee_id)+'\'})">编辑</button> <button class="ops-del" onclick="opsDelTch(\''+jsq(t.name)+'\')">删除</button></td></tr>').join('')||'<tr><td colspan="6" style="color:#aaa">无</td></tr>';
   return '<div class="ops-add">'+(ed?'<div style="width:100%;font-size:12px;color:#534AB7;font-weight:600;margin-bottom:2px">✏️ 编辑老师(姓名不可改;要改名请删除后重加)</div>':'')+
     '<div class="fg"><label>姓名*</label><input id="ops-tch-name" '+(ed?'readonly style="width:150px;background:#eee"':'style="width:150px"')+' value="'+eh(opsEV('tch','name'))+'" placeholder="Aj. Xxx, Yyy"></div>'+
     '<div class="fg"><label>专业</label><select id="ops-tch-dept">'+opsDeptOpts(opsEV('tch','dept'))+'</select></div>'+
-    '<div class="fg"><label>职位</label><input id="ops-tch-pos" style="width:110px" value="'+eh(opsEV('tch','position'))+'" placeholder="一般老师"></div>'+
-    '<div class="fg"><label>限额</label><input id="ops-tch-quota" type="number" step="0.5" style="width:65px" value="'+eh(String(opsEV('tch','quota')||''))+'" placeholder="10"></div>'+
+    '<div class="fg"><label>职位</label><select id="ops-tch-pos" onchange="opsFillQuota()" style="min-width:130px">'+opsPosOpts(defPos)+'</select></div>'+
+    '<div class="fg"><label>限额</label><input id="ops-tch-quota" type="number" step="0.5" style="width:65px" value="'+eh(String(defQuota||''))+'" placeholder="10"></div>'+
     '<div class="fg"><label>员工号</label><input id="ops-tch-eid" style="width:90px" value="'+eh(opsEV('tch','employee_id'))+'"></div>'+
     '<button class="btn btn-p" onclick="opsAddTch()">'+(ed?'保存修改':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>'+
     '<div class="tbl-wrap" style="max-height:calc(100vh - 430px)"><table><thead><tr><th>姓名</th><th>专业</th><th>职位</th><th>限额</th><th>员工号</th><th></th></tr></thead><tbody>'+body+'</tbody></table></div>';
 }
 async function opsAddTch(){const name=document.getElementById('ops-tch-name').value.trim();if(!name){alert('请输入姓名');return;}opsAfter(await gasPost('adminAddTeacher',{name,dept:document.getElementById('ops-tch-dept').value,position:document.getElementById('ops-tch-pos').value.trim(),quota:document.getElementById('ops-tch-quota').value,employee_id:document.getElementById('ops-tch-eid').value.trim()}),'已新增/更新老师 '+name);}
 async function opsDelTch(name){const n=opsUsedByTeacher(name);if(!confirm('删除老师「'+name+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 笔排课/特别排课是此老师。仍要删?':'')))return;opsAfter(await gasPost('adminDelTeacher',{name}),'已删除老师 '+name);}
+// ── 职位(默认限额)──
+function opsPosView(){
+  const ed=opsIsEdit('pos');
+  const body=(opsD.positions||[]).slice().sort((a,b)=>b.quota-a.quota).map(p=>'<tr><td>'+eh(p.position)+'</td><td style="text-align:center">'+p.quota+'</td><td style="text-align:right;white-space:nowrap"><button class="ops-edit" onclick="opsStartEdit(\'pos\',\''+jsq(p.position)+'\',{position:\''+jsq(p.position)+'\',quota:'+(p.quota||0)+'})">编辑</button> <button class="ops-del" onclick="opsDelPos(\''+jsq(p.position)+'\')">删除</button></td></tr>').join('')||'<tr><td colspan="3" style="color:#aaa">无</td></tr>';
+  return '<div class="ops-add">'+(ed?'<div style="width:100%;font-size:12px;color:#534AB7;font-weight:600;margin-bottom:2px">✏️ 编辑职位(名称不可改;改名请删除后重加)</div>':'')+
+    '<div class="fg"><label>职位名称</label><input id="ops-pos-name" '+(ed?'readonly style="width:150px;background:#eee"':'style="width:150px"')+' value="'+eh(opsEV('pos','position'))+'" placeholder="一般老师"></div>'+
+    '<div class="fg"><label>默认限额</label><input id="ops-pos-quota" type="number" step="0.5" style="width:70px" value="'+eh(String(opsEV('pos','quota')||''))+'" placeholder="10"></div>'+
+    '<button class="btn btn-p" onclick="opsAddPos()">'+(ed?'保存修改':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>'+
+    '<div style="font-size:11px;color:#888;margin-bottom:8px">在老师库选此职位会自动带出这个限额(仍可手动改)。</div>'+
+    '<table style="width:auto;min-width:300px"><thead><tr><th>职位</th><th>默认限额</th><th></th></tr></thead><tbody>'+body+'</tbody></table>';
+}
+async function opsAddPos(){const pos=document.getElementById('ops-pos-name').value.trim();if(!pos){alert('请输入职位名称');return;}opsAfter(await gasPost('adminAddPosition',{position:pos,quota:document.getElementById('ops-pos-quota').value}),'已保存职位 '+pos);}
+async function opsDelPos(pos){const n=(opsD.teachers||[]).filter(t=>t.position===pos).length;if(!confirm('删除职位「'+pos+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 位老师是此职位(删了不影响老师现有职位文字,但下拉里会没这项)。仍要删?':'')))return;opsAfter(await gasPost('adminDelPosition',{position:pos}),'已删除职位 '+pos);}
 // ── Catalog ──
 function opsCatView(){
   const ed=opsIsEdit('cat');
@@ -5265,14 +5289,16 @@ function syncTblHeight(){
     if(a==='whoOnline')return{success:true,users:[]};
     if(a==='listBackups')return{success:true,snapshots:[]};
     if(a==='opsData'){
-      const[se,de,ch,te,ca]=await Promise.all([
+      const[se,de,ch,te,ca,po]=await Promise.all([
         sget('semesters?select=sem&order=sem'),
         sget('depts?select=code,name&order=code'),
         sget('cohorts?select=id,dept,cohort&order=dept,cohort'),
         sget('teachers?select=name,dept,position,quota,employee_id&order=name'),
-        sget('catalog?select=id,dept,version,code,zh,en,credit,mapping,req,block,block_credit,fixed,note,source&order=code')
+        sget('catalog?select=id,dept,version,code,zh,en,credit,mapping,req,block,block_credit,fixed,note,source&order=code'),
+        sget('positions?select=position,quota&order=quota.desc').catch(function(){return [];})
       ]);
       return{success:true,
+        positions:(Array.isArray(po)?po:[]).map(x=>({position:x.position,quota:+x.quota||0})),
         semesters:(se||[]).map(x=>x.sem),
         depts:(de||[]).map(x=>({code:x.code,name:x.name||''})),
         cohorts:(ch||[]).map(x=>({id:x.id,dept:x.dept||'',cohort:x.cohort||''})),
@@ -5304,6 +5330,10 @@ function syncTblHeight(){
     if(action==='adminAddCatalog')return srpc('admin_add_catalog',{p_pin:_pin,p_row:body.row});
     if(action==='adminUpdateCatalog')return srpc('admin_update_catalog',{p_pin:_pin,p_id:body.id,p_fields:body.fields});
     if(action==='adminDelCatalog')return srpc('admin_del_catalog',{p_pin:_pin,p_id:body.id});
+    if(action==='adminAddPosition')return srpc('admin_add_position',{p_pin:_pin,p_position:body.position,p_quota:+body.quota||0});
+    if(action==='adminDelPosition')return srpc('admin_del_position',{p_pin:_pin,p_position:body.position});
+    if(action==='adminUpsertGrad')return srpc('admin_upsert_grad',{p_pin:_pin,p_pid:body.pid,p_total:+body.total||0});
+    if(action==='adminDelGrad')return srpc('admin_del_grad',{p_pin:_pin,p_pid:body.pid});
     return{success:false,error:'未知 action '+action};
   };
 
