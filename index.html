@@ -1151,7 +1151,7 @@ async function opsDelTch(name){const n=opsUsedByTeacher(name);if(!confirm('删�
 function opsCatView(){
   const ed=opsIsEdit('cat');
   const q=opsCatQ.trim().toLowerCase();
-  let all=opsD.catalog||[], list=q?all.filter(c=>((c.code||'')+(c.zh||'')+(c.en||'')+(c.dept||'')+(c.mapping||'')+(c.block||'')+(c.version||'')).toLowerCase().includes(q)):all;
+  let all=opsD.catalog||[], list=q?all.filter(c=>((c.code||'')+(c.zh||'')+(c.en||'')+(c.dept||'')+(c.mapping||'')+(c.block||'')+(c.version||'')+(c.note||'')).toLowerCase().includes(q)):all;
   const body=list.map(c=>'<tr>'+
     '<td style="font-family:ui-monospace,monospace">'+eh(c.code)+'</td>'+
     '<td>'+eh(c.zh)+'</td>'+
@@ -1160,10 +1160,13 @@ function opsCatView(){
     '<td style="font-size:11px;color:#888">'+eh(c.version)+'</td>'+
     '<td style="font-size:11px">'+eh(c.req)+'</td>'+
     '<td style="font-size:11px;text-align:center">'+eh(c.credit)+'</td>'+
+    '<td style="font-size:11px;text-align:center;color:#888">'+eh(c.block_credit)+'</td>'+
     '<td style="font-size:11px;color:#185FA5">'+eh(c.mapping||'')+'</td>'+
-    '<td style="font-size:10px;color:#999;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+eh(c.block)+'">'+eh(c.block)+'</td>'+
-    '<td style="text-align:right;white-space:nowrap"><button class="ops-edit" onclick="opsStartEdit(\'cat\','+c.id+',{code:\''+jsq(c.code)+'\',zh:\''+jsq(c.zh)+'\',en:\''+jsq(c.en)+'\',dept:\''+jsq(c.dept)+'\',version:\''+jsq(c.version)+'\',credit:\''+jsq(c.credit)+'\',mapping:\''+jsq(c.mapping)+'\',req:\''+jsq(c.req)+'\',block:\''+jsq(c.block)+'\'})">编辑</button> <button class="ops-del" onclick="opsDelCat('+c.id+',\''+jsq(c.code)+'\')">删除</button></td>'+
-    '</tr>').join('')||'<tr><td colspan="10" style="color:#aaa">无匹配</td></tr>';
+    '<td style="text-align:center">'+(c.fixed?'<span style="background:#2E7D32;color:#fff;font-size:9px;font-weight:700;border-radius:3px;padding:0 4px">常</span>':'')+'</td>'+
+    '<td style="font-size:10px;color:#7a5b00;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+eh(c.note)+'">'+eh(c.note||'')+'</td>'+
+    '<td style="font-size:10px;color:#999;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+eh(c.block)+'">'+eh(c.block)+'</td>'+
+    '<td style="text-align:right;white-space:nowrap"><button class="ops-edit" onclick="opsStartEdit(\'cat\','+c.id+',{code:\''+jsq(c.code)+'\',zh:\''+jsq(c.zh)+'\',en:\''+jsq(c.en)+'\',dept:\''+jsq(c.dept)+'\',version:\''+jsq(c.version)+'\',credit:\''+jsq(c.credit)+'\',block_credit:\''+jsq(c.block_credit)+'\',mapping:\''+jsq(c.mapping)+'\',req:\''+jsq(c.req)+'\',fixed:\''+jsq(c.fixed)+'\',note:\''+jsq(c.note)+'\',block:\''+jsq(c.block)+'\'})">编辑</button> <button class="ops-del" onclick="opsDelCat('+c.id+',\''+jsq(c.code)+'\')">删除</button></td>'+
+    '</tr>').join('')||'<tr><td colspan="13" style="color:#aaa">无匹配</td></tr>';
   return '<div class="ops-add">'+(ed?'<div style="width:100%;font-size:12px;color:#534AB7;font-weight:600;margin-bottom:2px">✏️ 编辑课程(代码不可改;要改代码请删除后重加)</div>':'')+
     '<div class="fg"><label>课程代码*</label><input id="ops-cat-code" '+(ed?'readonly style="width:90px;background:#eee"':'style="width:90px"')+' value="'+eh(opsEV('cat','code'))+'"></div>'+
     '<div class="fg"><label>中文名</label><input id="ops-cat-zh" style="width:140px" value="'+eh(opsEV('cat','zh'))+'"></div>'+
@@ -1171,16 +1174,19 @@ function opsCatView(){
     '<div class="fg"><label>专业</label><select id="ops-cat-dept">'+opsDeptOpts(opsEV('cat','dept'))+'</select></div>'+
     '<div class="fg"><label>版本</label><input id="ops-cat-ver" style="width:60px" value="'+eh(opsEV('cat','version'))+'" placeholder="2568"></div>'+
     '<div class="fg"><label>必/选修</label><input id="ops-cat-req" style="width:60px" value="'+eh(opsEV('cat','req'))+'"></div>'+
-    '<div class="fg"><label>学分</label><input id="ops-cat-credit" style="width:50px" value="'+eh(opsEV('cat','credit'))+'"></div>'+
-    '<div class="fg"><label>对接</label><input id="ops-cat-map" style="width:90px" value="'+eh(opsEV('cat','mapping'))+'"></div>'+
-    '<div class="fg"><label>模块 block</label><input id="ops-cat-block" style="width:150px" value="'+eh(opsEV('cat','block'))+'"></div>'+
+    '<div class="fg"><label>学分</label><input id="ops-cat-credit" style="width:46px" value="'+eh(opsEV('cat','credit'))+'"></div>'+
+    '<div class="fg"><label>模块学分</label><input id="ops-cat-bc" style="width:56px" value="'+eh(opsEV('cat','block_credit'))+'"></div>'+
+    '<div class="fg"><label>对接</label><input id="ops-cat-map" style="width:80px" value="'+eh(opsEV('cat','mapping'))+'"></div>'+
+    '<div class="fg"><label>固定开课</label><select id="ops-cat-fixed"><option value=""'+(opsEV('cat','fixed')?'':' selected')+'>否</option><option value="Y"'+(opsEV('cat','fixed')?' selected':'')+'>固定(常)</option></select></div>'+
+    '<div class="fg"><label>模块 block</label><input id="ops-cat-block" style="width:130px" value="'+eh(opsEV('cat','block'))+'"></div>'+
+    '<div class="fg"><label>备注</label><input id="ops-cat-note" style="width:120px" value="'+eh(opsEV('cat','note'))+'"></div>'+
     '<button class="btn btn-p" onclick="opsAddCat()">'+(ed?'保存修改':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>'+
-    '<div style="margin-bottom:8px"><input id="ops-cat-q" value="'+eh(opsCatQ)+'" oninput="opsCatQ=this.value;opsRenderSec();var e=document.getElementById(\'ops-cat-q\');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length);}" placeholder="🔍 搜代码/中英文/对接/模块/版本" style="width:300px;padding:6px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:12px"> <span style="font-size:11px;color:#888">共 '+all.length+' 条'+(q?'，筛出 '+list.length+' 条':'（全部显示）')+'</span></div>'+
-    '<div class="tbl-wrap" style="max-height:calc(100vh - 480px)"><table><thead><tr><th>代码</th><th>中文名</th><th>英文名</th><th>专业</th><th>版本</th><th>必/选</th><th>学分</th><th>对接</th><th>模块</th><th></th></tr></thead><tbody>'+body+'</tbody></table></div>';
+    '<div style="margin-bottom:8px"><input id="ops-cat-q" value="'+eh(opsCatQ)+'" oninput="opsCatQ=this.value;opsRenderSec();var e=document.getElementById(\'ops-cat-q\');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length);}" placeholder="🔍 搜代码/中英文/对接/模块/版本/备注" style="width:300px;padding:6px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:12px"> <span style="font-size:11px;color:#888">共 '+all.length+' 条'+(q?'，筛出 '+list.length+' 条':'（全部显示）')+'</span></div>'+
+    '<div class="tbl-wrap" style="max-height:calc(100vh - 480px)"><table><thead><tr><th>代码</th><th>中文名</th><th>英文名</th><th>专业</th><th>版本</th><th>必/选</th><th>学分</th><th>模块学分</th><th>对接</th><th>固定</th><th>备注</th><th>模块</th><th></th></tr></thead><tbody>'+body+'</tbody></table></div>';
 }
 async function opsAddCat(){
   const code=document.getElementById('ops-cat-code').value.trim().toUpperCase();if(!code){alert('请输入课程代码');return;}
-  const fields={code,zh:document.getElementById('ops-cat-zh').value.trim(),en:document.getElementById('ops-cat-en').value.trim(),dept:document.getElementById('ops-cat-dept').value,version:document.getElementById('ops-cat-ver').value.trim(),credit:document.getElementById('ops-cat-credit').value.trim(),mapping:document.getElementById('ops-cat-map').value.trim(),req:document.getElementById('ops-cat-req').value.trim(),block:document.getElementById('ops-cat-block').value.trim()};
+  const fields={code,zh:document.getElementById('ops-cat-zh').value.trim(),en:document.getElementById('ops-cat-en').value.trim(),dept:document.getElementById('ops-cat-dept').value,version:document.getElementById('ops-cat-ver').value.trim(),credit:document.getElementById('ops-cat-credit').value.trim(),block_credit:document.getElementById('ops-cat-bc').value.trim(),mapping:document.getElementById('ops-cat-map').value.trim(),req:document.getElementById('ops-cat-req').value.trim(),fixed:document.getElementById('ops-cat-fixed').value,note:document.getElementById('ops-cat-note').value.trim(),block:document.getElementById('ops-cat-block').value.trim()};
   if(opsIsEdit('cat'))opsAfter(await gasPost('adminUpdateCatalog',{id:opsEdit.key,fields}),'已保存 课程 '+code);
   else opsAfter(await gasPost('adminAddCatalog',{row:fields}),'已新增 课程 '+code);
 }
@@ -5264,14 +5270,14 @@ function syncTblHeight(){
         sget('depts?select=code,name&order=code'),
         sget('cohorts?select=id,dept,cohort&order=dept,cohort'),
         sget('teachers?select=name,dept,position,quota,employee_id&order=name'),
-        sget('catalog?select=id,dept,version,code,zh,en,credit,mapping,req,block,note&order=code')
+        sget('catalog?select=id,dept,version,code,zh,en,credit,mapping,req,block,block_credit,fixed,note,source&order=code')
       ]);
       return{success:true,
         semesters:(se||[]).map(x=>x.sem),
         depts:(de||[]).map(x=>({code:x.code,name:x.name||''})),
         cohorts:(ch||[]).map(x=>({id:x.id,dept:x.dept||'',cohort:x.cohort||''})),
         teachers:(te||[]).map(x=>({name:x.name,dept:x.dept||'',position:x.position||'',quota:+x.quota||0,employee_id:x.employee_id||''})),
-        catalog:(ca||[]).map(x=>({id:x.id,dept:x.dept||'',version:x.version||'',code:x.code||'',zh:x.zh||'',en:x.en||'',credit:x.credit||'',mapping:x.mapping||'',req:x.req||'',block:x.block||'',note:x.note||''}))};
+        catalog:(ca||[]).map(x=>({id:x.id,dept:x.dept||'',version:x.version||'',code:x.code||'',zh:x.zh||'',en:x.en||'',credit:x.credit||'',mapping:x.mapping||'',req:x.req||'',block:x.block||'',block_credit:x.block_credit||'',fixed:x.fixed||'',note:x.note||'',source:x.source||''}))};
     }
     return{success:true};
   };
