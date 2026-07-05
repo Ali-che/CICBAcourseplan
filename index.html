@@ -1083,6 +1083,8 @@ function opsPosOpts(sel){
 }
 function opsPosQuota(pos){const p=(opsD.positions||[]).find(x=>x.position===pos);return p?p.quota:'';}
 function opsFillQuota(){const pos=document.getElementById('ops-tch-pos').value;const q=opsPosQuota(pos);if(q!==''){const el=document.getElementById('ops-tch-quota');if(el)el.value=q;}}
+// 选/填模块 → 自动带出该模块的模块学分(该模块任一课的 block_credit)
+function opsFillBlockCredit(){const b=document.getElementById('ops-cat-block').value;const row=(opsD.catalog||[]).find(c=>c.block===b&&c.block_credit);if(row){const el=document.getElementById('ops-cat-bc');if(el)el.value=row.block_credit;}}
 async function renderOps(force){
   if(force)opsD=null;
   const b=document.getElementById('ops-body');
@@ -1190,6 +1192,8 @@ function opsCatView(){
   const ed=opsIsEdit('cat');
   const q=opsCatQ.trim().toLowerCase();
   let all=opsD.catalog||[], list=q?all.filter(c=>((c.code||'')+(c.zh||'')+(c.en||'')+(c.dept||'')+(c.mapping||'')+(c.block||'')+(c.version||'')+(c.note||'')).toLowerCase().includes(q)):all;
+  const _bset={}; all.forEach(c=>{if(c.block&&!(c.block in _bset))_bset[c.block]=c.block_credit;});
+  const blockDL=Object.keys(_bset).sort().map(b=>'<option value="'+eh(b)+'">').join('');
   const body=list.map(c=>'<tr>'+
     '<td style="font-family:ui-monospace,monospace">'+eh(c.code)+'</td>'+
     '<td>'+eh(c.zh)+'</td>'+
@@ -1216,7 +1220,7 @@ function opsCatView(){
     '<div class="fg"><label>模块学分</label><input id="ops-cat-bc" style="width:56px" value="'+eh(opsEV('cat','block_credit'))+'"></div>'+
     '<div class="fg"><label>对接</label><input id="ops-cat-map" style="width:80px" value="'+eh(opsEV('cat','mapping'))+'"></div>'+
     '<div class="fg"><label>固定开课</label><select id="ops-cat-fixed"><option value=""'+(opsEV('cat','fixed')?'':' selected')+'>否</option><option value="Y"'+(opsEV('cat','fixed')?' selected':'')+'>固定(常)</option></select></div>'+
-    '<div class="fg"><label>模块 block</label><input id="ops-cat-block" style="width:130px" value="'+eh(opsEV('cat','block'))+'"></div>'+
+    '<div class="fg"><label>模块 block(可选可填)</label><input id="ops-cat-block" list="ops-block-dl" onchange="opsFillBlockCredit()" style="width:170px" value="'+eh(opsEV('cat','block'))+'"><datalist id="ops-block-dl">'+blockDL+'</datalist></div>'+
     '<div class="fg"><label>备注</label><input id="ops-cat-note" style="width:120px" value="'+eh(opsEV('cat','note'))+'"></div>'+
     '<button class="btn btn-p" onclick="opsAddCat()">'+(ed?'保存修改':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>'+
     '<div style="margin-bottom:8px"><input id="ops-cat-q" value="'+eh(opsCatQ)+'" oninput="opsCatQ=this.value;opsRenderSec();var e=document.getElementById(\'ops-cat-q\');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length);}" placeholder="🔍 搜代码/中英文/对接/模块/版本/备注" style="width:300px;padding:6px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:12px"> <span style="font-size:11px;color:#888">共 '+all.length+' 条'+(q?'，筛出 '+list.length+' 条':'（全部显示）')+'</span></div>'+
