@@ -2163,7 +2163,7 @@ function _filterTransferList(){
   if(sem) f=f.filter(r=>r.sem===sem);
   if(half) f=f.filter(r=>r.half===half);
   if(cls) f=f.filter(r=>r.cls===cls);
-  if(q) f=f.filter(r=>(r.course||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q));
+  if(q) f=f.filter(r=>(r.course||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q)||_mapMatch(r.course,q));
   if(!f.length){
     list.innerHTML='<div style="text-align:center;color:#999;padding:24px;font-size:12px">没有符合条件的目标，请放宽筛选</div>';
     cntSpan.textContent='0 笔';
@@ -2572,6 +2572,8 @@ function mpHint(code){
   const v=cf&&cf.mapping?String(cf.mapping).trim():'';
   return (v&&v!=='待定')?'<div style="font-size:10.5px;color:#185FA5;margin-top:1px;padding-left:9px;line-height:1.3">🔗 对接 '+eh(v)+'</div>':'';
 }
+// 搜索是否命中该课程的「对接」课程代码(小写 q)
+function _mapMatch(code,q){const cf=C.find(x=>x.c===code);return !!(cf&&cf.mapping&&String(cf.mapping).toLowerCase().includes(q));}
 function renderSch(){
   if(!_panelActive('sch')){_tabDirty.sch=true;return;}
   _tabDirty.sch=false;
@@ -2604,7 +2606,8 @@ function renderSch(){
     disp=disp.filter(r=>
       (r.course||'').toLowerCase().includes(q)||
       (r.en||'').toLowerCase().includes(q)||
-      String(r.cls||'').toLowerCase().includes(q)
+      String(r.cls||'').toLowerCase().includes(q)||
+      _mapMatch(r.course,q)
     );
   }
   if(schSK==='course')disp.sort((a,b)=>schSD*a.course.localeCompare(b.course));
@@ -2833,7 +2836,8 @@ function renderSp(){
       (r.en||'').toLowerCase().includes(q)||
       String(r.sid||'').toLowerCase().includes(q)||
       (r.nm||'').toLowerCase().includes(q)||
-      String(r.cls||'').toLowerCase().includes(q)
+      String(r.cls||'').toLowerCase().includes(q)||
+      _mapMatch(r.co,q)
     );
   }
   // v7.9: 批量删除按钮
@@ -2881,14 +2885,14 @@ function renderTchr(){
   else if(dept){const dTchrs=T.filter(t=>t.d===dept).map(t=>t.n);data=data.filter(r=>dTchrs.includes(r.tc));}
   if(sem)data=data.filter(r=>r.sem===sem);
   if(tp)data=data.filter(r=>r.type===tp);
-  if(q)data=data.filter(r=>(r.course||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q)||String(r.cls||'').toLowerCase().includes(q));
+  if(q)data=data.filter(r=>(r.course||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q)||String(r.cls||'').toLowerCase().includes(q)||_mapMatch(r.course,q));
   let spRows=[];
   if(!tp||tp==='SG'){
     let spData=[...spD];
     if(tc)spData=spData.filter(r=>r.tc===tc);
     else if(dept){const dTchrs=T.filter(t=>t.d===dept).map(t=>t.n);spData=spData.filter(r=>dTchrs.includes(r.tc));}
     if(sem)spData=spData.filter(r=>r.sem===sem);
-    if(q)spData=spData.filter(r=>(r.co||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q)||String(r.cls||'').toLowerCase().includes(q));
+    if(q)spData=spData.filter(r=>(r.co||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q)||String(r.cls||'').toLowerCase().includes(q)||_mapMatch(r.co,q));
     const spMap={};
     spData.forEach(r=>{const k=r.co+'|'+r.sem;if(!spMap[k])spMap[k]={co:r.co,en:r.en,sem:r.sem,cls:r.cls,tc:r.tc,stus:[]};spMap[k].stus.push(r.mr+' '+r.nm);});
     spRows=Object.values(spMap);
@@ -2935,7 +2939,7 @@ function renderCoh(){
   if(co)data=data.filter(r=>r.cc.some(x=>x.cohort===co));
   else if(dept)data=data.filter(r=>r.cc.some(x=>Object.keys(CBD).filter(d=>d===dept).flatMap(d=>CBD[d]).includes(x.cohort)));
   if(sem)data=data.filter(r=>r.sem===sem);
-  if(q)data=data.filter(r=>(r.course||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q)||String(r.cls||'').toLowerCase().includes(q));
+  if(q)data=data.filter(r=>(r.course||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q)||String(r.cls||'').toLowerCase().includes(q)||_mapMatch(r.course,q));
   if(!data.length){tb.innerHTML='';em.textContent='暂无符合条件的排课记录';em.style.display='block';return;}
   em.style.display='none';
   tb.innerHTML=data.map((r,i)=>'<tr style="cursor:pointer" onclick="startES(\''+r.id+'\')" onmouseover="this.style.background=\'#F5F4FE\'" onmouseout="this.style.background=\'\'" title="点击编辑这笔排课"><td>'+(i+1)+'</td>'+
@@ -3027,7 +3031,7 @@ function renderSpTchr(){
   if(tc)data=data.filter(r=>r.tc===tc);
   if(sem)data=data.filter(r=>r.sem===sem);
   if(dept&&!tc){const deptTchrs=T.filter(t=>t.d===dept).map(t=>t.n);data=data.filter(r=>deptTchrs.includes(r.tc));}
-  if(q)data=data.filter(r=>(r.co||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q));
+  if(q)data=data.filter(r=>(r.co||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q)||_mapMatch(r.co,q));
   if(!data.length){wrap.innerHTML='';em.textContent='暂无符合条件的 SG/IS 排课记录';em.style.display='block';return;}
   em.style.display='none';
   // 双层 group: 先按老师，再按课程
