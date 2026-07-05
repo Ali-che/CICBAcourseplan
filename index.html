@@ -2876,7 +2876,8 @@ function renderSch(){
       (r.course||'').toLowerCase().includes(q)||
       (r.en||'').toLowerCase().includes(q)||
       String(r.cls||'').toLowerCase().includes(q)||
-      _mapMatch(r.course,q)
+      _mapMatch(r.course,q)||
+      (r.btec&&'btec'.includes(q))
     );
   }
   if(schSK==='course')disp.sort((a,b)=>schSD*a.course.localeCompare(b.course));
@@ -3154,7 +3155,7 @@ function renderTchr(){
   else if(dept){const dTchrs=T.filter(t=>t.d===dept).map(t=>t.n);data=data.filter(r=>dTchrs.includes(r.tc));}
   if(sem)data=data.filter(r=>r.sem===sem);
   if(tp)data=data.filter(r=>r.type===tp);
-  if(q)data=data.filter(r=>(r.course||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q)||String(r.cls||'').toLowerCase().includes(q)||_mapMatch(r.course,q));
+  if(q)data=data.filter(r=>(r.course||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q)||String(r.cls||'').toLowerCase().includes(q)||_mapMatch(r.course,q)||(r.btec&&'btec'.includes(q)));
   let spRows=[];
   if(!tp||tp==='SG'){
     let spData=[...spD];
@@ -3208,7 +3209,7 @@ function renderCoh(){
   if(co)data=data.filter(r=>r.cc.some(x=>x.cohort===co));
   else if(dept)data=data.filter(r=>r.cc.some(x=>Object.keys(CBD).filter(d=>d===dept).flatMap(d=>CBD[d]).includes(x.cohort)));
   if(sem)data=data.filter(r=>r.sem===sem);
-  if(q)data=data.filter(r=>(r.course||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q)||String(r.cls||'').toLowerCase().includes(q)||_mapMatch(r.course,q));
+  if(q)data=data.filter(r=>(r.course||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q)||String(r.cls||'').toLowerCase().includes(q)||_mapMatch(r.course,q)||(r.btec&&'btec'.includes(q)));
   if(!data.length){tb.innerHTML='';em.textContent='暂无符合条件的排课记录';em.style.display='block';return;}
   em.style.display='none';
   tb.innerHTML=data.map((r,i)=>'<tr style="cursor:pointer" onclick="startES(\''+r.id+'\')" onmouseover="this.style.background=\'#F5F4FE\'" onmouseout="this.style.background=\'\'" title="点击编辑这笔排课"><td>'+(i+1)+'</td>'+
