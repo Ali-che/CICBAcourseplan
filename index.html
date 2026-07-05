@@ -1069,6 +1069,21 @@ function applyRoleVisibility(){
 
 // ══════════ ⚙️ 后台操作(参考数据管理,admin 专属;写入走 admin_* RPC,服务端再验权限)══════════
 let opsD=null, opsSec='sem', opsLoading=false, opsCatQ='', opsEdit=null;
+let opsTchSort={key:'name',dir:1}, opsTchF={name:'',dept:'',pos:'',quota:'',eid:''};
+function opsTchSetSort(k){if(opsTchSort.key===k)opsTchSort.dir*=-1;else{opsTchSort.key=k;opsTchSort.dir=1;}opsRenderSec();}
+function opsTchRows(){
+  let list=(opsD.teachers||[]).slice();
+  const f=opsTchF;
+  if(f.name)list=list.filter(t=>(t.name||'').toLowerCase().includes(f.name.toLowerCase()));
+  if(f.dept)list=list.filter(t=>t.dept===f.dept);
+  if(f.pos)list=list.filter(t=>t.position===f.pos);
+  if(f.quota)list=list.filter(t=>String(t.quota).includes(f.quota));
+  if(f.eid)list=list.filter(t=>String(t.employee_id||'').includes(f.eid));
+  const k=opsTchSort.key,d=opsTchSort.dir;
+  list.sort(function(a,b){if(k==='quota')return d*((+a.quota||0)-(+b.quota||0));return d*String(a[k]||'').localeCompare(String(b[k]||''));});
+  return list.map(t=>'<tr><td style="white-space:nowrap">'+eh(t.name)+'</td><td>'+eh(t.dept)+'</td><td style="font-size:11px">'+eh(t.position)+'</td><td style="text-align:center">'+t.quota+'</td><td style="font-family:ui-monospace,monospace;font-size:11px">'+(t.employee_id?eh(t.employee_id):'—')+'</td><td style="text-align:right;white-space:nowrap"><button class="ops-edit" onclick="opsStartEdit(\'tch\',\''+jsq(t.name)+'\',{name:\''+jsq(t.name)+'\',dept:\''+jsq(t.dept)+'\',position:\''+jsq(t.position)+'\',quota:'+(t.quota||0)+',employee_id:\''+jsq(t.employee_id)+'\'})">编辑</button> <button class="ops-del" onclick="opsDelTch(\''+jsq(t.name)+'\')">删除</button></td></tr>').join('')||'<tr><td colspan="6" style="color:#aaa">无匹配</td></tr>';
+}
+function opsTchApply(){const tb=document.getElementById('ops-tch-tb');if(tb)tb.innerHTML=opsTchRows();}
 function jsq(s){return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
 function opsIsEdit(sec){return !!(opsEdit&&opsEdit.sec===sec);}
 function opsEV(sec,f){return (opsEdit&&opsEdit.sec===sec&&opsEdit.vals&&opsEdit.vals[f]!=null)?opsEdit.vals[f]:'';}
@@ -1149,7 +1164,11 @@ function opsTchView(){
   const ed=opsIsEdit('tch');
   const defPos=opsEV('tch','position')||(((opsD.positions||[])[0]||{}).position||'');
   const defQuota=ed?(opsEV('tch','quota')||''):opsPosQuota(defPos);
-  const body=(opsD.teachers||[]).slice().sort((a,b)=>a.name.localeCompare(b.name)).map(t=>'<tr><td style="white-space:nowrap">'+eh(t.name)+'</td><td>'+eh(t.dept)+'</td><td style="font-size:11px">'+eh(t.position)+'</td><td style="text-align:center">'+t.quota+'</td><td style="font-family:ui-monospace,monospace;font-size:11px">'+(t.employee_id?eh(t.employee_id):'—')+'</td><td style="text-align:right;white-space:nowrap"><button class="ops-edit" onclick="opsStartEdit(\'tch\',\''+jsq(t.name)+'\',{name:\''+jsq(t.name)+'\',dept:\''+jsq(t.dept)+'\',position:\''+jsq(t.position)+'\',quota:'+(t.quota||0)+',employee_id:\''+jsq(t.employee_id)+'\'})">编辑</button> <button class="ops-del" onclick="opsDelTch(\''+jsq(t.name)+'\')">删除</button></td></tr>').join('')||'<tr><td colspan="6" style="color:#aaa">无</td></tr>';
+  const _fi='width:100%;box-sizing:border-box;font-size:10.5px;padding:2px 5px;border:0;border-radius:4px;font-weight:400;color:#333;background:#fff';
+  const deptF='<select onchange="opsTchF.dept=this.value;opsTchApply()" style="'+_fi+'"><option value="">全部</option>'+(opsD.depts||[]).map(d=>'<option value="'+eh(d.code)+'"'+(opsTchF.dept===d.code?' selected':'')+'>'+eh(d.code)+'</option>').join('')+'</select>';
+  const _pset={}; (opsD.teachers||[]).forEach(t=>{if(t.position)_pset[t.position]=1;});
+  const posF='<select onchange="opsTchF.pos=this.value;opsTchApply()" style="'+_fi+'"><option value="">全部</option>'+Object.keys(_pset).sort().map(p=>'<option value="'+eh(p)+'"'+(opsTchF.pos===p?' selected':'')+'>'+eh(p)+'</option>').join('')+'</select>';
+  const hd=function(k,label,filter){const on=opsTchSort.key===k;return '<th style="background:#534AB7;vertical-align:top;padding:5px 6px"><div onclick="opsTchSetSort(\''+k+'\')" style="cursor:pointer;user-select:none;margin-bottom:3px;white-space:nowrap">'+label+' '+(on?(opsTchSort.dir>0?'▲':'▼'):'⇅')+'</div>'+filter+'</th>';};
   return '<div class="ops-add">'+(ed?'<div style="width:100%;font-size:12px;color:#534AB7;font-weight:600;margin-bottom:2px">✏️ 编辑老师(姓名不可改;要改名请删除后重加)</div>':'')+
     '<div class="fg"><label>姓名*</label><input id="ops-tch-name" '+(ed?'readonly style="width:150px;background:#eee"':'style="width:150px"')+' value="'+eh(opsEV('tch','name'))+'" placeholder="Aj. Xxx, Yyy"></div>'+
     '<div class="fg"><label>专业</label><select id="ops-tch-dept">'+opsDeptOpts(opsEV('tch','dept'))+'</select></div>'+
@@ -1157,7 +1176,14 @@ function opsTchView(){
     '<div class="fg"><label>限额</label><input id="ops-tch-quota" type="number" step="0.5" style="width:65px" value="'+eh(String(defQuota||''))+'" placeholder="10"></div>'+
     '<div class="fg"><label>员工号</label><input id="ops-tch-eid" style="width:90px" value="'+eh(opsEV('tch','employee_id'))+'"></div>'+
     '<button class="btn btn-p" onclick="opsAddTch()">'+(ed?'保存修改':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>'+
-    '<div class="tbl-wrap" style="max-height:calc(100vh - 430px)"><table><thead><tr><th>姓名</th><th>专业</th><th>职位</th><th>限额</th><th>员工号</th><th></th></tr></thead><tbody>'+body+'</tbody></table></div>';
+    '<div class="tbl-wrap" style="max-height:calc(100vh - 460px)"><table><thead><tr>'+
+      hd('name','姓名','<input value="'+eh(opsTchF.name)+'" oninput="opsTchF.name=this.value;opsTchApply()" placeholder="筛" style="'+_fi+'">')+
+      hd('dept','专业',deptF)+
+      hd('position','职位',posF)+
+      hd('quota','限额','<input value="'+eh(opsTchF.quota)+'" oninput="opsTchF.quota=this.value;opsTchApply()" placeholder="筛" style="'+_fi+'">')+
+      hd('employee_id','员工号','<input value="'+eh(opsTchF.eid)+'" oninput="opsTchF.eid=this.value;opsTchApply()" placeholder="筛" style="'+_fi+'">')+
+      '<th style="background:#534AB7"></th>'+
+    '</tr></thead><tbody id="ops-tch-tb">'+opsTchRows()+'</tbody></table></div>';
 }
 async function opsAddTch(){const name=document.getElementById('ops-tch-name').value.trim();if(!name){alert('请输入姓名');return;}opsAfter(await gasPost('adminAddTeacher',{name,dept:document.getElementById('ops-tch-dept').value,position:document.getElementById('ops-tch-pos').value.trim(),quota:document.getElementById('ops-tch-quota').value,employee_id:document.getElementById('ops-tch-eid').value.trim()}),'已新增/更新老师 '+name);}
 async function opsDelTch(name){const n=opsUsedByTeacher(name);if(!confirm('删除老师「'+name+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 笔排课/特别排课是此老师。仍要删?':'')))return;opsAfter(await gasPost('adminDelTeacher',{name}),'已删除老师 '+name);}
