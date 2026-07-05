@@ -17,6 +17,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .tabs{display:flex;gap:6px;margin-bottom:1.25rem;overflow-x:auto;background:transparent;padding:0}
 .tab{padding:10px 20px;font-size:14px;font-weight:500;cursor:pointer;border:0.5px solid #ddd;background:#fff;color:#888;border-radius:8px;white-space:nowrap;font-family:inherit;transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .tab.active{background:#534AB7;color:#fff;border-color:#534AB7;box-shadow:0 2px 8px rgba(83,74,183,.3)}
+.ops-tab{padding:6px 14px;font-size:12.5px;font-weight:500;border:0.5px solid #ddd;background:#fff;color:#666;border-radius:8px;cursor:pointer;font-family:inherit;transition:all .15s}
+.ops-tab.active{background:#534AB7;color:#fff;border-color:#534AB7}
+.ops-add{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;background:#F7F6FE;border:0.5px solid #E4E1F3;border-radius:8px;padding:10px 12px;margin-bottom:12px}
+.ops-add .fg{display:flex;flex-direction:column;gap:3px}
+.ops-add label{font-size:10.5px;color:#888}
+.ops-add input,.ops-add select{font-size:12px;padding:5px 8px;border:0.5px solid #cbd5e1;border-radius:6px;font-family:inherit}
+.ops-del{background:transparent;border:0.5px solid #f7c1c1;color:#a32d2d;border-radius:6px;font-size:11px;padding:2px 8px;cursor:pointer}
+.ops-del:hover{background:#FEE2E2}
 .tab:hover:not(.active){background:#f0effd;color:#534AB7;border-color:#AFA9EC}
 .panel{display:none}.panel.active{display:block}
 .stabs{display:flex;gap:5px;margin-bottom:.875rem;flex-wrap:wrap}
@@ -383,6 +391,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   <button class="tab" onclick="switchTab('sum')">📊 学期总表</button>
   <button class="tab" onclick="switchTab('cs')">📚 课程结构</button>
   <button class="tab" id="tab-sta" onclick="switchTab('sta')">📈 教学统计</button>
+  <button class="tab" id="tab-ops" onclick="switchTab('ops')" style="display:none">⚙️ 后台操作</button>
 </div>
 </div><!-- /.sticky-top -->
 
@@ -790,6 +799,21 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   </div>
 </div>
 
+<div id="panel-ops" class="panel">
+  <div class="card">
+    <div class="sechdr"><span class="ct" style="margin:0">⚙️ 后台操作 · 参考数据管理</span></div>
+    <div style="background:#FDECEC;border:0.5px solid #F5C2C2;color:#9B2C2C;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:12px">⚠️ 这里直接改<strong>参考数据</strong>，影响全系统、立即生效。删除前会检查是否被排课引用。仅管理员可见可用。</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+      <button class="ops-tab active" data-sec="sem" onclick="opsSwitch('sem')">学期</button>
+      <button class="ops-tab" data-sec="dept" onclick="opsSwitch('dept')">专业</button>
+      <button class="ops-tab" data-sec="coh" onclick="opsSwitch('coh')">届别</button>
+      <button class="ops-tab" data-sec="tch" onclick="opsSwitch('tch')">老师库</button>
+      <button class="ops-tab" data-sec="cat" onclick="opsSwitch('cat')">Catalog</button>
+      <button class="btn btn-sm" onclick="renderOps(true)" style="margin-left:auto">↻ 重载</button>
+    </div>
+    <div id="ops-body"><div style="color:#888;padding:20px">载入中…</div></div>
+  </div>
+</div>
 </div><!-- /.app -->
 
 <!-- ══ 排课编辑 Modal ═══════════════════════ -->
@@ -1025,13 +1049,98 @@ function unlockApp(){
 
 // v8.8：根据 currentRole 隐藏 / 显示某些 tab
 function applyRoleVisibility(){
+  const elevated = (currentRole==='director' || currentRole==='master' || currentRole==='admin');
+  const canOps   = (currentRole==='master' || currentRole==='admin');   // 后台操作仅最高权限
   const staTabBtn = document.getElementById('tab-sta');
   if(staTabBtn){
-    const canSeeStats = (currentRole==='director' || currentRole==='master');
-    staTabBtn.style.display = canSeeStats ? '' : 'none';
-    if(!canSeeStats && staTabBtn.classList.contains('active')) switchTab('sch');
+    staTabBtn.style.display = elevated ? '' : 'none';
+    if(!elevated && staTabBtn.classList.contains('active')) switchTab('sch');
+  }
+  const opsTabBtn = document.getElementById('tab-ops');
+  if(opsTabBtn){
+    opsTabBtn.style.display = canOps ? '' : 'none';
+    if(!canOps && opsTabBtn.classList.contains('active')) switchTab('sch');
   }
 }
+
+// ══════════ ⚙️ 后台操作(参考数据管理,admin 专属;写入走 admin_* RPC,服务端再验权限)══════════
+let opsD=null, opsSec='sem', opsLoading=false, opsCatQ='';
+function jsq(s){return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+async function renderOps(force){
+  if(force)opsD=null;
+  const b=document.getElementById('ops-body');
+  if(!opsD){
+    if(opsLoading)return;
+    opsLoading=true; if(b)b.innerHTML='<div style="color:#888;padding:20px">载入中…</div>';
+    try{const r=await gasGet({action:'opsData'}); opsLoading=false;
+      if(!r||!r.success){if(b)b.innerHTML='<div style="color:#a32d2d;padding:20px">载入失败</div>';return;}
+      opsD=r;
+    }catch(e){opsLoading=false;if(b)b.innerHTML='<div style="color:#a32d2d;padding:20px">载入失败:'+eh(e.message)+'</div>';return;}
+  }
+  opsRenderSec();
+}
+function opsSwitch(sec){opsSec=sec;document.querySelectorAll('.ops-tab').forEach(x=>x.classList.toggle('active',x.dataset.sec===sec));opsRenderSec();}
+function opsRenderSec(){
+  const b=document.getElementById('ops-body');if(!b||!opsD)return;
+  b.innerHTML= opsSec==='sem'?opsSemView(): opsSec==='dept'?opsDeptView(): opsSec==='coh'?opsCohView(): opsSec==='tch'?opsTchView(): opsSec==='cat'?opsCatView(): '';
+}
+// 使用中检查(用已加载的 schD/spD)
+function opsUsedBySem(s){return schD.filter(r=>r.sem===s).length+spD.filter(r=>r.sem===s).length;}
+function opsUsedByCohort(c){return schD.filter(r=>(r.cc||[]).some(x=>x.cohort===c)).length;}
+function opsUsedByTeacher(n){return schD.filter(r=>r.tc===n).length+spD.filter(r=>r.tc===n).length;}
+function opsUsedByDept(code){return (opsD.cohorts||[]).filter(c=>c.dept===code).length;}
+function opsUsedByCourse(code){return schD.filter(r=>r.course===code).length;}
+// 增删后:重拉后台数据 + 重载全局参考数据 + 重建下拉 + 重渲染
+async function opsAfter(r,msg){
+  if(!r||!r.success){alert('操作失败:'+((r&&r.error)||'unknown（可能不是管理员权限）'));return;}
+  opsD=null;
+  try{await loadRefFromSheets();rebuildUI();}catch(e){}
+  await renderOps(true);
+  if(typeof showToast==='function')showToast(msg,{kind:'success',duration:2500});
+}
+// ── 学期 ──
+function opsSemView(){
+  const body=(opsD.semesters||[]).slice().sort().map(s=>'<tr><td style="font-family:ui-monospace,monospace">'+eh(s)+'</td><td style="text-align:right"><button class="ops-del" onclick="opsDelSem(\''+jsq(s)+'\')">删除</button></td></tr>').join('')||'<tr><td colspan="2" style="color:#aaa">无</td></tr>';
+  return '<div class="ops-add"><div class="fg"><label>新学期(如 2570-1)</label><input id="ops-sem-in" placeholder="2570-1"></div><button class="btn btn-p" onclick="opsAddSem()">+ 新增</button></div><table style="width:auto;min-width:260px"><thead><tr><th>学期</th><th></th></tr></thead><tbody>'+body+'</tbody></table>';
+}
+async function opsAddSem(){const v=document.getElementById('ops-sem-in').value.trim();if(!v){alert('请输入学期');return;}opsAfter(await gasPost('adminAddSemester',{sem:v}),'已新增学期 '+v);}
+async function opsDelSem(s){const n=opsUsedBySem(s);if(!confirm('删除学期「'+s+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 笔排课用到此学期,删后会变孤儿。仍要删?':'')))return;opsAfter(await gasPost('adminDelSemester',{sem:s}),'已删除学期 '+s);}
+// ── 专业 ──
+function opsDeptView(){
+  const body=(opsD.depts||[]).slice().sort((a,b)=>a.code.localeCompare(b.code)).map(d=>'<tr><td style="font-family:ui-monospace,monospace">'+eh(d.code)+'</td><td>'+eh(d.name)+'</td><td style="text-align:right"><button class="ops-del" onclick="opsDelDept(\''+jsq(d.code)+'\')">删除</button></td></tr>').join('')||'<tr><td colspan="3" style="color:#aaa">无</td></tr>';
+  return '<div class="ops-add"><div class="fg"><label>专业代码</label><input id="ops-dept-code" placeholder="TM" style="width:80px"></div><div class="fg"><label>专业名称</label><input id="ops-dept-name" placeholder="旅游管理"></div><button class="btn btn-p" onclick="opsAddDept()">+ 新增</button></div><table style="width:auto;min-width:340px"><thead><tr><th>代码</th><th>名称</th><th></th></tr></thead><tbody>'+body+'</tbody></table>';
+}
+async function opsAddDept(){const code=document.getElementById('ops-dept-code').value.trim();if(!code){alert('请输入专业代码');return;}opsAfter(await gasPost('adminAddDept',{code,name:document.getElementById('ops-dept-name').value.trim()}),'已新增/更新专业 '+code);}
+async function opsDelDept(code){const n=opsUsedByDept(code);if(!confirm('删除专业「'+code+'」?'+(n>0?'\n\n⚠️ 该专业下有 '+n+' 个届别,删专业不会删届别但会失去归属。仍要删?':'')))return;opsAfter(await gasPost('adminDelDept',{code}),'已删除专业 '+code);}
+// ── 届别 ──
+function opsCohView(){
+  const deptOpts=(opsD.depts||[]).map(d=>'<option value="'+eh(d.code)+'">'+eh(d.code)+'</option>').join('');
+  const body=(opsD.cohorts||[]).slice().sort((a,b)=>(a.dept+a.cohort).localeCompare(b.dept+b.cohort)).map(c=>'<tr><td>'+eh(c.dept)+'</td><td style="font-family:ui-monospace,monospace">'+eh(c.cohort)+'</td><td style="text-align:right"><button class="ops-del" onclick="opsDelCoh('+c.id+',\''+jsq(c.cohort)+'\')">删除</button></td></tr>').join('')||'<tr><td colspan="3" style="color:#aaa">无</td></tr>';
+  return '<div class="ops-add"><div class="fg"><label>专业</label><select id="ops-coh-dept">'+deptOpts+'</select></div><div class="fg"><label>届别代码</label><input id="ops-coh-code" placeholder="TM70"></div><button class="btn btn-p" onclick="opsAddCoh()">+ 新增</button></div><div class="tbl-wrap" style="max-height:calc(100vh - 430px)"><table><thead><tr><th>专业</th><th>届别</th><th></th></tr></thead><tbody>'+body+'</tbody></table></div>';
+}
+async function opsAddCoh(){const coh=document.getElementById('ops-coh-code').value.trim();if(!coh){alert('请输入届别代码');return;}opsAfter(await gasPost('adminAddCohort',{dept:document.getElementById('ops-coh-dept').value,cohort:coh}),'已新增届别 '+coh);}
+async function opsDelCoh(id,coh){const n=opsUsedByCohort(coh);if(!confirm('删除届别「'+coh+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 笔排课用到此届别。仍要删?':'')))return;opsAfter(await gasPost('adminDelCohort',{id}),'已删除届别 '+coh);}
+// ── 老师库 ──
+function opsTchView(){
+  const deptOpts=(opsD.depts||[]).map(d=>'<option value="'+eh(d.code)+'">'+eh(d.code)+'</option>').join('');
+  const body=(opsD.teachers||[]).slice().sort((a,b)=>a.name.localeCompare(b.name)).map(t=>'<tr><td style="white-space:nowrap">'+eh(t.name)+'</td><td>'+eh(t.dept)+'</td><td style="font-size:11px">'+eh(t.position)+'</td><td style="text-align:center">'+t.quota+'</td><td style="font-family:ui-monospace,monospace;font-size:11px">'+(t.employee_id?eh(t.employee_id):'—')+'</td><td style="text-align:right"><button class="ops-del" onclick="opsDelTch(\''+jsq(t.name)+'\')">删除</button></td></tr>').join('')||'<tr><td colspan="6" style="color:#aaa">无</td></tr>';
+  return '<div class="ops-add"><div class="fg"><label>姓名*</label><input id="ops-tch-name" placeholder="Aj. Xxx, Yyy" style="width:150px"></div><div class="fg"><label>专业</label><select id="ops-tch-dept">'+deptOpts+'</select></div><div class="fg"><label>职位</label><input id="ops-tch-pos" placeholder="一般老师" style="width:110px"></div><div class="fg"><label>限额</label><input id="ops-tch-quota" type="number" step="0.5" style="width:65px" placeholder="10"></div><div class="fg"><label>员工号</label><input id="ops-tch-eid" style="width:90px"></div><button class="btn btn-p" onclick="opsAddTch()">+ 新增</button></div><div class="tbl-wrap" style="max-height:calc(100vh - 430px)"><table><thead><tr><th>姓名</th><th>专业</th><th>职位</th><th>限额</th><th>员工号</th><th></th></tr></thead><tbody>'+body+'</tbody></table></div>';
+}
+async function opsAddTch(){const name=document.getElementById('ops-tch-name').value.trim();if(!name){alert('请输入姓名');return;}opsAfter(await gasPost('adminAddTeacher',{name,dept:document.getElementById('ops-tch-dept').value,position:document.getElementById('ops-tch-pos').value.trim(),quota:document.getElementById('ops-tch-quota').value,employee_id:document.getElementById('ops-tch-eid').value.trim()}),'已新增/更新老师 '+name);}
+async function opsDelTch(name){const n=opsUsedByTeacher(name);if(!confirm('删除老师「'+name+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 笔排课/特别排课是此老师。仍要删?':'')))return;opsAfter(await gasPost('adminDelTeacher',{name}),'已删除老师 '+name);}
+// ── Catalog ──
+function opsCatView(){
+  const q=opsCatQ.trim().toLowerCase();
+  let all=opsD.catalog||[], list=q?all.filter(c=>((c.code||'')+(c.zh||'')+(c.en||'')+(c.dept||'')+(c.mapping||'')).toLowerCase().includes(q)):all;
+  const shown=list.slice(0,300);
+  const deptOpts=(opsD.depts||[]).map(d=>'<option value="'+eh(d.code)+'">'+eh(d.code)+'</option>').join('');
+  const body=shown.map(c=>'<tr><td style="font-family:ui-monospace,monospace">'+eh(c.code)+'</td><td>'+eh(c.zh)+'</td><td style="font-size:11px;color:#666">'+eh(c.en)+'</td><td>'+eh(c.dept)+'</td><td style="font-size:11px">'+eh(c.credit)+'</td><td style="font-size:11px;color:#185FA5">'+eh(c.mapping||'')+'</td><td style="text-align:right"><button class="ops-del" onclick="opsDelCat('+c.id+',\''+jsq(c.code)+'\')">删除</button></td></tr>').join('')||'<tr><td colspan="7" style="color:#aaa">无匹配</td></tr>';
+  return '<div class="ops-add"><div class="fg"><label>课程代码*</label><input id="ops-cat-code" style="width:90px"></div><div class="fg"><label>中文名</label><input id="ops-cat-zh" style="width:140px"></div><div class="fg"><label>英文名</label><input id="ops-cat-en" style="width:170px"></div><div class="fg"><label>专业</label><select id="ops-cat-dept">'+deptOpts+'</select></div><div class="fg"><label>学分</label><input id="ops-cat-credit" style="width:55px"></div><div class="fg"><label>对接</label><input id="ops-cat-map" style="width:90px"></div><div class="fg"><label>必/选修</label><input id="ops-cat-req" style="width:70px"></div><button class="btn btn-p" onclick="opsAddCat()">+ 新增</button></div>'+
+    '<div style="margin-bottom:8px"><input id="ops-cat-q" value="'+eh(opsCatQ)+'" oninput="opsCatQ=this.value;opsRenderSec();var e=document.getElementById(\'ops-cat-q\');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length);}" placeholder="🔍 搜代码/中英文/对接" style="width:280px;padding:6px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:12px"> <span style="font-size:11px;color:#888">共 '+all.length+' 条'+(q?'，筛出 '+list.length+(list.length>300?'（仅显示前300）':'')+' 条':'（仅显示前 '+shown.length+' 条，请用搜索）')+'</span></div>'+
+    '<div class="tbl-wrap" style="max-height:calc(100vh - 480px)"><table><thead><tr><th>代码</th><th>中文名</th><th>英文名</th><th>专业</th><th>学分</th><th>对接</th><th></th></tr></thead><tbody>'+body+'</tbody></table></div>';
+}
+async function opsAddCat(){const code=document.getElementById('ops-cat-code').value.trim().toUpperCase();if(!code){alert('请输入课程代码');return;}const row={code,zh:document.getElementById('ops-cat-zh').value.trim(),en:document.getElementById('ops-cat-en').value.trim(),dept:document.getElementById('ops-cat-dept').value,credit:document.getElementById('ops-cat-credit').value.trim(),mapping:document.getElementById('ops-cat-map').value.trim(),req:document.getElementById('ops-cat-req').value.trim()};opsAfter(await gasPost('adminAddCatalog',{row}),'已新增 catalog '+code);}
+async function opsDelCat(id,code){const n=opsUsedByCourse(code);if(!confirm('删除 catalog「'+code+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 笔排课用到此课程代码,删后课程下拉/对接会受影响。仍要删?':'')))return;opsAfter(await gasPost('adminDelCatalog',{id}),'已删除 catalog '+code);}
 
 function checkAuth(){
   const ts = localStorage.getItem(PIN_KEY);
@@ -4877,7 +4986,7 @@ async function confirmCsvImportSp(){
 }
 
 function switchTab(id){
-  ['sch','sp','sum','cs','sta'].forEach((x,i)=>{document.querySelectorAll('.tab')[i].classList.toggle('active',x===id);});
+  ['sch','sp','sum','cs','sta','ops'].forEach((x,i)=>{const tb=document.querySelectorAll('.tab')[i];if(tb)tb.classList.toggle('active',x===id);});
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+id).classList.add('active');
   if(id==='cs'){var _f=document.getElementById('cs-frame');if(_f&&!_f.src)_f.src=_f.dataset.src;}
@@ -4886,6 +4995,7 @@ function switchTab(id){
   else if(id==='sp'&&_tabDirty.sp)renderSp();
   else if(id==='sum'&&_tabDirty.sum)renderAllSum();
   else if(id==='sta'&&_tabDirty.sta)renderSta();
+  else if(id==='ops')renderOps();
   setTimeout(syncTblHeight,50); // 等 panel 显示后再算高度
 }
 function switchSub(id){
@@ -5104,6 +5214,21 @@ function syncTblHeight(){
     }
     if(a==='whoOnline')return{success:true,users:[]};
     if(a==='listBackups')return{success:true,snapshots:[]};
+    if(a==='opsData'){
+      const[se,de,ch,te,ca]=await Promise.all([
+        sget('semesters?select=sem&order=sem'),
+        sget('depts?select=code,name&order=code'),
+        sget('cohorts?select=id,dept,cohort&order=dept,cohort'),
+        sget('teachers?select=name,dept,position,quota,employee_id&order=name'),
+        sget('catalog?select=id,dept,version,code,zh,en,credit,mapping,req,block,note&order=code')
+      ]);
+      return{success:true,
+        semesters:(se||[]).map(x=>x.sem),
+        depts:(de||[]).map(x=>({code:x.code,name:x.name||''})),
+        cohorts:(ch||[]).map(x=>({id:x.id,dept:x.dept||'',cohort:x.cohort||''})),
+        teachers:(te||[]).map(x=>({name:x.name,dept:x.dept||'',position:x.position||'',quota:+x.quota||0,employee_id:x.employee_id||''})),
+        catalog:(ca||[]).map(x=>({id:x.id,dept:x.dept||'',version:x.version||'',code:x.code||'',zh:x.zh||'',en:x.en||'',credit:x.credit||'',mapping:x.mapping||'',req:x.req||'',block:x.block||'',note:x.note||''}))};
+    }
     return{success:true};
   };
 
@@ -5117,6 +5242,18 @@ function syncTblHeight(){
     if(action==='upsertBtec')return srpc('upsert_btec',{p_pin:_pin,p_name:body.name,p_value:+body.value||0});
     if(action==='deleteBtec')return srpc('delete_btec',{p_pin:_pin,p_name:body.name});
     if(action==='heartbeat'||action==='goodbye')return{success:true};
+    // ⚙️ 后台操作 admin RPC(服务端 _admin 再验权限)
+    if(action==='adminAddSemester')return srpc('admin_add_semester',{p_pin:_pin,p_sem:body.sem});
+    if(action==='adminDelSemester')return srpc('admin_del_semester',{p_pin:_pin,p_sem:body.sem});
+    if(action==='adminAddDept')return srpc('admin_add_dept',{p_pin:_pin,p_code:body.code,p_name:body.name});
+    if(action==='adminDelDept')return srpc('admin_del_dept',{p_pin:_pin,p_code:body.code});
+    if(action==='adminAddCohort')return srpc('admin_add_cohort',{p_pin:_pin,p_dept:body.dept,p_cohort:body.cohort});
+    if(action==='adminDelCohort')return srpc('admin_del_cohort',{p_pin:_pin,p_id:body.id});
+    if(action==='adminAddTeacher')return srpc('admin_add_teacher',{p_pin:_pin,p_name:body.name,p_dept:body.dept,p_position:body.position,p_quota:+body.quota||0,p_employee_id:body.employee_id||''});
+    if(action==='adminDelTeacher')return srpc('admin_del_teacher',{p_pin:_pin,p_name:body.name});
+    if(action==='adminAddCatalog')return srpc('admin_add_catalog',{p_pin:_pin,p_row:body.row});
+    if(action==='adminUpdateCatalog')return srpc('admin_update_catalog',{p_pin:_pin,p_id:body.id,p_fields:body.fields});
+    if(action==='adminDelCatalog')return srpc('admin_del_catalog',{p_pin:_pin,p_id:body.id});
     return{success:false,error:'未知 action '+action};
   };
 
