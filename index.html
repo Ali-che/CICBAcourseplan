@@ -812,6 +812,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <button class="ops-tab" data-sec="tch" onclick="opsSwitch('tch')">老师库</button>
       <button class="ops-tab" data-sec="pos" onclick="opsSwitch('pos')">职位</button>
       <button class="ops-tab" data-sec="cat" onclick="opsSwitch('cat')">课程总库</button>
+      <button class="ops-tab" data-sec="grad" onclick="opsSwitch('grad')">毕业学分</button>
       <button class="btn btn-sm" onclick="renderOps(true)" style="margin-left:auto">↻ 重载</button>
     </div>
     <div id="ops-body"><div style="color:#888;padding:20px">载入中…</div></div>
@@ -1098,7 +1099,7 @@ async function renderOps(force){
 function opsSwitch(sec){opsSec=sec;document.querySelectorAll('.ops-tab').forEach(x=>x.classList.toggle('active',x.dataset.sec===sec));opsRenderSec();}
 function opsRenderSec(){
   const b=document.getElementById('ops-body');if(!b||!opsD)return;
-  b.innerHTML= opsSec==='sem'?opsSemView(): opsSec==='dept'?opsDeptView(): opsSec==='coh'?opsCohView(): opsSec==='tch'?opsTchView(): opsSec==='pos'?opsPosView(): opsSec==='cat'?opsCatView(): '';
+  b.innerHTML= opsSec==='sem'?opsSemView(): opsSec==='dept'?opsDeptView(): opsSec==='coh'?opsCohView(): opsSec==='tch'?opsTchView(): opsSec==='pos'?opsPosView(): opsSec==='cat'?opsCatView(): opsSec==='grad'?opsGradView(): '';
 }
 // 使用中检查(用已加载的 schD/spD)
 function opsUsedBySem(s){return schD.filter(r=>r.sem===s).length+spD.filter(r=>r.sem===s).length;}
@@ -1171,6 +1172,19 @@ function opsPosView(){
 }
 async function opsAddPos(){const pos=document.getElementById('ops-pos-name').value.trim();if(!pos){alert('请输入职位名称');return;}opsAfter(await gasPost('adminAddPosition',{position:pos,quota:document.getElementById('ops-pos-quota').value}),'已保存职位 '+pos);}
 async function opsDelPos(pos){const n=(opsD.teachers||[]).filter(t=>t.position===pos).length;if(!confirm('删除职位「'+pos+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 位老师是此职位(删了不影响老师现有职位文字,但下拉里会没这项)。仍要删?':'')))return;opsAfter(await gasPost('adminDelPosition',{position:pos}),'已删除职位 '+pos);}
+// ── 毕业学分(各专业毕业总学分)──
+function opsGradView(){
+  const ed=opsIsEdit('grad');
+  const body=(opsD.grad||[]).slice().sort((a,b)=>String(a.pid).localeCompare(String(b.pid))).map(g=>'<tr><td style="font-family:ui-monospace,monospace">'+eh(g.pid)+'</td><td style="text-align:center">'+g.total+'</td><td style="text-align:right;white-space:nowrap"><button class="ops-edit" onclick="opsStartEdit(\'grad\',\''+jsq(g.pid)+'\',{pid:\''+jsq(g.pid)+'\',total:'+(g.total||0)+'})">编辑</button> <button class="ops-del" onclick="opsDelGrad(\''+jsq(g.pid)+'\')">删除</button></td></tr>').join('')||'<tr><td colspan="3" style="color:#aaa">无</td></tr>';
+  return '<div class="ops-add">'+(ed?'<div style="width:100%;font-size:12px;color:#534AB7;font-weight:600;margin-bottom:2px">✏️ 编辑(专业-版本不可改)</div>':'')+
+    '<div class="fg"><label>专业-版本 (pid)</label><input id="ops-grad-pid" '+(ed?'readonly style="width:120px;background:#eee"':'style="width:120px"')+' value="'+eh(opsEV('grad','pid'))+'" placeholder="TM-2565"></div>'+
+    '<div class="fg"><label>毕业总学分</label><input id="ops-grad-total" type="number" style="width:80px" value="'+eh(String(opsEV('grad','total')||''))+'" placeholder="123"></div>'+
+    '<button class="btn btn-p" onclick="opsAddGrad()">'+(ed?'保存修改':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>'+
+    '<div style="font-size:11px;color:#888;margin-bottom:8px">课程架构页各专业「Bachelor · 4 Years · X credits」用这里的值。pid 格式:专业-版本(如 TM-2565)。</div>'+
+    '<table style="width:auto;min-width:300px"><thead><tr><th>专业-版本</th><th>毕业总学分</th><th></th></tr></thead><tbody>'+body+'</tbody></table>';
+}
+async function opsAddGrad(){const pid=document.getElementById('ops-grad-pid').value.trim();if(!pid){alert('请输入 pid(专业-版本)');return;}opsAfter(await gasPost('adminUpsertGrad',{pid,total:document.getElementById('ops-grad-total').value}),'已保存毕业学分 '+pid);}
+async function opsDelGrad(pid){if(!confirm('删除「'+pid+'」的毕业学分设定?'))return;opsAfter(await gasPost('adminDelGrad',{pid}),'已删除 '+pid);}
 // ── Catalog ──
 function opsCatView(){
   const ed=opsIsEdit('cat');
@@ -5289,16 +5303,18 @@ function syncTblHeight(){
     if(a==='whoOnline')return{success:true,users:[]};
     if(a==='listBackups')return{success:true,snapshots:[]};
     if(a==='opsData'){
-      const[se,de,ch,te,ca,po]=await Promise.all([
+      const[se,de,ch,te,ca,po,gr]=await Promise.all([
         sget('semesters?select=sem&order=sem'),
         sget('depts?select=code,name&order=code'),
         sget('cohorts?select=id,dept,cohort&order=dept,cohort'),
         sget('teachers?select=name,dept,position,quota,employee_id&order=name'),
         sget('catalog?select=id,dept,version,code,zh,en,credit,mapping,req,block,block_credit,fixed,note,source&order=code'),
-        sget('positions?select=position,quota&order=quota.desc').catch(function(){return [];})
+        sget('positions?select=position,quota&order=quota.desc').catch(function(){return [];}),
+        sget('grad?select=pid,total&order=pid').catch(function(){return [];})
       ]);
       return{success:true,
         positions:(Array.isArray(po)?po:[]).map(x=>({position:x.position,quota:+x.quota||0})),
+        grad:(Array.isArray(gr)?gr:[]).map(x=>({pid:x.pid,total:+x.total||0})),
         semesters:(se||[]).map(x=>x.sem),
         depts:(de||[]).map(x=>({code:x.code,name:x.name||''})),
         cohorts:(ch||[]).map(x=>({id:x.id,dept:x.dept||'',cohort:x.cohort||''})),
