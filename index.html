@@ -482,6 +482,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <span style="width:1px;height:18px;background:#e0e0e0;margin:0 2px"></span>
         <button class="btn btn-sm no-print" onclick="exportSchExcel()" style="color:#1a6b2f;border-color:#9ed4ae" title="导出当前筛选结果为 Excel">📊 Excel</button>
         <button class="btn btn-sm no-print" onclick="openCsvImport()" style="color:#854F0B;border-color:#FCD34D" title="从 CSV 批量导入">📥 批量导入</button>
+        <button class="btn btn-sm no-print" onclick="openCohortCleanup()" style="color:#7c2d92;border-color:#d8b4e2" title="精准移除某个届别:独占的整笔删,共享的仅摘除该届别">🧹 按届别清理</button>
         <button id="sch-batch-del" class="btn btn-sm no-print" onclick="deleteFiltered('schedule')" style="color:#a32d2d;border-color:#f7c1c1;display:none" title="按目前筛选条件删除全部">🗑 批量删除 <span id="sch-batch-del-n">0</span></button>
         <span style="width:1px;height:18px;background:#e0e0e0;margin:0 2px"></span>
         <button class="btn btn-sm no-print" onclick="printPanel('sch')" title="打印当前页">🖨️ 列印</button>
@@ -3825,6 +3826,58 @@ function updateBatchDelButton(prefix,dispLen,totalLen){
   updateMasterCheckbox(prefix);
 }
 
+// ══ 按届别精准清理排课(独占整笔删、共享仅摘除该届别)══
+function openCohortCleanup(){
+  const set={};
+  schD.forEach(r=>(r.cc||[]).forEach(x=>{if(x.cohort)set[x.cohort]=(set[x.cohort]||0)+1;}));
+  const cohorts=Object.keys(set).sort();
+  if(!cohorts.length){alert('目前没有排课届别');return;}
+  const modal=document.createElement('div');
+  modal.className='modal-overlay open';modal.style.zIndex=3000;
+  const opts=cohorts.map(c=>'<option value="'+eh(c)+'">'+eh(c)+'（'+set[c]+' 笔）</option>').join('');
+  modal.innerHTML='<div class="modal-box" style="max-width:560px">'+
+    '<div class="modal-hdr"><h3>🧹 按届别清理排课</h3><button class="modal-close" data-action="cancel">✕</button></div>'+
+    '<div class="modal-body">'+
+      '<div style="background:#FDECEC;border:0.5px solid #F5C2C2;color:#9B2C2C;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:12px">⚠️ 精准移除:该届别<b>独占</b>的整笔删除;跟别人<b>共享</b>的只摘掉这个届别(其他届别保留)。不可逆,先看预览。</div>'+
+      '<div class="modal-sec">选届别</div>'+
+      '<select id="cc-clean-sel" style="width:100%" onchange="cohortCleanupPreview()"><option value="">— 请选择 —</option>'+opts+'</select>'+
+      '<div id="cc-clean-preview" style="margin-top:12px;font-size:13px"></div>'+
+    '</div>'+
+    '<div class="modal-footer"><button class="btn" data-action="cancel">取消</button><button class="btn btn-p" id="cc-clean-go" onclick="cohortCleanupExec()" disabled style="opacity:.5">确认清理</button></div>'+
+  '</div>';
+  document.body.appendChild(modal);
+  window._ccCleanModal=modal;
+  modal.querySelectorAll('[data-action="cancel"]').forEach(b=>b.onclick=()=>{document.body.removeChild(modal);window._ccCleanModal=null;window._ccCleanTarget=null;});
+}
+function cohortCleanupPreview(){
+  const coh=document.getElementById('cc-clean-sel').value;
+  const pv=document.getElementById('cc-clean-preview'),go=document.getElementById('cc-clean-go');
+  if(!coh){pv.innerHTML='';go.disabled=true;go.style.opacity=.5;window._ccCleanTarget=null;return;}
+  const inRec=schD.filter(r=>(r.cc||[]).some(x=>x.cohort===coh));
+  const solo=inRec.filter(r=>(r.cc||[]).length===1);
+  const shared=inRec.filter(r=>(r.cc||[]).length>1);
+  const stus=inRec.reduce((s,r)=>s+(((r.cc||[]).find(x=>x.cohort===coh)||{}).count||0),0);
+  pv.innerHTML='<div style="background:#F7F6FE;border-radius:8px;padding:12px 14px;line-height:1.9">'+
+    '<div>「<b>'+eh(coh)+'</b>」出现在 <b>'+inRec.length+'</b> 笔排课(此届别共 '+stus+' 人)</div>'+
+    '<div style="color:#a32d2d">· <b>'+solo.length+'</b> 笔独占 → <b>整笔删除</b></div>'+
+    '<div style="color:#7c2d92">· <b>'+shared.length+'</b> 笔共享 → <b>仅摘除此届别</b>(课程保留)</div>'+
+  '</div>';
+  go.disabled=false;go.style.opacity=1;
+  window._ccCleanTarget={coh:coh,solo:solo.map(r=>r.id),shared:shared.map(r=>r.id)};
+}
+async function cohortCleanupExec(){
+  const t=window._ccCleanTarget;if(!t||!t.coh)return;
+  if(!SHEETS_URL||!canSync()){alert('未配置或同步锁定,无法执行');return;}
+  if(!confirm('确定清理届别「'+t.coh+'」?\n\n整笔删除 '+t.solo.length+' 笔、摘除 '+t.shared.length+' 笔。不可逆。'))return;
+  const modal=window._ccCleanModal;let delOK=0,updOK=0,fail=0;
+  setSyncStatus('⏳ 清理中…','');
+  for(const id of t.solo){const r=await gasDeleteRecord('schedule',id);if(r&&r.success){schD=schD.filter(x=>String(x.id)!==String(id));delOK++;}else fail++;}
+  for(const id of t.shared){const rec=schD.find(x=>String(x.id)===String(id));if(!rec)continue;const newCc=(rec.cc||[]).filter(x=>x.cohort!==t.coh);const r=await gasUpdateRecord('schedule',id,{cc:newCc});if(r&&r.success){rec.cc=newCc;updOK++;}else fail++;}
+  if(modal){document.body.removeChild(modal);window._ccCleanModal=null;}window._ccCleanTarget=null;
+  renderSch();renderAllSum();renderSta();
+  setSyncStatus('✅ 已清理届别 '+t.coh+' '+new Date().toLocaleTimeString(),true);
+  alert('✓ 完成:删除 '+delOK+' 笔、摘除 '+updOK+' 笔'+(fail?('、失败 '+fail+' 笔(请刷新核对)'):'')+'。');
+}
 async function deleteFiltered(type){
   // v7.9+: 勾选优先；勾选为空才用筛选清单
   const selected=type==='schedule'?_schSelected:_spSelected;
