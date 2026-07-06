@@ -552,6 +552,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <span style="font-size:10px;color:#888">筛选</span>
         <select id="sp-sem-f" onchange="renderSp()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">全部学期</option></select>
         <select id="sp-dept-f" onchange="renderSp()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">课程代码</option></select>
+        <select id="sp-mj-f" onchange="renderSp()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">全部专业</option></select>
         <input id="sp-search" type="text" oninput="renderSp()" placeholder="🔍 搜课程代码 / 英文名 / 学号 / 姓名 / 班级" style="font-size:11px;padding:4px 8px;width:260px;border-color:#E5E3F8">
       </div>
       <!-- 操作区 -->
@@ -3103,6 +3104,10 @@ function renderSp(){
   let disp=[...spD];
   if(spSemF&&spSemF.value)disp=disp.filter(r=>r.sem===spSemF.value);
   if(spDeptF&&spDeptF.value)disp=disp.filter(r=>getCourseDept(r.co)===spDeptF.value);
+  // v8.22：专业筛选(选中后配合「批量删除」可删该专业全部学生)
+  const spMjF=document.getElementById('sp-mj-f');
+  if(spMjF){const cur=spMjF.value;const majors=[...new Set(spD.map(r=>r.mj).filter(Boolean))].sort();spMjF.innerHTML='<option value="">全部专业</option>'+majors.map(m=>'<option value="'+eh(m)+'">'+eh(m)+'</option>').join('');spMjF.value=cur;}
+  if(spMjF&&spMjF.value)disp=disp.filter(r=>r.mj===spMjF.value);
   // v8.10：IS/SG 搜索同时匹配 课程代码 / 英文名 / 学号 / 姓名 / 班级
   if(spSearchF&&spSearchF.value.trim()){
     const q=spSearchF.value.trim().toLowerCase();
