@@ -4341,13 +4341,21 @@ function printPanel(id){
         '<span><span class="ph-label">学期</span>'+semTxt+'</span>'+
       '</div>';
   }
-  // 版面：排课表 / 教学统计 各有专属横向列印类
+  // 版面：排课表 / 教学统计 各有专属列印类
+  const oldPS=document.getElementById('print-page-override'); if(oldPS) oldPS.remove();
   document.body.classList.remove('print-sch','print-sta');
   if(id==='sch')      document.body.classList.add('print-sch');
-  else if(id==='sta') document.body.classList.add('print-sta');  // v8.16
+  else if(id==='sta'){
+    document.body.classList.add('print-sta');  // v8.16
+    // @page 不能用 body class 作用域，改在列印时动态注入直向 A4（覆盖默认横向）
+    const st=document.createElement('style'); st.id='print-page-override';
+    st.textContent='@media print{@page{size:A4 portrait;margin:12mm 12mm 15mm 12mm}}';
+    document.head.appendChild(st);
+  }
   setTimeout(()=>{
     window.print();
     document.body.classList.remove('print-sch','print-sta');
+    const ps=document.getElementById('print-page-override'); if(ps) ps.remove();
   },300);
 }
 
