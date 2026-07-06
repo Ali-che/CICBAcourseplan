@@ -1251,15 +1251,16 @@ async function opsDelPos(pos){const n=(opsD.teachers||[]).filter(t=>t.position==
 // ── 毕业学分(各专业毕业总学分)──
 function opsGradView(){
   const ed=opsIsEdit('grad');
-  const body=(opsD.grad||[]).slice().sort((a,b)=>String(a.pid).localeCompare(String(b.pid))).map(g=>'<tr><td style="font-family:ui-monospace,monospace">'+eh(g.pid)+'</td><td style="text-align:center">'+g.total+'</td><td style="text-align:right;white-space:nowrap"><button class="ops-edit" onclick="opsStartEdit(\'grad\',\''+jsq(g.pid)+'\',{pid:\''+jsq(g.pid)+'\',total:'+(g.total||0)+'})">编辑</button> <button class="ops-del" onclick="opsDelGrad(\''+jsq(g.pid)+'\')">删除</button></td></tr>').join('')||'<tr><td colspan="3" style="color:#aaa">无</td></tr>';
+  const body=(opsD.grad||[]).slice().sort((a,b)=>String(a.pid).localeCompare(String(b.pid))).map(g=>'<tr><td style="font-family:ui-monospace,monospace">'+eh(g.pid)+'</td><td style="text-align:center">'+g.total+'</td><td style="text-align:center">'+(g.courses==null?'<span style="color:#ccc">—</span>':g.courses)+'</td><td style="text-align:right;white-space:nowrap"><button class="ops-edit" onclick="opsStartEdit(\'grad\',\''+jsq(g.pid)+'\',{pid:\''+jsq(g.pid)+'\',total:'+(g.total||0)+',courses:'+(g.courses==null?'\'\'':g.courses)+'})">编辑</button> <button class="ops-del" onclick="opsDelGrad(\''+jsq(g.pid)+'\')">删除</button></td></tr>').join('')||'<tr><td colspan="4" style="color:#aaa">无</td></tr>';
   return '<div class="ops-add">'+(ed?'<div style="width:100%;font-size:12px;color:#534AB7;font-weight:600;margin-bottom:2px">✏️ 编辑(专业-版本不可改)</div>':'')+
     '<div class="fg"><label>专业-版本 (pid)</label><input id="ops-grad-pid" '+(ed?'readonly style="width:120px;background:#eee"':'style="width:120px"')+' value="'+eh(opsEV('grad','pid'))+'" placeholder="TM-2565"></div>'+
     '<div class="fg"><label>毕业总学分</label><input id="ops-grad-total" type="number" style="width:80px" value="'+eh(String(opsEV('grad','total')||''))+'" placeholder="123"></div>'+
+    '<div class="fg"><label>总课数(门)</label><input id="ops-grad-courses" type="number" style="width:80px" value="'+eh(String(opsEV('grad','courses')||''))+'" placeholder="留空=自动数"></div>'+
     '<button class="btn btn-p" onclick="opsAddGrad()">'+(ed?'保存修改':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>'+
-    '<div style="font-size:11px;color:#888;margin-bottom:8px">课程架构页各专业「Bachelor · 4 Years · X credits」用这里的值。pid 格式:专业-版本(如 TM-2565)。</div>'+
-    '<table style="width:auto;min-width:300px"><thead><tr><th>专业-版本</th><th>毕业总学分</th><th></th></tr></thead><tbody>'+body+'</tbody></table>';
+    '<div style="font-size:11px;color:#888;margin-bottom:8px">课程架构页各专业顶部显示「X credits · Y 门课」:credits 用毕业总学分,门课用这里的总课数(留空则自动数课程总库门数)。pid 格式:专业-版本(如 TM-2565)。</div>'+
+    '<table style="width:auto;min-width:340px"><thead><tr><th>专业-版本</th><th>毕业总学分</th><th>总课数</th><th></th></tr></thead><tbody>'+body+'</tbody></table>';
 }
-async function opsAddGrad(){const pid=document.getElementById('ops-grad-pid').value.trim();if(!pid){alert('请输入 pid(专业-版本)');return;}opsAfter(await gasPost('adminUpsertGrad',{pid,total:document.getElementById('ops-grad-total').value}),'已保存毕业学分 '+pid);}
+async function opsAddGrad(){const pid=document.getElementById('ops-grad-pid').value.trim();if(!pid){alert('请输入 pid(专业-版本)');return;}const cv=document.getElementById('ops-grad-courses').value.trim();opsAfter(await gasPost('adminUpsertGrad',{pid,total:document.getElementById('ops-grad-total').value,courses:cv===''?null:cv}),'已保存毕业学分 '+pid);}
 async function opsDelGrad(pid){if(!confirm('删除「'+pid+'」的毕业学分设定?'))return;opsAfter(await gasPost('adminDelGrad',{pid}),'已删除 '+pid);}
 // ── Catalog ──
 function opsCatView(){
@@ -3840,8 +3841,9 @@ function openCohortCleanup(){
     '<div class="modal-body">'+
       '<div style="background:#FDECEC;border:0.5px solid #F5C2C2;color:#9B2C2C;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:12px">⚠️ 精准移除:所选届别<b>独占</b>的整笔删除;跟其他届别<b>共享</b>的只摘掉所选届别(其余保留)。<b>可多选</b>。不可逆,先看预览。</div>'+
       '<div class="modal-sec" style="display:flex;justify-content:space-between;align-items:center">选届别(可多选)<a href="#" onclick="cohortCleanupToggleAll(event)" style="font-size:12px;color:#6b46c1;text-decoration:none">全选 / 全不选</a></div>'+
-      '<div style="max-height:240px;overflow-y:auto;background:#F8F8FA;border-radius:6px;padding:6px">'+cks+'</div>'+
-      '<div id="cc-clean-preview" style="margin-top:12px;font-size:13px"></div>'+
+      '<div style="max-height:200px;overflow-y:auto;background:#F8F8FA;border-radius:6px;padding:6px">'+cks+'</div>'+
+      '<div id="cc-clean-summary" style="margin-top:12px;font-size:13px"></div>'+
+      '<div id="cc-clean-detail" style="margin-top:8px;max-height:230px;overflow-y:auto;border:0.5px solid #eee;border-radius:6px"></div>'+
     '</div>'+
     '<div class="modal-footer"><button class="btn" data-action="cancel">取消</button><button class="btn btn-p" id="cc-clean-go" onclick="cohortCleanupExec()" disabled style="opacity:.5">确认清理</button></div>'+
   '</div>';
@@ -3858,30 +3860,61 @@ function cohortCleanupToggleAll(e){
 }
 function cohortCleanupPreview(){
   const checked=[...document.querySelectorAll('.cc-clean-cb:checked')].map(x=>x.value);
-  const pv=document.getElementById('cc-clean-preview'),go=document.getElementById('cc-clean-go');
-  if(!checked.length){pv.innerHTML='';go.disabled=true;go.style.opacity=.5;window._ccCleanTarget=null;return;}
+  const sum=document.getElementById('cc-clean-summary'),det=document.getElementById('cc-clean-detail');
+  if(!checked.length){sum.innerHTML='';det.innerHTML='';window._ccCleanTarget={cohorts:[]};cohortCleanupRecalc();return;}
   const sel=new Set(checked);
   const inRec=schD.filter(r=>(r.cc||[]).some(x=>sel.has(x.cohort)));
-  const solo=inRec.filter(r=>(r.cc||[]).every(x=>sel.has(x.cohort)));
-  const shared=inRec.filter(r=>!(r.cc||[]).every(x=>sel.has(x.cohort)));
-  const stus=inRec.reduce((s,r)=>s+(r.cc||[]).filter(x=>sel.has(x.cohort)).reduce((a,x)=>a+(x.count||0),0),0);
-  pv.innerHTML='<div style="background:#F7F6FE;border-radius:8px;padding:12px 14px;line-height:1.9">'+
-    '<div>已选 <b>'+checked.length+'</b> 个届别,出现在 <b>'+inRec.length+'</b> 笔排课(共移除 '+stus+' 人)</div>'+
-    '<div style="color:#a32d2d">· <b>'+solo.length+'</b> 笔(所选届别独占)→ <b>整笔删除</b></div>'+
-    '<div style="color:#7c2d92">· <b>'+shared.length+'</b> 笔(还有其他届别)→ <b>仅摘除所选届别</b>(课程保留)</div>'+
+  window._ccCleanTarget={cohorts:checked};
+  det.innerHTML=inRec.length?('<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 9px;background:#f3f2f9;font-size:11px;color:#666"><span>受影响排课('+inRec.length+' 笔,可逐笔取消勾选)</span><a href="#" onclick="cohortCleanupToggleRecs(event)" style="color:#6b46c1;text-decoration:none">全选/全不选</a></div>'+
+    inRec.map(r=>{
+      const willDel=(r.cc||[]).every(x=>sel.has(x.cohort));
+      const cohHtml=(r.cc||[]).map(x=>sel.has(x.cohort)?'<b style="color:#a32d2d">'+eh(x.cohort)+'</b>':'<span style="color:#aaa">'+eh(x.cohort)+'</span>').join('  ');
+      const badge=willDel?'<span style="background:#FCE4E4;color:#a32d2d;border-radius:5px;padding:1px 7px;font-size:11px;white-space:nowrap">整删</span>':'<span style="background:#F0E6F7;color:#7c2d92;border-radius:5px;padding:1px 7px;font-size:11px;white-space:nowrap">摘除</span>';
+      return '<label style="display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;padding:7px 9px;border-top:0.5px solid #eee;cursor:pointer">'+
+        '<input type="checkbox" class="cc-rec-cb" value="'+eh(String(r.id))+'" checked onchange="cohortCleanupRecalc()" style="vertical-align:-1px">'+
+        '<span style="font-size:12px;line-height:1.5"><b>'+eh(r.course||'')+'</b> · '+eh(r.cls||'')+' <span style="color:#bbb">'+eh(r.sem||'')+'</span><br><span style="font-size:11px">届别: '+cohHtml+'</span></span>'+
+        badge+
+      '</label>';
+    }).join('')):'<div style="padding:12px;color:#999;font-size:12px">无相关排课</div>';
+  cohortCleanupRecalc();
+}
+function cohortCleanupToggleRecs(e){
+  if(e)e.preventDefault();
+  const cbs=[...document.querySelectorAll('.cc-rec-cb')];
+  const anyOff=cbs.some(c=>!c.checked);
+  cbs.forEach(c=>c.checked=anyOff);
+  cohortCleanupRecalc();
+}
+function cohortCleanupRecalc(){
+  const t=window._ccCleanTarget;const sum=document.getElementById('cc-clean-summary'),go=document.getElementById('cc-clean-go');
+  if(!t||!t.cohorts||!t.cohorts.length){sum.innerHTML='';go.disabled=true;go.style.opacity=.5;return;}
+  const sel=new Set(t.cohorts);
+  const ids=[...document.querySelectorAll('.cc-rec-cb:checked')].map(x=>x.value);
+  let del=0,upd=0,stus=0;
+  ids.forEach(id=>{const r=schD.find(x=>String(x.id)===String(id));if(!r)return;stus+=(r.cc||[]).filter(x=>sel.has(x.cohort)).reduce((a,x)=>a+(x.count||0),0);if((r.cc||[]).every(x=>sel.has(x.cohort)))del++;else upd++;});
+  sum.innerHTML='<div style="background:#F7F6FE;border-radius:8px;padding:10px 14px;line-height:1.85">'+
+    '<div>已选 <b>'+t.cohorts.length+'</b> 个届别,勾选 <b>'+ids.length+'</b> 笔排课(共移除 '+stus+' 人)</div>'+
+    '<div style="color:#a32d2d">· <b>'+del+'</b> 笔 → <b>整笔删除</b></div>'+
+    '<div style="color:#7c2d92">· <b>'+upd+'</b> 笔 → <b>仅摘除所选届别</b>(课程保留)</div>'+
   '</div>';
-  go.disabled=false;go.style.opacity=1;
-  window._ccCleanTarget={cohorts:checked,solo:solo.map(r=>r.id),shared:shared.map(r=>r.id)};
+  const on=ids.length>0;go.disabled=!on;go.style.opacity=on?1:.5;
 }
 async function cohortCleanupExec(){
   const t=window._ccCleanTarget;if(!t||!t.cohorts||!t.cohorts.length)return;
+  const recIds=[...document.querySelectorAll('.cc-rec-cb:checked')].map(x=>x.value);
+  if(!recIds.length){alert('没有勾选要清理的排课');return;}
   if(!SHEETS_URL||!canSync()){alert('未配置或同步锁定,无法执行');return;}
-  if(!confirm('确定清理 '+t.cohorts.length+' 个届别?\n\n'+t.cohorts.join('、')+'\n\n整笔删除 '+t.solo.length+' 笔、摘除 '+t.shared.length+' 笔。不可逆。'))return;
   const sel=new Set(t.cohorts);
+  let d=0,u=0;recIds.forEach(id=>{const r=schD.find(x=>String(x.id)===String(id));if(!r)return;if((r.cc||[]).every(x=>sel.has(x.cohort)))d++;else u++;});
+  if(!confirm('确定清理?\n\n届别: '+t.cohorts.join('、')+'\n勾选 '+recIds.length+' 笔:整笔删除 '+d+' 笔、摘除 '+u+' 笔。\n不可逆。'))return;
   const modal=window._ccCleanModal;let delOK=0,updOK=0,fail=0;
   setSyncStatus('⏳ 清理中…','');
-  for(const id of t.solo){const r=await gasDeleteRecord('schedule',id);if(r&&r.success){schD=schD.filter(x=>String(x.id)!==String(id));delOK++;}else fail++;}
-  for(const id of t.shared){const rec=schD.find(x=>String(x.id)===String(id));if(!rec)continue;const newCc=(rec.cc||[]).filter(x=>!sel.has(x.cohort));const r=await gasUpdateRecord('schedule',id,{cc:newCc});if(r&&r.success){rec.cc=newCc;updOK++;}else fail++;}
+  for(const id of recIds){
+    const rec=schD.find(x=>String(x.id)===String(id));if(!rec)continue;
+    const newCc=(rec.cc||[]).filter(x=>!sel.has(x.cohort));
+    if(!newCc.length){const r=await gasDeleteRecord('schedule',id);if(r&&r.success){schD=schD.filter(x=>String(x.id)!==String(id));delOK++;}else fail++;}
+    else{const r=await gasUpdateRecord('schedule',id,{cc:newCc});if(r&&r.success){rec.cc=newCc;updOK++;}else fail++;}
+  }
   if(modal){document.body.removeChild(modal);window._ccCleanModal=null;}window._ccCleanTarget=null;
   renderSch();renderAllSum();renderSta();
   setSyncStatus('✅ 已清理 '+t.cohorts.length+' 个届别 '+new Date().toLocaleTimeString(),true);
@@ -5455,11 +5488,11 @@ function syncTblHeight(){
         sget('teachers?select=name,dept,position,quota,employee_id&order=name'),
         sget('catalog?select=id,dept,version,code,zh,en,credit,mapping,req,block,block_credit,fixed,note,source&order=code'),
         sget('positions?select=position,quota&order=quota.desc').catch(function(){return [];}),
-        sget('grad?select=pid,total&order=pid').catch(function(){return [];})
+        sget('grad?select=pid,total,courses_count&order=pid').catch(function(){return [];})
       ]);
       return{success:true,
         positions:(Array.isArray(po)?po:[]).map(x=>({position:x.position,quota:+x.quota||0})),
-        grad:(Array.isArray(gr)?gr:[]).map(x=>({pid:x.pid,total:+x.total||0})),
+        grad:(Array.isArray(gr)?gr:[]).map(x=>({pid:x.pid,total:+x.total||0,courses:(x.courses_count==null?null:+x.courses_count)})),
         semesters:(se||[]).map(x=>x.sem),
         depts:(de||[]).map(x=>({code:x.code,name:x.name||''})),
         cohorts:(ch||[]).map(x=>({id:x.id,dept:x.dept||'',cohort:x.cohort||''})),
@@ -5493,7 +5526,7 @@ function syncTblHeight(){
     if(action==='adminDelCatalog')return srpc('admin_del_catalog',{p_pin:_pin,p_id:body.id});
     if(action==='adminAddPosition')return srpc('admin_add_position',{p_pin:_pin,p_position:body.position,p_quota:+body.quota||0});
     if(action==='adminDelPosition')return srpc('admin_del_position',{p_pin:_pin,p_position:body.position});
-    if(action==='adminUpsertGrad')return srpc('admin_upsert_grad',{p_pin:_pin,p_pid:body.pid,p_total:+body.total||0});
+    if(action==='adminUpsertGrad')return srpc('admin_upsert_grad',{p_pin:_pin,p_pid:body.pid,p_total:+body.total||0,p_courses:(body.courses==null||body.courses===''?null:+body.courses)});
     if(action==='adminDelGrad')return srpc('admin_del_grad',{p_pin:_pin,p_pid:body.pid});
     return{success:false,error:'未知 action '+action};
   };

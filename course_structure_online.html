@@ -156,8 +156,9 @@ function sheet(p,cmp){
     });
     secs+=`<div class="sec"><div class="sh">${b.cat} <span class="en">${en}</span><em>${blkcr(b)} cr</em></div>${rh}</div>`;
   });
-  if(cmp) return `<div class="sheet cmpsheet"><div class="hd2"><b>${p.label}</b> · ${p.name}<div class="m2">Bachelor · 4 Years · ${p.grad||'—'} credits</div></div><div class="cols one">${secs}</div></div>`;
-  return `<div class="sheet"><div class="hd"><div class="u">Dhurakij Pundit University</div><div class="t">Course Structure</div><div class="c">Chinese International College</div><div class="p">${p.name}</div><div class="cr2">Bachelor · 4 Years · ${p.grad||'—'} credits</div></div><div class="cols">${secs||'<div class=note>无课程</div>'}</div></div>`;
+  const nc=(p.coursesOv!=null?p.coursesOv:p.count);
+  if(cmp) return `<div class="sheet cmpsheet"><div class="hd2"><b>${p.label}</b> · ${p.name}<div class="m2">Bachelor · 4 Years · ${p.grad||'—'} credits · ${nc||'—'} 门课</div></div><div class="cols one">${secs}</div></div>`;
+  return `<div class="sheet"><div class="hd"><div class="u">Dhurakij Pundit University</div><div class="t">Course Structure</div><div class="c">Chinese International College</div><div class="p">${p.name}</div><div class="cr2">Bachelor · 4 Years · ${p.grad||'—'} credits · ${nc||'—'} 门课</div></div><div class="cols">${secs||'<div class=note>无课程</div>'}</div></div>`;
 }
 function searchAll(q){
   const scope=document.getElementById('fprog').value; let hits=[];
@@ -189,14 +190,14 @@ function loadSheet(){
   const H={apikey:SKEY};
   Promise.all([
     fetch(SUPA+'/rest/v1/catalog?select=dept,version,block,req,block_credit,code,zh,en,credit,mapping,fixed,note,source&order=id&limit=5000',{headers:H,cache:'no-store'}).then(r=>r.json()),
-    fetch(SUPA+'/rest/v1/grad?select=pid,total',{headers:H,cache:'no-store'}).then(r=>r.json()).catch(()=>[])
+    fetch(SUPA+'/rest/v1/grad?select=pid,total,courses_count',{headers:H,cache:'no-store'}).then(r=>r.json()).catch(()=>[])
   ]).then(([cat,grad])=>{
     // 组成跟原本 Sheet 一样的「中文表头 + 行」结构，喂给既有 buildData（解析逻辑不动）
     const rows=[['专业','版本','版块中文','必修/选修','区块学分','课程代码','中文名','英文名','学分','对接课程','固定开课','备注','数据来源']];
     (cat||[]).forEach(x=>rows.push([x.dept||'',x.version||'',x.block||'',x.req||'',x.block_credit||'',x.code||'',x.zh||'',x.en||'',x.credit||'',x.mapping||'',x.fixed||'',x.note||'',x.source||'']));
     DATA=buildData(rows);
-    const gm={}; (Array.isArray(grad)?grad:[]).forEach(x=>{if(x&&x.pid)gm[x.pid]=String(x.total);});
-    Object.keys(DATA).forEach(pid=>{if(gm[pid])DATA[pid].grad=gm[pid];});
+    const gm={},cm={}; (Array.isArray(grad)?grad:[]).forEach(x=>{if(x&&x.pid){gm[x.pid]=String(x.total);if(x.courses_count!=null&&x.courses_count!=='')cm[x.pid]=parseInt(x.courses_count,10);}});
+    Object.keys(DATA).forEach(pid=>{if(gm[pid])DATA[pid].grad=gm[pid];if(cm[pid]!=null&&!isNaN(cm[pid]))DATA[pid].coursesOv=cm[pid];});
     if(!cur||!DATA[cur])cur=tabsListBase.find(k=>DATA[k])||Object.keys(DATA)[0];
     initTabs(); render();
     document.getElementById('status').textContent='✅ 已从 Supabase 载入 · '+new Date().toLocaleString()+' · 共 '+Object.keys(DATA).length+' 个专业-版本';
