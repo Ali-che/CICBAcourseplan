@@ -254,8 +254,13 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   .panel.active th{font-size:6.8pt!important}
   .panel.active .badge{white-space:nowrap}
 
-  /* ── 教学统计专属：列印时辅助面板不印 ── */
+  /* ── 教学统计专属：列印时辅助面板不印；默认展开所有老师的手风琴明细 ── */
   body.print-sta #sta-low-panel{display:none!important}
+  body.print-sta tr.sta-acc{display:table-row!important}
+  body.print-sta tr.sta-acc td{padding:0!important}
+  body.print-sta .acc-wrap{-webkit-print-color-adjust:exact;print-color-adjust:exact;page-break-inside:avoid}
+  body.print-sta .acc-sec{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body.print-sta tr.sta-trow{page-break-inside:avoid}
 }
 .print-header{display:none}
 /* 排课表横向列印 */
