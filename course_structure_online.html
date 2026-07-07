@@ -161,10 +161,12 @@ function sheet(p,cmp){
   const cN=_n(p.courseN),cC=_n(p.courseCr),iN=_n(p.internN),iC=_n(p.internCr);
   let _parts=[];
   if(cN!=null||cC!=null) _parts.push('课程'+(cN!=null?' '+cN+' 门':'')+(cC!=null?' '+cC+' 学分':''));
-  if(iN!=null||iC!=null) _parts.push('实习'+(iN!=null?' '+iN+' 门':'')+(iC!=null?' '+iC+' 学分':'')+(p.internSub?' 可上课替代':''));
+  if(iN!=null||iC!=null) _parts.push('实习'+(iN!=null?' '+iN+' 门':'')+(iC!=null?' '+iC+' 学分':''));
+  if(p.internSub&&(iN!=null||iC!=null)) _parts.push('上课课程替代实习课程');
   const brk=_parts.length?' ('+_parts.join(' · ')+')':'';
-  if(cmp) return `<div class="sheet cmpsheet"><div class="hd2"><b>${p.label}</b> · ${p.name}<div class="m2">Bachelor · 4 Years · ${p.grad||'—'} credits · ${nc||'—'} 门课${brk}</div></div><div class="cols one">${secs}</div></div>`;
-  return `<div class="sheet"><div class="hd"><div class="u">Dhurakij Pundit University</div><div class="t">Course Structure</div><div class="c">Chinese International College</div><div class="p">${p.name}</div><div class="cr2">Bachelor · 4 Years · ${p.grad||'—'} credits · ${nc||'—'} 门课${brk}</div></div><div class="cols">${secs||'<div class=note>无课程</div>'}</div></div>`;
+  const courseLine=(nc||'—')+' 门课'+brk;
+  if(cmp) return `<div class="sheet cmpsheet"><div class="hd2"><b>${p.label}</b> · ${p.name}<div class="m2">Bachelor · 4 Years · ${p.grad||'—'} credits<br>${courseLine}</div></div><div class="cols one">${secs}</div></div>`;
+  return `<div class="sheet"><div class="hd"><div class="u">Dhurakij Pundit University</div><div class="t">Course Structure</div><div class="c">Chinese International College</div><div class="p">${p.name}</div><div class="cr2">Bachelor · 4 Years · ${p.grad||'—'} credits<br>${courseLine}</div></div><div class="cols">${secs||'<div class=note>无课程</div>'}</div></div>`;
 }
 function searchAll(q){
   const scope=document.getElementById('fprog').value; let hits=[];

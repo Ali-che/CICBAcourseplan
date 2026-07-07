@@ -1280,7 +1280,7 @@ function opsGradView(){
       '<td style="text-align:center">'+cel(g.courseCr)+'</td>'+
       '<td style="text-align:center">'+cel(g.internN)+'</td>'+
       '<td style="text-align:center">'+cel(g.internCr)+'</td>'+
-      '<td style="text-align:center">'+(g.internSub?'<span style="color:#1a7f37;font-weight:700">✓ 可替代</span>':dash)+'</td>'+
+      '<td style="text-align:center">'+(g.internSub?'<span style="color:#1a7f37;font-weight:700">✓</span>':dash)+'</td>'+
       '<td style="text-align:center;color:#534AB7;font-weight:600">'+(tot==null?dash:tot)+'</td>'+
       '<td style="text-align:right;white-space:nowrap"><button class="ops-edit" onclick="opsStartEdit(\'grad\',\''+jsq(g.pid)+'\',{pid:\''+jsq(g.pid)+'\',total:'+(g.total||0)+',courseN:'+(g.courseN==null?'\'\'':g.courseN)+',courseCr:'+(g.courseCr==null?'\'\'':g.courseCr)+',internN:'+(g.internN==null?'\'\'':g.internN)+',internCr:'+(g.internCr==null?'\'\'':g.internCr)+',internSub:'+(g.internSub?'true':'false')+'})">编辑</button> <button class="ops-del" onclick="opsDelGrad(\''+jsq(g.pid)+'\')">删除</button></td></tr>';
   }).join('')||'<tr><td colspan="9" style="color:#aaa">无</td></tr>';
@@ -1291,10 +1291,10 @@ function opsGradView(){
     '<div class="fg"><label>课程学分</label><input id="ops-grad-ccr" type="number" style="width:70px" value="'+eh(String(opsEV('grad','courseCr')||''))+'"></div>'+
     '<div class="fg"><label>实习数(门)</label><input id="ops-grad-in" type="number" style="width:70px" value="'+eh(String(opsEV('grad','internN')||''))+'"></div>'+
     '<div class="fg"><label>实习学分</label><input id="ops-grad-icr" type="number" style="width:70px" value="'+eh(String(opsEV('grad','internCr')||''))+'"></div>'+
-    '<div class="fg"><label>实习可上课替代</label><label style="display:inline-flex;align-items:center;gap:5px;height:30px;font-size:11px;color:#666;cursor:pointer"><input type="checkbox" id="ops-grad-isub" '+(opsEV('grad','internSub')?'checked':'')+' style="width:auto">可替代</label></div>'+
+    '<div class="fg"><label>上课课程替代实习课程</label><label style="display:inline-flex;align-items:center;height:30px;cursor:pointer"><input type="checkbox" id="ops-grad-isub" '+(opsEV('grad','internSub')?'checked':'')+' style="width:auto"></label></div>'+
     '<button class="btn btn-p" onclick="opsAddGrad()">'+(ed?'保存修改':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>'+
-    '<div style="font-size:11px;color:#888;margin-bottom:8px">课程架构页各专业顶部「X credits · Y 门课」:credits=毕业总学分,门课=总课数(自动 = 课程数 + 实习数)。「实习可上课替代」勾选后课程架构页会标注。pid 格式:专业-版本(如 TM-2565)。</div>'+
-    '<table style="width:auto;min-width:520px"><thead><tr><th>专业-版本</th><th>毕业总学分</th><th>课程数</th><th>课程学分</th><th>实习数</th><th>实习学分</th><th>实习替代</th><th>总课数</th><th></th></tr></thead><tbody>'+body+'</tbody></table>';
+    '<div style="font-size:11px;color:#888;margin-bottom:8px">课程架构页各专业顶部「X credits · Y 门课」:credits=毕业总学分,门课=总课数(自动 = 课程数 + 实习数)。勾选「上课课程替代实习课程」后课程架构页会标注。pid 格式:专业-版本(如 TM-2565)。</div>'+
+    '<table style="width:auto;min-width:560px"><thead><tr><th>专业-版本</th><th>毕业总学分</th><th>课程数</th><th>课程学分</th><th>实习数</th><th>实习学分</th><th>上课课程替代实习课程</th><th>总课数</th><th></th></tr></thead><tbody>'+body+'</tbody></table>';
 }
 async function opsAddGrad(){const pid=document.getElementById('ops-grad-pid').value.trim();if(!pid){alert('请输入 pid(专业-版本)');return;}const gv=id=>{const v=document.getElementById(id).value.trim();return v===''?null:v;};opsAfter(await gasPost('adminUpsertGrad',{pid,total:document.getElementById('ops-grad-total').value,courseN:gv('ops-grad-cn'),courseCr:gv('ops-grad-ccr'),internN:gv('ops-grad-in'),internCr:gv('ops-grad-icr'),internSub:document.getElementById('ops-grad-isub').checked}),'已保存毕业学分 '+pid);}
 async function opsDelGrad(pid){if(!confirm('删除「'+pid+'」的毕业学分设定?'))return;opsAfter(await gasPost('adminDelGrad',{pid}),'已删除 '+pid);}
