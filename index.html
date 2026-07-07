@@ -261,8 +261,26 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   body.print-sta .acc-wrap{-webkit-print-color-adjust:exact;print-color-adjust:exact;page-break-inside:avoid}
   body.print-sta .acc-sec{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   body.print-sta tr.sta-trow{page-break-inside:avoid}
+  /* ── 班级总表:按专业·届别分组列印 ── */
+  body.print-sco #panel-sum > *{display:none!important}
+  body.print-sco #sco-print{display:block!important}
+  body.print-sco .sco-dept{page-break-before:always;break-before:page}
+  body.print-sco .sco-dept:first-child{page-break-before:avoid;break-before:avoid}
+  body.print-sco .sco-dept-h{font-size:12pt;font-weight:700;color:#3C3489;margin:0 0 7pt;padding-bottom:3pt;border-bottom:1.5pt solid #534AB7}
+  body.print-sco .sco-coh{page-break-inside:avoid;margin-bottom:9pt}
+  body.print-sco .sco-coh-h{font-size:9.5pt;font-weight:700;color:#111;background:#EEEDFE!important;padding:3pt 7pt;border-radius:3pt;margin-bottom:2pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body.print-sco .sco-coh-h .n{font-weight:400;color:#888;font-size:8pt;margin-left:4pt}
+  body.print-sco .sco-tbl{width:100%;border-collapse:collapse;font-size:7.5pt;table-layout:auto}
+  body.print-sco .sco-tbl th{background:#534AB7!important;color:#fff!important;font-size:7pt;padding:2pt 4pt;text-align:left;-webkit-print-color-adjust:exact;print-color-adjust:exact;white-space:nowrap}
+  body.print-sco .sco-tbl td{padding:2pt 4pt;border-bottom:0.4pt solid #ddd;vertical-align:top;white-space:normal!important;word-break:normal}
+  body.print-sco .sco-tbl td:nth-child(2),body.print-sco .sco-tbl td:nth-child(3){white-space:nowrap!important;text-align:center}
+  body.print-sco .sco-tbl .ty{font-size:6.5pt;color:#666}
+  body.print-sco .sco-tbl .en{font-size:6.8pt;color:#888}
+  body.print-sco .sco-tbl .bt{font-size:6pt;font-weight:700;color:#fff!important;background:#534AB7!important;padding:0 3pt;border-radius:6pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body.print-sco .sco-tbl .nt{font-size:6.8pt;color:#666}
 }
 .print-header{display:none}
+#sco-print{display:none}
 /* 排课表横向列印 */
 @media print{
   body.print-sch @page{size:A4 landscape;margin:10mm 12mm 14mm 12mm;}
@@ -666,6 +684,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <div class="empty" id="st-em"></div>
     </div>
   </div>
+  <div id="sco-print"></div>
 </div>
 
 <!-- ══ 课程结构 ════════════════════════════ -->
@@ -4336,32 +4355,67 @@ async function syncFromSheets(type){
 }
 
 // ── 标签切换 ──────────────────────────────
+// 班级总表列印:按 专业 → 届别 → 课程 分组渲染(全部专业;尊重 f-co-s 学期筛选)
+function buildScoPrint(){
+  const cont=document.getElementById('sco-print'); if(!cont) return;
+  const semF=(document.getElementById('f-co-s')||{}).value||'';
+  const depts=Object.keys(CBD).sort();
+  const inCBD={}; depts.forEach(d=>(CBD[d]||[]).forEach(c=>inCBD[c]=true));
+  const secBody=cohs=>{
+    let body='';
+    cohs.slice().sort().forEach(coh=>{
+      let rows=schD.filter(r=>(r.cc||[]).some(x=>x.cohort===coh));
+      if(semF)rows=rows.filter(r=>r.sem===semF);
+      if(!rows.length)return;
+      rows=rows.slice().sort((a,b)=>String(a.sem||'').localeCompare(String(b.sem||''))||String(a.half||'').localeCompare(String(b.half||''))||String(a.course||'').localeCompare(String(b.course||'')));
+      const trs=rows.map(r=>'<tr>'+
+        '<td><b>'+eh(r.course||'')+'</b> <span class="ty">'+eh(r.type||'')+'</span>'+(r.btec?' <span class="bt">BTEC</span>':'')+'<br><span class="en">'+eh(r.en||'—')+'</span></td>'+
+        '<td>'+eh(r.sem||'')+'</td><td>'+eh(r.half||'')+'</td>'+
+        '<td>'+(r.tc?eh(r.tc):'待定')+'</td>'+
+        '<td class="nt">'+eh(r.nt||'')+'</td></tr>').join('');
+      body+='<div class="sco-coh"><div class="sco-coh-h">'+eh(coh)+'<span class="n">'+rows.length+' 门</span></div>'+
+        '<table class="sco-tbl"><thead><tr><th>课程代码 / 类型 / 英文名</th><th>学期</th><th>上下半</th><th>任课老师</th><th>备注</th></tr></thead><tbody>'+trs+'</tbody></table></div>';
+    });
+    return body;
+  };
+  let html='';
+  depts.forEach(d=>{const body=secBody(CBD[d]||[]);if(body)html+='<section class="sco-dept"><h2 class="sco-dept-h">专业 '+eh(d)+'</h2>'+body+'</section>';});
+  const orphanSet={}; schD.forEach(r=>(r.cc||[]).forEach(x=>{if(x.cohort&&!inCBD[x.cohort])orphanSet[x.cohort]=true;}));
+  const orphans=Object.keys(orphanSet);
+  if(orphans.length){const body=secBody(orphans);if(body)html+='<section class="sco-dept"><h2 class="sco-dept-h">未分类届别</h2>'+body+'</section>';}
+  cont.innerHTML=html||'<div style="padding:20px;color:#999">无排课数据</div>';
+}
 function printPanel(id){
   switchTab(id);
   const titles={sch:'排课记录',sp:'IS/SG 排课记录',sum:'学期总表',sta:'教学统计 · 各授课老师工作量'};
   const subtitles={sch:'课程安排总览',sp:'IS/SG 特别排课学生名单',sum:'学期课程综合总表',sta:'专业分组工作量统计（含BTEC）'};
   const now=new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
+  // 班级总表(sub-sco)活跃时,列印走「按专业分组」模式
+  const scoActive=(id==='sum'&&document.getElementById('sub-sco')&&document.getElementById('sub-sco').classList.contains('active'));
   // 取目前筛选的学期
   const semSelMap={sch:'sch-sem-f',sp:'sp-sem-f',sum:'f-tc-s',sta:'sta-yr'};
-  const semEl=document.getElementById(semSelMap[id]);
+  const semEl=document.getElementById(scoActive?'f-co-s':semSelMap[id]);
   const semVal=semEl?semEl.value:'';
   const semTxt=semVal||(id==='sta'?'全部学年':'全部学期');
+  const titleT=scoActive?'学期总表 · 班级课程总表':titles[id];
+  const subT=scoActive?'按专业 · 届别分组':subtitles[id];
   const hdr=document.getElementById('print-header');
   if(hdr){
     // v8.16.2: 所有 tab 统一不压列印日期
     hdr.innerHTML=
-      '<h1>CIC 本科排课管理系统 · '+titles[id]+'</h1>'+
+      '<h1>CIC 本科排课管理系统 · '+titleT+'</h1>'+
       '<div class="ph-meta">'+
-        '<span><span class="ph-label">文件说明</span>'+subtitles[id]+'</span>'+
+        '<span><span class="ph-label">文件说明</span>'+subT+'</span>'+
         '<span><span class="ph-label">学期</span>'+semTxt+'</span>'+
       '</div>';
   }
   // 版面：排课表 / 教学统计 各有专属列印类
   const oldPS=document.getElementById('print-page-override'); if(oldPS) oldPS.remove();
-  document.body.classList.remove('print-sch','print-sta');
+  document.body.classList.remove('print-sch','print-sta','print-sco');
   if(id==='sch')      document.body.classList.add('print-sch');
-  else if(id==='sta'){
-    document.body.classList.add('print-sta');  // v8.16
+  else if(id==='sta'||scoActive){
+    document.body.classList.add(scoActive?'print-sco':'print-sta');
+    if(scoActive) buildScoPrint();
     // @page 不能用 body class 作用域，改在列印时动态注入直向 A4（覆盖默认横向）
     const st=document.createElement('style'); st.id='print-page-override';
     st.textContent='@media print{@page{size:A4 portrait;margin:12mm 12mm 15mm 12mm}}';
@@ -4369,7 +4423,7 @@ function printPanel(id){
   }
   setTimeout(()=>{
     window.print();
-    document.body.classList.remove('print-sch','print-sta');
+    document.body.classList.remove('print-sch','print-sta','print-sco');
     const ps=document.getElementById('print-page-override'); if(ps) ps.remove();
   },300);
 }
