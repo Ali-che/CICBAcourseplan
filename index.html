@@ -266,18 +266,20 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   body.print-sco #sco-print{display:block!important}
   body.print-sco .sco-dept{page-break-before:always;break-before:page}
   body.print-sco .sco-dept:first-child{page-break-before:avoid;break-before:avoid}
-  body.print-sco .sco-dept-h{font-size:12pt;font-weight:700;color:#3C3489;margin:0 0 7pt;padding-bottom:3pt;border-bottom:1.5pt solid #534AB7}
-  body.print-sco .sco-coh{page-break-inside:avoid;margin-bottom:9pt}
-  body.print-sco .sco-coh-h{font-size:9.5pt;font-weight:700;color:#111;background:#EEEDFE!important;padding:3pt 7pt;border-radius:3pt;margin-bottom:2pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  body.print-sco .sco-coh-h .n{font-weight:400;color:#888;font-size:8pt;margin-left:4pt}
-  body.print-sco .sco-tbl{width:100%;border-collapse:collapse;font-size:7.5pt;table-layout:auto}
-  body.print-sco .sco-tbl th{background:#534AB7!important;color:#fff!important;font-size:7pt;padding:2pt 4pt;text-align:left;-webkit-print-color-adjust:exact;print-color-adjust:exact;white-space:nowrap}
-  body.print-sco .sco-tbl td{padding:2pt 4pt;border-bottom:0.4pt solid #ddd;vertical-align:top;white-space:normal!important;word-break:normal}
+  body.print-sco #sco-print{width:100%}
+  body.print-sco .sco-dept-h{font-size:15pt;font-weight:700;color:#3C3489;margin:0 0 9pt;padding-bottom:4pt;border-bottom:2pt solid #534AB7}
+  body.print-sco .sco-coh{page-break-inside:avoid;margin-bottom:13pt}
+  body.print-sco .sco-coh-h{font-size:12pt;font-weight:700;color:#111;background:#EEEDFE!important;padding:4pt 9pt;border-radius:3pt;margin-bottom:3pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body.print-sco .sco-coh-h .n{font-weight:400;color:#888;font-size:10pt;margin-left:5pt}
+  body.print-sco .sco-tbl{width:100%!important;max-width:100%!important;margin:0!important;border-collapse:collapse;font-size:9.5pt!important;table-layout:auto}
+  body.print-sco .sco-tbl th{background:#534AB7!important;color:#fff!important;font-size:9pt!important;padding:4pt 7pt!important;text-align:left;-webkit-print-color-adjust:exact;print-color-adjust:exact;white-space:nowrap!important}
+  body.print-sco .sco-tbl th:first-child{width:46%}
+  body.print-sco .sco-tbl td{padding:4pt 7pt!important;border-bottom:0.5pt solid #ddd;vertical-align:top;white-space:normal!important;word-break:normal}
   body.print-sco .sco-tbl td:nth-child(2),body.print-sco .sco-tbl td:nth-child(3){white-space:nowrap!important;text-align:center}
-  body.print-sco .sco-tbl .ty{font-size:6.5pt;color:#666}
-  body.print-sco .sco-tbl .en{font-size:6.8pt;color:#888}
-  body.print-sco .sco-tbl .bt{font-size:6pt;font-weight:700;color:#fff!important;background:#534AB7!important;padding:0 3pt;border-radius:6pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  body.print-sco .sco-tbl .nt{font-size:6.8pt;color:#666}
+  body.print-sco .sco-tbl .ty{font-size:8pt;color:#666}
+  body.print-sco .sco-tbl .en{font-size:8.5pt;color:#888}
+  body.print-sco .sco-tbl .bt{font-size:7pt;font-weight:700;color:#fff!important;background:#534AB7!important;padding:0 3pt;border-radius:6pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body.print-sco .sco-tbl .nt{font-size:8.5pt;color:#666}
 }
 .print-header{display:none}
 #sco-print{display:none}
@@ -4363,6 +4365,7 @@ function buildScoPrint(){
   const semF=(document.getElementById('f-co-s')||{}).value||'';
   const deptF=(document.getElementById('f-co-d')||{}).value||'';   // 尊重上方「专业」筛选
   const cohF=(document.getElementById('f-co')||{}).value||'';      // 尊重上方「届别」筛选
+  const HR={'上半学期':1,'上半':1,'下半学期':2,'下半':2,'全学期':3,'全':3};   // 半学期排序:上→下→全
   let depts=Object.keys(CBD).sort();
   if(deptF)depts=depts.filter(d=>d===deptF);
   const inCBD={}; Object.keys(CBD).forEach(d=>(CBD[d]||[]).forEach(c=>inCBD[c]=true));
@@ -4374,7 +4377,7 @@ function buildScoPrint(){
       let rows=schD.filter(r=>(r.cc||[]).some(x=>x.cohort===coh));
       if(semF)rows=rows.filter(r=>r.sem===semF);
       if(!rows.length)return;
-      rows=rows.slice().sort((a,b)=>String(a.sem||'').localeCompare(String(b.sem||''))||String(a.half||'').localeCompare(String(b.half||''))||String(a.course||'').localeCompare(String(b.course||'')));
+      rows=rows.slice().sort((a,b)=>String(a.sem||'').localeCompare(String(b.sem||''))||((HR[a.half]||9)-(HR[b.half]||9))||String(a.course||'').localeCompare(String(b.course||'')));
       const trs=rows.map(r=>'<tr>'+
         '<td><b>'+eh(r.course||'')+'</b> <span class="ty">'+eh(r.type||'')+'</span>'+(r.btec?' <span class="bt">BTEC</span>':'')+'<br><span class="en">'+eh(r.en||'—')+'</span></td>'+
         '<td>'+eh(r.sem||'')+'</td><td>'+eh(r.half||'')+'</td>'+
