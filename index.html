@@ -505,7 +505,8 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <button class="btn btn-sm no-print" onclick="openCohortCleanup()" style="color:#7c2d92;border-color:#d8b4e2" title="精准移除某个届别:独占的整笔删,共享的仅摘除该届别">🧹 按届别清理</button>
         <button id="sch-batch-del" class="btn btn-sm no-print" onclick="deleteFiltered('schedule')" style="color:#a32d2d;border-color:#f7c1c1;display:none" title="按目前筛选条件删除全部">🗑 批量删除 <span id="sch-batch-del-n">0</span></button>
         <span style="width:1px;height:18px;background:#e0e0e0;margin:0 2px"></span>
-        <button class="btn btn-sm no-print" onclick="printPanel('sch')" title="打印当前页">🖨️ 列印</button>
+        <span class="no-print" style="font-size:11px;color:#888">依当前筛选 · 横向 A4</span>
+        <button class="btn btn-sm no-print" onclick="printPanel('sch')" title="按目前的学期/搜索筛选,列印排课记录(横向 A4);未筛选则印全部">🖨️ 列印</button>
       </div>
     </div>
     <div class="tbl-wrap">
@@ -585,7 +586,8 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <button class="btn btn-sm no-print" onclick="openCsvImportSp()" style="color:#854F0B;border-color:#FCD34D" title="从 CSV 批量导入">📥 批量导入</button>
         <button id="sp-batch-del" class="btn btn-sm no-print" onclick="deleteFiltered('special')" style="color:#a32d2d;border-color:#f7c1c1;display:none" title="按目前筛选条件删除全部">🗑 批量删除 <span id="sp-batch-del-n">0</span></button>
         <span style="width:1px;height:18px;background:#e0e0e0;margin:0 2px"></span>
-        <button class="btn btn-sm no-print" onclick="printPanel('sp')" title="打印当前页">🖨️ 列印</button>
+        <span class="no-print" style="font-size:11px;color:#888">依当前筛选 · 横向 A4</span>
+        <button class="btn btn-sm no-print" onclick="printPanel('sp')" title="按目前筛选,列印 IS/SG 排课学生名单(横向 A4);未筛选则印全部">🖨️ 列印</button>
       </div>
     </div>
     <div class="tbl-wrap">
@@ -612,7 +614,10 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <button class="stab" onclick="switchSub('sss')">SG/IS·学生</button>
       <button class="stab" onclick="switchSub('sst')">SG/IS·老师</button>
     </div>
-    <button class="btn btn-sm no-print" onclick="printPanel('sum')">🖨️ 列印</button>
+    <div class="no-print" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+      <span id="sum-print-hint" style="font-size:11px;color:#888;text-align:right;line-height:1.35;max-width:520px"></span>
+      <button class="btn btn-sm" onclick="printPanel('sum')" title="依当前子页与筛选列印">🖨️ 列印</button>
+    </div>
   </div>
   <!-- v8.11.1：醒目提示 -->
   <div style="background:linear-gradient(90deg,#EEEDFE 0%,#F5F4FE 100%);border:0.5px solid #AFA9EC;border-radius:8px;padding:8px 14px;margin-bottom:10px;display:flex;align-items:center;gap:8px;font-size:12px;color:#3C3489">
@@ -721,7 +726,8 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <div style="display:flex;gap:6px;align-items:center">
         <button class="btn btn-sm no-print" onclick="showFormulaInfo()" style="color:#534AB7;border-color:#AFA9EC" title="查看工作量计算公式">ℹ️ 公式说明</button>
         <button class="btn btn-sm" onclick="renderSta()">↻ 刷新</button>
-        <button class="btn btn-sm no-print" onclick="printPanel('sta')">🖨️ 列印</button>
+        <span class="no-print" style="font-size:11px;color:#888">全部老师明细展开 · 直向 A4</span>
+        <button class="btn btn-sm no-print" onclick="printPanel('sta')" title="列印教学统计:所有老师的课程明细自动展开(直向 A4);印的是当前学年筛选">🖨️ 列印</button>
       </div>
     </div>
     <div class="tbl-wrap">
@@ -5350,12 +5356,32 @@ function switchTab(id){
   else if(id==='sum'&&_tabDirty.sum)renderAllSum();
   else if(id==='sta'&&_tabDirty.sta)renderSta();
   else if(id==='ops')renderOps();
+  if(id==='sum'){if(!window._sumHintWired){const ps=document.getElementById('panel-sum');if(ps){ps.addEventListener('change',updateSumPrintHint);ps.addEventListener('input',updateSumPrintHint);window._sumHintWired=true;}}updateSumPrintHint();}
   setTimeout(syncTblHeight,50); // 等 panel 显示后再算高度
+}
+// 学期总表:列印按钮旁的动态说明——随子页与筛选实时反映「将印什么」
+function updateSumPrintHint(){
+  const el=document.getElementById('sum-print-hint'); if(!el) return;
+  const active=(document.querySelector('#panel-sum .spanel.active')||{}).id||'';
+  const v=id=>{const e=document.getElementById(id);return e?e.value:'';};
+  let t='';
+  if(active==='sub-sco'){
+    const d=v('f-co-d'),c=v('f-co'),s=v('f-co-s');
+    t='🖨️ 将印:'+(d?'专业 '+d:'全部专业')+' · '+(c?'届别 '+c:'全部届别')+' · '+(s?'学期 '+s:'全部学期')+' —— 按专业→届别分组 · 直向 A4';
+  }else if(active==='sub-stc'){
+    t='🖨️ 将印:任课老师课程总表(依当前筛选)· 横向 A4';
+  }else if(active==='sub-sss'){
+    t='🖨️ 将印:SG/IS 学生名单(依当前筛选)· 横向 A4';
+  }else if(active==='sub-sst'){
+    t='🖨️ 将印:SG/IS 老师名单(依当前筛选)· 横向 A4';
+  }
+  el.textContent=t;
 }
 function switchSub(id){
   document.querySelectorAll('.stab').forEach(t=>t.classList.toggle('active',t.getAttribute('onclick').includes(id)));
   document.querySelectorAll('.spanel').forEach(p=>p.classList.remove('active'));
   document.getElementById('sub-'+id).classList.add('active');
+  updateSumPrintHint();
   setTimeout(syncTblHeight,50);
 }
 
