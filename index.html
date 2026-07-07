@@ -1280,9 +1280,10 @@ function opsGradView(){
       '<td style="text-align:center">'+cel(g.courseCr)+'</td>'+
       '<td style="text-align:center">'+cel(g.internN)+'</td>'+
       '<td style="text-align:center">'+cel(g.internCr)+'</td>'+
+      '<td style="text-align:center">'+(g.internSub?'<span style="color:#1a7f37;font-weight:700">✓ 可替代</span>':dash)+'</td>'+
       '<td style="text-align:center;color:#534AB7;font-weight:600">'+(tot==null?dash:tot)+'</td>'+
-      '<td style="text-align:right;white-space:nowrap"><button class="ops-edit" onclick="opsStartEdit(\'grad\',\''+jsq(g.pid)+'\',{pid:\''+jsq(g.pid)+'\',total:'+(g.total||0)+',courseN:'+(g.courseN==null?'\'\'':g.courseN)+',courseCr:'+(g.courseCr==null?'\'\'':g.courseCr)+',internN:'+(g.internN==null?'\'\'':g.internN)+',internCr:'+(g.internCr==null?'\'\'':g.internCr)+'})">编辑</button> <button class="ops-del" onclick="opsDelGrad(\''+jsq(g.pid)+'\')">删除</button></td></tr>';
-  }).join('')||'<tr><td colspan="8" style="color:#aaa">无</td></tr>';
+      '<td style="text-align:right;white-space:nowrap"><button class="ops-edit" onclick="opsStartEdit(\'grad\',\''+jsq(g.pid)+'\',{pid:\''+jsq(g.pid)+'\',total:'+(g.total||0)+',courseN:'+(g.courseN==null?'\'\'':g.courseN)+',courseCr:'+(g.courseCr==null?'\'\'':g.courseCr)+',internN:'+(g.internN==null?'\'\'':g.internN)+',internCr:'+(g.internCr==null?'\'\'':g.internCr)+',internSub:'+(g.internSub?'true':'false')+'})">编辑</button> <button class="ops-del" onclick="opsDelGrad(\''+jsq(g.pid)+'\')">删除</button></td></tr>';
+  }).join('')||'<tr><td colspan="9" style="color:#aaa">无</td></tr>';
   return '<div class="ops-add">'+(ed?'<div style="width:100%;font-size:12px;color:#534AB7;font-weight:600;margin-bottom:2px">✏️ 编辑(专业-版本不可改)</div>':'')+
     '<div class="fg"><label>专业-版本 (pid)</label><input id="ops-grad-pid" '+(ed?'readonly style="width:110px;background:#eee"':'style="width:110px"')+' value="'+eh(opsEV('grad','pid'))+'" placeholder="TM-2565"></div>'+
     '<div class="fg"><label>毕业总学分</label><input id="ops-grad-total" type="number" style="width:70px" value="'+eh(String(opsEV('grad','total')||''))+'" placeholder="123"></div>'+
@@ -1290,11 +1291,12 @@ function opsGradView(){
     '<div class="fg"><label>课程学分</label><input id="ops-grad-ccr" type="number" style="width:70px" value="'+eh(String(opsEV('grad','courseCr')||''))+'"></div>'+
     '<div class="fg"><label>实习数(门)</label><input id="ops-grad-in" type="number" style="width:70px" value="'+eh(String(opsEV('grad','internN')||''))+'"></div>'+
     '<div class="fg"><label>实习学分</label><input id="ops-grad-icr" type="number" style="width:70px" value="'+eh(String(opsEV('grad','internCr')||''))+'"></div>'+
+    '<div class="fg"><label>实习可上课替代</label><label style="display:inline-flex;align-items:center;gap:5px;height:30px;font-size:11px;color:#666;cursor:pointer"><input type="checkbox" id="ops-grad-isub" '+(opsEV('grad','internSub')?'checked':'')+' style="width:auto">可替代</label></div>'+
     '<button class="btn btn-p" onclick="opsAddGrad()">'+(ed?'保存修改':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>'+
-    '<div style="font-size:11px;color:#888;margin-bottom:8px">课程架构页各专业顶部「X credits · Y 门课」:credits=毕业总学分,门课=总课数(自动 = 课程数 + 实习数)。pid 格式:专业-版本(如 TM-2565)。</div>'+
-    '<table style="width:auto;min-width:460px"><thead><tr><th>专业-版本</th><th>毕业总学分</th><th>课程数</th><th>课程学分</th><th>实习数</th><th>实习学分</th><th>总课数</th><th></th></tr></thead><tbody>'+body+'</tbody></table>';
+    '<div style="font-size:11px;color:#888;margin-bottom:8px">课程架构页各专业顶部「X credits · Y 门课」:credits=毕业总学分,门课=总课数(自动 = 课程数 + 实习数)。「实习可上课替代」勾选后课程架构页会标注。pid 格式:专业-版本(如 TM-2565)。</div>'+
+    '<table style="width:auto;min-width:520px"><thead><tr><th>专业-版本</th><th>毕业总学分</th><th>课程数</th><th>课程学分</th><th>实习数</th><th>实习学分</th><th>实习替代</th><th>总课数</th><th></th></tr></thead><tbody>'+body+'</tbody></table>';
 }
-async function opsAddGrad(){const pid=document.getElementById('ops-grad-pid').value.trim();if(!pid){alert('请输入 pid(专业-版本)');return;}const gv=id=>{const v=document.getElementById(id).value.trim();return v===''?null:v;};opsAfter(await gasPost('adminUpsertGrad',{pid,total:document.getElementById('ops-grad-total').value,courseN:gv('ops-grad-cn'),courseCr:gv('ops-grad-ccr'),internN:gv('ops-grad-in'),internCr:gv('ops-grad-icr')}),'已保存毕业学分 '+pid);}
+async function opsAddGrad(){const pid=document.getElementById('ops-grad-pid').value.trim();if(!pid){alert('请输入 pid(专业-版本)');return;}const gv=id=>{const v=document.getElementById(id).value.trim();return v===''?null:v;};opsAfter(await gasPost('adminUpsertGrad',{pid,total:document.getElementById('ops-grad-total').value,courseN:gv('ops-grad-cn'),courseCr:gv('ops-grad-ccr'),internN:gv('ops-grad-in'),internCr:gv('ops-grad-icr'),internSub:document.getElementById('ops-grad-isub').checked}),'已保存毕业学分 '+pid);}
 async function opsDelGrad(pid){if(!confirm('删除「'+pid+'」的毕业学分设定?'))return;opsAfter(await gasPost('adminDelGrad',{pid}),'已删除 '+pid);}
 // ── Catalog ──
 function opsCatView(){
@@ -5565,11 +5567,11 @@ function syncTblHeight(){
         sget('teachers?select=name,dept,position,quota,employee_id&order=name'),
         sget('catalog?select=id,dept,version,code,zh,en,credit,mapping,req,block,block_credit,fixed,note,source&order=code'),
         sget('positions?select=position,quota&order=quota.desc').catch(function(){return [];}),
-        sget('grad?select=pid,total,courses_count,course_n,course_cr,intern_n,intern_cr&order=pid').catch(function(){return [];})
+        sget('grad?select=pid,total,courses_count,course_n,course_cr,intern_n,intern_cr,intern_sub&order=pid').catch(function(){return [];})
       ]);
       return{success:true,
         positions:(Array.isArray(po)?po:[]).map(x=>({position:x.position,quota:+x.quota||0})),
-        grad:(Array.isArray(gr)?gr:[]).map(x=>({pid:x.pid,total:+x.total||0,courses:(x.courses_count==null?null:+x.courses_count),courseN:(x.course_n==null?null:+x.course_n),courseCr:(x.course_cr==null?null:+x.course_cr),internN:(x.intern_n==null?null:+x.intern_n),internCr:(x.intern_cr==null?null:+x.intern_cr)})),
+        grad:(Array.isArray(gr)?gr:[]).map(x=>({pid:x.pid,total:+x.total||0,courses:(x.courses_count==null?null:+x.courses_count),courseN:(x.course_n==null?null:+x.course_n),courseCr:(x.course_cr==null?null:+x.course_cr),internN:(x.intern_n==null?null:+x.intern_n),internCr:(x.intern_cr==null?null:+x.intern_cr),internSub:!!x.intern_sub})),
         semesters:(se||[]).map(x=>x.sem),
         depts:(de||[]).map(x=>({code:x.code,name:x.name||''})),
         cohorts:(ch||[]).map(x=>({id:x.id,dept:x.dept||'',cohort:x.cohort||''})),
@@ -5603,7 +5605,7 @@ function syncTblHeight(){
     if(action==='adminDelCatalog')return srpc('admin_del_catalog',{p_pin:_pin,p_id:body.id});
     if(action==='adminAddPosition')return srpc('admin_add_position',{p_pin:_pin,p_position:body.position,p_quota:+body.quota||0});
     if(action==='adminDelPosition')return srpc('admin_del_position',{p_pin:_pin,p_position:body.position});
-    if(action==='adminUpsertGrad'){const N=v=>(v==null||v===''?null:+v);return srpc('admin_upsert_grad',{p_pin:_pin,p_pid:body.pid,p_total:+body.total||0,p_course_n:N(body.courseN),p_course_cr:N(body.courseCr),p_intern_n:N(body.internN),p_intern_cr:N(body.internCr)});}
+    if(action==='adminUpsertGrad'){const N=v=>(v==null||v===''?null:+v);return srpc('admin_upsert_grad',{p_pin:_pin,p_pid:body.pid,p_total:+body.total||0,p_course_n:N(body.courseN),p_course_cr:N(body.courseCr),p_intern_n:N(body.internN),p_intern_cr:N(body.internCr),p_intern_sub:!!body.internSub});}
     if(action==='adminDelGrad')return srpc('admin_del_grad',{p_pin:_pin,p_pid:body.pid});
     return{success:false,error:'未知 action '+action};
   };

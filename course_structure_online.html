@@ -161,7 +161,7 @@ function sheet(p,cmp){
   const cN=_n(p.courseN),cC=_n(p.courseCr),iN=_n(p.internN),iC=_n(p.internCr);
   let _parts=[];
   if(cN!=null||cC!=null) _parts.push('课程'+(cN!=null?' '+cN+' 门':'')+(cC!=null?' '+cC+' 学分':''));
-  if(iN!=null||iC!=null) _parts.push('实习'+(iN!=null?' '+iN+' 门':'')+(iC!=null?' '+iC+' 学分':''));
+  if(iN!=null||iC!=null) _parts.push('实习'+(iN!=null?' '+iN+' 门':'')+(iC!=null?' '+iC+' 学分':'')+(p.internSub?' 可上课替代':''));
   const brk=_parts.length?' ('+_parts.join(' · ')+')':'';
   if(cmp) return `<div class="sheet cmpsheet"><div class="hd2"><b>${p.label}</b> · ${p.name}<div class="m2">Bachelor · 4 Years · ${p.grad||'—'} credits · ${nc||'—'} 门课${brk}</div></div><div class="cols one">${secs}</div></div>`;
   return `<div class="sheet"><div class="hd"><div class="u">Dhurakij Pundit University</div><div class="t">Course Structure</div><div class="c">Chinese International College</div><div class="p">${p.name}</div><div class="cr2">Bachelor · 4 Years · ${p.grad||'—'} credits · ${nc||'—'} 门课${brk}</div></div><div class="cols">${secs||'<div class=note>无课程</div>'}</div></div>`;
@@ -196,14 +196,14 @@ function loadSheet(){
   const H={apikey:SKEY};
   Promise.all([
     fetch(SUPA+'/rest/v1/catalog?select=dept,version,block,req,block_credit,code,zh,en,credit,mapping,fixed,note,source&order=id&limit=5000',{headers:H,cache:'no-store'}).then(r=>r.json()),
-    fetch(SUPA+'/rest/v1/grad?select=pid,total,courses_count,course_n,course_cr,intern_n,intern_cr',{headers:H,cache:'no-store'}).then(r=>r.json()).catch(()=>[])
+    fetch(SUPA+'/rest/v1/grad?select=pid,total,courses_count,course_n,course_cr,intern_n,intern_cr,intern_sub',{headers:H,cache:'no-store'}).then(r=>r.json()).catch(()=>[])
   ]).then(([cat,grad])=>{
     // 组成跟原本 Sheet 一样的「中文表头 + 行」结构，喂给既有 buildData（解析逻辑不动）
     const rows=[['专业','版本','版块中文','必修/选修','区块学分','课程代码','中文名','英文名','学分','对接课程','固定开课','备注','数据来源']];
     (cat||[]).forEach(x=>rows.push([x.dept||'',x.version||'',x.block||'',x.req||'',x.block_credit||'',x.code||'',x.zh||'',x.en||'',x.credit||'',x.mapping||'',x.fixed||'',x.note||'',x.source||'']));
     DATA=buildData(rows);
-    const gm={},cm={},gb={}; (Array.isArray(grad)?grad:[]).forEach(x=>{if(x&&x.pid){gm[x.pid]=String(x.total);if(x.courses_count!=null&&x.courses_count!=='')cm[x.pid]=parseInt(x.courses_count,10);gb[x.pid]={cn:x.course_n,ccr:x.course_cr,inn:x.intern_n,icr:x.intern_cr};}});
-    Object.keys(DATA).forEach(pid=>{if(gm[pid])DATA[pid].grad=gm[pid];if(cm[pid]!=null&&!isNaN(cm[pid]))DATA[pid].coursesOv=cm[pid];if(gb[pid]){DATA[pid].courseN=gb[pid].cn;DATA[pid].courseCr=gb[pid].ccr;DATA[pid].internN=gb[pid].inn;DATA[pid].internCr=gb[pid].icr;}});
+    const gm={},cm={},gb={}; (Array.isArray(grad)?grad:[]).forEach(x=>{if(x&&x.pid){gm[x.pid]=String(x.total);if(x.courses_count!=null&&x.courses_count!=='')cm[x.pid]=parseInt(x.courses_count,10);gb[x.pid]={cn:x.course_n,ccr:x.course_cr,inn:x.intern_n,icr:x.intern_cr,isub:!!x.intern_sub};}});
+    Object.keys(DATA).forEach(pid=>{if(gm[pid])DATA[pid].grad=gm[pid];if(cm[pid]!=null&&!isNaN(cm[pid]))DATA[pid].coursesOv=cm[pid];if(gb[pid]){DATA[pid].courseN=gb[pid].cn;DATA[pid].courseCr=gb[pid].ccr;DATA[pid].internN=gb[pid].inn;DATA[pid].internCr=gb[pid].icr;DATA[pid].internSub=gb[pid].isub;}});
     if(!cur||!DATA[cur])cur=tabsListBase.find(k=>DATA[k])||Object.keys(DATA)[0];
     initTabs(); render();
     document.getElementById('status').textContent='✅ 已从 Supabase 载入 · '+new Date().toLocaleString()+' · 共 '+Object.keys(DATA).length+' 个专业-版本';
