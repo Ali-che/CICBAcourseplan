@@ -4361,11 +4361,16 @@ async function syncFromSheets(type){
 function buildScoPrint(){
   const cont=document.getElementById('sco-print'); if(!cont) return;
   const semF=(document.getElementById('f-co-s')||{}).value||'';
-  const depts=Object.keys(CBD).sort();
-  const inCBD={}; depts.forEach(d=>(CBD[d]||[]).forEach(c=>inCBD[c]=true));
+  const deptF=(document.getElementById('f-co-d')||{}).value||'';   // 尊重上方「专业」筛选
+  const cohF=(document.getElementById('f-co')||{}).value||'';      // 尊重上方「届别」筛选
+  let depts=Object.keys(CBD).sort();
+  if(deptF)depts=depts.filter(d=>d===deptF);
+  const inCBD={}; Object.keys(CBD).forEach(d=>(CBD[d]||[]).forEach(c=>inCBD[c]=true));
   const secBody=cohs=>{
     let body='';
-    cohs.slice().sort().forEach(coh=>{
+    let list=cohs.slice().sort();
+    if(cohF)list=list.filter(c=>c===cohF);
+    list.forEach(coh=>{
       let rows=schD.filter(r=>(r.cc||[]).some(x=>x.cohort===coh));
       if(semF)rows=rows.filter(r=>r.sem===semF);
       if(!rows.length)return;
@@ -4382,10 +4387,9 @@ function buildScoPrint(){
   };
   let html='';
   depts.forEach(d=>{const body=secBody(CBD[d]||[]);if(body)html+='<section class="sco-dept"><h2 class="sco-dept-h">专业 '+eh(d)+'</h2>'+body+'</section>';});
-  const orphanSet={}; schD.forEach(r=>(r.cc||[]).forEach(x=>{if(x.cohort&&!inCBD[x.cohort])orphanSet[x.cohort]=true;}));
-  const orphans=Object.keys(orphanSet);
-  if(orphans.length){const body=secBody(orphans);if(body)html+='<section class="sco-dept"><h2 class="sco-dept-h">未分类届别</h2>'+body+'</section>';}
-  cont.innerHTML=html||'<div style="padding:20px;color:#999">无排课数据</div>';
+  // 只有在「全部专业 + 全部届别」时才附上未分类届别
+  if(!deptF&&!cohF){const orphanSet={}; schD.forEach(r=>(r.cc||[]).forEach(x=>{if(x.cohort&&!inCBD[x.cohort])orphanSet[x.cohort]=true;}));const orphans=Object.keys(orphanSet);if(orphans.length){const body=secBody(orphans);if(body)html+='<section class="sco-dept"><h2 class="sco-dept-h">未分类届别</h2>'+body+'</section>';}}
+  cont.innerHTML=html||'<div style="padding:20px;color:#999">此筛选下无排课数据</div>';
 }
 function printPanel(id){
   switchTab(id);
@@ -4400,7 +4404,9 @@ function printPanel(id){
   const semVal=semEl?semEl.value:'';
   const semTxt=semVal||(id==='sta'?'全部学年':'全部学期');
   const titleT=scoActive?'学期总表 · 班级课程总表':titles[id];
-  const subT=scoActive?'按专业 · 届别分组':subtitles[id];
+  const scoDept=scoActive?((document.getElementById('f-co-d')||{}).value||''):'';
+  const scoCoh=scoActive?((document.getElementById('f-co')||{}).value||''):'';
+  const subT=scoActive?('按专业·届别分组 · '+(scoDept?'专业 '+scoDept:'全部专业')+(scoCoh?' · 届别 '+scoCoh:'')):subtitles[id];
   const hdr=document.getElementById('print-header');
   if(hdr){
     // v8.16.2: 所有 tab 统一不压列印日期
