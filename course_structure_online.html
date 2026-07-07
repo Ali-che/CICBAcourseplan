@@ -159,9 +159,10 @@ function sheet(p,cmp){
   const nc=(p.coursesOv!=null?p.coursesOv:p.count);
   const _n=v=>(v==null||v===''||isNaN(v)?null:+v);
   const cN=_n(p.courseN),cC=_n(p.courseCr),iN=_n(p.internN),iC=_n(p.internCr);
-  let brk='';
-  if(cN!=null||cC!=null) brk+=' · 课程'+(cN!=null?' '+cN+' 门':'')+(cC!=null?' '+cC+' 学分':'');
-  if(iN!=null||iC!=null) brk+=' · 实习'+(iN!=null?' '+iN+' 门':'')+(iC!=null?' '+iC+' 学分':'');
+  let _parts=[];
+  if(cN!=null||cC!=null) _parts.push('课程'+(cN!=null?' '+cN+' 门':'')+(cC!=null?' '+cC+' 学分':''));
+  if(iN!=null||iC!=null) _parts.push('实习'+(iN!=null?' '+iN+' 门':'')+(iC!=null?' '+iC+' 学分':''));
+  const brk=_parts.length?' ('+_parts.join(' · ')+')':'';
   if(cmp) return `<div class="sheet cmpsheet"><div class="hd2"><b>${p.label}</b> · ${p.name}<div class="m2">Bachelor · 4 Years · ${p.grad||'—'} credits · ${nc||'—'} 门课${brk}</div></div><div class="cols one">${secs}</div></div>`;
   return `<div class="sheet"><div class="hd"><div class="u">Dhurakij Pundit University</div><div class="t">Course Structure</div><div class="c">Chinese International College</div><div class="p">${p.name}</div><div class="cr2">Bachelor · 4 Years · ${p.grad||'—'} credits · ${nc||'—'} 门课${brk}</div></div><div class="cols">${secs||'<div class=note>无课程</div>'}</div></div>`;
 }
