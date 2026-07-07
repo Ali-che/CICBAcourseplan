@@ -162,7 +162,7 @@ function sheet(p,cmp){
   let _parts=[];
   if(cN!=null||cC!=null) _parts.push('课程'+(cN!=null?' '+cN+' 门':'')+(cC!=null?' '+cC+' 学分':''));
   if(iN!=null||iC!=null) _parts.push('实习'+(iN!=null?' '+iN+' 门':'')+(iC!=null?' '+iC+' 学分':''));
-  if(p.internSub&&(iN!=null||iC!=null)) _parts.push('上课课程替代实习课程');
+  if(p.internSub&&(iN!=null||iC!=null)) _parts.push('课程可抵实习');
   const brk=_parts.length?' ('+_parts.join(' · ')+')':'';
   const courseLine=(nc||'—')+' 门课'+brk;
   if(cmp) return `<div class="sheet cmpsheet"><div class="hd2"><b>${p.label}</b> · ${p.name}<div class="m2">Bachelor · 4 Years · ${p.grad||'—'} credits<br>${courseLine}</div></div><div class="cols one">${secs}</div></div>`;
