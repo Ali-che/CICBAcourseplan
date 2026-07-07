@@ -5334,7 +5334,7 @@ function switchTab(id){
   ['sch','sp','sum','cs','sta','ops'].forEach((x,i)=>{const tb=document.querySelectorAll('.tab')[i];if(tb)tb.classList.toggle('active',x===id);});
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+id).classList.add('active');
-  if(id==='cs'){var _f=document.getElementById('cs-frame');if(_f&&!_f.src)_f.src=_f.dataset.src;}
+  if(id==='cs'){var _f=document.getElementById('cs-frame');if(_f&&!_f.src)_f.src=_f.dataset.src+'?cb='+Date.now();}
   // v8.18 P0: 切到某 Tab 时，若它在隐藏期间被标脏才渲染（否则保留现有 DOM/滚动位置）
   if(id==='sch'&&_tabDirty.sch)renderSch();
   else if(id==='sp'&&_tabDirty.sp)renderSp();
