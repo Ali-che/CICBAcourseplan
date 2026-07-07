@@ -4400,6 +4400,39 @@ function buildScoPrint(){
   if(!deptF&&!cohF){const orphanSet={}; schD.forEach(r=>(r.cc||[]).forEach(x=>{if(x.cohort&&!inCBD[x.cohort])orphanSet[x.cohort]=true;}));const orphans=Object.keys(orphanSet);if(orphans.length){const body=secBody(orphans);if(body)html+='<section class="sco-dept"><h2 class="sco-dept-h">未分类届别</h2>'+body+'</section>';}}
   cont.innerHTML=html||'<div style="padding:20px;color:#999">此筛选下无排课数据</div>';
 }
+// 任课老师总表列印:按 专业 → 老师 → 课程 分组(与班级总表同款直向版式,复用 #sco-print 容器)
+function buildStcPrint(){
+  const cont=document.getElementById('sco-print'); if(!cont) return;
+  const v=id=>{const e=document.getElementById(id);return e?e.value:'';};
+  const deptF=v('f-tc-d'),tcF=v('f-tc'),semF=v('f-tc-s'),typeF=v('f-tc-t'),q=v('f-tc-q').trim().toLowerCase();
+  const HR={'上半学期':1,'上半':1,'下半学期':2,'下半':2,'全学期':3,'全':3};
+  const totOf=r=>(r.cc||[]).reduce((a,x)=>a+(+x.count||0),0);
+  const matchQ=r=>!q||(r.course||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q)||String(r.cls||'').toLowerCase().includes(q)||_mapMatch(r.course,q)||(r.btec&&'btec'.includes(q));
+  let depts=[...new Set(T.map(t=>t.d))].filter(d=>d&&!['DPU','CIC'].includes(d)).sort();
+  if(deptF)depts=depts.filter(d=>d===deptF);
+  const teacherBody=tname=>{
+    let rows=schD.filter(r=>r.tc===tname);
+    if(semF)rows=rows.filter(r=>r.sem===semF);
+    if(typeF)rows=rows.filter(r=>r.type===typeF);
+    rows=rows.filter(matchQ);
+    if(!rows.length)return '';
+    rows=rows.slice().sort((a,b)=>String(a.sem||'').localeCompare(String(b.sem||''))||((HR[a.half]||9)-(HR[b.half]||9))||String(a.course||'').localeCompare(String(b.course||'')));
+    const trs=rows.map(r=>'<tr>'+
+      '<td><b>'+eh(r.course||'')+'</b> <span class="ty">'+eh(r.type||'')+'</span>'+(r.btec?' <span class="bt">BTEC</span>':'')+'<br><span class="en">'+eh(r.en||'—')+'</span></td>'+
+      '<td>'+eh(r.cls||'')+'</td><td>'+eh(r.sem||'')+'</td><td>'+eh(r.half||'')+'</td>'+
+      '<td>'+totOf(r)+'</td><td class="nt">'+eh(r.nt||'')+'</td></tr>').join('');
+    return '<div class="sco-coh"><div class="sco-coh-h">'+eh(tname)+'<span class="n">'+rows.length+' 门</span></div>'+
+      '<table class="sco-tbl"><thead><tr><th>课程代码 / 类型 / 英文名</th><th>班级</th><th>学期</th><th>上下半</th><th>总人数</th><th>备注</th></tr></thead><tbody>'+trs+'</tbody></table></div>';
+  };
+  let html='';
+  depts.forEach(d=>{
+    let tchrs=[...new Set(T.filter(t=>t.d===d).map(t=>t.n))].sort();
+    if(tcF)tchrs=tchrs.filter(n=>n===tcF);
+    let body=''; tchrs.forEach(n=>{body+=teacherBody(n);});
+    if(body)html+='<section class="sco-dept"><h2 class="sco-dept-h">专业 '+eh(d)+'</h2>'+body+'</section>';
+  });
+  cont.innerHTML=html||'<div style="padding:20px;color:#999">此筛选下无排课数据</div>';
+}
 function printPanel(id){
   switchTab(id);
   const titles={sch:'排课记录',sp:'IS/SG 排课记录',sum:'学期总表',sta:'教学统计 · 各授课老师工作量'};
@@ -4407,15 +4440,19 @@ function printPanel(id){
   const now=new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
   // 班级总表(sub-sco)活跃时,列印走「按专业分组」模式
   const scoActive=(id==='sum'&&document.getElementById('sub-sco')&&document.getElementById('sub-sco').classList.contains('active'));
+  const stcActive=(id==='sum'&&document.getElementById('sub-stc')&&document.getElementById('sub-stc').classList.contains('active'));
+  const grouped=scoActive||stcActive;
   // 取目前筛选的学期
   const semSelMap={sch:'sch-sem-f',sp:'sp-sem-f',sum:'f-tc-s',sta:'sta-yr'};
   const semEl=document.getElementById(scoActive?'f-co-s':semSelMap[id]);
   const semVal=semEl?semEl.value:'';
   const semTxt=semVal||(id==='sta'?'全部学年':'全部学期');
-  const titleT=scoActive?'学期总表 · 班级课程总表':titles[id];
-  const scoDept=scoActive?((document.getElementById('f-co-d')||{}).value||''):'';
-  const scoCoh=scoActive?((document.getElementById('f-co')||{}).value||''):'';
-  const subT=scoActive?('按专业·届别分组 · '+(scoDept?'专业 '+scoDept:'全部专业')+(scoCoh?' · 届别 '+scoCoh:'')):subtitles[id];
+  const gv=id2=>{const e=document.getElementById(id2);return e?e.value:'';};
+  const titleT=scoActive?'学期总表 · 班级课程总表':stcActive?'学期总表 · 任课老师课程总表':titles[id];
+  let subT;
+  if(scoActive){const d=gv('f-co-d'),c=gv('f-co');subT='按专业·届别分组 · '+(d?'专业 '+d:'全部专业')+(c?' · 届别 '+c:'');}
+  else if(stcActive){const d=gv('f-tc-d'),tc=gv('f-tc');subT='按专业·老师分组 · '+(d?'专业 '+d:'全部专业')+(tc?' · 老师 '+tc:'');}
+  else subT=subtitles[id];
   const hdr=document.getElementById('print-header');
   if(hdr){
     // v8.16.2: 所有 tab 统一不压列印日期
@@ -4430,9 +4467,9 @@ function printPanel(id){
   const oldPS=document.getElementById('print-page-override'); if(oldPS) oldPS.remove();
   document.body.classList.remove('print-sch','print-sta','print-sco');
   if(id==='sch')      document.body.classList.add('print-sch');
-  else if(id==='sta'||scoActive){
-    document.body.classList.add(scoActive?'print-sco':'print-sta');
-    if(scoActive) buildScoPrint();
+  else if(id==='sta'||grouped){
+    document.body.classList.add(grouped?'print-sco':'print-sta');
+    if(scoActive) buildScoPrint(); else if(stcActive) buildStcPrint();
     // @page 不能用 body class 作用域，改在列印时动态注入直向 A4（覆盖默认横向）
     const st=document.createElement('style'); st.id='print-page-override';
     st.textContent='@media print{@page{size:A4 portrait;margin:12mm 12mm 15mm 12mm}}';
@@ -5369,7 +5406,8 @@ function updateSumPrintHint(){
     const d=v('f-co-d'),c=v('f-co'),s=v('f-co-s');
     t='🖨️ 将印:'+(d?'专业 '+d:'全部专业')+' · '+(c?'届别 '+c:'全部届别')+' · '+(s?'学期 '+s:'全部学期')+' —— 按专业→届别分组 · 直向 A4';
   }else if(active==='sub-stc'){
-    t='🖨️ 将印:任课老师课程总表(依当前筛选)· 横向 A4';
+    const d=v('f-tc-d'),tc=v('f-tc'),s=v('f-tc-s');
+    t='🖨️ 将印:'+(d?'专业 '+d:'全部专业')+' · '+(tc?'老师 '+tc:'全部老师')+' · '+(s?'学期 '+s:'全部学期')+' —— 按专业→老师分组 · 直向 A4';
   }else if(active==='sub-sss'){
     t='🖨️ 将印:SG/IS 学生名单(依当前筛选)· 横向 A4';
   }else if(active==='sub-sst'){
