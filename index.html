@@ -4130,7 +4130,9 @@ function renderSta(){
     [schD.reduce((s,r)=>s+r.cc.length,0),'届别课次'],
     [actT,'参与老师'],[schD.filter(r=>r.type==='Capstone').length,'Capstone课程']
   ].map(([v,l])=>'<div class="mc"><div class="mv">'+v+'</div><div class="ml">'+l+'</div></div>').join('');
-  const depts=[...new Set(T.filter(t=>t.l>0).map(t=>t.d))].sort();
+  const _teachSet=new Set([...schD.map(r=>r.tc),...spD.map(r=>r.tc)].filter(Boolean));
+  const _counts=t=>(t.l>0||_teachSet.has(t.n));   // 有规定课时 或 实际有排课(含外聘 CIC/DPU,l=0 也纳入)
+  const depts=[...new Set(T.filter(_counts).map(t=>t.d))].sort();
   // v7.9.11: 先算所有老师的 % 用于 Top 10 面板
   const allTeacherStats=[];
   T.filter(t=>t.l>0).forEach(t=>{
@@ -4144,7 +4146,7 @@ function renderSta(){
   });
   let rows='';let hasData=false;
   depts.forEach(dept=>{
-    const dTchrs=T.filter(t=>t.d===dept&&t.l>0).sort((a,b)=>a.n.localeCompare(b.n));
+    const dTchrs=T.filter(t=>t.d===dept&&_counts(t)).sort((a,b)=>a.n.localeCompare(b.n));
     // 表頭 = 8 + activeSems.length 欄（#/老師/職位/各學期/教學總數/BTEC/規定/年總/%）
     rows+='<tr class="dh"><td colspan="'+(9+activeSems.length)+'">▸ '+dept+' · '+dTchrs.length+'位老师</td></tr>';
     let dWt=0;let idx=0;
@@ -4172,9 +4174,9 @@ function renderSta(){
         sdCells(d1,true)+sdCells(d2,true)+sdCells(d3,true)+
         '<td style="text-align:center;border-left:1px solid #eee;font-weight:500">'+totalWt+'</td>'+
         '<td style="text-align:center;background:#F5F4FE;padding:3px">'+(btecCount>0?'<span style="font-size:13px;font-weight:600;color:#534AB7">'+btecWt+'</span>':'<span style="color:#ddd">—</span>')+'</td>'+
-        '<td style="text-align:center;color:#888;font-size:11px">'+t.l+'</td>'+
+        '<td style="text-align:center;color:#888;font-size:11px">'+(t.l>0?t.l:'<span style="color:#ccc">—</span>')+'</td>'+
         '<td style="text-align:center"><strong id="yt-'+k+'">'+yearTotal+'</strong></td>'+
-        '<td><span class="badge '+(over?'b3':'b1')+'" id="pct-'+k+'">'+pct+'% / '+t.l+'</span></td>'+
+        '<td>'+(t.l>0?'<span class="badge '+(over?'b3':'b1')+'" id="pct-'+k+'">'+pct+'% / '+t.l+'</span>':'<span class="badge b1" id="pct-'+k+'" style="background:#eee;color:#999" title="外聘·无规定课时">外聘 —</span>')+'</td>'+
         '</tr>';
       rows+='<tr class="sta-acc" id="acc-'+k+'"><td colspan="'+(9+activeSems.length)+'" style="padding:0;border:0">'+
         '<div class="acc-wrap">'+accBlock(totalSemDetails)+'</div></td></tr>';
