@@ -1103,6 +1103,7 @@ function applyRoleVisibility(){
 
 // ══════════ ⚙️ 后台操作(参考数据管理,admin 专属;写入走 admin_* RPC,服务端再验权限)══════════
 let opsD=null, opsSec='sem', opsLoading=false, opsCatQ='', opsEdit=null;
+let _catSel=new Set();   // 课程总库多选删除
 let opsTchSort={key:'name',dir:1}, opsTchF={name:'',dept:'',pos:'',quota:'',eid:''};
 function opsTchSetSort(k){if(opsTchSort.key===k)opsTchSort.dir*=-1;else{opsTchSort.key=k;opsTchSort.dir=1;}opsRenderSec();}
 function opsTchRows(){
@@ -1124,7 +1125,7 @@ function opsCatSetSort(k){if(opsCatSort.key===k)opsCatSort.dir*=-1;else{opsCatSo
 function opsCatFiltered(){
   const q=opsCatQ.trim().toLowerCase(), f=opsCatColF;
   let list=(opsD.catalog||[]).filter(function(c){
-    if(q && !((c.code||'')+(c.zh||'')+(c.en||'')+(c.dept||'')+(c.mapping||'')+(c.block||'')+(c.version||'')+(c.note||'')).toLowerCase().includes(q))return false;
+    if(q && !((c.code||'')+(c.zh||'')+(c.en||'')+(c.dept||'')+(c.mapping||'')+(c.block||'')+(c.version||'')+(c.note||'')+(c.description||'')).toLowerCase().includes(q))return false;
     if(f.code && !(c.code||'').toLowerCase().includes(f.code.toLowerCase()))return false;
     if(f.zh && !(c.zh||'').toLowerCase().includes(f.zh.toLowerCase()))return false;
     if(f.en && !(c.en||'').toLowerCase().includes(f.en.toLowerCase()))return false;
@@ -1143,7 +1144,11 @@ function opsCatFiltered(){
   list.sort(function(a,b){if(k==='credit'||k==='block_credit')return d*((parseFloat(a[k])||0)-(parseFloat(b[k])||0));return d*String(a[k]||'').localeCompare(String(b[k]||''));});
   return list;
 }
-function opsCatRowHtml(c){return '<tr>'+
+function opsCatRowHtml(c){
+  const hasD=c.description&&String(c.description).trim();
+  const chk=_catSel.has(String(c.id))?'checked':'';
+  return '<tr ondblclick="opsCatEdit('+c.id+')" style="cursor:pointer" title="双击此行即可编辑">'+
+  '<td style="text-align:center"><input type="checkbox" class="ops-cat-chk" '+chk+' onclick="event.stopPropagation();opsCatToggle(\''+c.id+'\',this.checked)"></td>'+
   '<td style="font-family:ui-monospace,monospace">'+eh(c.code)+'</td>'+
   '<td>'+eh(c.zh)+'</td>'+
   '<td style="font-size:11px;color:#666">'+eh(c.en)+'</td>'+
@@ -1156,9 +1161,23 @@ function opsCatRowHtml(c){return '<tr>'+
   '<td style="text-align:center">'+(c.fixed?'<span style="background:#2E7D32;color:#fff;font-size:9px;font-weight:700;border-radius:3px;padding:0 4px">常</span>':'')+'</td>'+
   '<td style="font-size:10px;color:#7a5b00;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+eh(c.note)+'">'+eh(c.note||'')+'</td>'+
   '<td style="font-size:10px;color:#999;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+eh(c.block)+'">'+eh(c.block)+'</td>'+
-  '<td style="text-align:right;white-space:nowrap"><button class="ops-edit" onclick="opsStartEdit(\'cat\','+c.id+',{code:\''+jsq(c.code)+'\',zh:\''+jsq(c.zh)+'\',en:\''+jsq(c.en)+'\',dept:\''+jsq(c.dept)+'\',version:\''+jsq(c.version)+'\',credit:\''+jsq(c.credit)+'\',block_credit:\''+jsq(c.block_credit)+'\',mapping:\''+jsq(c.mapping)+'\',req:\''+jsq(c.req)+'\',fixed:\''+jsq(c.fixed)+'\',note:\''+jsq(c.note)+'\',block:\''+jsq(c.block)+'\'})">编辑</button> <button class="ops-del" onclick="opsDelCat('+c.id+',\''+jsq(c.code)+'\')">删除</button></td>'+
+  '<td style="text-align:center" title="'+(hasD?eh(c.description):'无说明')+'">'+(hasD?'<span style="cursor:help">💬</span>':'<span style="color:#ddd">—</span>')+'</td>'+
+  '<td style="text-align:right;white-space:nowrap"><button class="ops-edit" onclick="opsCatEdit('+c.id+')">编辑</button> <button class="ops-del" onclick="opsDelCat('+c.id+',\''+jsq(c.code)+'\')">删除</button></td>'+
   '</tr>';}
-function opsCatApply(){const rows=opsCatFiltered();const tb=document.getElementById('ops-cat-tb');if(tb)tb.innerHTML=rows.map(opsCatRowHtml).join('')||'<tr><td colspan="13" style="color:#aaa">无匹配</td></tr>';const ct=document.getElementById('ops-cat-count');if(ct)ct.textContent='共 '+(opsD.catalog||[]).length+' 条，筛出 '+rows.length+' 条';}
+function opsCatEdit(id){const c=(opsD.catalog||[]).find(x=>String(x.id)===String(id));if(!c)return;opsStartEdit('cat',c.id,{code:c.code,zh:c.zh,en:c.en,dept:c.dept,version:c.version,credit:c.credit,block_credit:c.block_credit,mapping:c.mapping,req:c.req,fixed:c.fixed,note:c.note,block:c.block});}
+function opsCatToggle(id,checked){if(checked)_catSel.add(String(id));else _catSel.delete(String(id));opsCatUpdBatchBtn();}
+function opsCatToggleAll(checked){const ids=opsCatFiltered().map(c=>String(c.id));ids.forEach(i=>{if(checked)_catSel.add(i);else _catSel.delete(i);});opsCatApply();}
+function opsCatUpdBatchBtn(){const b=document.getElementById('ops-cat-batch');if(b){b.style.display=_catSel.size>0?'inline-flex':'none';const n=document.getElementById('ops-cat-batch-n');if(n)n.textContent=_catSel.size;}const m=document.getElementById('ops-cat-master');if(m){const ids=opsCatFiltered().map(c=>String(c.id));m.checked=ids.length>0&&ids.every(i=>_catSel.has(i));}}
+async function opsCatBatchDel(){
+  const ids=[..._catSel];if(!ids.length)return;
+  let used=0;ids.forEach(id=>{const c=(opsD.catalog||[]).find(x=>String(x.id)===String(id));if(c&&opsUsedByCourse(c.code)>0)used++;});
+  if(!confirm('确定删除选中的 '+ids.length+' 门课程?'+(used>0?'\n\n⚠️ 其中 '+used+' 门有排课在用,删后课程下拉/对接会受影响。':'')+'\n\n不可逆。'))return;
+  let ok=0,fail=0;
+  for(const id of ids){const r=await gasPost('adminDelCatalog',{id:+id});if(r&&r.success)ok++;else fail++;}
+  _catSel.clear();
+  opsAfter({success:true},'已删除 '+ok+' 门课程'+(fail?('、失败 '+fail+' 门'):''));
+}
+function opsCatApply(){const rows=opsCatFiltered();const tb=document.getElementById('ops-cat-tb');if(tb)tb.innerHTML=rows.map(opsCatRowHtml).join('')||'<tr><td colspan="15" style="color:#aaa">无匹配</td></tr>';const ct=document.getElementById('ops-cat-count');if(ct)ct.textContent='共 '+(opsD.catalog||[]).length+' 条，筛出 '+rows.length+' 条';opsCatUpdBatchBtn();}
 function jsq(s){return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
 function opsIsEdit(sec){return !!(opsEdit&&opsEdit.sec===sec);}
 function opsEV(sec,f){return (opsEdit&&opsEdit.sec===sec&&opsEdit.vals&&opsEdit.vals[f]!=null)?opsEdit.vals[f]:'';}
@@ -1338,13 +1357,15 @@ function opsCatView(){
     '<div class="fg"><label>备注</label><input id="ops-cat-note" style="width:120px" value="'+eh(opsEV('cat','note'))+'"></div>'+
     '<div class="fg" style="flex:1 1 280px;min-width:240px"><label>说明(课程结构页 ⓘ 展开的介绍)</label><textarea id="ops-cat-desc" rows="2" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:12px;padding:5px 8px;border:0.5px solid #cbd5e1;border-radius:6px;resize:vertical" placeholder="课程简介…">'+eh(curDesc)+'</textarea></div>'+
     '<button class="btn btn-p" onclick="opsAddCat()">'+(ed?'保存修改':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>'+
-    '<div style="margin-bottom:8px"><input id="ops-cat-q" value="'+eh(opsCatQ)+'" oninput="opsCatQ=this.value;opsCatApply()" placeholder="🔍 全局搜(代码/中英文/对接/模块/版本/备注)" style="width:320px;padding:6px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:12px"> <span id="ops-cat-count" style="font-size:11px;color:#888">共 '+all.length+' 条，筛出 '+rows.length+' 条</span></div>'+
+    '<div style="margin-bottom:8px"><input id="ops-cat-q" value="'+eh(opsCatQ)+'" oninput="opsCatQ=this.value;opsCatApply()" placeholder="🔍 全局搜(代码/中英文/对接/模块/版本/备注/说明)" style="width:320px;padding:6px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:12px"> <span id="ops-cat-count" style="font-size:11px;color:#888">共 '+all.length+' 条，筛出 '+rows.length+' 条</span> <button class="btn btn-sm" id="ops-cat-batch" onclick="opsCatBatchDel()" style="display:none;color:#a32d2d;border-color:#f7c1c1;vertical-align:middle">🗑 删除选中 <span id="ops-cat-batch-n">0</span></button></div>'+
     '<div class="tbl-wrap" style="max-height:calc(100vh - 490px)"><table><thead><tr>'+
+      '<th style="background:#534AB7;text-align:center;vertical-align:top;padding:4px 5px"><input type="checkbox" id="ops-cat-master" onclick="opsCatToggleAll(this.checked)" title="全选/全不选(当前筛选)"></th>'+
       hd('code','代码',ti('code'))+hd('zh','中文名',ti('zh'))+hd('en','英文名',ti('en'))+
       hd('dept','专业',sel('dept',deptOptsF))+hd('version','版本',sel('version',verOptsF))+
       hd('req','必/选',sel('req',reqOptsF))+hd('credit','学分',ti('credit'))+
       hd('block_credit','模块学分','')+hd('mapping','对接',ti('mapping'))+
       hd('fixed','固定',sel('fixed',fixedOptsF))+hd('note','备注',ti('note'))+hd('block','模块',ti('block'))+
+      '<th style="background:#534AB7;white-space:nowrap">说明</th>'+
       '<th style="background:#534AB7"></th>'+
     '</tr></thead><tbody id="ops-cat-tb">'+rows.map(opsCatRowHtml).join('')+'</tbody></table></div>';
 }
