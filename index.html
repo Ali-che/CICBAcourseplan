@@ -1310,6 +1310,7 @@ async function opsDelGrad(pid){if(!confirm('删除「'+pid+'」的毕业学分�
 function opsCatView(){
   const ed=opsIsEdit('cat');
   const all=opsD.catalog||[];
+  const curDesc=ed?(((opsD.catalog||[]).find(c=>String(c.id)===String(opsEdit.key))||{}).description||''):'';
   const _bset={}; all.forEach(c=>{if(c.block&&!(c.block in _bset))_bset[c.block]=c.block_credit;});
   const blockDL=Object.keys(_bset).sort().map(b=>'<option value="'+eh(b)+'">').join('');
   const _cf='width:100%;box-sizing:border-box;font-size:10px;padding:2px 4px;border:0;border-radius:4px;font-weight:400;color:#333;background:#fff';
@@ -1335,6 +1336,7 @@ function opsCatView(){
     '<div class="fg"><label>固定开课</label><select id="ops-cat-fixed"><option value=""'+(opsEV('cat','fixed')?'':' selected')+'>否</option><option value="Y"'+(opsEV('cat','fixed')?' selected':'')+'>固定(常)</option></select></div>'+
     '<div class="fg"><label>模块 block(可选可填)</label><input id="ops-cat-block" list="ops-block-dl" onchange="opsFillBlockCredit()" style="width:170px" value="'+eh(opsEV('cat','block'))+'"><datalist id="ops-block-dl">'+blockDL+'</datalist></div>'+
     '<div class="fg"><label>备注</label><input id="ops-cat-note" style="width:120px" value="'+eh(opsEV('cat','note'))+'"></div>'+
+    '<div class="fg" style="flex:1 1 280px;min-width:240px"><label>说明(课程结构页 ⓘ 展开的介绍)</label><textarea id="ops-cat-desc" rows="2" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:12px;padding:5px 8px;border:0.5px solid #cbd5e1;border-radius:6px;resize:vertical" placeholder="课程简介…">'+eh(curDesc)+'</textarea></div>'+
     '<button class="btn btn-p" onclick="opsAddCat()">'+(ed?'保存修改':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>'+
     '<div style="margin-bottom:8px"><input id="ops-cat-q" value="'+eh(opsCatQ)+'" oninput="opsCatQ=this.value;opsCatApply()" placeholder="🔍 全局搜(代码/中英文/对接/模块/版本/备注)" style="width:320px;padding:6px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:12px"> <span id="ops-cat-count" style="font-size:11px;color:#888">共 '+all.length+' 条，筛出 '+rows.length+' 条</span></div>'+
     '<div class="tbl-wrap" style="max-height:calc(100vh - 490px)"><table><thead><tr>'+
@@ -1348,7 +1350,7 @@ function opsCatView(){
 }
 async function opsAddCat(){
   const code=document.getElementById('ops-cat-code').value.trim().toUpperCase();if(!code){alert('请输入课程代码');return;}
-  const fields={code,zh:document.getElementById('ops-cat-zh').value.trim(),en:document.getElementById('ops-cat-en').value.trim(),dept:document.getElementById('ops-cat-dept').value,version:document.getElementById('ops-cat-ver').value.trim(),credit:document.getElementById('ops-cat-credit').value.trim(),block_credit:document.getElementById('ops-cat-bc').value.trim(),mapping:document.getElementById('ops-cat-map').value.trim(),req:document.getElementById('ops-cat-req').value.trim(),fixed:document.getElementById('ops-cat-fixed').value,note:document.getElementById('ops-cat-note').value.trim(),block:document.getElementById('ops-cat-block').value.trim()};
+  const fields={code,zh:document.getElementById('ops-cat-zh').value.trim(),en:document.getElementById('ops-cat-en').value.trim(),dept:document.getElementById('ops-cat-dept').value,version:document.getElementById('ops-cat-ver').value.trim(),credit:document.getElementById('ops-cat-credit').value.trim(),block_credit:document.getElementById('ops-cat-bc').value.trim(),mapping:document.getElementById('ops-cat-map').value.trim(),req:document.getElementById('ops-cat-req').value.trim(),fixed:document.getElementById('ops-cat-fixed').value,note:document.getElementById('ops-cat-note').value.trim(),block:document.getElementById('ops-cat-block').value.trim(),description:document.getElementById('ops-cat-desc').value};
   if(opsIsEdit('cat'))opsAfter(await gasPost('adminUpdateCatalog',{id:opsEdit.key,fields}),'已保存 课程 '+code);
   else opsAfter(await gasPost('adminAddCatalog',{row:fields}),'已新增 课程 '+code);
 }
@@ -5649,7 +5651,7 @@ function syncTblHeight(){
         sget('depts?select=code,name&order=code'),
         sget('cohorts?select=id,dept,cohort&order=dept,cohort'),
         sget('teachers?select=name,dept,position,quota,employee_id&order=name'),
-        sget('catalog?select=id,dept,version,code,zh,en,credit,mapping,req,block,block_credit,fixed,note,source&order=code'),
+        sget('catalog?select=id,dept,version,code,zh,en,credit,mapping,req,block,block_credit,fixed,note,source,description&order=code'),
         sget('positions?select=position,quota&order=quota.desc').catch(function(){return [];}),
         sget('grad?select=pid,total,courses_count,course_n,course_cr,intern_n,intern_cr,intern_sub&order=pid').catch(function(){return [];})
       ]);
@@ -5660,7 +5662,7 @@ function syncTblHeight(){
         depts:(de||[]).map(x=>({code:x.code,name:x.name||''})),
         cohorts:(ch||[]).map(x=>({id:x.id,dept:x.dept||'',cohort:x.cohort||''})),
         teachers:(te||[]).map(x=>({name:x.name,dept:x.dept||'',position:x.position||'',quota:+x.quota||0,employee_id:x.employee_id||''})),
-        catalog:(ca||[]).map(x=>({id:x.id,dept:x.dept||'',version:x.version||'',code:x.code||'',zh:x.zh||'',en:x.en||'',credit:x.credit||'',mapping:x.mapping||'',req:x.req||'',block:x.block||'',block_credit:x.block_credit||'',fixed:x.fixed||'',note:x.note||'',source:x.source||''}))};
+        catalog:(ca||[]).map(x=>({id:x.id,dept:x.dept||'',version:x.version||'',code:x.code||'',zh:x.zh||'',en:x.en||'',credit:x.credit||'',mapping:x.mapping||'',req:x.req||'',block:x.block||'',block_credit:x.block_credit||'',fixed:x.fixed||'',note:x.note||'',source:x.source||'',description:x.description||''}))};
     }
     return{success:true};
   };

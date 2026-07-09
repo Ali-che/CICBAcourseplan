@@ -110,7 +110,7 @@ function buildData(rows){
       const key=eff+'||'+need;
       if(!gm[key]){gm[key]={cat:eff,need:need,courses:[]};order.push(key);}
       const code=get(r,'课程代码');
-      gm[key].courses.push({code:code,zh:get(r,'中文名'),en:get(r,'英文名'),cr:get(r,'学分'),link:get(r,'对接课程'),fixed:get(r,'固定开课'),memo:get(r,'备注'),desc:DESC[code.replace(/ /g,'')]||''});
+      gm[key].courses.push({code:code,zh:get(r,'中文名'),en:get(r,'英文名'),cr:get(r,'学分'),link:get(r,'对接课程'),fixed:get(r,'固定开课'),memo:get(r,'备注'),desc:(DBDESC[code.replace(/ /g,'').toUpperCase()]||DESC[code.replace(/ /g,'')]||'')});
     });
     let groups=order.map(k=>gm[k]);
     const baseOf=c=>{for(const s of['-必修','-选修','-主修'])if(c.endsWith(s))return c.slice(0,-s.length);return c;};
@@ -193,13 +193,16 @@ function parseGrad(text){
     if(!k||!v)continue; const n=parseFloat(v); if(!isNaN(n))v=String(Math.round(n)); m[k]=v;}
   return m;
 }
+var DBDESC={};   // catalog.description(后台可编辑),覆盖写死的 DESC
 function loadSheet(){
   document.getElementById('status').textContent='从 Supabase 载入中…';
   const H={apikey:SKEY};
   Promise.all([
-    fetch(SUPA+'/rest/v1/catalog?select=dept,version,block,req,block_credit,code,zh,en,credit,mapping,fixed,note,source&order=id&limit=5000',{headers:H,cache:'no-store'}).then(r=>r.json()),
+    fetch(SUPA+'/rest/v1/catalog?select=dept,version,block,req,block_credit,code,zh,en,credit,mapping,fixed,note,source,description&order=id&limit=5000',{headers:H,cache:'no-store'}).then(r=>r.json()),
     fetch(SUPA+'/rest/v1/grad?select=pid,total,courses_count,course_n,course_cr,intern_n,intern_cr,intern_sub',{headers:H,cache:'no-store'}).then(r=>r.json()).catch(()=>[])
   ]).then(([cat,grad])=>{
+    // 课程说明:优先用 catalog.description(后台可编辑),没有再用写死的 DESC 兜底
+    DBDESC={}; (cat||[]).forEach(x=>{if(x&&x.code&&x.description)DBDESC[String(x.code).replace(/ /g,'').toUpperCase()]=x.description;});
     // 组成跟原本 Sheet 一样的「中文表头 + 行」结构，喂给既有 buildData（解析逻辑不动）
     const rows=[['专业','版本','版块中文','必修/选修','区块学分','课程代码','中文名','英文名','学分','对接课程','固定开课','备注','数据来源']];
     (cat||[]).forEach(x=>rows.push([x.dept||'',x.version||'',x.block||'',x.req||'',x.block_credit||'',x.code||'',x.zh||'',x.en||'',x.credit||'',x.mapping||'',x.fixed||'',x.note||'',x.source||'']));
