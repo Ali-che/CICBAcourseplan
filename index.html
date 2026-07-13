@@ -1408,7 +1408,7 @@ function logout(){
 }
 
 // ══════════ 站内消息(私信 + 公告)══════════
-let _msgData={me:'',items:[]}, _msgTab='dm', _msgPeer=null, _msgLoading=false;
+let _msgData={me:'',items:[]}, _msgTab='dm', _msgPeer=null, _msgLoading=false, _msgUsers=[];
 async function refreshMsg(){
   if(!currentEditor||_msgLoading)return; _msgLoading=true;
   try{const r=await gasPost('msgInbox',{});if(r&&r.success){_msgData={me:r.me||currentEditor,items:r.items||[]};msgUpdBell();const modal=document.getElementById('msg-modal');if(modal){const ae=document.activeElement;const typing=ae&&['msg-body','msg-reply','msg-ann-body'].indexOf(ae.id)>=0;if(!typing)msgRenderPanel();}}}catch(e){}
@@ -1416,13 +1416,13 @@ async function refreshMsg(){
 }
 function _msgUnread(){const me=_msgData.me;return (_msgData.items||[]).filter(m=>!m.read&&m.from_name!==me).length;}
 function msgUpdBell(){const b=document.getElementById('msg-unread');if(!b)return;const n=_msgUnread();if(n>0){b.textContent=n>99?'99+':n;b.style.display='';}else b.style.display='none';}
-function openMsgPanel(){if(!currentEditor){alert('请先登录');return;}let m=document.getElementById('msg-modal');if(!m){m=document.createElement('div');m.id='msg-modal';m.className='modal-overlay open';m.style.zIndex=4000;document.body.appendChild(m);}_msgPeer=null;_msgTab='dm';msgRenderPanel();refreshMsg();}
+async function openMsgPanel(){if(!currentEditor){alert('请先登录');return;}let m=document.getElementById('msg-modal');if(!m){m=document.createElement('div');m.id='msg-modal';m.className='modal-overlay open';m.style.zIndex=4000;document.body.appendChild(m);}_msgPeer=null;_msgTab='dm';msgRenderPanel();try{const u=await gasPost('msgUsers',{});if(u&&u.success)_msgUsers=u.users||[];}catch(e){}msgRenderPanel();refreshMsg();}
 function closeMsgPanel(){const m=document.getElementById('msg-modal');if(m)document.body.removeChild(m);}
 function msgSetTab(t){_msgTab=t;_msgPeer=null;msgRenderPanel();if(t==='announce')_msgMarkAnnRead();}
 function _msgBack(){_msgPeer=null;msgRenderPanel();}
 function _msgFmtTime(iso){try{const d=new Date(iso),now=new Date();const sd=d.toDateString()===now.toDateString();const hm=d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});return sd?hm:((d.getMonth()+1)+'/'+d.getDate()+' '+hm);}catch(e){return '';}}
 function _msgPeers(){const me=_msgData.me;const dms=(_msgData.items||[]).filter(m=>m.kind==='dm');const map={};dms.forEach(m=>{const o=m.from_name===me?m.to_name:m.from_name;if(!o)return;if(!map[o])map[o]={peer:o,last:m,unread:0};if(new Date(m.created_at)>new Date(map[o].last.created_at))map[o].last=m;if(!m.read&&m.from_name!==me)map[o].unread++;});return Object.values(map).sort((a,b)=>new Date(b.last.created_at)-new Date(a.last.created_at));}
-function _msgRecipients(){const me=_msgData.me;const s={};(typeof T!=='undefined'?T:[]).forEach(t=>{if(t.n&&t.n!==me)s[t.n]=1;});_msgPeers().forEach(p=>{if(p.peer!==me)s[p.peer]=1;});return Object.keys(s).sort();}
+function _msgRecipients(){const me=_msgData.me;return (_msgUsers||[]).filter(n=>n&&n!==me);}  // 只列有 PIN 的人
 async function _msgMarkAnnRead(){const ids=(_msgData.items||[]).filter(m=>m.kind==='announce'&&!m.read&&m.from_name!==_msgData.me).map(m=>m.id);if(ids.length){await gasPost('msgMarkRead',{ids});refreshMsg();}}
 async function msgOpenThread(peer){_msgPeer=peer;msgRenderPanel();const me=_msgData.me;const ids=(_msgData.items||[]).filter(m=>m.kind==='dm'&&m.from_name===peer&&m.to_name===me&&!m.read).map(m=>m.id);if(ids.length){await gasPost('msgMarkRead',{ids});refreshMsg();}}
 async function msgSendDM(){const to=document.getElementById('msg-to').value;const b=document.getElementById('msg-body').value.trim();if(!to){alert('请选择收件人');return;}if(!b){alert('请输入内容');return;}const r=await gasPost('msgSend',{to,body:b});if(r&&r.success){_msgPeer=to;await refreshMsg();}else alert('发送失败:'+((r&&r.error)||'?'));}
@@ -5785,6 +5785,7 @@ function syncTblHeight(){
     if(action==='msgSend')return srpc('msg_send',{p_pin:_pin,p_to:body.to,p_body:body.body});
     if(action==='msgAnnounce')return srpc('msg_announce',{p_pin:_pin,p_body:body.body});
     if(action==='msgInbox')return srpc('msg_inbox',{p_pin:_pin});
+    if(action==='msgUsers')return srpc('msg_users',{p_pin:_pin});
     if(action==='msgMarkRead')return srpc('msg_mark_read',{p_pin:_pin,p_ids:body.ids});
     return{success:false,error:'未知 action '+action};
   };
