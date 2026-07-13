@@ -412,6 +412,9 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 </div>
 <div class="sync-bar" id="sync-bar"><div class="sync-bar-inner" id="sync-bar-inner"></div></div>
 
+<!-- 公告横幅:有未读公告时显示 -->
+<div id="ann-banner" style="display:none"></div>
+
 <!-- ══ 主标签 ═════════════════════════════ -->
 <div class="tabs">
   <button class="tab active" onclick="switchTab('sch')">📋 排课表</button>
@@ -1411,12 +1414,27 @@ function logout(){
 let _msgData={me:'',items:[]}, _msgTab='dm', _msgPeer=null, _msgLoading=false, _msgUsers=[];
 async function refreshMsg(){
   if(!currentEditor||_msgLoading)return; _msgLoading=true;
-  try{const r=await gasPost('msgInbox',{});if(r&&r.success){_msgData={me:r.me||currentEditor,items:r.items||[]};msgUpdBell();const modal=document.getElementById('msg-modal');if(modal){const ae=document.activeElement;const typing=ae&&['msg-body','msg-reply','msg-ann-body'].indexOf(ae.id)>=0;if(!typing)msgRenderPanel();}}}catch(e){}
+  try{const r=await gasPost('msgInbox',{});if(r&&r.success){_msgData={me:r.me||currentEditor,items:r.items||[]};msgUpdBell();renderAnnBanner();const modal=document.getElementById('msg-modal');if(modal){const ae=document.activeElement;const typing=ae&&['msg-body','msg-reply','msg-ann-body'].indexOf(ae.id)>=0;if(!typing)msgRenderPanel();}}}catch(e){}
   _msgLoading=false;
 }
 function _msgUnread(){const me=_msgData.me;return (_msgData.items||[]).filter(m=>!m.read&&m.from_name!==me).length;}
 function msgUpdBell(){const b=document.getElementById('msg-unread');if(!b)return;const n=_msgUnread();if(n>0){b.textContent=n>99?'99+':n;b.style.display='';}else b.style.display='none';}
-async function openMsgPanel(){if(!currentEditor){alert('请先登录');return;}let m=document.getElementById('msg-modal');if(!m){m=document.createElement('div');m.id='msg-modal';m.className='modal-overlay open';m.style.zIndex=4000;document.body.appendChild(m);}_msgPeer=null;_msgTab='dm';msgRenderPanel();try{const u=await gasPost('msgUsers',{});if(u&&u.success)_msgUsers=u.users||[];}catch(e){}msgRenderPanel();refreshMsg();}
+async function openMsgPanel(tab){if(!currentEditor){alert('请先登录');return;}let m=document.getElementById('msg-modal');if(!m){m=document.createElement('div');m.id='msg-modal';m.className='modal-overlay open';m.style.zIndex=4000;document.body.appendChild(m);}_msgPeer=null;_msgTab=tab||'dm';msgRenderPanel();try{const u=await gasPost('msgUsers',{});if(u&&u.success)_msgUsers=u.users||[];}catch(e){}msgRenderPanel();if(_msgTab==='announce')_msgMarkAnnRead();refreshMsg();}
+// 顶部公告横幅:有未读公告时显示
+function renderAnnBanner(){
+  const b=document.getElementById('ann-banner'); if(!b)return;
+  const me=_msgData.me;
+  const un=(_msgData.items||[]).filter(m=>m.kind==='announce'&&!m.read&&m.from_name!==me).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  if(!un.length){b.style.display='none';b.innerHTML='';return;}
+  const l=un[0],more=un.length-1;
+  b.style.display='';
+  b.innerHTML='<div style="display:flex;align-items:center;gap:10px;background:linear-gradient(90deg,#FFF3C4,#FFF8E1);border:0.5px solid #FCD34D;border-radius:10px;padding:9px 14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)">'+
+    '<span style="font-size:16px;flex-shrink:0">📢</span>'+
+    '<div style="flex:1;min-width:0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" onclick="openMsgPanel(\'announce\')" title="点击查看全部公告"><b style="font-size:12px;color:#854F0B">'+eh(l.from_name)+':</b> <span style="font-size:12px;color:#5c4a12">'+eh(String(l.body).slice(0,90))+'</span>'+(more>0?' <span style="font-size:11px;color:#b08900">(+还有 '+more+' 条未读)</span>':'')+'</div>'+
+    '<button class="btn btn-sm" onclick="dismissAnnBanner()" style="border-color:#FCD34D;color:#854F0B;flex-shrink:0" title="标记已读并隐藏">知道了 ✕</button>'+
+  '</div>';
+}
+async function dismissAnnBanner(){const me=_msgData.me;const ids=(_msgData.items||[]).filter(m=>m.kind==='announce'&&!m.read&&m.from_name!==me).map(m=>m.id);const b=document.getElementById('ann-banner');if(b){b.style.display='none';}if(ids.length){await gasPost('msgMarkRead',{ids});await refreshMsg();}}
 function closeMsgPanel(){const m=document.getElementById('msg-modal');if(m)document.body.removeChild(m);}
 function msgSetTab(t){_msgTab=t;_msgPeer=null;msgRenderPanel();if(t==='announce')_msgMarkAnnRead();}
 function _msgBack(){_msgPeer=null;msgRenderPanel();}
