@@ -384,6 +384,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     <button class="btn btn-sm" onclick="importData()">📂 导入 JSON</button>
     <button class="btn btn-sm" id="btn-refresh" onclick="reloadRef()" style="display:none">↻ 刷新参考数据</button>
     <button class="btn btn-sm" onclick="showErrorLog()" style="color:#854F0B;border-color:#FCD34D;display:none" title="查看后端错误日志（最近 50 条）">🩺 错误日志</button>
+    <button class="btn btn-sm" id="msg-bell" onclick="openMsgPanel()" style="position:relative" title="站内消息(私信/公告)">🔔 消息<span id="msg-unread" style="display:none;position:absolute;top:-7px;right:-7px;background:#e53935;color:#fff;font-size:9px;font-weight:700;border-radius:10px;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 3px">0</span></button>
     <span id="editor-badge" class="badge b5" style="font-size:11px;padding:5px 12px" title="当前操作人（每次新增/编辑/删除都会记录到 Sheet）">👤 —</span>
     <span id="online-badge" class="badge b1" style="font-size:11px;padding:5px 12px;cursor:pointer;display:none" onclick="showOnlineList()" title="点击查看在线名单">👥 —</span>
     <button class="btn btn-sm" onclick="logout()" style="color:#a32d2d;border-color:#f7c1c1" title="登出系统">🔒 登出</button>
@@ -1406,6 +1407,67 @@ function logout(){
   setTimeout(()=>document.getElementById('pin-input').focus(),100);
 }
 
+// ══════════ 站内消息(私信 + 公告)══════════
+let _msgData={me:'',items:[]}, _msgTab='dm', _msgPeer=null, _msgLoading=false;
+async function refreshMsg(){
+  if(!currentEditor||_msgLoading)return; _msgLoading=true;
+  try{const r=await gasPost('msgInbox',{});if(r&&r.success){_msgData={me:r.me||currentEditor,items:r.items||[]};msgUpdBell();const modal=document.getElementById('msg-modal');if(modal){const ae=document.activeElement;const typing=ae&&['msg-body','msg-reply','msg-ann-body'].indexOf(ae.id)>=0;if(!typing)msgRenderPanel();}}}catch(e){}
+  _msgLoading=false;
+}
+function _msgUnread(){const me=_msgData.me;return (_msgData.items||[]).filter(m=>!m.read&&m.from_name!==me).length;}
+function msgUpdBell(){const b=document.getElementById('msg-unread');if(!b)return;const n=_msgUnread();if(n>0){b.textContent=n>99?'99+':n;b.style.display='';}else b.style.display='none';}
+function openMsgPanel(){if(!currentEditor){alert('请先登录');return;}let m=document.getElementById('msg-modal');if(!m){m=document.createElement('div');m.id='msg-modal';m.className='modal-overlay open';m.style.zIndex=4000;document.body.appendChild(m);}_msgPeer=null;_msgTab='dm';msgRenderPanel();refreshMsg();}
+function closeMsgPanel(){const m=document.getElementById('msg-modal');if(m)document.body.removeChild(m);}
+function msgSetTab(t){_msgTab=t;_msgPeer=null;msgRenderPanel();if(t==='announce')_msgMarkAnnRead();}
+function _msgBack(){_msgPeer=null;msgRenderPanel();}
+function _msgFmtTime(iso){try{const d=new Date(iso),now=new Date();const sd=d.toDateString()===now.toDateString();const hm=d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});return sd?hm:((d.getMonth()+1)+'/'+d.getDate()+' '+hm);}catch(e){return '';}}
+function _msgPeers(){const me=_msgData.me;const dms=(_msgData.items||[]).filter(m=>m.kind==='dm');const map={};dms.forEach(m=>{const o=m.from_name===me?m.to_name:m.from_name;if(!o)return;if(!map[o])map[o]={peer:o,last:m,unread:0};if(new Date(m.created_at)>new Date(map[o].last.created_at))map[o].last=m;if(!m.read&&m.from_name!==me)map[o].unread++;});return Object.values(map).sort((a,b)=>new Date(b.last.created_at)-new Date(a.last.created_at));}
+function _msgRecipients(){const me=_msgData.me;const s={};(typeof T!=='undefined'?T:[]).forEach(t=>{if(t.n&&t.n!==me)s[t.n]=1;});_msgPeers().forEach(p=>{if(p.peer!==me)s[p.peer]=1;});return Object.keys(s).sort();}
+async function _msgMarkAnnRead(){const ids=(_msgData.items||[]).filter(m=>m.kind==='announce'&&!m.read&&m.from_name!==_msgData.me).map(m=>m.id);if(ids.length){await gasPost('msgMarkRead',{ids});refreshMsg();}}
+async function msgOpenThread(peer){_msgPeer=peer;msgRenderPanel();const me=_msgData.me;const ids=(_msgData.items||[]).filter(m=>m.kind==='dm'&&m.from_name===peer&&m.to_name===me&&!m.read).map(m=>m.id);if(ids.length){await gasPost('msgMarkRead',{ids});refreshMsg();}}
+async function msgSendDM(){const to=document.getElementById('msg-to').value;const b=document.getElementById('msg-body').value.trim();if(!to){alert('请选择收件人');return;}if(!b){alert('请输入内容');return;}const r=await gasPost('msgSend',{to,body:b});if(r&&r.success){_msgPeer=to;await refreshMsg();}else alert('发送失败:'+((r&&r.error)||'?'));}
+async function msgReplyThread(){const el=document.getElementById('msg-reply');const b=(el?el.value:'').trim();if(!b||!_msgPeer)return;const r=await gasPost('msgSend',{to:_msgPeer,body:b});if(r&&r.success){if(el)el.value='';await refreshMsg();}else alert('发送失败:'+((r&&r.error)||'?'));}
+async function msgSendAnnounce(){const el=document.getElementById('msg-ann-body');const b=(el?el.value:'').trim();if(!b)return;const r=await gasPost('msgAnnounce',{body:b});if(r&&r.success){if(el)el.value='';await refreshMsg();}else alert('发送失败:'+((r&&r.error)||'?'));}
+function msgRenderPanel(){
+  const modal=document.getElementById('msg-modal');if(!modal)return;
+  const me=_msgData.me||currentEditor;
+  const isAdmin=(currentRole==='admin'||currentRole==='master'||currentRole==='director'||currentRole==='主任');
+  const dmU=(_msgData.items||[]).filter(m=>m.kind==='dm'&&!m.read&&m.from_name!==me).length;
+  const anU=(_msgData.items||[]).filter(m=>m.kind==='announce'&&!m.read&&m.from_name!==me).length;
+  const tab=(id,label,n)=>'<button onclick="msgSetTab(\''+id+'\')" style="flex:1;padding:9px;border:0;background:'+(_msgTab===id?'#EEEDFE':'#fff')+';color:'+(_msgTab===id?'#3C3489':'#888')+';font-weight:'+(_msgTab===id?'700':'500')+';cursor:pointer;font-family:inherit;font-size:13px;border-bottom:2px solid '+(_msgTab===id?'#534AB7':'transparent')+'">'+label+(n>0?' <span style="background:#e53935;color:#fff;font-size:10px;border-radius:8px;padding:0 5px">'+n+'</span>':'')+'</button>';
+  let body='';
+  if(_msgTab==='dm'){ body=_msgPeer?_msgThreadHtml(_msgPeer,me):_msgDmListHtml(me); }
+  else { body=_msgAnnHtml(me,isAdmin); }
+  modal.innerHTML='<div class="modal-box" style="max-width:560px;height:76vh;display:flex;flex-direction:column">'+
+    '<div class="modal-hdr"><h3>🔔 站内消息 · '+eh(me)+'</h3><button class="modal-close" onclick="closeMsgPanel()">✕</button></div>'+
+    '<div style="display:flex;border-bottom:0.5px solid #e0e0e0;flex-shrink:0">'+tab('dm','私信',dmU)+tab('announce','公告',anU)+'</div>'+
+    '<div class="modal-body" style="flex:1;overflow-y:auto;padding:12px 16px">'+body+'</div>'+
+  '</div>';
+}
+function _msgDmListHtml(me){
+  const recips=_msgRecipients();
+  const compose='<div style="background:#F7F6FE;border-radius:8px;padding:10px;margin-bottom:12px">'+
+    '<div style="font-size:12px;font-weight:600;color:#534AB7;margin-bottom:6px">✍️ 写私信</div>'+
+    '<select id="msg-to" style="width:100%;margin-bottom:6px"><option value="">— 选收件人 —</option>'+recips.map(n=>'<option value="'+eh(n)+'">'+eh(n)+'</option>').join('')+'</select>'+
+    '<textarea id="msg-body" rows="2" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:12px;padding:6px;border:0.5px solid #cbd5e1;border-radius:6px;resize:vertical" placeholder="内容…"></textarea>'+
+    '<div style="text-align:right;margin-top:6px"><button class="btn btn-p btn-sm" onclick="msgSendDM()">发送</button></div></div>';
+  const peers=_msgPeers();
+  const list=peers.length?peers.map(p=>{const last=p.last;const preview=(last.from_name===me?'我: ':'')+eh(String(last.body).slice(0,30));return '<div onclick="msgOpenThread(\''+jsq(p.peer)+'\')" style="display:flex;align-items:center;gap:8px;padding:9px 6px;border-bottom:0.5px solid #eee;cursor:pointer" onmouseover="this.style.background=\'#f5f4fe\'" onmouseout="this.style.background=\'\'"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">'+eh(p.peer)+(p.unread?' <span style="background:#e53935;color:#fff;font-size:9px;border-radius:8px;padding:0 5px">'+p.unread+'</span>':'')+'</div><div style="font-size:11px;color:#999;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+preview+'</div></div><div style="font-size:10px;color:#bbb;white-space:nowrap">'+_msgFmtTime(last.created_at)+'</div></div>';}).join(''):'<div style="text-align:center;color:#aaa;padding:20px;font-size:12px">还没有私信</div>';
+  return compose+'<div style="font-size:11px;color:#888;margin-bottom:4px">对话</div>'+list;
+}
+function _msgThreadHtml(peer,me){
+  const msgs=(_msgData.items||[]).filter(m=>m.kind==='dm'&&((m.from_name===me&&m.to_name===peer)||(m.from_name===peer&&m.to_name===me))).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  const bubbles=msgs.map(m=>{const mine=m.from_name===me;return '<div style="display:flex;justify-content:'+(mine?'flex-end':'flex-start')+';margin-bottom:8px"><div style="max-width:75%;background:'+(mine?'#534AB7':'#F0F0F5')+';color:'+(mine?'#fff':'#111')+';padding:7px 11px;border-radius:12px;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word">'+eh(m.body)+'<div style="font-size:9px;opacity:.6;margin-top:2px;text-align:right">'+_msgFmtTime(m.created_at)+'</div></div></div>';}).join('')||'<div style="text-align:center;color:#aaa;padding:16px;font-size:12px">开始对话</div>';
+  return '<div style="margin-bottom:8px"><button class="btn btn-sm" onclick="_msgBack()">← 返回</button> <b style="margin-left:6px">'+eh(peer)+'</b></div><div style="margin-bottom:10px">'+bubbles+'</div><div style="display:flex;gap:6px"><textarea id="msg-reply" rows="2" style="flex:1;box-sizing:border-box;font-family:inherit;font-size:12px;padding:6px;border:0.5px solid #cbd5e1;border-radius:6px;resize:vertical" placeholder="回复 '+eh(peer)+'…"></textarea><button class="btn btn-p btn-sm" onclick="msgReplyThread()">发送</button></div>';
+}
+function _msgAnnHtml(me,isAdmin){
+  let compose='';
+  if(isAdmin)compose='<div style="background:#FFF8E1;border-radius:8px;padding:10px;margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:#854F0B;margin-bottom:6px">📢 发公告(全体可见)</div><textarea id="msg-ann-body" rows="2" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:12px;padding:6px;border:0.5px solid #cbd5e1;border-radius:6px;resize:vertical" placeholder="公告内容…"></textarea><div style="text-align:right;margin-top:6px"><button class="btn btn-p btn-sm" onclick="msgSendAnnounce()">发布</button></div></div>';
+  const anns=(_msgData.items||[]).filter(m=>m.kind==='announce').sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  const list=anns.length?anns.map(m=>'<div style="border-left:3px solid #FCD34D;background:#FFFDF5;padding:8px 12px;border-radius:0 6px 6px 0;margin-bottom:8px"><div style="font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word">'+eh(m.body)+'</div><div style="font-size:10px;color:#999;margin-top:4px">'+eh(m.from_name)+' · '+_msgFmtTime(m.created_at)+'</div></div>').join(''):'<div style="text-align:center;color:#aaa;padding:20px;font-size:12px">还没有公告</div>';
+  return compose+list;
+}
+
 window.addEventListener('DOMContentLoaded', checkAuth);
 
 // FIX: Modal 拖選保護 —— 只有 mousedown 起點就在 overlay 上、且 click 結束也在 overlay 上才關閉
@@ -1752,6 +1814,7 @@ let pollTimer=null;
 function startRemotePoll(){
   if(!SHEETS_URL||pollTimer)return;
   pollTimer=setInterval(async()=>{
+    if(loadOK&&currentEditor&&typeof refreshMsg==='function')refreshMsg();  // 站内消息:不受编辑框暂停影响
     // v8.17: 编辑框开着时暂停轮询 —— 编辑中途不再被「云端有人编辑，储存暂停」横条打断
     if(!loadOK||staleWarningShown||_anyModalOpen())return;
     try{
@@ -1765,6 +1828,7 @@ function startRemotePoll(){
       }
     }catch(e){}
   },POLL_INTERVAL_MS);
+  setTimeout(()=>{if(currentEditor&&typeof refreshMsg==='function')refreshMsg();},1500); // 载入后尽快拉一次消息,铃铛立刻有数
 }
 function showStaleWarning(){
   if(staleWarningShown)return;
@@ -5718,6 +5782,10 @@ function syncTblHeight(){
     if(action==='adminDelPosition')return srpc('admin_del_position',{p_pin:_pin,p_position:body.position});
     if(action==='adminUpsertGrad'){const N=v=>(v==null||v===''?null:+v);return srpc('admin_upsert_grad',{p_pin:_pin,p_pid:body.pid,p_total:+body.total||0,p_course_n:N(body.courseN),p_course_cr:N(body.courseCr),p_intern_n:N(body.internN),p_intern_cr:N(body.internCr),p_intern_sub:!!body.internSub});}
     if(action==='adminDelGrad')return srpc('admin_del_grad',{p_pin:_pin,p_pid:body.pid});
+    if(action==='msgSend')return srpc('msg_send',{p_pin:_pin,p_to:body.to,p_body:body.body});
+    if(action==='msgAnnounce')return srpc('msg_announce',{p_pin:_pin,p_body:body.body});
+    if(action==='msgInbox')return srpc('msg_inbox',{p_pin:_pin});
+    if(action==='msgMarkRead')return srpc('msg_mark_read',{p_pin:_pin,p_ids:body.ids});
     return{success:false,error:'未知 action '+action};
   };
 
