@@ -5960,12 +5960,10 @@ function syncTblHeight(){
     if(a==='whoOnline')return{success:true,users:[]};
     if(a==='listBackups')return{success:true,snapshots:[]};
     if(a==='btecData'){
-      const[st,un,pl,iv]=await Promise.all([
-        sget('btec_student?select=*&order=dept,sid').catch(function(){return [];}),
-        sget('btec_unit?select=*&order=seq').catch(function(){return [];}),
-        sget('btec_plan?select=*').catch(function(){return [];}),
-        sget('btec_iv?select=*').catch(function(){return [];})]);
-      return{success:true,students:st||[],units:un||[],plan:pl||[],iv:iv||[]};
+      // 学生个资不再匿名直读:改走验 PIN 的 security-definer RPC btec_data(p_pin)
+      const r=await srpc('btec_data',{p_pin:_pin}).catch(function(){return null;});
+      if(r&&!r.error)return{success:true,students:r.students||[],units:r.units||[],plan:r.plan||[],iv:r.iv||[]};
+      return{success:false,students:[],units:[],plan:[],iv:[],error:(r&&r.error)||'需要登入'};
     }
     if(a==='opsData'){
       const[se,de,ch,te,ca,po,gr]=await Promise.all([
