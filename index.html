@@ -1526,7 +1526,7 @@ function _btecStudents(){
   const q=((document.getElementById('btec-q')||{}).value||'').trim().toLowerCase();
   if(df)list=list.filter(s=>s.dept===df);
   if(q)list=list.filter(s=>((s.sid||'')+(s.zh||'')+(s.en||'')).toLowerCase().includes(q));
-  return list.sort((a,b)=>String(a.dept||'').localeCompare(String(b.dept||''))||String(a.sid||'').localeCompare(String(b.sid||'')));
+  return list.sort((a,b)=>String(a.sid||'').localeCompare(String(b.sid||'')));  // 按学号排序
 }
 function renderBtec(){
   const isAdmin=(currentRole==='admin');
@@ -1541,6 +1541,7 @@ function renderBtec(){
   if(em)em.style.display='none';
   const showMeta=((document.getElementById('btec-meta')||{}).checked)||false;
   const semSet={};studs.forEach(s=>units.forEach(u=>{const c=_btecCell(s,u.code);if(c.sem)semSet[c.sem]=1;}));
+  (typeof SEMS!=='undefined'?SEMS:[]).forEach(x=>{if(x)semSet[x]=1;});  // 固定学期骨架总是显示
   const sems=Object.keys(semSet).sort();
   const th=t=>'<th style="position:sticky;top:0;background:#534AB7;color:#fff;padding:4px 6px;font-size:10px;white-space:nowrap;z-index:2">'+t+'</th>';
   const corner='<th style="position:sticky;left:0;top:0;background:#3C3489;color:#fff;z-index:3;min-width:150px;text-align:left;padding:4px 8px">BTEC 单元＼学生</th>';
@@ -1552,7 +1553,9 @@ function renderBtec(){
   h+=rowlabel('英文',studs.map(s=>'<td style="text-align:center;padding:2px 4px;white-space:nowrap;font-size:10px;color:#666">'+eh(s.en||'')+'</td>').join(''));
   h+='</thead><tbody>';
   units.forEach(u=>{
-    const rl='<td style="position:sticky;left:0;background:#fff;z-index:1;padding:3px 8px;white-space:nowrap;border-top:0.5px solid #eee"><b style="color:#333">'+eh(u.name_en||'')+'</b> <span style="font-family:ui-monospace;font-size:9px;color:#185FA5">'+eh(u.code||'')+'</span>'+(u.req==='Mandatory'?' <span style="font-size:8px;background:#534AB7;color:#fff;border-radius:3px;padding:0 3px">必</span>':'')+(showMeta?'<div style="font-size:9px;color:#aaa">'+(u.glh||'')+'h · '+eh(u.instructor||'')+'</div>':'')+'</td>';
+    const reqTag=(u.req==='Mandatory')?'<span style="font-size:8px;background:#534AB7;color:#fff;border-radius:3px;padding:0 4px">必修</span>':'<span style="font-size:8px;background:#eee;color:#888;border-radius:3px;padding:0 4px">选修</span>';
+    const asTag=u.assess?' <span style="font-size:8px;background:'+(String(u.assess).indexOf('Set')>=0?'#FDE7E7;color:#c0392b':'#E8F5E9;color:#2e7d32')+';border-radius:3px;padding:0 4px">'+eh(u.assess)+'</span>':'';
+    const rl='<td style="position:sticky;left:0;background:#fff;z-index:1;padding:3px 8px;white-space:nowrap;border-top:0.5px solid #eee"><b style="color:#333">'+eh(u.name_en||'')+'</b> <span style="font-family:ui-monospace;font-size:9px;color:#185FA5">'+eh(u.code||'')+'</span> '+reqTag+asTag+(showMeta?'<div style="font-size:9px;color:#aaa">'+(u.glh||'')+'h · 讲师 '+eh(u.instructor||'—')+' · IV '+eh(u.verifier||'—')+'</div>':'')+'</td>';
     const cells=studs.map(s=>{const c=_btecCell(s,u.code);const col=_btecSemC(c.sem);const style=c.sem?('background:'+col[0]+';color:'+col[1]):'';return '<td onclick="'+(isAdmin?'btecEditCell('+s.id+',\''+jsq(u.code)+'\')':'')+'" style="text-align:center;padding:3px 5px;white-space:nowrap;border-top:0.5px solid #eee;'+(isAdmin?'cursor:pointer;':'')+style+(c.manual?';box-shadow:inset 0 0 0 1.5px #534AB7':'')+'" title="'+(c.manual?'手动设定':(c.sem?'来自排课(自动)':''))+'">'+(c.sem||'')+'</td>';}).join('');
     h+='<tr>'+rl+cells+'</tr>';
   });
