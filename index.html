@@ -855,6 +855,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <button class="btn btn-sm no-print" onclick="printPanel('btec')">🖨️ 列印</button>
     </div>
   </div>
+  <div id="btec-title" style="margin-bottom:10px"></div>
   <div id="btec-addbar" class="no-print" style="display:none;background:#F7F6FE;border-radius:8px;padding:9px 12px;margin-bottom:10px"></div>
   <div class="card"><div class="tbl-wrap" style="overflow:auto;max-height:calc(100vh - 250px)"><div id="btec-matrix"></div></div><div class="empty" id="btec-em" style="display:none">还没有 BTEC 学生</div></div>
   <div id="btec-iv-wrap" style="margin-top:12px"></div>
@@ -1567,7 +1568,8 @@ function renderBtec(){
   if(!wrap)return;
   const ab=document.getElementById('btec-addbar');
   if(ab){if(isAdmin){ab.style.display='';ab.innerHTML=_btecAddBar();}else ab.style.display='none';}
-  const units0=(_btec.units||[]).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
+  const _reqRank=r=>(r==='Mandatory'?0:r==='Optional'?1:2);
+  const units0=(_btec.units||[]).slice().sort((a,b)=>(_reqRank(a.req)-_reqRank(b.req))||((a.seq||0)-(b.seq||0)));
   const studs=_btecStudents();
   renderBtecIV(units0,isAdmin);
   // 学年学期筛选:选项=表格里真的出现过的学期
@@ -1582,6 +1584,8 @@ function renderBtec(){
   const semSet={};studs.forEach(s=>units.forEach(u=>{const c=_btecCell(s,u.code);if(c.sem)semSet[c.sem]=1;}));
   (typeof SEMS!=='undefined'?SEMS:[]).forEach(x=>{if(x)semSet[x]=1;});  // 固定学期骨架总是显示
   const sems=Object.keys(semSet).sort();
+  const _tEl=document.getElementById('btec-title');
+  if(_tEl){const totU=units0.length;const totG=units0.reduce((a,x)=>a+(x.glh||0),0);_tEl.innerHTML='<div style="background:#FCEEC8;border:0.5px solid #EBD9A0;border-radius:8px;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><b style="color:#7a5b00;font-size:13px">Pearson BTEC International Level 3 Extended Diploma in Business (2 Years)</b><span style="font-family:ui-monospace;font-size:12px;color:#7a5b00;font-weight:700">'+totG+' Hours · '+totU+' Units</span></div>';}
   if(_btecTransp){wrap.innerHTML=_btecTranspHtml(units,studs,sems,isAdmin,showTc);return;}
   const th=dep=>{const c=(typeof COHORT_COLOR!=='undefined'?COHORT_COLOR[dep]:null);const bg=c?c.bg:'#534AB7',fg=c?c.fg:'#fff';return '<th style="position:sticky;top:0;background:'+bg+';color:'+fg+';padding:4px 4px;font-size:10px;font-weight:700;white-space:nowrap;z-index:2;width:104px;overflow:hidden;text-overflow:ellipsis;border:0.5px solid #fff" title="专业 '+eh(dep||'')+'">'+eh(dep||'')+'</th>';};
   const corner='<th style="position:sticky;left:0;top:0;background:#3C3489;color:#fff;z-index:3;width:410px;text-align:left;padding:4px 8px">BTEC 单元＼学生</th>';
@@ -1593,10 +1597,16 @@ function renderBtec(){
   h+=rowlabel('中文',studs.map(s=>tc('<b>'+eh(s.zh||'')+'</b>'+(isAdmin?' <span onclick="btecEditStu('+s.id+')" style="cursor:pointer;font-size:9px;color:#888">✎</span><span onclick="btecDelStu('+s.id+',\''+jsq(s.zh||s.sid||'')+'\')" style="cursor:pointer;font-size:9px;color:#c00">🗑</span>':''),s.zh)).join(''));
   h+=rowlabel('英文',studs.map(s=>tc('<span style="font-size:10px;color:#666">'+eh(s.en||'')+'</span>',s.en)).join(''));
   h+='</thead><tbody>';
+  const _grp={};units.forEach(u=>{const k=u.req||'其他';(_grp[k]=_grp[k]||{n:0,glh:0}).n++;_grp[k].glh+=(u.glh||0);});
+  const _reqLabel={Mandatory:'📌 Mandatory Units · 必修（全修）',Optional:'🧩 Optional Units · 选修（至少 540 GLH）'};
+  const _ghdr=req=>{const g=_grp[req]||{n:0,glh:0};const isM=(req==='Mandatory');const bg=isM?'#EAF1FB':'#EEF6E9';const fg=isM?'#1d4ed8':'#2e7d32';const txt=(_reqLabel[req]||('· '+eh(req||'其他')))+' — '+g.n+' 单元 · '+g.glh+' GLH';return '<tr><td style="position:sticky;left:0;background:'+bg+';color:'+fg+';z-index:1;padding:5px 10px;font-weight:700;font-size:11px;border-top:3px solid #fff;white-space:nowrap">'+txt+'</td><td colspan="'+studs.length+'" style="background:'+bg+';border-top:3px solid #fff"></td></tr>';};
+  let _curReq=null;
   units.forEach(u=>{
+    if(u.req!==_curReq){_curReq=u.req;h+=_ghdr(_curReq);}
     const asTag=u.assess?' <span style="font-size:8px;background:'+(String(u.assess).indexOf('Set')>=0?'#FDE7E7;color:#c0392b':'#E8F5E9;color:#2e7d32')+';border-radius:3px;padding:0 4px;white-space:nowrap;vertical-align:middle">'+eh(u.assess)+'</span>':'';
     const unBadge=(u.unit_no!=null&&u.unit_no!=='')?'<span style="display:inline-block;min-width:15px;text-align:center;background:#EEEDFE;color:#3C3489;font-family:ui-monospace;font-size:9px;font-weight:700;border-radius:4px;padding:0 4px;margin-right:5px;white-space:nowrap;vertical-align:middle">'+eh(u.unit_no)+'</span>':'';
-    const rl='<td style="position:sticky;left:0;background:#fff;z-index:1;padding:3px 8px;white-space:nowrap;overflow:hidden;border-top:0.5px solid #eee" title="'+eh((u.unit_no?(u.unit_no+' · '):'')+(u.name_en||''))+'">'+(isAdmin?'<span onclick="event.stopPropagation();btecBatchRow(\''+jsq(u.code)+'\')" style="cursor:pointer;font-size:8px;color:#534AB7;border:0.5px solid #AFA9EC;border-radius:3px;padding:0 3px;margin-right:5px;white-space:nowrap;vertical-align:middle" title="整行批量设学期">批量</span>':'')+unBadge+'<b style="color:#333;vertical-align:middle">'+eh(u.name_en||'')+'</b> <span style="font-family:ui-monospace;font-size:9px;color:#185FA5;white-space:nowrap;vertical-align:middle">'+eh(u.code||'')+'</span>'+asTag+'</td>';
+    const glhBadge=(u.glh!=null&&u.glh!=='')?' <span style="font-size:8px;color:#0277bd;background:#E1F5FE;border-radius:3px;padding:0 4px;white-space:nowrap;vertical-align:middle" title="Guided Learning Hours">'+eh(u.glh)+' GLH</span>':'';
+    const rl='<td style="position:sticky;left:0;background:#fff;z-index:1;padding:3px 8px;white-space:nowrap;overflow:hidden;border-top:0.5px solid #eee" title="'+eh((u.unit_no?(u.unit_no+' · '):'')+(u.name_en||'')+(u.glh?(' · '+u.glh+' GLH'):''))+'">'+(isAdmin?'<span onclick="event.stopPropagation();btecBatchRow(\''+jsq(u.code)+'\')" style="cursor:pointer;font-size:8px;color:#534AB7;border:0.5px solid #AFA9EC;border-radius:3px;padding:0 3px;margin-right:5px;white-space:nowrap;vertical-align:middle" title="整行批量设学期">批量</span>':'')+unBadge+'<b style="color:#333;vertical-align:middle">'+eh(u.name_en||'')+'</b> <span style="font-family:ui-monospace;font-size:9px;color:#185FA5;white-space:nowrap;vertical-align:middle">'+eh(u.code||'')+'</span>'+glhBadge+asTag+'</td>';
     const cells=studs.map(s=>{const c=_btecCell(s,u.code);const col=_btecSemC(c.sem);const style=c.sem?('background:'+col[0]+';color:'+col[1]):'';const tcLine=(showTc&&c.tc)?'<div style="font-size:10px;opacity:.85;font-weight:400;overflow:hidden;text-overflow:ellipsis">'+(c.tcMan?'✎':'')+eh(c.tc)+'</div>':'';const ivLine=(showTc&&c.iv)?'<div style="font-size:9px;color:#6a1b9a;opacity:.95;overflow:hidden;text-overflow:ellipsis">IV '+eh(c.iv)+'</div>':'';const tip=c.sem?(c.sem+(c.tc?' · 讲师 '+eh(c.tc):'')+(c.iv?' · IV '+eh(c.iv):'')+(c.manual?' (手动)':' (来自排课)')):'';return '<td onclick="'+(isAdmin?'btecEditCell('+s.id+',\''+jsq(u.code)+'\')':'')+'" style="text-align:center;padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:104px;font-size:12px;border-top:0.5px solid #eee;'+(isAdmin?'cursor:pointer;':'')+style+'" title="'+tip+'">'+(c.sem||'')+tcLine+ivLine+'</td>';}).join('');
     h+='<tr>'+rl+cells+'</tr>';
   });
