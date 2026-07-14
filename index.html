@@ -420,9 +420,9 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   <button class="tab active" onclick="switchTab('sch')">📋 排课表</button>
   <button class="tab" onclick="switchTab('sp')">👤 IS/SG 排课</button>
   <button class="tab" onclick="switchTab('sum')">📊 学期总表</button>
+  <button class="tab" id="tab-btec" onclick="switchTab('btec')">🎓 BTEC 计划</button>
   <button class="tab" onclick="switchTab('cs')">📚 课程结构</button>
   <button class="tab" id="tab-sta" onclick="switchTab('sta')">📈 教学统计</button>
-  <button class="tab" id="tab-btec" onclick="switchTab('btec')">🎓 BTEC 计划</button>
   <button class="tab" id="tab-ops" onclick="switchTab('ops')" style="display:none">⚙️ 后台操作</button>
 </div>
 </div><!-- /.sticky-top -->
@@ -5649,7 +5649,7 @@ async function confirmCsvImportSp(){
 }
 
 function switchTab(id){
-  ['sch','sp','sum','cs','sta','btec','ops'].forEach((x,i)=>{const tb=document.querySelectorAll('.tab')[i];if(tb)tb.classList.toggle('active',x===id);});
+  ['sch','sp','sum','btec','cs','sta','ops'].forEach((x,i)=>{const tb=document.querySelectorAll('.tab')[i];if(tb)tb.classList.toggle('active',x===id);});
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+id).classList.add('active');
   if(id==='cs'){var _f=document.getElementById('cs-frame');if(_f&&!_f.src)_f.src=_f.dataset.src+'?cb='+Date.now();}
