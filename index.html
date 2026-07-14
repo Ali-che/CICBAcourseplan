@@ -1557,7 +1557,7 @@ async function loadBtec(){
 }
 function reloadBtec(){loadBtec();}
 function _btecPlan(sid,code){const p=(_btec.plan||[]).find(x=>String(x.student_id)===String(sid)&&String(x.code).toUpperCase()===String(code).toUpperCase());return p?p.sem:null;}
-function _btecAuto(stu,code){const recs=schD.filter(x=>String(x.course).toUpperCase()===String(code).toUpperCase()&&(x.btec===true||x.btec==='TRUE'||x.btec==='true')&&String(x.sem||'').indexOf('2569')===0&&(x.cc||[]).some(c=>(stu.cohort&&c.cohort===stu.cohort)||(stu.dept&&cohortPrefix(c.cohort)===stu.dept)));if(!recs.length)return {sem:'',tc:''};const r=recs[0];return {sem:r.sem||'',tc:r.tc||''};}
+function _btecAuto(stu,code){const all=schD.filter(x=>String(x.course).toUpperCase()===String(code).toUpperCase()&&(x.btec===true||x.btec==='TRUE'||x.btec==='true')&&String(x.sem||'').indexOf('2569')===0);if(!all.length)return {sem:'',tc:''};const mine=all.filter(x=>(x.cc||[]).some(c=>(stu.cohort&&c.cohort===stu.cohort)||(stu.dept&&cohortPrefix(c.cohort)===stu.dept)));const pool=mine.length?mine:all;const r=pool.slice().sort((a,b)=>String(a.sem||'').localeCompare(String(b.sem||'')))[0];return {sem:r.sem||'',tc:r.tc||''};}
 function _btecCell(stu,code){const o=_btecPlan(stu.id,code);const man=(o!=null&&o!=='');const a=_btecAuto(stu,code);return {sem:man?o:a.sem,manual:man,tc:a.tc};}
 function _btecStudents(){
   let list=[...(_btec.students||[])];
