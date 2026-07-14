@@ -1557,7 +1557,7 @@ async function loadBtec(){
 }
 function reloadBtec(){loadBtec();}
 function _btecPlan(sid,code){const p=(_btec.plan||[]).find(x=>String(x.student_id)===String(sid)&&String(x.code).toUpperCase()===String(code).toUpperCase());return p?p.sem:null;}
-function _btecAuto(stu,code){if(!stu.cohort)return {sem:'',tc:''};const recs=schD.filter(x=>String(x.course).toUpperCase()===String(code).toUpperCase()&&(x.cc||[]).some(c=>c.cohort===stu.cohort));if(!recs.length)return {sem:'',tc:''};const r=recs.find(x=>x.btec===true||x.btec==='TRUE'||x.btec==='true')||recs[0];return {sem:r.sem||'',tc:r.tc||''};}
+function _btecAuto(stu,code){const recs=schD.filter(x=>String(x.course).toUpperCase()===String(code).toUpperCase()&&(x.cc||[]).some(c=>(stu.cohort&&c.cohort===stu.cohort)||(stu.dept&&cohortPrefix(c.cohort)===stu.dept)));if(!recs.length)return {sem:'',tc:''};const r=recs.find(x=>x.btec===true||x.btec==='TRUE'||x.btec==='true')||recs[0];return {sem:r.sem||'',tc:r.tc||''};}
 function _btecCell(stu,code){const o=_btecPlan(stu.id,code);const man=(o!=null&&o!=='');const a=_btecAuto(stu,code);return {sem:man?o:a.sem,manual:man,tc:a.tc};}
 function _btecStudents(){
   let list=[...(_btec.students||[])];
