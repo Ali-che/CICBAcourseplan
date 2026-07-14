@@ -1633,7 +1633,8 @@ function btecEditCell(sid,code){
   const curSem=(p.sem!=null&&p.sem!=='')?p.sem:'';const curTc=(p.tc!=null&&p.tc!=='')?p.tc:'';
   const effSem=curSem||a.sem;const curIv=_btecIV(code,effSem)||'';
   const names=[...new Set((typeof T!=='undefined'?T:[]).map(t=>t.n).filter(Boolean))].sort();
-  const semOpt=['<option value="">(空 = 回退自动排课)</option>'].concat((typeof SEMS!=='undefined'?SEMS:[]).map(x=>'<option'+(x===curSem?' selected':'')+'>'+eh(x)+'</option>')).join('');
+  const _ss={};(typeof SEMS!=='undefined'?SEMS:[]).forEach(x=>{if(x)_ss[x]=1;});(_btec.plan||[]).forEach(pp=>{if(pp.sem)_ss[pp.sem]=1;});if(curSem)_ss[curSem]=1;if(a.sem)_ss[a.sem]=1;const semList=Object.keys(_ss).sort();
+  const semOpt=['<option value="">(空 = 回退自动排课)</option>'].concat(semList.map(x=>'<option'+(x===curSem?' selected':'')+'>'+eh(x)+'</option>')).join('');
   const tcOpt=['<option value="">(空 = 自动:'+eh(a.tc||'—')+')</option>'].concat(names.map(n=>'<option'+(n===curTc?' selected':'')+'>'+eh(n)+'</option>')).join('');
   const ivOpt=['<option value="">(无 / 清除)</option>'].concat(names.map(n=>'<option'+(n===curIv?' selected':'')+'>'+eh(n)+'</option>')).join('');
   let m=document.getElementById('btec-cell-modal');if(!m){m=document.createElement('div');m.id='btec-cell-modal';document.body.appendChild(m);}
