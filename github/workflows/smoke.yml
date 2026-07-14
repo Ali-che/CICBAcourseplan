@@ -1,0 +1,21 @@
+name: smoke   # 线上健康监控:定时跑 tools/smoke.py,失败会 email 仓库拥有者
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # 每 30 分钟(UTC)
+  workflow_dispatch: {}       # 也可在 Actions 分页手动 Run
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Run smoke test
+        run: python3 tools/smoke.py
