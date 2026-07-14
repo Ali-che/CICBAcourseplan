@@ -1253,9 +1253,9 @@ async function opsAfter(r,msg){
 // ── 学期 ──
 function opsSemView(){
   const body=(opsD.semesters||[]).slice().sort().map(s=>'<tr><td style="font-family:ui-monospace,monospace">'+eh(s)+'</td><td style="text-align:right"><button class="ops-del" onclick="opsDelSem(\''+jsq(s)+'\')">删除</button></td></tr>').join('')||'<tr><td colspan="2" style="color:#aaa">无</td></tr>';
-  return '<div class="ops-add"><div class="fg"><label>新学期(如 2570-1)</label><input id="ops-sem-in" placeholder="2570-1"></div><button class="btn btn-p" onclick="opsAddSem()">+ 新增</button></div><table style="width:auto;min-width:260px"><thead><tr><th>学期</th><th></th></tr></thead><tbody>'+body+'</tbody></table>';
+  return '<div class="ops-add"><div class="fg"><label>新学期(可批量,空格/逗号分隔)</label><input id="ops-sem-in" style="width:280px" placeholder="2570-1 2570-2 2570-3 2571-1 2571-2"></div><button class="btn btn-p" onclick="opsAddSem()">+ 新增</button></div><table style="width:auto;min-width:260px"><thead><tr><th>学期</th><th></th></tr></thead><tbody>'+body+'</tbody></table>';
 }
-async function opsAddSem(){const v=document.getElementById('ops-sem-in').value.trim();if(!v){alert('请输入学期');return;}opsAfter(await gasPost('adminAddSemester',{sem:v}),'已新增学期 '+v);}
+async function opsAddSem(){const raw=document.getElementById('ops-sem-in').value.trim();if(!raw){alert('请输入学期');return;}const list=raw.split(/[\s,，\n]+/).map(x=>x.trim()).filter(Boolean);if(!list.length){alert('请输入学期');return;}let ok=0,fail=0;for(const sm of list){const r=await gasPost('adminAddSemester',{sem:sm});if(r&&r.success)ok++;else fail++;}opsAfter(ok>0?{success:true}:{success:false,error:'全部失败(可能非管理员)'},'已加 '+ok+' 个学期'+(fail?('、失败 '+fail):''));}
 async function opsDelSem(s){const n=opsUsedBySem(s);if(!confirm('删除学期「'+s+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 笔排课用到此学期,删后会变孤儿。仍要删?':'')))return;opsAfter(await gasPost('adminDelSemester',{sem:s}),'已删除学期 '+s);}
 // ── 专业 ──
 function opsDeptView(){
@@ -1596,7 +1596,7 @@ function renderBtec(){
   h+='</thead><tbody>';
   units.forEach(u=>{
     const asTag=u.assess?' <span style="font-size:8px;background:'+(String(u.assess).indexOf('Set')>=0?'#FDE7E7;color:#c0392b':'#E8F5E9;color:#2e7d32')+';border-radius:3px;padding:0 4px">'+eh(u.assess)+'</span>':'';
-    const rl='<td style="position:sticky;left:0;background:#fff;z-index:1;padding:3px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:0.5px solid #eee" title="'+eh(u.name_en||'')+'"><b style="color:#333">'+eh(u.name_en||'')+'</b> <span style="font-family:ui-monospace;font-size:9px;color:#185FA5">'+eh(u.code||'')+'</span>'+asTag+'</td>';
+    const rl='<td style="position:sticky;left:0;background:#fff;z-index:1;padding:3px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:0.5px solid #eee" title="'+eh(u.name_en||'')+'">'+(isAdmin?'<span onclick="event.stopPropagation();btecBatchRow(\''+jsq(u.code)+'\')" style="cursor:pointer;font-size:8px;color:#534AB7;border:0.5px solid #AFA9EC;border-radius:3px;padding:0 3px;margin-right:5px" title="整行批量设学期">批量</span>':'')+'<b style="color:#333">'+eh(u.name_en||'')+'</b> <span style="font-family:ui-monospace;font-size:9px;color:#185FA5">'+eh(u.code||'')+'</span>'+asTag+'</td>';
     const cells=studs.map(s=>{const c=_btecCell(s,u.code);const col=_btecSemC(c.sem);const style=c.sem?('background:'+col[0]+';color:'+col[1]):'';const tcLine=(showTc&&c.tc)?'<div style="font-size:8px;opacity:.8;font-weight:400;overflow:hidden;text-overflow:ellipsis">'+eh(c.tc)+'</div>':'';const tip=c.sem?(c.sem+(c.tc?' · 讲师 '+eh(c.tc):'')+(c.manual?' (手动)':' (来自排课)')):'';return '<td onclick="'+(isAdmin?'btecEditCell('+s.id+',\''+jsq(u.code)+'\',this)':'')+'" style="text-align:center;padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:92px;border-top:0.5px solid #eee;'+(isAdmin?'cursor:pointer;':'')+style+'" title="'+tip+'">'+(c.sem||'')+tcLine+'</td>';}).join('');
     h+='<tr>'+rl+cells+'</tr>';
   });
@@ -1630,6 +1630,7 @@ async function btecSaveStu(){
 async function btecDelStu(id,name){if(!confirm('删除学生「'+name+'」及其手动格子?'))return;const r=await gasPost('adminDelBtecStudent',{id});if(r&&r.success)await loadBtec();else alert('删除失败:'+((r&&r.error)||'?'));}
 function btecEditCell(sid,code,td){if(!td)return;const cur=_btecPlan(sid,code)||'';const opts=['<option value="">(清除/回退自动)</option>'].concat((typeof SEMS!=='undefined'?SEMS:[]).map(s=>'<option value="'+s+'"'+(s===cur?' selected':'')+'>'+s+'</option>')).join('');td.innerHTML='<select onclick="event.stopPropagation()" onchange="btecSaveCell('+sid+',\''+jsq(code)+'\',this.value)" onblur="renderBtec()" style="font-size:10px;width:100%;padding:1px">'+opts+'</select>';const sel=td.querySelector('select');if(sel)sel.focus();}
 async function btecSaveCell(sid,code,sem){const r=await gasPost('adminSetBtecPlan',{student_id:sid,code:code,sem:sem});if(r&&r.success)await loadBtec();else{alert('设定失败:'+((r&&r.error)||'?'));renderBtec();}}
+async function btecBatchRow(code){const studs=_btecStudents();if(!studs.length){alert('当前无学生');return;}const v=prompt('把「'+code+'」对当前显示的 '+studs.length+' 位学生批量设为哪个学期?\n填如 2569-1;留空 = 清除这些学生此单元的手动值(回退自动排课):','');if(v===null)return;const sem=v.trim();let ok=0;for(const s of studs){const r=await gasPost('adminSetBtecPlan',{student_id:s.id,code:code,sem:sem});if(r&&r.success)ok++;}await loadBtec();if(typeof showToast==='function')showToast('已批量设 '+ok+' 位学生的「'+code+'」',{kind:'success'});}
 
 window.addEventListener('DOMContentLoaded', checkAuth);
 
