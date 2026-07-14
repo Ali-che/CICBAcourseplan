@@ -855,6 +855,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   </div>
   <div id="btec-addbar" class="no-print" style="display:none;background:#F7F6FE;border-radius:8px;padding:9px 12px;margin-bottom:10px"></div>
   <div class="card"><div class="tbl-wrap" style="overflow:auto;max-height:calc(100vh - 250px)"><div id="btec-matrix"></div></div><div class="empty" id="btec-em" style="display:none">还没有 BTEC 学生</div></div>
+  <div id="btec-iv-wrap" style="margin-top:12px"></div>
 </div>
 
 <div id="panel-ops" class="panel">
@@ -1507,12 +1508,27 @@ function _msgAnnHtml(me,isAdmin){
 }
 
 // ══════════ BTEC 修课计划 ══════════
-let _btec={students:[],units:[],plan:[]}, _btecEdit=null, _btecSemOpen=true;
+let _btec={students:[],units:[],plan:[],iv:[]}, _btecEdit=null, _btecSemOpen=true, _btecIVOpen=false;
 function btecToggleSem(){_btecSemOpen=!_btecSemOpen;renderBtec();}
+function btecToggleIV(){_btecIVOpen=!_btecIVOpen;renderBtec();}
+function _btecIV(code,sem){const r=(_btec.iv||[]).find(x=>String(x.code).toUpperCase()===String(code).toUpperCase()&&x.sem===sem);return r?r.iv:'';}
+function renderBtecIV(units,isAdmin){
+  const w=document.getElementById('btec-iv-wrap');if(!w)return;
+  const sems=(typeof SEMS!=='undefined'?[...SEMS]:[]).sort();
+  let h='<div class="card"><div onclick="btecToggleIV()" style="cursor:pointer;font-weight:600;color:#534AB7">'+(_btecIVOpen?'▾':'▸')+' 🔎 IV 内部审核(单元 × 学期)'+(isAdmin&&_btecIVOpen?' <span style="font-size:11px;color:#888;font-weight:400">— 点格子填</span>':'')+'</div>';
+  if(_btecIVOpen){
+    h+='<div class="tbl-wrap" style="overflow:auto;margin-top:8px;max-height:50vh"><table style="border-collapse:collapse;font-size:11px"><thead><tr><th style="position:sticky;left:0;background:#3C3489;color:#fff;z-index:2;padding:4px 8px;text-align:left;min-width:210px">单元＼学期</th>'+sems.map(sm=>'<th style="position:sticky;top:0;background:#534AB7;color:#fff;padding:4px 8px;font-size:10px;white-space:nowrap;z-index:1">'+sm+'</th>').join('')+'</tr></thead><tbody>';
+    units.forEach(u=>{h+='<tr><td style="position:sticky;left:0;background:#fff;z-index:1;padding:3px 8px;white-space:nowrap;border-top:0.5px solid #eee"><b>'+eh(u.name_en||'')+'</b> <span style="font-family:ui-monospace;font-size:9px;color:#185FA5">'+eh(u.code||'')+'</span></td>'+sems.map(sm=>{const iv=_btecIV(u.code,sm);return '<td onclick="'+(isAdmin?'btecEditIV(\''+jsq(u.code)+'\',\''+sm+'\')':'')+'" style="text-align:center;padding:3px 6px;border-top:0.5px solid #eee;font-size:10px;white-space:nowrap;'+(isAdmin?'cursor:pointer;':'')+(iv?'background:#F3E8FF;color:#6a1b9a':'')+'">'+eh(iv||'')+'</td>';}).join('')+'</tr>';});
+    h+='</tbody></table></div>';
+  }
+  h+='</div>';
+  w.innerHTML=h;
+}
+async function btecEditIV(code,sem){const cur=_btecIV(code,sem)||'';const v=prompt('单元 '+code+' · '+sem+' 的 IV(内部审核老师)。留空=清除:',cur);if(v===null)return;const r=await gasPost('adminSetBtecIv',{code:code,sem:sem,iv:v.trim()});if(r&&r.success)await loadBtec();else alert('设定失败:'+((r&&r.error)||'?'));}
 const _BTEC_SEMC={'2568-1':['#DBE7FF','#1d4ed8'],'2568-2':['#FCE4EC','#c2185b'],'2569-1':['#E8F5E9','#2e7d32'],'2569-2':['#FFF3E0','#b5651d'],'2570-1':['#E1F5FE','#0277bd'],'2570-2':['#E0F2F1','#00695c'],'2570-3':['#F3E5F5','#6a1b9a'],'2571-1':['#FFF8E1','#a87800'],'2571-2':['#EFEBE9','#5d4037']};
 function _btecSemC(s){return _BTEC_SEMC[s]||['#F0F0F0','#666'];}
 async function loadBtec(){
-  try{const r=await gasGet({action:'btecData'});if(r&&r.success)_btec={students:r.students||[],units:r.units||[],plan:r.plan||[]};}catch(e){}
+  try{const r=await gasGet({action:'btecData'});if(r&&r.success)_btec={students:r.students||[],units:r.units||[],plan:r.plan||[],iv:r.iv||[]};}catch(e){}
   const df=document.getElementById('btec-dept-f');
   if(df){const cur=df.value;const ds=[...new Set((_btec.students||[]).map(s=>s.dept).filter(Boolean))].sort();df.innerHTML='<option value="">全部专业</option>'+ds.map(d=>'<option value="'+eh(d)+'"'+(d===cur?' selected':'')+'>'+eh(d)+'</option>').join('');}
   renderBtec();
@@ -1537,6 +1553,7 @@ function renderBtec(){
   if(ab){if(isAdmin){ab.style.display='';ab.innerHTML=_btecAddBar();}else ab.style.display='none';}
   const units=(_btec.units||[]).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
   const studs=_btecStudents();
+  renderBtecIV(units,isAdmin);
   const hint=document.getElementById('btec-hint');if(hint)hint.textContent=studs.length+' 生 · '+units.length+' 单元'+(isAdmin?' · 点格子改学期':'');
   if(!studs.length){wrap.innerHTML='';if(em)em.style.display='block';return;}
   if(em)em.style.display='none';
@@ -5859,11 +5876,12 @@ function syncTblHeight(){
     if(a==='whoOnline')return{success:true,users:[]};
     if(a==='listBackups')return{success:true,snapshots:[]};
     if(a==='btecData'){
-      const[st,un,pl]=await Promise.all([
+      const[st,un,pl,iv]=await Promise.all([
         sget('btec_student?select=*&order=dept,sid').catch(function(){return [];}),
         sget('btec_unit?select=*&order=seq').catch(function(){return [];}),
-        sget('btec_plan?select=*').catch(function(){return [];})]);
-      return{success:true,students:st||[],units:un||[],plan:pl||[]};
+        sget('btec_plan?select=*').catch(function(){return [];}),
+        sget('btec_iv?select=*').catch(function(){return [];})]);
+      return{success:true,students:st||[],units:un||[],plan:pl||[],iv:iv||[]};
     }
     if(a==='opsData'){
       const[se,de,ch,te,ca,po,gr]=await Promise.all([
@@ -5925,6 +5943,7 @@ function syncTblHeight(){
     if(action==='adminSetBtecPlan')return srpc('admin_set_btec_plan',{p_pin:_pin,p_student_id:body.student_id,p_code:body.code,p_sem:body.sem});
     if(action==='adminUpsertBtecUnit')return srpc('admin_upsert_btec_unit',{p_pin:_pin,p_row:body.row});
     if(action==='adminDelBtecUnit')return srpc('admin_del_btec_unit',{p_pin:_pin,p_id:body.id});
+    if(action==='adminSetBtecIv')return srpc('admin_set_btec_iv',{p_pin:_pin,p_code:body.code,p_sem:body.sem,p_iv:body.iv});
     return{success:false,error:'未知 action '+action};
   };
 
