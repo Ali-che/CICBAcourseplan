@@ -1518,8 +1518,8 @@ async function loadBtec(){
 }
 function reloadBtec(){loadBtec();}
 function _btecPlan(sid,code){const p=(_btec.plan||[]).find(x=>String(x.student_id)===String(sid)&&String(x.code).toUpperCase()===String(code).toUpperCase());return p?p.sem:null;}
-function _btecAuto(stu,code){if(!stu.cohort)return '';const r=schD.find(x=>String(x.course).toUpperCase()===String(code).toUpperCase()&&(x.cc||[]).some(c=>c.cohort===stu.cohort));return r?r.sem:'';}
-function _btecCell(stu,code){const o=_btecPlan(stu.id,code);const man=(o!=null&&o!=='');return {sem:man?o:_btecAuto(stu,code),manual:man};}
+function _btecAuto(stu,code){if(!stu.cohort)return {sem:'',tc:''};const recs=schD.filter(x=>String(x.course).toUpperCase()===String(code).toUpperCase()&&(x.cc||[]).some(c=>c.cohort===stu.cohort));if(!recs.length)return {sem:'',tc:''};const r=recs.find(x=>x.btec===true||x.btec==='TRUE'||x.btec==='true')||recs[0];return {sem:r.sem||'',tc:r.tc||''};}
+function _btecCell(stu,code){const o=_btecPlan(stu.id,code);const man=(o!=null&&o!=='');const a=_btecAuto(stu,code);return {sem:man?o:a.sem,manual:man,tc:a.tc};}
 function _btecStudents(){
   let list=[...(_btec.students||[])];
   const df=(document.getElementById('btec-dept-f')||{}).value||'';
@@ -1556,7 +1556,7 @@ function renderBtec(){
     const reqTag=(u.req==='Mandatory')?'<span style="font-size:8px;background:#534AB7;color:#fff;border-radius:3px;padding:0 4px">必修</span>':'<span style="font-size:8px;background:#eee;color:#888;border-radius:3px;padding:0 4px">选修</span>';
     const asTag=u.assess?' <span style="font-size:8px;background:'+(String(u.assess).indexOf('Set')>=0?'#FDE7E7;color:#c0392b':'#E8F5E9;color:#2e7d32')+';border-radius:3px;padding:0 4px">'+eh(u.assess)+'</span>':'';
     const rl='<td style="position:sticky;left:0;background:#fff;z-index:1;padding:3px 8px;white-space:nowrap;border-top:0.5px solid #eee"><b style="color:#333">'+eh(u.name_en||'')+'</b> <span style="font-family:ui-monospace;font-size:9px;color:#185FA5">'+eh(u.code||'')+'</span> '+reqTag+asTag+(showMeta?'<div style="font-size:9px;color:#aaa">'+(u.glh||'')+'h · 讲师 '+eh(u.instructor||'—')+' · IV '+eh(u.verifier||'—')+'</div>':'')+'</td>';
-    const cells=studs.map(s=>{const c=_btecCell(s,u.code);const col=_btecSemC(c.sem);const style=c.sem?('background:'+col[0]+';color:'+col[1]):'';return '<td onclick="'+(isAdmin?'btecEditCell('+s.id+',\''+jsq(u.code)+'\')':'')+'" style="text-align:center;padding:3px 5px;white-space:nowrap;border-top:0.5px solid #eee;'+(isAdmin?'cursor:pointer;':'')+style+(c.manual?';box-shadow:inset 0 0 0 1.5px #534AB7':'')+'" title="'+(c.manual?'手动设定':(c.sem?'来自排课(自动)':''))+'">'+(c.sem||'')+'</td>';}).join('');
+    const cells=studs.map(s=>{const c=_btecCell(s,u.code);const col=_btecSemC(c.sem);const style=c.sem?('background:'+col[0]+';color:'+col[1]):'';const tcLine=(showMeta&&c.tc)?'<div style="font-size:8px;opacity:.75;font-weight:400">'+eh(c.tc)+'</div>':'';const tip=c.sem?(c.sem+(c.tc?' · '+eh(c.tc):'')+(c.manual?' (手动)':' (来自排课)')):'';return '<td onclick="'+(isAdmin?'btecEditCell('+s.id+',\''+jsq(u.code)+'\')':'')+'" style="text-align:center;padding:3px 5px;white-space:nowrap;border-top:0.5px solid #eee;'+(isAdmin?'cursor:pointer;':'')+style+(c.manual?';box-shadow:inset 0 0 0 1.5px #534AB7':'')+'" title="'+tip+'">'+(c.sem||'')+tcLine+'</td>';}).join('');
     h+='<tr>'+rl+cells+'</tr>';
   });
   h+='<tr style="border-top:2px solid #534AB7"><td style="position:sticky;left:0;background:#EEEDFE;z-index:1;padding:3px 8px;font-weight:700;color:#3C3489">Total</td>'+studs.map(s=>{let n=0;units.forEach(u=>{if(_btecCell(s,u.code).sem)n++;});return '<td style="text-align:center;font-weight:700;color:#3C3489;background:#EEEDFE">'+n+'</td>';}).join('')+'</tr>';
@@ -1582,6 +1582,7 @@ function btecCancelStu(){_btecEdit=null;renderBtec();}
 async function btecSaveStu(){
   const row={sid:document.getElementById('btec-sid').value.trim(),zh:document.getElementById('btec-zh').value.trim(),en:document.getElementById('btec-en').value.trim(),dept:document.getElementById('btec-dept').value,cohort:document.getElementById('btec-cohort').value};
   if(!row.sid&&!row.zh){alert('至少填学号或中文名');return;}
+  if(!row.cohort&&!confirm('未填「届别」→ 自动格子不会从排课带出学期(只能手动点格子填)。仍要保存?'))return;
   let r;if(_btecEdit)r=await gasPost('adminUpdateBtecStudent',{id:_btecEdit.id,fields:row});else r=await gasPost('adminAddBtecStudent',{row});
   if(r&&r.success){_btecEdit=null;await loadBtec();}else alert('保存失败:'+((r&&r.error)||'?'));
 }
