@@ -1616,20 +1616,24 @@ function renderBtec(){
   h+='</tbody></table>';
   wrap.innerHTML=h;
 }
+let _btecAddOpen=false;
+function btecToggleAdd(){_btecAddOpen=!_btecAddOpen;if(!_btecAddOpen)_btecEdit=null;renderBtec();}
 function _btecAddBar(){
   const ed=_btecEdit;
+  const open=_btecAddOpen||!!ed;
+  const head='<div onclick="btecToggleAdd()" style="cursor:pointer;font-weight:600;color:#534AB7;font-size:12px;user-select:none">'+(open?('▾ '+(ed?'✏️ 改学生':'✍️ 加学生')):'＋ 加学生')+'</div>';
+  if(!open)return head;
   const depts=Object.keys(typeof CBD!=='undefined'?CBD:{}).sort();
-  const cohs=[...new Set(Object.values(typeof CBD!=='undefined'?CBD:{}).flat())].sort();
   const g=(id,ph,v,w)=>'<input id="'+id+'" placeholder="'+ph+'" value="'+eh(v||'')+'" style="width:'+w+';font-size:12px;padding:4px 7px;border:0.5px solid #cbd5e1;border-radius:6px">';
-  return '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12px">'+
-    '<b style="color:#534AB7">'+(ed?'✏️ 改学生':'✍️ 加学生')+'</b>'+
+  return head+'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12px;margin-top:8px">'+
     g('btec-sid','学号',ed?ed.sid:'','110px')+g('btec-zh','中文名',ed?ed.zh:'','90px')+g('btec-en','英文名',ed?ed.en:'','130px')+
     '<select id="btec-dept" style="font-size:12px;padding:4px"><option value="">专业</option>'+depts.map(d=>'<option'+(ed&&ed.dept===d?' selected':'')+'>'+eh(d)+'</option>').join('')+'</select>'+
-    '<button class="btn btn-p btn-sm" onclick="btecSaveStu()">'+(ed?'保存':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="btecCancelStu()">取消</button>':'')+
+    '<button class="btn btn-p btn-sm" onclick="btecSaveStu()">'+(ed?'保存':'+ 新增')+'</button>'+
+    ' <button class="btn btn-sm" onclick="'+(ed?'btecCancelStu()':'btecToggleAdd()')+'">'+(ed?'取消':'收起')+'</button>'+
     '</div>';
 }
-function btecEditStu(id){const s=(_btec.students||[]).find(x=>String(x.id)===String(id));if(s){_btecEdit=s;renderBtec();try{document.getElementById('btec-addbar').scrollIntoView({block:'center'});}catch(e){}}}
-function btecCancelStu(){_btecEdit=null;renderBtec();}
+function btecEditStu(id){const s=(_btec.students||[]).find(x=>String(x.id)===String(id));if(s){_btecEdit=s;_btecAddOpen=true;renderBtec();try{document.getElementById('btec-addbar').scrollIntoView({block:'center'});}catch(e){}}}
+function btecCancelStu(){_btecEdit=null;_btecAddOpen=false;renderBtec();}
 async function btecSaveStu(){
   const row={sid:document.getElementById('btec-sid').value.trim(),zh:document.getElementById('btec-zh').value.trim(),en:document.getElementById('btec-en').value.trim(),dept:document.getElementById('btec-dept').value};
   if(!row.sid&&!row.zh){alert('至少填学号或中文名');return;}
