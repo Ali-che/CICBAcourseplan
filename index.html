@@ -8,6 +8,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CIC 本科排课管理系统</title>
+<!-- ═══════ §CSS 样式 ═══════ -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#f5f5f7;color:#111;font-size:13px}
@@ -428,6 +429,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 </div><!-- /.sticky-top -->
 
 <!-- ══ 排课表 ═══════════════════════════════ -->
+<!-- ═══════ §HTML-PANELS 页面结构(各分页 id=panel-XXX:sch/sp/sum/cs/sta/btec/ops) ═══════ -->
 <div id="panel-sch" class="panel active">
   <div class="card" style="padding:0;overflow:hidden">
     <!-- 折叠标题行 -->
@@ -1049,6 +1051,16 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 //    例如 if(e.parameter.token!==SCRIPT_SECRET) return blocked。
 // 這兩件事都不是改前端 HTML 就能解決，請另開 Apps Script 端的工作。
 // ── PIN 码验证 ──────────────────────────────
+// ╔═══════════════════════════════════════════════════════════════╗
+// ║  区块目录  ——  Cmd-F 搜 §TOKEN 直接跳到该段                     ║
+// ║  §CSS 样式 · §HTML-PANELS 页面结构(各分页 id=panel-XXX)         ║
+// ║  §CONFIG 常量/登录态 · §OPS 后台操作 · §AUTH 登录/权限           ║
+// ║  §MSG 站内讯息 · §BTEC 修课计划 · §REFDATA 参考数据/预设         ║
+// ║  §STATE 核心状态 · §POLL 轮询/心跳/同步                          ║
+// ║  §SCHEDULE 排课表 · §SPECIAL 特殊课 · §STATS 教学统计            ║
+// ║  §PRINT 列印 · §TABS 分页切换 · §ADAPTER Supabase 适配层         ║
+// ╚═══════════════════════════════════════════════════════════════╝
+// ═══════ §CONFIG 常量·登录状态 ═══════
 const PIN_KEY = 'cic_auth';
 const PIN_TTL = 24 * 60 * 60 * 1000;
 const EDITOR_KEY = 'cic_editor';     // v7.4: 当前操作人名字
@@ -1128,6 +1140,7 @@ function applyRoleVisibility(){
 }
 
 // ══════════ ⚙️ 后台操作(参考数据管理,admin 专属;写入走 admin_* RPC,服务端再验权限)══════════
+// ═══════ §OPS 后台操作·参考数据管理 ═══════
 let opsD=null, opsSec='sem', opsLoading=false, opsCatQ='', opsEdit=null;
 let _catSel=new Set();   // 课程总库多选删除
 let opsTchSort={key:'name',dir:1}, opsTchF={name:'',dept:'',pos:'',quota:'',eid:''};
@@ -1403,6 +1416,7 @@ async function opsAddCat(){
 }
 async function opsDelCat(id,code){const n=opsUsedByCourse(code);if(!confirm('删除 catalog「'+code+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 笔排课用到此课程代码,删后课程下拉/对接会受影响。仍要删?':'')))return;opsAfter(await gasPost('adminDelCatalog',{id}),'已删除 课程 '+code);}
 
+// ═══════ §AUTH 登录·权限·公告横幅 ═══════
 function checkAuth(){
   const ts = localStorage.getItem(PIN_KEY);
   // v8.17: 除了「24h 内登入过」，还要求 token 真的在 —— 避免「空 token 假登入 → 第一个请求就被登出」
@@ -1433,6 +1447,7 @@ function logout(){
 }
 
 // ══════════ 站内消息(私信 + 公告)══════════
+// ═══════ §MSG 站内讯息(私信+公告) ═══════
 let _msgData={me:'',items:[]}, _msgTab='dm', _msgPeer=null, _msgLoading=false, _msgUsers=[], _msgScrollPending=false;
 async function refreshMsg(){
   if(!currentEditor||_msgLoading)return; _msgLoading=true;
@@ -1511,6 +1526,7 @@ function _msgAnnHtml(me,isAdmin){
 }
 
 // ══════════ BTEC 修课计划 ══════════
+// ═══════ §BTEC 修课计划(矩阵/IV/加学生) ═══════
 let _btec={students:[],units:[],plan:[],iv:[]}, _btecEdit=null, _btecSemOpen=true, _btecIVOpen=false, _btecTransp=false;
 function btecToggleSem(){_btecSemOpen=!_btecSemOpen;renderBtec();}
 function btecToggleTransp(){_btecTransp=!_btecTransp;renderBtec();}
@@ -1706,6 +1722,7 @@ function modalMaybeClose(ev,overlay,closeFn){
 // ╔══════════════════════════════════════════════════════════╗
 // ║  配置区                                                   ║
 // ╚══════════════════════════════════════════════════════════╝
+// ═══════ §REFDATA 参考数据·预设值·SHEETS_URL ═══════
 const SHEETS_URL = 'https://script.google.com/macros/s/AKfycby9ulo_9shd7FmdHDAV6ONFC5DG58KyjPGmkwXs1cK5wBkzwRdgOmZFFi7cH3ovA36m/exec';
 
 // ╔══════════════════════════════════════════════════════════╗
@@ -1982,6 +1999,7 @@ const WTS={正常:1,英文:.5,'CD-实习':1,实习:1,SG:.167,Capstone:.75};
 const TB={正常:'b0',英文:'b6','CD-实习':'b1',实习:'b2',SG:'b3',Capstone:'b5'};
 const CLSS=['601','602','603','604','605','331','332','333','Capstone-971','Capstone-972','Capstone-973','Capstone-974','Capstone-975','Capstone-976','Capstone-977','Capstone-978'];
 // v7.3: SEMS 仍保留作为内建 fallback，但实际使用的是动态读取的 S
+// ═══════ §STATE 核心状态·资料容器(schD/spD/SEMS…) ═══════
 const DEFAULT_SEMS=['2569-1','2569-2','2569-3','2570-1','2570-2','2570-3'];
 let SEMS=[...DEFAULT_SEMS];   // 来自「学期列表」分页，loadRefFromSheets 会覆盖
 let schD=[],spD=[],selDpts=new Set(),btecD={};
@@ -2033,6 +2051,7 @@ function canSync(){
 }
 
 // ── 远端轮询 + 警告条 ────────────────────
+// ═══════ §POLL 轮询·心跳·同步·防呆锁 ═══════
 const POLL_INTERVAL_MS=120000;  // v8.18: 30s→2min，多人时大幅减少后台读表塞车（只是「别人改了」提醒晚点出现）
 let pollTimer=null;
 function startRemotePoll(){
@@ -3218,6 +3237,7 @@ function mpHint(code){
 }
 // 搜索是否命中该课程的「对接」课程代码(小写 q)
 function _mapMatch(code,q){const cf=C.find(x=>x.c===code);return !!(cf&&cf.mapping&&String(cf.mapping).toLowerCase().includes(q));}
+// ═══════ §SCHEDULE 排课表 ═══════
 function renderSch(){
   if(!_panelActive('sch')){_tabDirty.sch=true;return;}
   _tabDirty.sch=false;
@@ -3458,6 +3478,7 @@ function closeSpModal(){
 }
 
 function saveESp(id){}
+// ═══════ §SPECIAL 特殊课/特聘 ═══════
 function renderSp(){
   if(!_panelActive('sp')){_tabDirty.sp=true;return;}
   _tabDirty.sp=false;
@@ -4434,6 +4455,7 @@ function autoSyncBtec(){
   },1500);
 }
 
+// ═══════ §STATS 教学统计 ═══════
 function renderSta(){
   if(!_panelActive('sta')){_tabDirty.sta=true;return;}
   _tabDirty.sta=false;
@@ -4692,6 +4714,7 @@ async function syncFromSheets(type){
 
 // ── 标签切换 ──────────────────────────────
 // 班级总表列印:按 专业 → 届别 → 课程 分组渲染(全部专业;尊重 f-co-s 学期筛选)
+// ═══════ §PRINT 列印(班级总表/任课老师/教学统计) ═══════
 function buildScoPrint(){
   const cont=document.getElementById('sco-print'); if(!cont) return;
   const semF=(document.getElementById('f-co-s')||{}).value||'';
@@ -5708,6 +5731,7 @@ async function confirmCsvImportSp(){
   closeCsvImportSp();
 }
 
+// ═══════ §TABS 分页切换·载入 ═══════
 function switchTab(id){
   ['sch','sp','sum','btec','cs','sta','ops'].forEach((x,i)=>{const tb=document.querySelectorAll('.tab')[i];if(tb)tb.classList.toggle('active',x===id);});
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
@@ -5877,6 +5901,7 @@ function syncTblHeight(){
   });
 }
 
+// ═══════ §ADAPTER ↓↓↓ Supabase 后端适配层(覆写 checkPin/gasGet/gasPost/srpc/sget) ═══════
 // ═══════════════ Supabase 适配器（测试版）═══════════════
 // 只把跟后端讲话的 4 个函数改成讲 Supabase；其余前端一律不动。
 (function(){
