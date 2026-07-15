@@ -1611,7 +1611,7 @@ function renderBtec(){
   renderBtecIV(units0,isAdmin);
   // 学年学期筛选:选项=表格里真的出现过的学期
   const semF=document.getElementById('btec-intake-f');const inf=(semF||{}).value||'';
-  if(semF){const appear={};studs.forEach(s=>units0.forEach(u=>{const c=_btecCell(s,u.code);if(c.sem)appear[c.sem]=1;}));(typeof SEMS!=='undefined'?SEMS:[]).forEach(x=>{if(x)appear[x]=1;});const xs=Object.keys(appear).sort();const want='<option value="">全部</option>'+xs.map(x=>'<option'+(x===inf?' selected':'')+'>'+eh(x)+'</option>').join('');if(semF.innerHTML!==want)semF.innerHTML=want;}
+  if(semF){const appear={};studs.forEach(s=>units0.forEach(u=>{const c=_btecCell(s,u.code);if(c.sem)appear[c.sem]=1;}));(typeof SEMS!=='undefined'?SEMS:[]).forEach(x=>{if(x)appear[x]=1;});const xs=Object.keys(appear).sort();const byYr={};xs.forEach(s=>{const yr=String(s).substring(0,4);(byYr[yr]=byYr[yr]||[]).push(s);});let want='<option value="">全部学期</option>';Object.keys(byYr).sort().forEach(yr=>{want+='<optgroup label="─ '+yr+' ─">'+byYr[yr].map(s=>'<option'+(s===inf?' selected':'')+'>'+eh(s)+'</option>').join('')+'</optgroup>';});if(semF.innerHTML!==want)semF.innerHTML=want;}
   // 选了某学期 → 只显示该学期有课的单元行
   const units=inf?units0.filter(u=>studs.some(s=>_btecCell(s,u.code).sem===inf)):units0;
   const hint=document.getElementById('btec-hint');if(hint)hint.textContent=studs.length+' 生 · '+units.length+' 单元'+(inf?(' @'+inf):'')+(isAdmin?' · 点格子改 学期/讲师/IV':'');
