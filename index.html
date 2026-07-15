@@ -750,7 +750,6 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
             <th style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">第三学期</th>
             <th rowspan="2" style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">教学<br>总数</th>
             <th rowspan="2" style="text-align:center;background:#3C3489">BTEC<br>×0.5</th>
-            <th rowspan="2" style="text-align:center;background:#3C3489">BTEC</th>
             <th rowspan="2" style="text-align:center">学年<br>规定</th>
             <th rowspan="2" style="text-align:center">学年<br>总数</th>
             <th rowspan="2" style="text-align:center">%</th>
@@ -1528,7 +1527,7 @@ function _msgAnnHtml(me,isAdmin){
 
 // ══════════ BTEC 修课计划 ══════════
 // ═══════ §BTEC 修课计划(矩阵/IV/加学生) ═══════
-let _btec={students:[],units:[],plan:[],iv:[],stat:[]}, _btecEdit=null, _btecSemOpen=true, _btecIVOpen=false, _btecTransp=false;
+let _btec={students:[],units:[],plan:[],iv:[]}, _btecEdit=null, _btecSemOpen=true, _btecIVOpen=false, _btecTransp=false;
 function btecToggleSem(){_btecSemOpen=!_btecSemOpen;renderBtec();}
 function btecToggleTransp(){_btecTransp=!_btecTransp;renderBtec();}
 function _btecTranspHtml(units,studs,sems,isAdmin,showTc){
@@ -1543,8 +1542,8 @@ function _btecTranspHtml(units,studs,sems,isAdmin,showTc){
     const scell='<td style="position:sticky;left:0;background:#fff;z-index:1;padding:3px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:0.5px solid #eee" title="'+eh((s.zh||'')+' '+(s.en||'')+' '+(s.sid||''))+'">'+chip+'<b>'+eh(s.zh||s.sid||'')+'</b> <span style="font-size:9px;color:#888;font-family:ui-monospace">'+eh(s.sid||'')+'</span>'+(isAdmin?' <span onclick="btecEditStu('+s.id+')" style="cursor:pointer;font-size:9px;color:#888">✎</span><span onclick="btecDelStu('+s.id+',\''+jsq(s.zh||s.sid||'')+'\')" style="cursor:pointer;font-size:9px;color:#c00">🗑</span>':'')+'</td>';
     const ucells=units.map(u=>{const cell=_btecCell(s,u.code);const col=_btecSemC(cell.sem);const style=cell.sem?('background:'+col[0]+';color:'+col[1]):'';const tcLine=(showTc&&cell.tc)?'<div style="font-size:8.5px;opacity:.85;overflow:hidden;text-overflow:ellipsis">'+(cell.tcMan?'✎':'')+eh(cell.tc)+'</div>':'';const ivLine=(showTc&&cell.iv)?'<div style="font-size:8px;color:#6a1b9a;opacity:.95;overflow:hidden;text-overflow:ellipsis">IV '+eh(cell.iv)+'</div>':'';const tip=cell.sem?(cell.sem+(cell.tc?' · 讲师 '+eh(cell.tc):'')+(cell.iv?' · IV '+eh(cell.iv):'')+(cell.manual?' (手动)':' (来自排课)')):'';return '<td onclick="'+(isAdmin?'btecEditCell('+s.id+',\''+jsq(u.code)+'\')':'')+'" style="text-align:center;padding:2px 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:9px;border-top:0.5px solid #eee;'+(isAdmin?'cursor:pointer;':'')+style+'" title="'+tip+'">'+(cell.sem||'')+tcLine+ivLine+'</td>';}).join('');
     let tot=0;units.forEach(u=>{if(_btecCell(s,u.code).sem)tot++;});
-    const totCell=_btecStatTd(s.id,'TOTAL',tot,'text-align:center;font-weight:700;color:#3C3489;background:#EEEDFE;border-top:0.5px solid #eee',isAdmin,true);
-    const semCells=_btecSemOpen?sems.map(sm=>{let n=0;units.forEach(u=>{if(_btecCell(s,u.code).sem===sm)n++;});const col=_btecSemC(sm);return _btecStatTd(s.id,sm,n,'text-align:center;font-size:9px;background:'+col[0]+';color:'+col[1]+';border-top:0.5px solid #eee',isAdmin,false);}).join(''):'';
+    const totCell='<td style="text-align:center;font-weight:700;color:#3C3489;background:#EEEDFE;border-top:0.5px solid #eee">'+tot+'</td>';
+    const semCells=_btecSemOpen?sems.map(sm=>{let n=0;units.forEach(u=>{if(_btecCell(s,u.code).sem===sm)n++;});const col=_btecSemC(sm);return '<td style="text-align:center;font-size:9px;background:'+col[0]+';color:'+col[1]+';border-top:0.5px solid #eee">'+(n||'')+'</td>';}).join(''):'';
     h+='<tr>'+scell+ucells+totCell+semCells+'</tr>';
   });
   h+='</tbody></table>';
@@ -1553,27 +1552,6 @@ function _btecTranspHtml(units,studs,sems,isAdmin,showTc){
 function btecToggleIV(){_btecIVOpen=!_btecIVOpen;renderBtec();}
 function _btecIV(code,sem){const r=(_btec.iv||[]).find(x=>String(x.code).toUpperCase()===String(code).toUpperCase()&&x.sem===sem);return r?r.iv:'';}
 function _btecTc(code,sem){const r=(_btec.iv||[]).find(x=>String(x.code).toUpperCase()===String(code).toUpperCase()&&x.sem===sem);return r&&r.tc?r.tc:'';}
-function _btecStat(sid,k){const r=(_btec.stat||[]).find(x=>String(x.student_id)===String(sid)&&x.k===k);return r?r.val:null;}
-function _btecStatTd(sid,k,autoVal,style,isAdmin,showZero){
-  const o=_btecStat(sid,k);const man=(o!=null);
-  let txt;
-  if(man)txt=String(o)+'<span style="font-size:8px;opacity:.85">✎</span>';
-  else txt=(showZero||autoVal)?String(autoVal):'';
-  const oc=isAdmin?('onclick="btecEditStat('+sid+',\''+jsq(k)+'\','+(autoVal||0)+')" title="点改;手动会盖过自动('+(autoVal||0)+')"'):'';
-  return '<td '+oc+' style="'+style+(isAdmin?';cursor:pointer':'')+(man?';color:#b45309;font-weight:700':'')+'">'+txt+'</td>';
-}
-function btecEditStat(sid,k,autoVal){
-  if(currentRole!=='admin')return;
-  const cur=_btecStat(sid,k);const label=(k==='TOTAL'?'Total 修课数':k+' 课数');
-  const v=prompt('手动设定「'+label+'」的数字?\n自动算出来是 '+autoVal+'。\n留空 = 回到自动。',cur!=null?String(cur):'');
-  if(v===null)return;
-  btecSaveStat(sid,k,v.trim());
-}
-async function btecSaveStat(sid,k,val){
-  if(val!==''&&!/^\d+$/.test(val)){alert('请填整数,或留空回到自动');return;}
-  const r=await gasPost('adminSetBtecStat',{student_id:sid,k:k,val:val});
-  if(r&&r.success)await loadBtec();else alert('保存失败:'+((r&&r.error)||'?'));
-}
 function renderBtecIV(units,isAdmin){
   const w=document.getElementById('btec-iv-wrap');if(w)w.innerHTML='';  // IV 已改由点格子编辑,底部表移除
 }
@@ -1582,7 +1560,7 @@ async function btecSaveIV(code,sem,iv){const r=await gasPost('adminSetBtecIv',{c
 const _BTEC_SEMC={'2568-1':['#DBE7FF','#1d4ed8'],'2568-2':['#FCE4EC','#c2185b'],'2569-1':['#E8F5E9','#2e7d32'],'2569-2':['#FFF3E0','#b5651d'],'2570-1':['#E1F5FE','#0277bd'],'2570-2':['#E0F2F1','#00695c'],'2570-3':['#F3E5F5','#6a1b9a'],'2571-1':['#FFF8E1','#a87800'],'2571-2':['#EFEBE9','#5d4037']};
 function _btecSemC(s){return _BTEC_SEMC[s]||['#F0F0F0','#666'];}
 async function loadBtec(){
-  try{const r=await gasGet({action:'btecData'});if(r&&r.success)_btec={students:r.students||[],units:r.units||[],plan:r.plan||[],iv:r.iv||[],stat:r.stat||[]};}catch(e){}
+  try{const r=await gasGet({action:'btecData'});if(r&&r.success)_btec={students:r.students||[],units:r.units||[],plan:r.plan||[],iv:r.iv||[]};}catch(e){}
   const df=document.getElementById('btec-dept-f');
   if(df){const cur=df.value;const ds=[...new Set((_btec.students||[]).map(s=>s.dept).filter(Boolean))].sort();df.innerHTML='<option value="">全部专业</option>'+ds.map(d=>'<option value="'+eh(d)+'"'+(d===cur?' selected':'')+'>'+eh(d)+'</option>').join('');}
   renderBtec();
@@ -1612,7 +1590,7 @@ function renderBtec(){
   renderBtecIV(units0,isAdmin);
   // 学年学期筛选:选项=表格里真的出现过的学期
   const semF=document.getElementById('btec-intake-f');const inf=(semF||{}).value||'';
-  if(semF){const appear={};studs.forEach(s=>units0.forEach(u=>{const c=_btecCell(s,u.code);if(c.sem)appear[c.sem]=1;}));(typeof SEMS!=='undefined'?SEMS:[]).forEach(x=>{if(x)appear[x]=1;});const xs=Object.keys(appear).sort();const byYr={};xs.forEach(s=>{const yr=String(s).substring(0,4);(byYr[yr]=byYr[yr]||[]).push(s);});let want='<option value="">全部学期</option>';Object.keys(byYr).sort().forEach(yr=>{want+='<optgroup label="─ '+yr+' ─">'+byYr[yr].map(s=>'<option'+(s===inf?' selected':'')+'>'+eh(s)+'</option>').join('')+'</optgroup>';});if(semF.innerHTML!==want)semF.innerHTML=want;}
+  if(semF){const appear={};studs.forEach(s=>units0.forEach(u=>{const c=_btecCell(s,u.code);if(c.sem)appear[c.sem]=1;}));(typeof SEMS!=='undefined'?SEMS:[]).forEach(x=>{if(x)appear[x]=1;});const xs=Object.keys(appear).sort();const want='<option value="">全部</option>'+xs.map(x=>'<option'+(x===inf?' selected':'')+'>'+eh(x)+'</option>').join('');if(semF.innerHTML!==want)semF.innerHTML=want;}
   // 选了某学期 → 只显示该学期有课的单元行
   const units=inf?units0.filter(u=>studs.some(s=>_btecCell(s,u.code).sem===inf)):units0;
   const hint=document.getElementById('btec-hint');if(hint)hint.textContent=studs.length+' 生 · '+units.length+' 单元'+(inf?(' @'+inf):'')+(isAdmin?' · 点格子改 学期/讲师/IV':'');
@@ -1648,9 +1626,9 @@ function renderBtec(){
     const cells=studs.map(s=>{const c=_btecCell(s,u.code);const col=_btecSemC(c.sem);const style=c.sem?('background:'+col[0]+';color:'+col[1]):'';const tcLine=(showTc&&c.tc)?'<div style="font-size:10px;opacity:.85;font-weight:400;overflow:hidden;text-overflow:ellipsis">'+(c.tcMan?'✎':'')+eh(c.tc)+'</div>':'';const ivLine=(showTc&&c.iv)?'<div style="font-size:9px;color:#6a1b9a;opacity:.95;overflow:hidden;text-overflow:ellipsis">IV '+eh(c.iv)+'</div>':'';const tip=c.sem?(c.sem+(c.tc?' · 讲师 '+eh(c.tc):'')+(c.iv?' · IV '+eh(c.iv):'')+(c.manual?' (手动)':' (来自排课)')):'';return '<td onclick="'+(isAdmin?'btecEditCell('+s.id+',\''+jsq(u.code)+'\')':'')+'" style="text-align:center;padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:104px;font-size:12px;border-top:0.5px solid #eee;'+(isAdmin?'cursor:pointer;':'')+style+'" title="'+tip+'">'+(c.sem||'')+tcLine+ivLine+'</td>';}).join('');
     h+='<tr>'+rl+cells+'</tr>';
   });
-  h+='<tr style="border-top:3px double #534AB7"><td style="position:sticky;left:0;background:#EEEDFE;z-index:1;padding:4px 8px;font-weight:700;color:#3C3489">Total 修课数</td>'+studs.map(s=>{let n=0;units.forEach(u=>{if(_btecCell(s,u.code).sem)n++;});return _btecStatTd(s.id,'TOTAL',n,'text-align:center;font-weight:700;color:#3C3489;background:#EEEDFE',isAdmin,true);}).join('')+'</tr>';
+  h+='<tr style="border-top:3px double #534AB7"><td style="position:sticky;left:0;background:#EEEDFE;z-index:1;padding:4px 8px;font-weight:700;color:#3C3489">Total 修课数</td>'+studs.map(s=>{let n=0;units.forEach(u=>{if(_btecCell(s,u.code).sem)n++;});return '<td style="text-align:center;font-weight:700;color:#3C3489;background:#EEEDFE">'+n+'</td>';}).join('')+'</tr>';
   h+='<tr onclick="btecToggleSem()" style="cursor:pointer"><td style="position:sticky;left:0;background:#F0EFFA;z-index:1;padding:4px 8px;font-weight:600;color:#534AB7;border-top:6px solid #fff">'+(_btecSemOpen?'▾':'▸')+' 各学年学期课数 '+(_btecSemOpen?'(收起)':'(展开)')+'</td><td colspan="'+studs.length+'" style="background:#F0EFFA;border-top:6px solid #fff"></td></tr>';
-  if(_btecSemOpen)sems.forEach(sm=>{const col=_btecSemC(sm);h+='<tr><td style="position:sticky;left:0;background:'+col[0]+';color:'+col[1]+';z-index:1;padding:2px 8px;font-weight:600;font-size:10px">'+sm+'</td>'+studs.map(s=>{let n=0;units.forEach(u=>{if(_btecCell(s,u.code).sem===sm)n++;});return _btecStatTd(s.id,sm,n,'text-align:center;font-size:10px;background:'+col[0]+';color:'+col[1],isAdmin,false);}).join('')+'</tr>';});
+  if(_btecSemOpen)sems.forEach(sm=>{const col=_btecSemC(sm);h+='<tr><td style="position:sticky;left:0;background:'+col[0]+';color:'+col[1]+';z-index:1;padding:2px 8px;font-weight:600;font-size:10px">'+sm+'</td>'+studs.map(s=>{let n=0;units.forEach(u=>{if(_btecCell(s,u.code).sem===sm)n++;});return '<td style="text-align:center;font-size:10px;background:'+col[0]+';color:'+col[1]+'">'+(n||'')+'</td>';}).join('')+'</tr>';});
   h+='</tbody></table>';
   wrap.innerHTML=h;
 }
@@ -4478,18 +4456,9 @@ function autoSyncBtec(){
 }
 
 // ═══════ §STATS 教学统计 ═══════
-let _teachBtec=null;  // {老师名: 手填BTEC值},加进学年总数;null=未载入
-async function loadTeachBtec(){try{const r=await gasGet({action:'teachBtec'});_teachBtec=(r&&r.map)||{};}catch(e){_teachBtec={};}renderSta();}
-async function saveTeachBtec(name,val){
-  const v=String(val||'').trim();
-  if(v!==''&&!/^\d+(\.\d+)?$/.test(v)){alert('请填数字(可小数),或留空清除');renderSta();return;}
-  const r=await gasPost('adminSetTeachBtec',{teacher:name,val:v});
-  if(r&&r.success){_teachBtec=null;renderSta();}else alert('保存失败:'+((r&&r.error)||'?'));
-}
 function renderSta(){
   if(!_panelActive('sta')){_tabDirty.sta=true;return;}
   _tabDirty.sta=false;
-  if(_teachBtec===null){_teachBtec={};loadTeachBtec();}  // 首次进来拉手填值,回来再渲染
   const yr=document.getElementById('sta-yr')?document.getElementById('sta-yr').value:'';
   const activeSems=yr?['1','2','3'].map(s=>yr+'-'+s):[];
   const actT=[...new Set([...schD.map(r=>r.tc),...spD.map(r=>r.tc)])].filter(Boolean).length;
@@ -4507,8 +4476,8 @@ function renderSta(){
     const totalSems=yr?activeSems:['2569-1','2569-2','2569-3','2570-1','2570-2','2570-3'];
     const totalWt=totalSems.reduce((s,sem)=>s+semDetail(t.n,sem).wt,0);
     const btecCount=totalSems.reduce((s,sem)=>s+schD.filter(r=>r.tc===t.n&&r.sem===sem&&r.btec).length,0);
-    const btecWt=btecCount*0.5;const _mb=+((_teachBtec||{})[t.n])||0;
-    const yearTotal=Math.round((totalWt+btecWt+_mb)*100)/100;
+    const btecWt=btecCount*0.5;
+    const yearTotal=Math.round((totalWt+btecWt)*100)/100;
     const pct=t.l>0?Math.round(yearTotal/t.l*100):0;
     allTeacherStats.push({n:t.n,d:t.d,l:t.l,yearTotal,pct,k:t.n.replace(/[^a-zA-Z0-9]/g,'_')});
   });
@@ -4529,8 +4498,8 @@ function renderSta(){
       const totalSemDetails=totalSems.map(s=>({sem:s,d:semDetail(t.n,s)}));
       const totalWt=Math.round(totalSems.reduce((s,sem)=>{const d=semDetail(t.n,sem);return s+d.wt;},0)*100)/100;
       const btecCount=totalSems.reduce((s,sem)=>s+schD.filter(r=>r.tc===t.n&&r.sem===sem&&r.btec).length,0);
-      const btecWt=Math.round(btecCount*0.5*100)/100;const _mb=+((_teachBtec||{})[t.n])||0;
-      const yearTotal=Math.round((totalWt+btecWt+_mb)*100)/100;
+      const btecWt=Math.round(btecCount*0.5*100)/100;
+      const yearTotal=Math.round((totalWt+btecWt)*100)/100;
       dWt+=yearTotal;
       const pct=t.l>0?Math.round(yearTotal/t.l*100):0;
       const over=t.l>0&&yearTotal>t.l;
@@ -4542,12 +4511,11 @@ function renderSta(){
         sdCells(d1,true)+sdCells(d2,true)+sdCells(d3,true)+
         '<td style="text-align:center;border-left:1px solid #eee;font-weight:500">'+totalWt+'</td>'+
         '<td style="text-align:center;background:#F5F4FE;padding:3px">'+(btecCount>0?'<span style="font-size:13px;font-weight:600;color:#534AB7">'+btecWt+'</span>':'<span style="color:#ddd">—</span>')+'</td>'+
-        '<td style="text-align:center;background:#F5F4FE;padding:2px" onclick="event.stopPropagation()">'+(currentRole==='admin'?'<input type="number" step="0.25" min="0" value="'+((_mb)?_mb:'')+'" style="width:44px;text-align:center;font-size:12px;border:0.5px solid #cbd5e1;border-radius:4px;padding:2px" onchange="saveTeachBtec(\''+jsq(t.n)+'\',this.value)" title="手动 BTEC,加进学年总数;留空清除">':(_mb?'<span style="font-weight:600;color:#b45309">'+_mb+'</span>':'<span style="color:#ddd">—</span>'))+'</td>'+
         '<td style="text-align:center;color:#888;font-size:11px">'+(t.l>0?t.l:'<span style="color:#ccc">—</span>')+'</td>'+
         '<td style="text-align:center"><strong id="yt-'+k+'">'+yearTotal+'</strong></td>'+
         '<td>'+(t.l>0?'<span class="badge '+(over?'b3':'b1')+'" id="pct-'+k+'">'+pct+'% / '+t.l+'</span>':'<span class="badge b1" id="pct-'+k+'" style="background:#eee;color:#999" title="外聘·无规定课时">外聘 —</span>')+'</td>'+
         '</tr>';
-      rows+='<tr class="sta-acc" id="acc-'+k+'"><td colspan="'+(10+activeSems.length)+'" style="padding:0;border:0">'+
+      rows+='<tr class="sta-acc" id="acc-'+k+'"><td colspan="'+(9+activeSems.length)+'" style="padding:0;border:0">'+
         '<div class="acc-wrap">'+accBlock(totalSemDetails)+'</div></td></tr>';
     });
     // 小計列總欄數 = 8 + activeSems.length（3+sems+1總+4尾：BTEC/規定/年總/%）
@@ -4555,7 +4523,7 @@ function renderSta(){
       '<td colspan="4" style="text-align:right;padding-right:12px">'+dept+' 小计</td>'+
       '<td colspan="'+activeSems.length+'"></td>'+
       '<td style="text-align:center;border-left:1px solid #eee"><strong>'+Math.round(dWt*100)/100+'</strong></td>'+
-      '<td colspan="5"></td></tr>';
+      '<td colspan="4"></td></tr>';
   });
   if(!yr){document.getElementById('sta-em').textContent='请先选择学年';document.getElementById('sta-em').style.display='block';document.getElementById('sta-tb').innerHTML='';document.getElementById('sta-low-panel').style.display='none';return;}
   if(!hasData){document.getElementById('sta-em').style.display='block';document.getElementById('sta-tb').innerHTML='';document.getElementById('sta-low-panel').style.display='none';return;}
@@ -6019,10 +5987,9 @@ function syncTblHeight(){
     if(a==='btecData'){
       // 学生个资不再匿名直读:改走验 PIN 的 security-definer RPC btec_data(p_pin)
       const r=await srpc('btec_data',{p_pin:_pin}).catch(function(){return null;});
-      if(r&&!r.error)return{success:true,students:r.students||[],units:r.units||[],plan:r.plan||[],iv:r.iv||[],stat:r.stat||[]};
-      return{success:false,students:[],units:[],plan:[],iv:[],stat:[],error:(r&&r.error)||'需要登入'};
+      if(r&&!r.error)return{success:true,students:r.students||[],units:r.units||[],plan:r.plan||[],iv:r.iv||[]};
+      return{success:false,students:[],units:[],plan:[],iv:[],error:(r&&r.error)||'需要登入'};
     }
-    if(a==='teachBtec'){const d=await sget('teach_btec?select=teacher,val').catch(function(){return [];});const m={};(d||[]).forEach(function(x){m[x.teacher]=+x.val;});return{success:true,map:m};}
     if(a==='opsData'){
       const[se,de,ch,te,ca,po,gr]=await Promise.all([
         sget('semesters?select=sem&order=sem'),
@@ -6085,8 +6052,6 @@ function syncTblHeight(){
     if(action==='adminDelBtecUnit')return srpc('admin_del_btec_unit',{p_pin:_pin,p_id:body.id});
     if(action==='adminSetBtecIv')return srpc('admin_set_btec_iv',{p_pin:_pin,p_code:body.code,p_sem:body.sem,p_iv:body.iv});
     if(action==='adminSetBtecIv2')return srpc('admin_set_btec_iv2',{p_pin:_pin,p_code:body.code,p_sem:body.sem,p_tc:body.tc,p_iv:body.iv});
-    if(action==='adminSetBtecStat')return srpc('admin_set_btec_stat',{p_pin:_pin,p_student_id:body.student_id,p_k:body.k,p_val:body.val});
-    if(action==='adminSetTeachBtec')return srpc('admin_set_teach_btec',{p_pin:_pin,p_teacher:body.teacher,p_val:body.val});
     if(action==='adminSetBtecCell')return srpc('admin_set_btec_cell',{p_pin:_pin,p_student_id:body.student_id,p_code:body.code,p_sem:body.sem,p_tc:body.tc,p_iv:body.iv});
     return{success:false,error:'未知 action '+action};
   };
