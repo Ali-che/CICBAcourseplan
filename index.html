@@ -4495,7 +4495,7 @@ function renderSta(){
   depts.forEach(dept=>{
     const dTchrs=T.filter(t=>t.d===dept&&_counts(t)).sort((a,b)=>a.n.localeCompare(b.n));
     // 表頭 = 8 + activeSems.length 欄（#/老師/職位/各學期/教學總數/BTEC/規定/年總/%）
-    rows+='<tr class="dh"><td colspan="'+(9+activeSems.length)+'">▸ '+dept+' · '+dTchrs.length+'位老师</td></tr>';
+    rows+='<tr class="dh"><td colspan="'+(10+activeSems.length)+'">▸ '+dept+' · '+dTchrs.length+'位老师</td></tr>';
     let dWt=0;let idx=0;
     dTchrs.forEach(t=>{
       idx++;hasData=true;
