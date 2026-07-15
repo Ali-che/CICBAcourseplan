@@ -750,7 +750,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
             <th style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">第三学期</th>
             <th rowspan="2" style="text-align:center;border-left:1px solid rgba(255,255,255,.3)">教学<br>总数</th>
             <th rowspan="2" style="text-align:center;background:#3C3489">BTEC<br>×0.5</th>
-            <th rowspan="2" style="text-align:center;background:#534AB7">BTEC</th>
+            <th rowspan="2" style="text-align:center;background:#3C3489">BTEC</th>
             <th rowspan="2" style="text-align:center">学年<br>规定</th>
             <th rowspan="2" style="text-align:center">学年<br>总数</th>
             <th rowspan="2" style="text-align:center">%</th>
@@ -4542,7 +4542,7 @@ function renderSta(){
         sdCells(d1,true)+sdCells(d2,true)+sdCells(d3,true)+
         '<td style="text-align:center;border-left:1px solid #eee;font-weight:500">'+totalWt+'</td>'+
         '<td style="text-align:center;background:#F5F4FE;padding:3px">'+(btecCount>0?'<span style="font-size:13px;font-weight:600;color:#534AB7">'+btecWt+'</span>':'<span style="color:#ddd">—</span>')+'</td>'+
-        '<td style="text-align:center;background:#EEEDFE;padding:2px" onclick="event.stopPropagation()">'+(currentRole==='admin'?'<input type="number" step="0.25" min="0" value="'+((_mb)?_mb:'')+'" style="width:44px;text-align:center;font-size:12px;border:0.5px solid #cbd5e1;border-radius:4px;padding:2px" onchange="saveTeachBtec(\''+jsq(t.n)+'\',this.value)" title="手动 BTEC,加进学年总数;留空清除">':(_mb?'<span style="font-weight:600;color:#b45309">'+_mb+'</span>':'<span style="color:#ddd">—</span>'))+'</td>'+
+        '<td style="text-align:center;background:#F5F4FE;padding:2px" onclick="event.stopPropagation()">'+(currentRole==='admin'?'<input type="number" step="0.25" min="0" value="'+((_mb)?_mb:'')+'" style="width:44px;text-align:center;font-size:12px;border:0.5px solid #cbd5e1;border-radius:4px;padding:2px" onchange="saveTeachBtec(\''+jsq(t.n)+'\',this.value)" title="手动 BTEC,加进学年总数;留空清除">':(_mb?'<span style="font-weight:600;color:#b45309">'+_mb+'</span>':'<span style="color:#ddd">—</span>'))+'</td>'+
         '<td style="text-align:center;color:#888;font-size:11px">'+(t.l>0?t.l:'<span style="color:#ccc">—</span>')+'</td>'+
         '<td style="text-align:center"><strong id="yt-'+k+'">'+yearTotal+'</strong></td>'+
         '<td>'+(t.l>0?'<span class="badge '+(over?'b3':'b1')+'" id="pct-'+k+'">'+pct+'% / '+t.l+'</span>':'<span class="badge b1" id="pct-'+k+'" style="background:#eee;color:#999" title="外聘·无规定课时">外聘 —</span>')+'</td>'+
