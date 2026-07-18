@@ -1640,7 +1640,11 @@ function _btecAddBar(){
   const open=_btecAddOpen||!!ed;
   const head='<div onclick="btecToggleAdd()" style="cursor:pointer;font-weight:600;color:#534AB7;font-size:12px;user-select:none">'+(open?('▾ '+(ed?'✏️ 改学生':'✍️ 加学生')):'＋ 加学生')+'</div>';
   if(!open)return head;
-  const depts=Object.keys(typeof CBD!=='undefined'?CBD:{}).sort();
+  const depts=[...new Set([].concat(
+    (typeof DEPTS!=='undefined'?DEPTS:[]).map(d=>d&&d.code),
+    (typeof opsD!=='undefined'&&opsD&&opsD.depts?opsD.depts:[]).map(d=>d&&d.code),
+    Object.keys(typeof CBD!=='undefined'?CBD:{})
+  ))].filter(Boolean).sort();
   const g=(id,ph,v,w)=>'<input id="'+id+'" placeholder="'+ph+'" value="'+eh(v||'')+'" style="width:'+w+';font-size:12px;padding:4px 7px;border:0.5px solid #cbd5e1;border-radius:6px">';
   return head+'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12px;margin-top:8px">'+
     g('btec-sid','学号',ed?ed.sid:'','110px')+g('btec-zh','中文名',ed?ed.zh:'','90px')+g('btec-en','英文名',ed?ed.en:'','130px')+
@@ -1889,6 +1893,7 @@ const DEFAULT_CBD={
 };
 
 let C=DEFAULT_C.map(x=>({...x})),T=DEFAULT_T.map(x=>({...x})),CBD=JSON.parse(JSON.stringify(DEFAULT_CBD));
+let DEPTS=[];  // 完整专业表[{code,name}](含还没届别的新专业),启动 readRef 载入
 let refSource='local',refLoadTime=null;
 
 // ── 动态加载参考数据 ──────────────────────
@@ -1906,6 +1911,7 @@ async function loadRefFromSheets(){
     if(data.cohorts&&data.cohorts.length){
       CBD={};data.cohorts.forEach(c=>{if(!CBD[c.dept])CBD[c.dept]=[];CBD[c.dept].push(c.cohort);});
     }
+    if(data.depts&&data.depts.length)DEPTS=data.depts;  // 完整专业表(供 BTEC 加学生下拉等)
     // v7.3: 接收学期列表
     if(data.sems&&data.sems.length)SEMS=data.sems;
     // v7.4: 接收主任 PIN 列表，并缓存到 localStorage（让下次 PIN 输入能立刻查）
