@@ -1572,7 +1572,9 @@ function btecExportExcel(){
   const studs=_btecStudents();
   if(!studs.length){alert('没有学生可导出(先调整专业/搜索筛选)');return;}
   const rank=r=>(r==='Mandatory'?0:r==='Optional'?1:2);
-  const units=(_btec.units||[]).slice().sort((a,b)=>(rank(a.req)-rank(b.req))||((a.seq||0)-(b.seq||0)));
+  const inf=(document.getElementById('btec-intake-f')||{}).value||'';
+  let units=(_btec.units||[]).slice().sort((a,b)=>(rank(a.req)-rank(b.req))||((a.seq||0)-(b.seq||0)));
+  if(inf)units=units.filter(u=>studs.some(s=>_btecCell(s,u.code).sem===inf));  // 选了学期→只导该学期有课的单元(与画面一致)
   const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const df=(document.getElementById('btec-dept-f')||{}).value||'';
   const now=new Date();const dateStr=now.toISOString().slice(0,10);
@@ -1584,7 +1586,7 @@ function btecExportExcel(){
   html+='</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>';
   html+='<table border="1" style="border-collapse:collapse;font-size:11pt;font-family:Arial">';
   html+='<tr><td colspan="'+ncol+'" style="background:#3C3489;color:#fff;font-size:14pt;font-weight:bold;text-align:center;padding:8px">Pearson BTEC · 修课计划</td></tr>';
-  html+='<tr><td colspan="'+ncol+'" style="font-size:9pt;color:#666;text-align:center;padding:4px">专业:'+esc(df||'全部')+'　｜　'+studs.length+' 生 · '+units.length+' 单元　｜　导出:'+dateStr+'</td></tr>';
+  html+='<tr><td colspan="'+ncol+'" style="font-size:9pt;color:#666;text-align:center;padding:4px">专业:'+esc(df||'全部')+(inf?'　｜　学期:'+esc(inf):'')+'　｜　'+studs.length+' 生 · '+units.length+' 单元　｜　导出:'+dateStr+'</td></tr>';
   html+='<tr>'+th('BTEC 单元')+th('GLH')+th('必修/选修')+studs.map(s=>th(esc((s.zh||s.sid||''))+(s.dept?' ('+esc(s.dept)+')':'')+'<br>'+esc(s.sid||''))).join('')+'</tr>';
   let curReq=null;
   units.forEach(u=>{
@@ -1598,7 +1600,7 @@ function btecExportExcel(){
   html+='</table></body></html>';
   const blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download='BTEC修课计划_'+(df||'全部')+'_'+dateStr+'.xls';
+  a.download='BTEC修课计划_'+(df||'全部')+(inf?'_'+inf:'')+'_'+dateStr+'.xls';
   a.click();URL.revokeObjectURL(a.href);
 }
 function _btecPlan(sid,code){const p=(_btec.plan||[]).find(x=>String(x.student_id)===String(sid)&&String(x.code).toUpperCase()===String(code).toUpperCase());return p?p.sem:null;}
