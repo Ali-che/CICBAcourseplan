@@ -1587,14 +1587,14 @@ function btecExportExcel(){
   html+='<table border="1" style="border-collapse:collapse;font-size:11pt;font-family:Arial">';
   html+='<tr><td colspan="'+ncol+'" style="background:#3C3489;color:#fff;font-size:14pt;font-weight:bold;text-align:center;padding:8px">Pearson BTEC · 修课计划</td></tr>';
   html+='<tr><td colspan="'+ncol+'" style="font-size:9pt;color:#666;text-align:center;padding:4px">专业:'+esc(df||'全部')+(inf?'　｜　学期:'+esc(inf):'')+'　｜　'+studs.length+' 生 · '+units.length+' 单元　｜　导出:'+dateStr+'</td></tr>';
-  html+='<tr>'+th('BTEC 单元')+th('GLH')+th('必修/选修')+studs.map(s=>th(esc((s.zh||s.sid||''))+(s.dept?' ('+esc(s.dept)+')':'')+'<br>'+esc(s.sid||''))).join('')+'</tr>';
+  html+='<tr>'+th('BTEC 单元')+th('GLH')+th('必修/选修')+studs.map(s=>th(esc((s.zh||s.sid||''))+(s.dept?' ('+esc(s.dept)+')':'')+'<br>'+esc(s.sid||'')+(s.en?'<br>'+esc(s.en):''))).join('')+'</tr>';
   let curReq=null;
   units.forEach(u=>{
     if(u.req!==curReq){curReq=u.req;const lbl=(curReq==='Mandatory'?'必修 Mandatory Units':curReq==='Optional'?'选修 Optional Units':esc(curReq||'其他'));html+='<tr><td colspan="'+ncol+'" style="background:#EEEDFE;color:#3C3489;font-weight:bold;padding:4px 8px">'+lbl+'</td></tr>';}
     html+='<tr><td style="padding:4px 8px;white-space:nowrap">'+esc((u.unit_no?('#'+u.unit_no+' '):'')+(u.name_en||'')+' ('+(u.code||'')+')')+'</td>'+
       '<td style="text-align:center;padding:4px 6px">'+esc(u.glh||'')+'</td>'+
       '<td style="text-align:center;padding:4px 6px">'+esc(u.assess||'')+'</td>'+
-      studs.map(s=>'<td style="text-align:center;padding:4px 6px">'+esc(_btecCell(s,u.code).sem||'')+'</td>').join('')+'</tr>';
+      studs.map(s=>{const c=_btecCell(s,u.code);return '<td style="text-align:center;padding:4px 6px">'+esc(c.sem||'')+(c.tc?'<br><span style="color:#666;font-size:9pt">'+esc(c.tc)+'</span>':'')+'</td>';}).join('')+'</tr>';
   });
   html+='<tr><td colspan="3" style="background:#EEEDFE;font-weight:bold;padding:4px 8px;text-align:right">Total 修课数</td>'+studs.map(s=>{let n=0;units.forEach(u=>{if(_btecCell(s,u.code).sem)n++;});return '<td style="background:#EEEDFE;text-align:center;font-weight:bold;padding:4px 6px">'+n+'</td>';}).join('')+'</tr>';
   html+='</table></body></html>';
