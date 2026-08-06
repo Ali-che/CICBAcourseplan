@@ -855,6 +855,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <span id="btec-hint" style="font-size:11px;color:#888"></span>
       <button class="btn btn-sm no-print" onclick="btecToggleTransp()" title="切换布局:学生为列 ⇄ 学生为行">⇄ 转置</button>
       <button class="btn btn-sm no-print" onclick="reloadBtec()">↻ 重载</button>
+      <button class="btn btn-sm no-print" onclick="btecExportExcel()" title="导出当前(专业筛选后)的修课计划为 Excel">📊 导出 Excel</button>
       <button class="btn btn-sm no-print" onclick="printPanel('btec')">🖨️ 列印</button>
     </div>
   </div>
@@ -1567,6 +1568,39 @@ async function loadBtec(){
   renderBtec();
 }
 function reloadBtec(){loadBtec();}
+function btecExportExcel(){
+  const studs=_btecStudents();
+  if(!studs.length){alert('没有学生可导出(先调整专业/搜索筛选)');return;}
+  const rank=r=>(r==='Mandatory'?0:r==='Optional'?1:2);
+  const units=(_btec.units||[]).slice().sort((a,b)=>(rank(a.req)-rank(b.req))||((a.seq||0)-(b.seq||0)));
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const df=(document.getElementById('btec-dept-f')||{}).value||'';
+  const now=new Date();const dateStr=now.toISOString().slice(0,10);
+  const ncol=3+studs.length;
+  const th=t=>'<td style="background:#3C3489;color:#fff;font-weight:bold;padding:6px 8px;white-space:nowrap;text-align:center">'+t+'</td>';
+  let html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+  html+='<head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>';
+  html+='<x:Name>BTEC修课计划</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>';
+  html+='</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>';
+  html+='<table border="1" style="border-collapse:collapse;font-size:11pt;font-family:Arial">';
+  html+='<tr><td colspan="'+ncol+'" style="background:#3C3489;color:#fff;font-size:14pt;font-weight:bold;text-align:center;padding:8px">Pearson BTEC · 修课计划</td></tr>';
+  html+='<tr><td colspan="'+ncol+'" style="font-size:9pt;color:#666;text-align:center;padding:4px">专业:'+esc(df||'全部')+'　｜　'+studs.length+' 生 · '+units.length+' 单元　｜　导出:'+dateStr+'</td></tr>';
+  html+='<tr>'+th('BTEC 单元')+th('GLH')+th('必修/选修')+studs.map(s=>th(esc((s.zh||s.sid||''))+(s.dept?' ('+esc(s.dept)+')':'')+'<br>'+esc(s.sid||''))).join('')+'</tr>';
+  let curReq=null;
+  units.forEach(u=>{
+    if(u.req!==curReq){curReq=u.req;const lbl=(curReq==='Mandatory'?'必修 Mandatory Units':curReq==='Optional'?'选修 Optional Units':esc(curReq||'其他'));html+='<tr><td colspan="'+ncol+'" style="background:#EEEDFE;color:#3C3489;font-weight:bold;padding:4px 8px">'+lbl+'</td></tr>';}
+    html+='<tr><td style="padding:4px 8px;white-space:nowrap">'+esc((u.unit_no?('#'+u.unit_no+' '):'')+(u.name_en||'')+' ('+(u.code||'')+')')+'</td>'+
+      '<td style="text-align:center;padding:4px 6px">'+esc(u.glh||'')+'</td>'+
+      '<td style="text-align:center;padding:4px 6px">'+esc(u.assess||'')+'</td>'+
+      studs.map(s=>'<td style="text-align:center;padding:4px 6px">'+esc(_btecCell(s,u.code).sem||'')+'</td>').join('')+'</tr>';
+  });
+  html+='<tr><td colspan="3" style="background:#EEEDFE;font-weight:bold;padding:4px 8px;text-align:right">Total 修课数</td>'+studs.map(s=>{let n=0;units.forEach(u=>{if(_btecCell(s,u.code).sem)n++;});return '<td style="background:#EEEDFE;text-align:center;font-weight:bold;padding:4px 6px">'+n+'</td>';}).join('')+'</tr>';
+  html+='</table></body></html>';
+  const blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='BTEC修课计划_'+(df||'全部')+'_'+dateStr+'.xls';
+  a.click();URL.revokeObjectURL(a.href);
+}
 function _btecPlan(sid,code){const p=(_btec.plan||[]).find(x=>String(x.student_id)===String(sid)&&String(x.code).toUpperCase()===String(code).toUpperCase());return p?p.sem:null;}
 function _btecAuto(stu,code){const all=schD.filter(x=>String(x.course).toUpperCase()===String(code).toUpperCase()&&(x.btec===true||x.btec==='TRUE'||x.btec==='true')&&String(x.sem||'').indexOf('2569')===0);if(!all.length)return {sem:'',tc:''};const mine=all.filter(x=>(x.cc||[]).some(c=>(stu.cohort&&c.cohort===stu.cohort)||(stu.dept&&cohortPrefix(c.cohort)===stu.dept)));const pool=mine.length?mine:all;const r=pool.slice().sort((a,b)=>String(a.sem||'').localeCompare(String(b.sem||'')))[0];return {sem:r.sem||'',tc:r.tc||''};}
 function _btecPlanRow(sid,code){return (_btec.plan||[]).find(x=>String(x.student_id)===String(sid)&&String(x.code).toUpperCase()===String(code).toUpperCase())||null;}
