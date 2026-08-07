@@ -859,7 +859,8 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <button class="btn btn-sm no-print" onclick="printPanel('btec')">🖨️ 列印</button>
     </div>
   </div>
-  <div id="btec-title" style="margin-bottom:10px"></div>
+  <div id="btec-title" style="margin-bottom:6px"></div>
+  <div id="btec-count" style="margin:0 2px 10px;font-size:12px;color:#555;display:flex;flex-wrap:wrap;gap:6px;align-items:center"></div>
   <div id="btec-addbar" class="no-print" style="display:none;background:#F7F6FE;border-radius:8px;padding:9px 12px;margin-bottom:10px"></div>
   <div class="card"><div class="tbl-wrap" style="overflow:auto;max-height:calc(100vh - 250px)"><div id="btec-matrix"></div></div><div class="empty" id="btec-em" style="display:none">还没有 BTEC 学生</div></div>
   <div id="btec-iv-wrap" style="margin-top:12px"></div>
@@ -1639,6 +1640,10 @@ function renderBtec(){
   const sems=Object.keys(semSet).sort();
   const _tEl=document.getElementById('btec-title');
   if(_tEl){const totU=units0.length;const totG=units0.reduce((a,x)=>a+(x.glh||0),0);_tEl.innerHTML='<div style="background:#FCEEC8;border:0.5px solid #EBD9A0;border-radius:8px;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><b style="color:#7a5b00;font-size:13px">Pearson BTEC International Level 3 Extended Diploma in Business (2 Years)</b><span style="font-family:ui-monospace;font-size:12px;color:#7a5b00;font-weight:700">'+totG+' Hours · '+totU+' Units</span></div>';}
+  const _cEl=document.getElementById('btec-count');
+  if(_cEl){const byDept={};studs.forEach(s=>{const d=s.dept||'—';byDept[d]=(byDept[d]||0)+1;});
+    const chips=Object.keys(byDept).sort().map(d=>{const c=(typeof COHORT_COLOR!=='undefined'?COHORT_COLOR[d]:null);const bg=c?c.bg:'#EEE',fg=c?c.fg:'#555';return '<span style="background:'+bg+';color:'+fg+';border-radius:10px;padding:1px 9px;font-size:11px;font-weight:600">'+eh(d)+' '+byDept[d]+'</span>';}).join('');
+    _cEl.innerHTML='<b style="color:#3C3489">👥 共 '+studs.length+' 生</b>'+(inf?'<span style="color:#888">(@'+eh(inf)+')</span>':'')+(chips?'<span style="color:#ccc">|</span>'+chips:'');}
   if(_btecTransp){wrap.innerHTML=_btecTranspHtml(units,studs,sems,isAdmin,showTc);return;}
   const th=dep=>{const c=(typeof COHORT_COLOR!=='undefined'?COHORT_COLOR[dep]:null);const bg=c?c.bg:'#534AB7',fg=c?c.fg:'#fff';return '<th style="position:sticky;top:0;background:'+bg+';color:'+fg+';padding:4px 4px;font-size:10px;font-weight:700;white-space:nowrap;z-index:2;width:104px;overflow:hidden;text-overflow:ellipsis;border:0.5px solid #fff" title="专业 '+eh(dep||'')+'">'+eh(dep||'')+'</th>';};
   const corner='<th style="position:sticky;left:0;top:0;background:#3C3489;color:#fff;z-index:3;width:410px;text-align:left;padding:4px 8px">BTEC 单元＼学生</th>';
