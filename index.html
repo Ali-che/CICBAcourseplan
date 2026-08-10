@@ -1644,7 +1644,9 @@ function renderBtec(){
   const _cEl=document.getElementById('btec-count');
   if(_cEl){const byDept={};studs.forEach(s=>{const d=s.dept||'—';byDept[d]=(byDept[d]||0)+1;});
     const chips=Object.keys(byDept).sort().map(d=>{const c=(typeof COHORT_COLOR!=='undefined'?COHORT_COLOR[d]:null);const bg=c?c.bg:'#EEE',fg=c?c.fg:'#555';return '<span style="background:'+bg+';color:'+fg+';border-radius:10px;padding:1px 9px;font-size:11px;font-weight:600">'+eh(d)+' '+byDept[d]+'</span>';}).join('');
-    _cEl.innerHTML='<b style="color:#3C3489">👥 共 '+studs.length+' 生</b>'+(inf?'<span style="color:#888">(@'+eh(inf)+')</span>':'')+(chips?'<span style="color:#ccc">|</span>'+chips:'');}
+    const byYr={};studs.forEach(s=>{const y=s.acad_year||'未设';byYr[y]=(byYr[y]||0)+1;});
+    const yrChips=Object.keys(byYr).sort().map(y=>'<span style="background:#EEF2FF;color:#3949ab;border-radius:10px;padding:1px 9px;font-size:11px;font-weight:600">🎓 '+eh(y)+' '+byYr[y]+'</span>').join('');
+    _cEl.innerHTML='<b style="color:#3C3489">👥 共 '+studs.length+' 生</b>'+(inf?'<span style="color:#888">(@'+eh(inf)+')</span>':'')+(chips?'<span style="color:#ccc">|</span>'+chips:'')+(yrChips?'<span style="color:#ccc">|</span>'+yrChips:'');}
   if(_btecTransp){wrap.innerHTML=_btecTranspHtml(units,studs,sems,isAdmin,showTc);return;}
   const th=dep=>{const c=(typeof COHORT_COLOR!=='undefined'?COHORT_COLOR[dep]:null);const bg=c?c.bg:'#534AB7',fg=c?c.fg:'#fff';return '<th style="position:sticky;top:0;background:'+bg+';color:'+fg+';padding:4px 4px;font-size:10px;font-weight:700;white-space:nowrap;z-index:2;width:104px;overflow:hidden;text-overflow:ellipsis;border:0.5px solid #fff" title="专业 '+eh(dep||'')+'">'+eh(dep||'')+'</th>';};
   const corner='<th style="position:sticky;left:0;top:0;background:#3C3489;color:#fff;z-index:3;width:410px;text-align:left;padding:4px 8px">BTEC 单元＼学生</th>';
@@ -1692,6 +1694,7 @@ function _btecAddBar(){
     g('btec-sid','学号',ed?ed.sid:'','110px')+g('btec-zh','中文名',ed?ed.zh:'','90px')+g('btec-en','英文名',ed?ed.en:'','130px')+
     '<select id="btec-dept" style="font-size:12px;padding:4px"><option value="">专业</option>'+depts.map(d=>'<option'+(ed&&ed.dept===d?' selected':'')+'>'+eh(d)+'</option>').join('')+'</select>'+
     '<select id="btec-track" style="font-size:12px;padding:4px" title="正课状态"><option value="">正课状态(空白)</option>'+['纯BTEC','正课+BTEC','待确'].map(x=>'<option'+(ed&&ed.track===x?' selected':'')+'>'+eh(x)+'</option>').join('')+'</select>'+
+    '<select id="btec-year" style="font-size:12px;padding:4px" title="学年"><option value="">学年(空白)</option>'+['2024-2025','2025-2026','2026-2027','2027-2028'].map(x=>'<option'+(ed&&ed.acad_year===x?' selected':'')+'>'+eh(x)+'</option>').join('')+'</select>'+
     '<button class="btn btn-p btn-sm" onclick="btecSaveStu()">'+(ed?'保存':'+ 新增')+'</button>'+
     ' <button class="btn btn-sm" onclick="'+(ed?'btecCancelStu()':'btecToggleAdd()')+'">'+(ed?'取消':'收起')+'</button>'+
     '</div>';
@@ -1702,9 +1705,10 @@ async function btecSaveStu(){
   const row={sid:document.getElementById('btec-sid').value.trim(),zh:document.getElementById('btec-zh').value.trim(),en:document.getElementById('btec-en').value.trim(),dept:document.getElementById('btec-dept').value};
   if(!row.sid&&!row.zh){alert('至少填学号或中文名');return;}
   const track=(document.getElementById('btec-track')||{}).value||'';
+  const year=(document.getElementById('btec-year')||{}).value||'';
   let r;
-  if(_btecEdit){r=await gasPost('adminUpdateBtecStudent',{id:_btecEdit.id,fields:row});if(r&&r.success)await gasPost('adminSetBtecTrack',{student_id:_btecEdit.id,track:track});}
-  else{r=await gasPost('adminAddBtecStudent',{row});if(r&&r.success&&track){await loadBtec();const ns=(_btec.students||[]).find(x=>String(x.sid)===String(row.sid));if(ns)await gasPost('adminSetBtecTrack',{student_id:ns.id,track:track});}}
+  if(_btecEdit){r=await gasPost('adminUpdateBtecStudent',{id:_btecEdit.id,fields:row});if(r&&r.success){await gasPost('adminSetBtecTrack',{student_id:_btecEdit.id,track:track});await gasPost('adminSetBtecYear',{student_id:_btecEdit.id,year:year});}}
+  else{r=await gasPost('adminAddBtecStudent',{row});if(r&&r.success&&(track||year)){await loadBtec();const ns=(_btec.students||[]).find(x=>String(x.sid)===String(row.sid));if(ns){if(track)await gasPost('adminSetBtecTrack',{student_id:ns.id,track:track});if(year)await gasPost('adminSetBtecYear',{student_id:ns.id,year:year});}}}
   if(r&&r.success){_btecEdit=null;await loadBtec();}else alert('保存失败:'+((r&&r.error)||'?'));
 }
 async function btecDelStu(id,name){if(!confirm('删除学生「'+name+'」及其手动格子?'))return;const r=await gasPost('adminDelBtecStudent',{id});if(r&&r.success)await loadBtec();else alert('删除失败:'+((r&&r.error)||'?'));}
@@ -6111,6 +6115,7 @@ function syncTblHeight(){
     if(action==='adminAddBtecStudent')return srpc('admin_add_btec_student',{p_pin:_pin,p_row:body.row});
     if(action==='adminUpdateBtecStudent')return srpc('admin_update_btec_student',{p_pin:_pin,p_id:body.id,p_fields:body.fields});
     if(action==='adminSetBtecTrack')return srpc('admin_set_btec_track',{p_pin:_pin,p_student_id:body.student_id,p_track:body.track});
+    if(action==='adminSetBtecYear')return srpc('admin_set_btec_year',{p_pin:_pin,p_student_id:body.student_id,p_year:body.year});
     if(action==='adminDelBtecStudent')return srpc('admin_del_btec_student',{p_pin:_pin,p_id:body.id});
     if(action==='adminSetBtecPlan')return srpc('admin_set_btec_plan',{p_pin:_pin,p_student_id:body.student_id,p_code:body.code,p_sem:body.sem});
     if(action==='adminUpsertBtecUnit')return srpc('admin_upsert_btec_unit',{p_pin:_pin,p_row:body.row});
