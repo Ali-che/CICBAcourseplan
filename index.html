@@ -919,7 +919,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     </div>
     <div class="tbl-wrap" style="overflow:auto;max-height:calc(100vh - 300px)">
       <table><thead><tr>
-        <th>#</th><th>学生专业</th><th>学号</th><th>姓名(英文)</th><th>姓名(中文)</th><th>学年学期</th><th>任课老师</th><th>课程代码</th><th>班级</th><th>负责学校</th><th>备注</th><th class="no-print">操作</th>
+        <th>#</th><th>学号</th><th>学生称谓</th><th>学生姓名</th><th class="sort" onclick="examSort('dept')">学生专业 <span id="exam-si-dept">⇅</span></th><th class="sort" onclick="examSort('sem')">学年学期 <span id="exam-si-sem">⇅</span></th><th class="sort" onclick="examSort('course')">课程代码/英文名 <span id="exam-si-course">⇅</span></th><th>班级</th><th>任课老师</th><th>负责学校</th><th>备注</th><th class="no-print">操作</th>
       </tr></thead><tbody id="exam-tb"></tbody></table>
     </div>
     <div class="empty" id="exam-em" style="display:none">暂无期末考特例记录</div>
@@ -1632,7 +1632,8 @@ async function loadBtec(){
 }
 function reloadBtec(){loadBtec();}
 // ═══════ §EXAM 期末考特例 ═══════
-let _exam={rows:[],schools:[]}, _examEdit=null, _examLoaded=false;
+let _exam={rows:[],schools:[]}, _examEdit=null, _examLoaded=false, _examSK='', _examSD=1;
+function examSort(k){if(_examSK===k)_examSD=-_examSD;else{_examSK=k;_examSD=1;}renderExam();}
 async function loadExam(){
   try{const r=await gasGet({action:'examData'});if(r&&r.success)_exam={rows:r.rows||[],schools:r.schools||[]};}catch(e){}
   const sf=document.getElementById('exam-sem-f');
@@ -1673,6 +1674,7 @@ function _examRows(){
   if(sm)list=list.filter(x=>x.sem===sm);
   if(df)list=list.filter(x=>x.dept===df);
   if(q)list=list.filter(x=>((x.teacher||'')+(x.course||'')+(x.sid||'')+(x.name_py||'')+(x.name_zh||'')+(x.school||'')+(x.cls||'')).toLowerCase().includes(q));
+  if(_examSK){const key=_examSK;list.sort((a,b)=>_examSD*String(a[key]||'').localeCompare(String(b[key]||''),'zh'));}
   return list;
 }
 function renderExam(){
@@ -1684,20 +1686,23 @@ function renderExam(){
   if(!rows.length){tb.innerHTML='';if(em)em.style.display='block';return;}
   if(em)em.style.display='none';
   const deptChip=d=>{const c=(typeof COHORT_COLOR!=='undefined'?COHORT_COLOR[d]:null);return c?'<span class="badge" style="background:'+c.bg+';color:'+c.fg+'">'+eh(d)+'</span>':(d?'<span class="badge b4">'+eh(d)+'</span>':'');};
+  const nameCell=x=>{const py=eh(x.name_py||''),zh=eh(x.name_zh||'');return py+(zh?(py?'<br>':'')+'<span style="font-size:11px;color:#999">'+zh+'</span>':'');};
   tb.innerHTML=rows.map((x,i)=>'<tr>'+
     '<td style="color:#bbb">'+(i+1)+'</td>'+
-    '<td>'+deptChip(x.dept)+'</td>'+
     '<td><code style="font-size:11px">'+eh(x.sid||'')+'</code></td>'+
-    '<td style="white-space:nowrap">'+(x.salut?'<span style="color:#999;font-size:11px">'+eh(x.salut)+' </span>':'')+eh(x.name_py||'')+'</td>'+
-    '<td style="white-space:nowrap">'+eh(x.name_zh||'')+'</td>'+
+    '<td>'+(x.salut?'<span class="badge b4" style="font-size:11px">'+eh(x.salut)+'</span>':'')+'</td>'+
+    '<td style="white-space:nowrap">'+nameCell(x)+'</td>'+
+    '<td>'+deptChip(x.dept)+'</td>'+
     '<td>'+(x.sem?semBadge(x.sem):'')+'</td>'+
-    '<td style="white-space:nowrap">'+eh(x.teacher||'')+'</td>'+
     '<td><span class="badge b0">'+eh(x.course||'')+'</span>'+(function(){const en=((typeof C!=='undefined'?(C.find(c=>c.c===x.course)||{}):{}).en)||'';return en?'<br><span style="font-size:10px;color:#999">'+eh(en)+'</span>':'';})()+'</td>'+
     '<td>'+eh(x.cls||'')+'</td>'+
+    '<td style="white-space:nowrap">'+eh(x.teacher||'')+'</td>'+
     '<td style="white-space:nowrap">'+eh(x.school||'')+'</td>'+
     '<td style="font-size:11px;color:#888;max-width:140px">'+eh(x.note||'')+'</td>'+
     '<td class="no-print" style="white-space:nowrap">'+(isAdmin?'<button class="btn-ic btn-ic-edit" onclick="examEdit('+x.id+')" title="编辑">✎</button> <button class="btn-ic btn-ic-del" onclick="examDel('+x.id+',\''+jsq(x.name_zh||x.sid||'')+'\')" title="删除">🗑</button>':'')+'</td>'+
     '</tr>').join('');
+  const setIc=(id,k)=>{const el=document.getElementById(id);if(el)el.innerHTML=(typeof siIcon==='function')?siIcon(k,_examSK,_examSD):(_examSK===k?(_examSD>0?'▲':'▼'):'⇅');};
+  setIc('exam-si-dept','dept');setIc('exam-si-sem','sem');setIc('exam-si-course','course');
 }
 function examToggleAdd(force){
   const b=document.getElementById('exam-add-body'),ar=document.getElementById('exam-add-arrow'),hn=document.getElementById('exam-add-hint');
@@ -1774,13 +1779,13 @@ function examExportExcel(){
   const rows=_examRows();if(!rows.length){alert('无记录可导出');return;}
   const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const dateStr=new Date().toISOString().slice(0,10);
-  const HD=['#','学生专业','学号','称谓','姓名(英文)','姓名(中文)','学年学期','任课老师','课程代码','课程英文名','班级','负责学校','备注'];
+  const HD=['#','学号','称谓','姓名(英文)','姓名(中文)','学生专业','学年学期','课程代码','课程英文名','班级','任课老师','负责学校','备注'];
   const coEn=cc=>((typeof C!=='undefined'?(C.find(c=>c.c===cc)||{}):{}).en)||'';
   let html='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>期末考特例</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>';
   html+='<table border="1" style="border-collapse:collapse;font-size:11pt;font-family:Arial">';
   html+='<tr><td colspan="'+HD.length+'" style="background:#534AB7;color:#fff;font-size:14pt;font-weight:bold;text-align:center;padding:8px">本科期末考特例 · '+esc(dateStr)+'</td></tr>';
   html+='<tr>'+HD.map(h=>'<td style="background:#534AB7;color:#fff;font-weight:bold;padding:6px 8px;white-space:nowrap">'+h+'</td>').join('')+'</tr>';
-  rows.forEach((x,i)=>{html+='<tr>'+[i+1,x.dept,x.sid,x.salut,x.name_py,x.name_zh,x.sem,x.teacher,x.course,coEn(x.course),x.cls,x.school,x.note].map(c=>'<td style="padding:4px 7px">'+esc(c)+'</td>').join('')+'</tr>';});
+  rows.forEach((x,i)=>{html+='<tr>'+[i+1,x.sid,x.salut,x.name_py,x.name_zh,x.dept,x.sem,x.course,coEn(x.course),x.cls,x.teacher,x.school,x.note].map(c=>'<td style="padding:4px 7px">'+esc(c)+'</td>').join('')+'</tr>';});
   html+='</table></body></html>';
   const blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='本科期末考特例_'+dateStr+'.xls';a.click();URL.revokeObjectURL(a.href);
