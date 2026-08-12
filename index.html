@@ -911,6 +911,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <button class="ops-tab" data-sec="pos" onclick="opsSwitch('pos')">职位</button>
       <button class="ops-tab" data-sec="cat" onclick="opsSwitch('cat')">课程总库</button>
       <button class="ops-tab" data-sec="grad" onclick="opsSwitch('grad')">毕业学分</button>
+      <button class="ops-tab" data-sec="school" onclick="opsSwitch('school')">登分学校</button>
       <button class="btn btn-sm" onclick="renderOps(true)" style="margin-left:auto">↻ 重载</button>
     </div>
     <div id="ops-body"><div style="color:#888;padding:20px">载入中…</div></div>
@@ -1285,7 +1286,8 @@ async function renderOps(force){
 function opsSwitch(sec){opsSec=sec;document.querySelectorAll('.ops-tab').forEach(x=>x.classList.toggle('active',x.dataset.sec===sec));opsRenderSec();}
 function opsRenderSec(){
   const b=document.getElementById('ops-body');if(!b||!opsD)return;
-  b.innerHTML= opsSec==='sem'?opsSemView(): opsSec==='dept'?opsDeptView(): opsSec==='coh'?opsCohView(): opsSec==='tch'?opsTchView(): opsSec==='pos'?opsPosView(): opsSec==='cat'?opsCatView(): opsSec==='grad'?opsGradView(): '';
+  b.innerHTML= opsSec==='sem'?opsSemView(): opsSec==='dept'?opsDeptView(): opsSec==='coh'?opsCohView(): opsSec==='tch'?opsTchView(): opsSec==='pos'?opsPosView(): opsSec==='cat'?opsCatView(): opsSec==='grad'?opsGradView(): opsSec==='school'?opsSchoolView(): '';
+  if(opsSec==='school'&&!_examLoaded){_examLoaded=true;loadExam().then(function(){if(opsSec==='school')opsRenderSec();});}
 }
 // 使用中检查(用已加载的 schD/spD)
 function opsUsedBySem(s){return schD.filter(r=>r.sem===s).length+spD.filter(r=>r.sem===s).length;}
@@ -1603,7 +1605,7 @@ async function loadBtec(){
 }
 function reloadBtec(){loadBtec();}
 // ═══════ §EXAM 期末考特例 ═══════
-let _exam={rows:[],schools:[]}, _examEdit=null;
+let _exam={rows:[],schools:[]}, _examEdit=null, _examLoaded=false;
 async function loadExam(){
   try{const r=await gasGet({action:'examData'});if(r&&r.success)_exam={rows:r.rows||[],schools:r.schools||[]};}catch(e){}
   const sf=document.getElementById('exam-sem-f');
@@ -1611,8 +1613,30 @@ async function loadExam(){
   const df=document.getElementById('exam-dept-f');
   if(df){const cur=df.value;const ds=[...new Set((_exam.rows||[]).map(x=>x.dept).filter(Boolean))].sort();df.innerHTML='<option value="">全部</option>'+ds.map(d=>'<option'+(d===cur?' selected':'')+'>'+eh(d)+'</option>').join('');}
   renderExam();
+  _examLoaded=true;
 }
 function reloadExam(){loadExam();}
+// ── 后台：登分学校管理 ──
+function opsSchoolView(){
+  const list=(_exam.schools||[]).slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
+  const body=list.map(function(s){return '<tr><td>'+eh(s.name)+'</td><td style="text-align:right"><button class="ops-del" onclick="opsDelSchool('+s.id+',\''+jsq(s.name)+'\')">删除</button></td></tr>';}).join('')||'<tr><td colspan="2" style="color:#aaa">尚无登分学校，请在下方新增</td></tr>';
+  return '<div style="color:#666;font-size:12px;margin-bottom:8px">这些学校会出现在「📝 期末考特例」表单的「负责学校（登分）」下拉里。</div>'+
+    '<div class="ops-add"><div class="fg"><label>新登分学校(可批量,空格/逗号分隔)</label><input id="ops-school-in" style="width:280px" placeholder="集美登分 北交登分"></div><button class="btn btn-p" onclick="opsAddSchool()">+ 新增</button></div>'+
+    '<table style="width:auto;min-width:280px"><thead><tr><th>登分学校</th><th></th></tr></thead><tbody>'+body+'</tbody></table>';
+}
+async function opsAddSchool(){
+  const raw=((document.getElementById('ops-school-in')||{}).value||'').trim();if(!raw){alert('请输入学校名称');return;}
+  const list=raw.split(/[\s,，\n]+/).map(function(x){return x.trim();}).filter(Boolean);if(!list.length){alert('请输入学校名称');return;}
+  let ok=0,fail=0;for(const nm of list){const r=await gasPost('adminAddExamSchool',{name:nm});if(r&&r.success)ok++;else fail++;}
+  await loadExam();opsRenderSec();
+  if(typeof showToast==='function')showToast('已加 '+ok+' 个登分学校'+(fail?('、失败 '+fail):''),{kind:ok?'success':'error',duration:2500});
+}
+async function opsDelSchool(id,name){
+  if(!confirm('删除登分学校「'+name+'」?（已填过此校的旧记录不受影响）'))return;
+  const r=await gasPost('adminDelExamSchool',{id:id});
+  if(r&&r.success){await loadExam();opsRenderSec();if(typeof showToast==='function')showToast('已删除 '+name,{kind:'success',duration:2000});}
+  else alert('删除失败:'+((r&&r.error)||'?（可能非管理员权限）'));
+}
 function _examRows(){
   let list=[...(_exam.rows||[])];
   const sm=(document.getElementById('exam-sem-f')||{}).value||'';
@@ -6281,6 +6305,7 @@ function syncTblHeight(){
     if(action==='adminSetBtecYear')return srpc('admin_set_btec_year',{p_pin:_pin,p_student_id:body.student_id,p_year:body.year});
     if(action==='adminSetBtecKind')return srpc('admin_set_btec_kind',{p_pin:_pin,p_student_id:body.student_id,p_code:body.code,p_kind:body.kind});
     if(action==='adminAddExamSchool')return srpc('admin_add_exam_school',{p_pin:_pin,p_name:body.name});
+    if(action==='adminDelExamSchool')return srpc('admin_del_exam_school',{p_pin:_pin,p_id:body.id});
     if(action==='adminSetExamSpecial')return srpc('admin_set_exam_special',{p_pin:_pin,p_id:body.id,p_sem:body.sem,p_teacher:body.teacher,p_course:body.course,p_cls:body.cls,p_school:body.school,p_dept:body.dept,p_sid:body.sid,p_name_py:body.name_py,p_name_zh:body.name_zh,p_note:body.note,p_salut:body.salut});
     if(action==='adminDelExamSpecial')return srpc('admin_del_exam_special',{p_pin:_pin,p_id:body.id});
     if(action==='adminDelBtecStudent')return srpc('admin_del_btec_student',{p_pin:_pin,p_id:body.id});
