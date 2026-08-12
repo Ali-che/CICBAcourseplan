@@ -424,6 +424,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   <button class="tab" id="tab-btec" onclick="switchTab('btec')">🎓 BTEC 计划</button>
   <button class="tab" onclick="switchTab('cs')">📚 课程结构</button>
   <button class="tab" id="tab-sta" onclick="switchTab('sta')">📈 教学统计</button>
+  <button class="tab" id="tab-exam" onclick="switchTab('exam')">📝 期末考特例</button>
   <button class="tab" id="tab-ops" onclick="switchTab('ops')" style="display:none">⚙️ 后台操作</button>
 </div>
 </div><!-- /.sticky-top -->
@@ -865,6 +866,32 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   <div id="btec-addbar" class="no-print" style="display:none;background:#F7F6FE;border-radius:8px;padding:9px 12px;margin-bottom:10px"></div>
   <div class="card"><div class="tbl-wrap" style="overflow:auto;max-height:calc(100vh - 250px)"><div id="btec-matrix"></div></div><div class="empty" id="btec-em" style="display:none">还没有 BTEC 学生</div></div>
   <div id="btec-iv-wrap" style="margin-top:12px"></div>
+</div>
+
+<div id="panel-exam" class="panel">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:.6rem">
+      <span class="ct" style="margin:0;font-size:13px">📝 本科期末考特例<span id="exam-n" style="font-weight:400;color:#888;margin-left:6px"></span></span>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-sm no-print" onclick="reloadExam()">↻ 重载</button>
+        <button class="btn btn-sm no-print" onclick="examExportExcel()">📊 导出 Excel</button>
+        <button class="btn btn-sm no-print" onclick="printPanel('exam')">🖨️ 列印</button>
+      </div>
+    </div>
+    <div class="fbar no-print" style="margin-bottom:.6rem;flex-wrap:wrap">
+      <label>学年学期</label><select id="exam-sem-f" onchange="renderExam()"><option value="">全部</option></select>
+      <label>系别</label><select id="exam-dept-f" onchange="renderExam()"><option value="">全部</option></select>
+      <input id="exam-q" oninput="renderExam()" placeholder="🔍 老师/课程/学号/姓名/学校" style="width:200px">
+      <button class="btn btn-p btn-sm" onclick="examNew()">＋ 新增</button>
+    </div>
+    <div id="exam-form" class="no-print" style="display:none;background:#F7F6FE;border-radius:8px;padding:12px 14px;margin-bottom:12px"></div>
+    <div class="tbl-wrap" style="overflow:auto;max-height:calc(100vh - 300px)">
+      <table><thead><tr>
+        <th>#</th><th>任课老师</th><th>课程代码</th><th>班级</th><th>学年学期</th><th>登分学校</th><th>系别</th><th>学号</th><th>姓名(拼音)</th><th>姓名(中文)</th><th>备注</th><th class="no-print">操作</th>
+      </tr></thead><tbody id="exam-tb"></tbody></table>
+    </div>
+    <div class="empty" id="exam-em" style="display:none">暂无期末考特例记录</div>
+  </div>
 </div>
 
 <div id="panel-ops" class="panel">
@@ -1570,6 +1597,99 @@ async function loadBtec(){
   renderBtec();
 }
 function reloadBtec(){loadBtec();}
+// ═══════ §EXAM 期末考特例 ═══════
+let _exam={rows:[],schools:[]}, _examEdit=null;
+async function loadExam(){
+  try{const r=await gasGet({action:'examData'});if(r&&r.success)_exam={rows:r.rows||[],schools:r.schools||[]};}catch(e){}
+  const sf=document.getElementById('exam-sem-f');
+  if(sf){const cur=sf.value;const byYr={};(typeof SEMS!=='undefined'?SEMS:[]).forEach(s=>{if(s){const y=String(s).substring(0,4);(byYr[y]=byYr[y]||[]).push(s);}});(_exam.rows||[]).forEach(x=>{if(x.sem){const y=String(x.sem).substring(0,4);if(!byYr[y])byYr[y]=[];if(byYr[y].indexOf(x.sem)<0)byYr[y].push(x.sem);}});let h='<option value="">全部</option>';Object.keys(byYr).sort().forEach(y=>{h+='<optgroup label="─ '+y+' ─">'+byYr[y].sort().map(s=>'<option'+(s===cur?' selected':'')+'>'+eh(s)+'</option>').join('')+'</optgroup>';});sf.innerHTML=h;}
+  const df=document.getElementById('exam-dept-f');
+  if(df){const cur=df.value;const ds=[...new Set((_exam.rows||[]).map(x=>x.dept).filter(Boolean))].sort();df.innerHTML='<option value="">全部</option>'+ds.map(d=>'<option'+(d===cur?' selected':'')+'>'+eh(d)+'</option>').join('');}
+  renderExam();
+}
+function reloadExam(){loadExam();}
+function _examRows(){
+  let list=[...(_exam.rows||[])];
+  const sm=(document.getElementById('exam-sem-f')||{}).value||'';
+  const df=(document.getElementById('exam-dept-f')||{}).value||'';
+  const q=((document.getElementById('exam-q')||{}).value||'').trim().toLowerCase();
+  if(sm)list=list.filter(x=>x.sem===sm);
+  if(df)list=list.filter(x=>x.dept===df);
+  if(q)list=list.filter(x=>((x.teacher||'')+(x.course||'')+(x.sid||'')+(x.name_py||'')+(x.name_zh||'')+(x.school||'')+(x.cls||'')).toLowerCase().includes(q));
+  return list;
+}
+function renderExam(){
+  if(!_panelActive('exam'))return;
+  const isAdmin=(currentRole==='admin');
+  const tb=document.getElementById('exam-tb'),em=document.getElementById('exam-em');if(!tb)return;
+  const rows=_examRows();
+  const n=document.getElementById('exam-n');if(n)n.textContent='('+rows.length+'条)';
+  if(!rows.length){tb.innerHTML='';if(em)em.style.display='block';return;}
+  if(em)em.style.display='none';
+  const deptChip=d=>{const c=(typeof COHORT_COLOR!=='undefined'?COHORT_COLOR[d]:null);return c?'<span class="badge" style="background:'+c.bg+';color:'+c.fg+'">'+eh(d)+'</span>':(d?'<span class="badge b4">'+eh(d)+'</span>':'');};
+  tb.innerHTML=rows.map((x,i)=>'<tr>'+
+    '<td style="color:#bbb">'+(i+1)+'</td>'+
+    '<td style="white-space:nowrap">'+eh(x.teacher||'')+'</td>'+
+    '<td><span class="badge b0">'+eh(x.course||'')+'</span></td>'+
+    '<td>'+eh(x.cls||'')+'</td>'+
+    '<td>'+(x.sem?semBadge(x.sem):'')+'</td>'+
+    '<td style="white-space:nowrap">'+eh(x.school||'')+'</td>'+
+    '<td>'+deptChip(x.dept)+'</td>'+
+    '<td><code style="font-size:11px">'+eh(x.sid||'')+'</code></td>'+
+    '<td style="white-space:nowrap">'+eh(x.name_py||'')+'</td>'+
+    '<td style="white-space:nowrap">'+eh(x.name_zh||'')+'</td>'+
+    '<td style="font-size:11px;color:#888;max-width:140px">'+eh(x.note||'')+'</td>'+
+    '<td class="no-print" style="white-space:nowrap">'+(isAdmin?'<button class="btn-ic btn-ic-edit" onclick="examEdit('+x.id+')" title="编辑">✎</button> <button class="btn-ic btn-ic-del" onclick="examDel('+x.id+',\''+jsq(x.name_zh||x.sid||'')+'\')" title="删除">🗑</button>':'')+'</td>'+
+    '</tr>').join('');
+}
+function examNew(){_examEdit={};_examShowForm();}
+function examEdit(id){const r=(_exam.rows||[]).find(x=>String(x.id)===String(id));if(r){_examEdit=Object.assign({},r);_examShowForm();try{document.getElementById('exam-form').scrollIntoView({block:'center'});}catch(e){}}}
+function examCancel(){_examEdit=null;const f=document.getElementById('exam-form');if(f)f.style.display='none';}
+function _examShowForm(){
+  const f=document.getElementById('exam-form');if(!f)return;const ed=_examEdit||{};
+  const semOpts='<option value="">学期</option>'+(typeof SEMS!=='undefined'?SEMS:[]).map(s=>'<option'+(ed.sem===s?' selected':'')+'>'+eh(s)+'</option>').join('');
+  const tchOpts='<option value="">老师</option>'+[...new Set((typeof T!=='undefined'?T:[]).map(t=>t.n).filter(Boolean))].sort().map(nn=>'<option'+(ed.teacher===nn?' selected':'')+'>'+eh(nn)+'</option>').join('');
+  const crsOpts='<option value="">课程</option>'+[...new Set((typeof C!=='undefined'?C:[]).map(c=>c.c).filter(Boolean))].sort().map(cc=>'<option'+(ed.course===cc?' selected':'')+'>'+eh(cc)+'</option>').join('');
+  const deptOpts='<option value="">系别</option>'+[...new Set([].concat((typeof DEPTS!=='undefined'?DEPTS:[]).map(d=>d&&d.code),Object.keys(typeof CBD!=='undefined'?CBD:{}))).filter(Boolean)].sort().map(d=>'<option'+(ed.dept===d?' selected':'')+'>'+eh(d)+'</option>').join('');
+  const schOpts='<option value="">登分学校</option>'+(_exam.schools||[]).map(s=>'<option'+(ed.school===s.name?' selected':'')+'>'+eh(s.name)+'</option>').join('');
+  const g=(id,ph,v,w)=>'<input id="'+id+'" placeholder="'+ph+'" value="'+eh(v||'')+'" style="width:'+w+';font-size:12px;padding:4px 7px;border:0.5px solid #cbd5e1;border-radius:6px">';
+  const sel=(id,opts)=>'<select id="'+id+'" style="font-size:12px;padding:4px 6px;border:0.5px solid #cbd5e1;border-radius:6px">'+opts+'</select>';
+  f.innerHTML='<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12px">'+
+    '<b style="color:#534AB7">'+(ed.id?'✏️ 改特例':'✍️ 加特例')+'</b>'+
+    sel('exam-sem',semOpts)+sel('exam-teacher',tchOpts)+sel('exam-course',crsOpts)+g('exam-cls','班级',ed.cls,'70px')+
+    sel('exam-school',schOpts)+'<button class="btn btn-sm" onclick="examAddSchool()" title="新增登分学校">＋校</button>'+
+    sel('exam-dept',deptOpts)+g('exam-sid','学号',ed.sid,'100px')+g('exam-py','姓名(拼音)',ed.name_py,'130px')+g('exam-zh','姓名(中文)',ed.name_zh,'90px')+g('exam-note','备注',ed.note,'120px')+
+    '<button class="btn btn-p btn-sm" onclick="examSaveForm()">'+(ed.id?'保存':'+ 新增')+'</button> <button class="btn btn-sm" onclick="examCancel()">取消</button>'+
+    '</div>';
+  f.style.display='';
+}
+async function examAddSchool(){
+  const name=prompt('新增登分学校名称:');if(name===null)return;const nm=name.trim();if(!nm)return;
+  const r=await gasPost('adminAddExamSchool',{name:nm});
+  if(r&&r.success){await loadExam();_examShowForm();const sc=document.getElementById('exam-school');if(sc)sc.value=nm;}else alert('新增失败:'+((r&&r.error)||'?'));
+}
+async function examSaveForm(){
+  const v=id=>(document.getElementById(id)||{}).value||'';
+  const body={id:(_examEdit&&_examEdit.id)||null,sem:v('exam-sem'),teacher:v('exam-teacher'),course:v('exam-course'),cls:v('exam-cls').trim(),school:v('exam-school'),dept:v('exam-dept'),sid:v('exam-sid').trim(),name_py:v('exam-py').trim(),name_zh:v('exam-zh').trim(),note:v('exam-note').trim()};
+  if(!body.sid&&!body.name_zh&&!body.name_py){alert('至少填学号或姓名');return;}
+  const r=await gasPost('adminSetExamSpecial',body);
+  if(r&&r.success){_examEdit=null;const f=document.getElementById('exam-form');if(f)f.style.display='none';await loadExam();}else alert('保存失败:'+((r&&r.error)||'?'));
+}
+async function examDel(id,name){if(!confirm('删除「'+name+'」这笔期末考特例?'))return;const r=await gasPost('adminDelExamSpecial',{id});if(r&&r.success)await loadExam();else alert('删除失败:'+((r&&r.error)||'?'));}
+function examExportExcel(){
+  const rows=_examRows();if(!rows.length){alert('无记录可导出');return;}
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const dateStr=new Date().toISOString().slice(0,10);
+  const HD=['#','任课老师','课程代码','班级','学年学期','登分学校','系别','学号','姓名(拼音)','姓名(中文)','备注'];
+  let html='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>期末考特例</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>';
+  html+='<table border="1" style="border-collapse:collapse;font-size:11pt;font-family:Arial">';
+  html+='<tr><td colspan="'+HD.length+'" style="background:#534AB7;color:#fff;font-size:14pt;font-weight:bold;text-align:center;padding:8px">本科期末考特例 · '+esc(dateStr)+'</td></tr>';
+  html+='<tr>'+HD.map(h=>'<td style="background:#534AB7;color:#fff;font-weight:bold;padding:6px 8px;white-space:nowrap">'+h+'</td>').join('')+'</tr>';
+  rows.forEach((x,i)=>{html+='<tr>'+[i+1,x.teacher,x.course,x.cls,x.sem,x.school,x.dept,x.sid,x.name_py,x.name_zh,x.note].map(c=>'<td style="padding:4px 7px">'+esc(c)+'</td>').join('')+'</tr>';});
+  html+='</table></body></html>';
+  const blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='本科期末考特例_'+dateStr+'.xls';a.click();URL.revokeObjectURL(a.href);
+}
 function btecExportExcel(){
   const studs=_btecStudents();
   if(!studs.length){alert('没有学生可导出(先调整专业/搜索筛选)');return;}
@@ -4860,15 +4980,15 @@ function buildStcPrint(){
 }
 function printPanel(id){
   switchTab(id);
-  const titles={sch:'排课记录',sp:'IS/SG 排课记录',sum:'学期总表',sta:'教学统计 · 各授课老师工作量',btec:'BTEC 修课计划'};
-  const subtitles={sch:'课程安排总览',sp:'IS/SG 特别排课学生名单',sum:'学期课程综合总表',sta:'专业分组工作量统计（含BTEC）',btec:'各生 BTEC 单元学期分布'};
+  const titles={sch:'排课记录',sp:'IS/SG 排课记录',sum:'学期总表',sta:'教学统计 · 各授课老师工作量',btec:'BTEC 修课计划',exam:'本科期末考特例'};
+  const subtitles={sch:'课程安排总览',sp:'IS/SG 特别排课学生名单',sum:'学期课程综合总表',sta:'专业分组工作量统计（含BTEC）',btec:'各生 BTEC 单元学期分布',exam:'期末考特殊安排学生名单'};
   const now=new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
   // 班级总表(sub-sco)活跃时,列印走「按专业分组」模式
   const scoActive=(id==='sum'&&document.getElementById('sub-sco')&&document.getElementById('sub-sco').classList.contains('active'));
   const stcActive=(id==='sum'&&document.getElementById('sub-stc')&&document.getElementById('sub-stc').classList.contains('active'));
   const grouped=scoActive||stcActive;
   // 取目前筛选的学期
-  const semSelMap={sch:'sch-sem-f',sp:'sp-sem-f',sum:'f-tc-s',sta:'sta-yr'};
+  const semSelMap={sch:'sch-sem-f',sp:'sp-sem-f',sum:'f-tc-s',sta:'sta-yr',exam:'exam-sem-f'};
   const semEl=document.getElementById(scoActive?'f-co-s':semSelMap[id]);
   const semVal=semEl?semEl.value:'';
   const semTxt=semVal||(id==='sta'?'全部学年':'全部学期');
@@ -5809,7 +5929,7 @@ async function confirmCsvImportSp(){
 
 // ═══════ §TABS 分页切换·载入 ═══════
 function switchTab(id){
-  ['sch','sp','sum','btec','cs','sta','ops'].forEach((x,i)=>{const tb=document.querySelectorAll('.tab')[i];if(tb)tb.classList.toggle('active',x===id);});
+  ['sch','sp','sum','btec','cs','sta','exam','ops'].forEach((x,i)=>{const tb=document.querySelectorAll('.tab')[i];if(tb)tb.classList.toggle('active',x===id);});
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+id).classList.add('active');
   if(id==='cs'){var _f=document.getElementById('cs-frame');if(_f&&!_f.src)_f.src=_f.dataset.src+'?cb='+Date.now();}
@@ -5819,6 +5939,7 @@ function switchTab(id){
   else if(id==='sum'&&_tabDirty.sum)renderAllSum();
   else if(id==='sta'&&_tabDirty.sta)renderSta();
   else if(id==='btec')loadBtec();
+  else if(id==='exam')loadExam();
   else if(id==='ops')renderOps();
   if(id==='sum'){if(!window._sumHintWired){const ps=document.getElementById('panel-sum');if(ps){ps.addEventListener('change',updateSumPrintHint);ps.addEventListener('input',updateSumPrintHint);window._sumHintWired=true;}}updateSumPrintHint();}
   setTimeout(syncTblHeight,50); // 等 panel 显示后再算高度
@@ -6067,6 +6188,7 @@ function syncTblHeight(){
       return{success:false,students:[],units:[],plan:[],iv:[],error:(r&&r.error)||'需要登入'};
     }
     if(a==='teachBtec'){const d=await sget('teach_btec?select=teacher,val').catch(function(){return [];});const m={};(d||[]).forEach(function(x){m[x.teacher]=+x.val;});return{success:true,map:m};}
+    if(a==='examData'){const r=await srpc('exam_special_list',{p_pin:_pin}).catch(function(){return null;});const sc=await sget('exam_school?select=id,name&order=name').catch(function(){return [];});if(r&&!r.error)return{success:true,rows:r.rows||[],schools:sc||[]};return{success:false,rows:[],schools:sc||[],error:(r&&r.error)||'需要登入'};}
     if(a==='opsData'){
       const[se,de,ch,te,ca,po,gr]=await Promise.all([
         sget('semesters?select=sem&order=sem'),
@@ -6126,6 +6248,9 @@ function syncTblHeight(){
     if(action==='adminSetBtecTrack')return srpc('admin_set_btec_track',{p_pin:_pin,p_student_id:body.student_id,p_track:body.track});
     if(action==='adminSetBtecYear')return srpc('admin_set_btec_year',{p_pin:_pin,p_student_id:body.student_id,p_year:body.year});
     if(action==='adminSetBtecKind')return srpc('admin_set_btec_kind',{p_pin:_pin,p_student_id:body.student_id,p_code:body.code,p_kind:body.kind});
+    if(action==='adminAddExamSchool')return srpc('admin_add_exam_school',{p_pin:_pin,p_name:body.name});
+    if(action==='adminSetExamSpecial')return srpc('admin_set_exam_special',{p_pin:_pin,p_id:body.id,p_sem:body.sem,p_teacher:body.teacher,p_course:body.course,p_cls:body.cls,p_school:body.school,p_dept:body.dept,p_sid:body.sid,p_name_py:body.name_py,p_name_zh:body.name_zh,p_note:body.note});
+    if(action==='adminDelExamSpecial')return srpc('admin_del_exam_special',{p_pin:_pin,p_id:body.id});
     if(action==='adminDelBtecStudent')return srpc('admin_del_btec_student',{p_pin:_pin,p_id:body.id});
     if(action==='adminSetBtecPlan')return srpc('admin_set_btec_plan',{p_pin:_pin,p_student_id:body.student_id,p_code:body.code,p_sem:body.sem});
     if(action==='adminUpsertBtecUnit')return srpc('admin_upsert_btec_unit',{p_pin:_pin,p_row:body.row});
