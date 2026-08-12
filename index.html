@@ -926,6 +926,16 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   </div>
 </div>
 
+<div class="modal-overlay" id="exam-modal" onmousedown="modalMouseDown(event,this)" onclick="modalMaybeClose(event,this,examModalClose)">
+  <div class="modal-box" style="max-width:920px">
+    <div class="modal-hdr">
+      <h3 id="exam-modal-title">✏️ 修改期末考特例</h3>
+      <button class="modal-close" onclick="examModalClose()">✕</button>
+    </div>
+    <div class="modal-body"><div id="exam-modal-form"></div></div>
+  </div>
+</div>
+
 <div id="panel-ops" class="panel">
   <div class="card">
     <div class="sechdr"><span class="ct" style="margin:0">⚙️ 后台操作 · 参考数据管理</span></div>
@@ -1632,7 +1642,7 @@ async function loadBtec(){
 }
 function reloadBtec(){loadBtec();}
 // ═══════ §EXAM 期末考特例 ═══════
-let _exam={rows:[],schools:[]}, _examEdit=null, _examLoaded=false, _examSK='', _examSD=1;
+let _exam={rows:[],schools:[]}, _examEdit=null, _examLoaded=false, _examSK='', _examSD=1, _examModalMode=false;
 function examSort(k){if(_examSK===k)_examSD=-_examSD;else{_examSK=k;_examSD=1;}renderExam();}
 async function loadExam(){
   try{const r=await gasGet({action:'examData'});if(r&&r.success)_exam={rows:r.rows||[],schools:r.schools||[]};}catch(e){}
@@ -1710,13 +1720,22 @@ function examToggleAdd(force){
   b.style.display=open?'':'none';
   if(ar)ar.style.transform=open?'rotate(180deg)':'';
   if(hn)hn.textContent=open?(_examEdit&&_examEdit.id?'（编辑中）':'（填写中）'):'（点击展开）';
-  if(open){if(!_examEdit)_examEdit={};_examShowForm();}else{_examEdit=null;}
+  if(open){_examModalMode=false;const mf=document.getElementById('exam-modal-form');if(mf)mf.innerHTML='';if(!_examEdit)_examEdit={};_examShowForm('exam-form');}else{_examEdit=null;}
 }
 function examNew(){_examEdit={};examToggleAdd(true);}
-function examEdit(id){const r=(_exam.rows||[]).find(x=>String(x.id)===String(id));if(r){_examEdit=Object.assign({},r);examToggleAdd(true);try{document.getElementById('exam-add-hdr').scrollIntoView({block:'center'});}catch(e){}}}
-function examCancel(){_examEdit=null;examToggleAdd(false);}
-function _examShowForm(){
-  const f=document.getElementById('exam-form');if(!f)return;const ed=_examEdit||{};
+// 修改 → 弹窗（同排课表）
+function examEdit(id){
+  const r=(_exam.rows||[]).find(x=>String(x.id)===String(id));if(!r)return;
+  examToggleAdd(false);const tf=document.getElementById('exam-form');if(tf)tf.innerHTML='';  // 先收起并清空顶部新增表单（它会把 _examEdit 置空），避免同 id 冲突
+  _examEdit=Object.assign({},r);_examModalMode=true;  // 再设定编辑对象
+  const t=document.getElementById('exam-modal-title');if(t)t.textContent='✏️ 修改期末考特例'+(r.name_zh||r.name_py?(' · '+eh(r.name_zh||r.name_py)):'');
+  _examShowForm('exam-modal-form');
+  const m=document.getElementById('exam-modal');if(m)m.classList.add('open');document.body.style.overflow='hidden';
+}
+function examModalClose(){const m=document.getElementById('exam-modal');if(m)m.classList.remove('open');document.body.style.overflow='';const mf=document.getElementById('exam-modal-form');if(mf)mf.innerHTML='';_examModalMode=false;_examEdit=null;}
+function examCancel(){if(_examModalMode){examModalClose();}else{_examEdit=null;examToggleAdd(false);}}
+function _examShowForm(target){
+  const f=document.getElementById(target||'exam-form');if(!f)return;const ed=_examEdit||{};
   const opt=(v,cur)=>'<option value="'+eh(v)+'"'+(String(cur)===String(v)?' selected':'')+'>'+eh(v)+'</option>';
   // 学年学期：按学年分组（同学期总表样式）
   const byYr={};(typeof SEMS!=='undefined'?SEMS:[]).forEach(s=>{if(s){const y=String(s).substring(0,4);(byYr[y]=byYr[y]||[]).push(s);}});
@@ -1772,7 +1791,7 @@ async function examSaveForm(){
   const body={id:(_examEdit&&_examEdit.id)||null,sem:v('exam-sem'),teacher:v('exam-teacher'),course:v('exam-course').trim().toUpperCase(),cls:v('exam-cls').trim(),school:v('exam-school'),dept:v('exam-dept'),sid:v('exam-sid').trim(),name_py:v('exam-py').trim(),name_zh:v('exam-zh').trim(),note:v('exam-note').trim(),salut:v('exam-salut')};
   if(!body.sid&&!body.name_zh&&!body.name_py){alert('至少填学号或姓名');return;}
   const r=await gasPost('adminSetExamSpecial',body);
-  if(r&&r.success){examToggleAdd(false);await loadExam();}else alert('保存失败:'+((r&&r.error)||'?'));
+  if(r&&r.success){if(_examModalMode)examModalClose();else examToggleAdd(false);await loadExam();}else alert('保存失败:'+((r&&r.error)||'?'));
 }
 async function examDel(id,name){if(!confirm('删除「'+name+'」这笔期末考特例?'))return;const r=await gasPost('adminDelExamSpecial',{id});if(r&&r.success)await loadExam();else alert('删除失败:'+((r&&r.error)||'?'));}
 function examExportExcel(){
