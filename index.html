@@ -1685,8 +1685,17 @@ function examCancel(){_examEdit=null;examToggleAdd(false);}
 function _examShowForm(){
   const f=document.getElementById('exam-form');if(!f)return;const ed=_examEdit||{};
   const opt=(v,cur)=>'<option value="'+eh(v)+'"'+(String(cur)===String(v)?' selected':'')+'>'+eh(v)+'</option>';
-  const semOpts='<option value="">请选择</option>'+(typeof SEMS!=='undefined'?SEMS:[]).map(s=>opt(s,ed.sem)).join('');
-  const tchOpts='<option value="">请选择</option>'+[...new Set((typeof T!=='undefined'?T:[]).map(t=>t.n).filter(Boolean))].sort().map(nn=>opt(nn,ed.teacher)).join('');
+  // 学年学期：按学年分组（同学期总表样式）
+  const byYr={};(typeof SEMS!=='undefined'?SEMS:[]).forEach(s=>{if(s){const y=String(s).substring(0,4);(byYr[y]=byYr[y]||[]).push(s);}});
+  let semOpts='<option value="">请选择</option>';Object.keys(byYr).sort().forEach(y=>{semOpts+='<optgroup label="─ '+y+' ─">'+byYr[y].slice().sort().map(s=>opt(s,ed.sem)).join('')+'</optgroup>';});
+  // 授课老师：按系分组（复用排课台 helper）
+  const tchOpts=(typeof tchrOptHTML==='function')?tchrOptHTML(ed.teacher,'请选择'):('<option value="">请选择</option>'+[...new Set((typeof T!=='undefined'?T:[]).map(t=>t.n).filter(Boolean))].sort().map(nn=>opt(nn,ed.teacher)).join(''));
+  // 班级代码：普通 / 实习 / Capstone（同排课台）
+  const CLS_G={'普通':['601','602','603','604','605'],'实习':['331','332','333'],'Capstone':['Capstone-971','Capstone-972','Capstone-973','Capstone-974','Capstone-975','Capstone-976','Capstone-977','Capstone-978']};
+  let clsOpts='<option value="">请选择</option>';const clsKnown=[];
+  Object.keys(CLS_G).forEach(g=>{clsOpts+='<optgroup label="'+g+'">'+CLS_G[g].map(c=>{clsKnown.push(c);return opt(c,ed.cls);}).join('')+'</optgroup>';});
+  if(ed.cls&&clsKnown.indexOf(ed.cls)<0)clsOpts+='<option value="'+eh(ed.cls)+'" selected>'+eh(ed.cls)+'</option>';
+  // 学生专业
   const majors=[...new Set([].concat((typeof DEPTS!=='undefined'?DEPTS:[]).map(d=>d&&d.code),(typeof T!=='undefined'?T:[]).map(t=>t.d)).filter(Boolean))].filter(d=>!['DPU','CIC'].includes(d)).sort();
   const mjOpts='<option value="">请选择</option>'+majors.map(d=>opt(d,ed.dept)).join('');
   const schOpts='<option value="">请选择</option>'+(_exam.schools||[]).map(s=>opt(s.name,ed.school)).join('');
@@ -1704,14 +1713,14 @@ function _examShowForm(){
     '</div>'+
     '<div class="g4">'+
       fg('学生专业',sel('exam-dept',mjOpts))+
-      fg('课程代码',inp('exam-course','输入代码，如 KB218',ed.course,' list="co-dl" autocomplete="off" oninput="lookupC(\'exam-course\',\'exam-course-en\',null)"'))+
+      fg('课程代码',inp('exam-course','输入代码，如 KB218',ed.course,' list="co-dl" autocomplete="off" oninput="examCourseEn(this.value)"'))+
       fg('课程英文名（自动）',inp('exam-course-en','自动显示',curEn,' readonly'))+
-      fg('班级代码',inp('exam-cls','如 KB-218',ed.cls))+
+      fg('班级代码',sel('exam-cls',clsOpts))+
     '</div>'+
     '<div class="g4">'+
       fg('学年学期',sel('exam-sem',semOpts))+
       fg('任课老师',sel('exam-teacher',tchOpts))+
-      fg('负责学校（登分）','<div style="display:flex;gap:4px;align-items:center">'+sel('exam-school',schOpts)+'<button class="btn btn-sm" onclick="examAddSchool()" title="新增登分学校" style="flex:0 0 auto;white-space:nowrap">＋校</button></div>')+
+      fg('负责学校',sel('exam-school',schOpts))+
       fg('备注',inp('exam-note','选填',ed.note))+
     '</div>'+
     '<div style="display:flex;gap:8px;margin-top:2px">'+
@@ -1719,6 +1728,7 @@ function _examShowForm(){
       '<button class="btn" onclick="examCancel()">取消</button>'+
     '</div>';
 }
+function examCourseEn(code){const el=document.getElementById('exam-course-en');if(!el)return;const f=(typeof C!=='undefined')?C.find(x=>x.c===String(code||'').trim().toUpperCase()):null;el.value=(f&&f.en)||'';}
 async function examAddSchool(){
   const name=prompt('新增登分学校名称:');if(name===null)return;const nm=name.trim();if(!nm)return;
   const r=await gasPost('adminAddExamSchool',{name:nm});
