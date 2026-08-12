@@ -892,7 +892,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     </div>
     <div class="tbl-wrap" style="overflow:auto;max-height:calc(100vh - 300px)">
       <table><thead><tr>
-        <th>#</th><th>任课老师</th><th>课程代码</th><th>班级</th><th>学年学期</th><th>登分学校</th><th>系别</th><th>学号</th><th>姓名(拼音)</th><th>姓名(中文)</th><th>备注</th><th class="no-print">操作</th>
+        <th>#</th><th>任课老师</th><th>课程代码</th><th>班级</th><th>学年学期</th><th>负责学校</th><th>学生专业</th><th>学号</th><th>姓名(英文)</th><th>姓名(中文)</th><th>备注</th><th class="no-print">操作</th>
       </tr></thead><tbody id="exam-tb"></tbody></table>
     </div>
     <div class="empty" id="exam-em" style="display:none">暂无期末考特例记录</div>
@@ -1635,13 +1635,13 @@ function renderExam(){
   tb.innerHTML=rows.map((x,i)=>'<tr>'+
     '<td style="color:#bbb">'+(i+1)+'</td>'+
     '<td style="white-space:nowrap">'+eh(x.teacher||'')+'</td>'+
-    '<td><span class="badge b0">'+eh(x.course||'')+'</span></td>'+
+    '<td><span class="badge b0">'+eh(x.course||'')+'</span>'+(function(){const en=((typeof C!=='undefined'?(C.find(c=>c.c===x.course)||{}):{}).en)||'';return en?'<br><span style="font-size:10px;color:#999">'+eh(en)+'</span>':'';})()+'</td>'+
     '<td>'+eh(x.cls||'')+'</td>'+
     '<td>'+(x.sem?semBadge(x.sem):'')+'</td>'+
     '<td style="white-space:nowrap">'+eh(x.school||'')+'</td>'+
     '<td>'+deptChip(x.dept)+'</td>'+
     '<td><code style="font-size:11px">'+eh(x.sid||'')+'</code></td>'+
-    '<td style="white-space:nowrap">'+eh(x.name_py||'')+'</td>'+
+    '<td style="white-space:nowrap">'+(x.salut?'<span style="color:#999;font-size:11px">'+eh(x.salut)+' </span>':'')+eh(x.name_py||'')+'</td>'+
     '<td style="white-space:nowrap">'+eh(x.name_zh||'')+'</td>'+
     '<td style="font-size:11px;color:#888;max-width:140px">'+eh(x.note||'')+'</td>'+
     '<td class="no-print" style="white-space:nowrap">'+(isAdmin?'<button class="btn-ic btn-ic-edit" onclick="examEdit('+x.id+')" title="编辑">✎</button> <button class="btn-ic btn-ic-del" onclick="examDel('+x.id+',\''+jsq(x.name_zh||x.sid||'')+'\')" title="删除">🗑</button>':'')+'</td>'+
@@ -1660,31 +1660,39 @@ function examEdit(id){const r=(_exam.rows||[]).find(x=>String(x.id)===String(id)
 function examCancel(){_examEdit=null;examToggleAdd(false);}
 function _examShowForm(){
   const f=document.getElementById('exam-form');if(!f)return;const ed=_examEdit||{};
-  const semOpts='<option value="">请选择</option>'+(typeof SEMS!=='undefined'?SEMS:[]).map(s=>'<option'+(ed.sem===s?' selected':'')+'>'+eh(s)+'</option>').join('');
-  const tchOpts='<option value="">请选择</option>'+[...new Set((typeof T!=='undefined'?T:[]).map(t=>t.n).filter(Boolean))].sort().map(nn=>'<option'+(ed.teacher===nn?' selected':'')+'>'+eh(nn)+'</option>').join('');
-  const crsOpts='<option value="">请选择</option>'+[...new Set((typeof C!=='undefined'?C:[]).map(c=>c.c).filter(Boolean))].sort().map(cc=>'<option'+(ed.course===cc?' selected':'')+'>'+eh(cc)+'</option>').join('');
-  const deptOpts='<option value="">请选择</option>'+[...new Set([].concat((typeof DEPTS!=='undefined'?DEPTS:[]).map(d=>d&&d.code),Object.keys(typeof CBD!=='undefined'?CBD:{}))).filter(Boolean)].sort().map(d=>'<option'+(ed.dept===d?' selected':'')+'>'+eh(d)+'</option>').join('');
-  const schOpts='<option value="">请选择</option>'+(_exam.schools||[]).map(s=>'<option'+(ed.school===s.name?' selected':'')+'>'+eh(s.name)+'</option>').join('');
+  const opt=(v,cur)=>'<option value="'+eh(v)+'"'+(String(cur)===String(v)?' selected':'')+'>'+eh(v)+'</option>';
+  const semOpts='<option value="">请选择</option>'+(typeof SEMS!=='undefined'?SEMS:[]).map(s=>opt(s,ed.sem)).join('');
+  const tchOpts='<option value="">请选择</option>'+[...new Set((typeof T!=='undefined'?T:[]).map(t=>t.n).filter(Boolean))].sort().map(nn=>opt(nn,ed.teacher)).join('');
+  const majors=[...new Set([].concat((typeof DEPTS!=='undefined'?DEPTS:[]).map(d=>d&&d.code),(typeof T!=='undefined'?T:[]).map(t=>t.d)).filter(Boolean))].filter(d=>!['DPU','CIC'].includes(d)).sort();
+  const mjOpts='<option value="">请选择</option>'+majors.map(d=>opt(d,ed.dept)).join('');
+  const schOpts='<option value="">请选择</option>'+(_exam.schools||[]).map(s=>opt(s.name,ed.school)).join('');
+  const salutOpts=['Mr.','Ms.'].map(s=>opt(s,ed.salut||'Mr.')).join('');
+  const curEn=((typeof C!=='undefined'?(C.find(x=>x.c===ed.course)||{}):{}).en)||'';
   const fg=(lbl,inner)=>'<div class="fg"><label>'+lbl+'</label>'+inner+'</div>';
-  const inp=(id,ph,v)=>'<input id="'+id+'" placeholder="'+ph+'" value="'+eh(v||'')+'">';
+  const inp=(id,ph,v,extra)=>'<input id="'+id+'" placeholder="'+ph+'" value="'+eh(v||'')+'"'+(extra||'')+'>';
   const sel=(id,opts)=>'<select id="'+id+'">'+opts+'</select>';
   f.innerHTML=
     '<div class="g4">'+
-      fg('学年学期',sel('exam-sem',semOpts))+
-      fg('任课老师',sel('exam-teacher',tchOpts))+
-      fg('课程代码',sel('exam-course',crsOpts))+
-      fg('班级',inp('exam-cls','如 KB218',ed.cls))+
+      fg('学号',inp('exam-sid','学号',ed.sid))+
+      fg('学生称谓',sel('exam-salut',salutOpts))+
+      fg('学生姓名（英文）',inp('exam-py','English name only',ed.name_py,' oninput="enOnly(this)"'))+
+      fg('学生姓名（中文）',inp('exam-zh','中文姓名',ed.name_zh))+
     '</div>'+
     '<div class="g4">'+
-      fg('登分学校','<div style="display:flex;gap:4px;align-items:center">'+sel('exam-school',schOpts)+'<button class="btn btn-sm" onclick="examAddSchool()" title="新增登分学校" style="flex:0 0 auto;white-space:nowrap">＋校</button></div>')+
-      fg('系别',sel('exam-dept',deptOpts))+
-      fg('学号',inp('exam-sid','学号',ed.sid))+
+      fg('学生专业',sel('exam-dept',mjOpts))+
+      fg('课程代码',inp('exam-course','输入代码，如 KB218',ed.course,' list="co-dl" autocomplete="off" oninput="lookupC(\'exam-course\',\'exam-course-en\',null)"'))+
+      fg('课程英文名（自动）',inp('exam-course-en','自动显示',curEn,' readonly'))+
+      fg('班级代码',inp('exam-cls','如 KB-218',ed.cls))+
+    '</div>'+
+    '<div class="g4">'+
+      fg('学年学期',sel('exam-sem',semOpts))+
+      fg('任课老师',sel('exam-teacher',tchOpts))+
+      fg('负责学校（登分）','<div style="display:flex;gap:4px;align-items:center">'+sel('exam-school',schOpts)+'<button class="btn btn-sm" onclick="examAddSchool()" title="新增登分学校" style="flex:0 0 auto;white-space:nowrap">＋校</button></div>')+
       fg('备注',inp('exam-note','选填',ed.note))+
     '</div>'+
-    '<div class="g3">'+
-      fg('姓名（拼音）',inp('exam-py','English / Pinyin',ed.name_py))+
-      fg('姓名（中文）',inp('exam-zh','中文姓名',ed.name_zh))+
-      fg('&nbsp;','<div style="display:flex;gap:6px"><button class="btn btn-p" onclick="examSaveForm()">'+(ed.id?'💾 保存修改':'＋ 添加特例')+'</button><button class="btn" onclick="examCancel()">取消</button></div>')+
+    '<div style="display:flex;gap:8px;margin-top:2px">'+
+      '<button class="btn btn-p" onclick="examSaveForm()">'+(ed.id?'💾 保存修改':'＋ 添加特例')+'</button>'+
+      '<button class="btn" onclick="examCancel()">取消</button>'+
     '</div>';
 }
 async function examAddSchool(){
@@ -1694,7 +1702,7 @@ async function examAddSchool(){
 }
 async function examSaveForm(){
   const v=id=>(document.getElementById(id)||{}).value||'';
-  const body={id:(_examEdit&&_examEdit.id)||null,sem:v('exam-sem'),teacher:v('exam-teacher'),course:v('exam-course'),cls:v('exam-cls').trim(),school:v('exam-school'),dept:v('exam-dept'),sid:v('exam-sid').trim(),name_py:v('exam-py').trim(),name_zh:v('exam-zh').trim(),note:v('exam-note').trim()};
+  const body={id:(_examEdit&&_examEdit.id)||null,sem:v('exam-sem'),teacher:v('exam-teacher'),course:v('exam-course').trim().toUpperCase(),cls:v('exam-cls').trim(),school:v('exam-school'),dept:v('exam-dept'),sid:v('exam-sid').trim(),name_py:v('exam-py').trim(),name_zh:v('exam-zh').trim(),note:v('exam-note').trim(),salut:v('exam-salut')};
   if(!body.sid&&!body.name_zh&&!body.name_py){alert('至少填学号或姓名');return;}
   const r=await gasPost('adminSetExamSpecial',body);
   if(r&&r.success){examToggleAdd(false);await loadExam();}else alert('保存失败:'+((r&&r.error)||'?'));
@@ -6273,7 +6281,7 @@ function syncTblHeight(){
     if(action==='adminSetBtecYear')return srpc('admin_set_btec_year',{p_pin:_pin,p_student_id:body.student_id,p_year:body.year});
     if(action==='adminSetBtecKind')return srpc('admin_set_btec_kind',{p_pin:_pin,p_student_id:body.student_id,p_code:body.code,p_kind:body.kind});
     if(action==='adminAddExamSchool')return srpc('admin_add_exam_school',{p_pin:_pin,p_name:body.name});
-    if(action==='adminSetExamSpecial')return srpc('admin_set_exam_special',{p_pin:_pin,p_id:body.id,p_sem:body.sem,p_teacher:body.teacher,p_course:body.course,p_cls:body.cls,p_school:body.school,p_dept:body.dept,p_sid:body.sid,p_name_py:body.name_py,p_name_zh:body.name_zh,p_note:body.note});
+    if(action==='adminSetExamSpecial')return srpc('admin_set_exam_special',{p_pin:_pin,p_id:body.id,p_sem:body.sem,p_teacher:body.teacher,p_course:body.course,p_cls:body.cls,p_school:body.school,p_dept:body.dept,p_sid:body.sid,p_name_py:body.name_py,p_name_zh:body.name_zh,p_note:body.note,p_salut:body.salut});
     if(action==='adminDelExamSpecial')return srpc('admin_del_exam_special',{p_pin:_pin,p_id:body.id});
     if(action==='adminDelBtecStudent')return srpc('admin_del_btec_student',{p_pin:_pin,p_id:body.id});
     if(action==='adminSetBtecPlan')return srpc('admin_set_btec_plan',{p_pin:_pin,p_student_id:body.student_id,p_code:body.code,p_sem:body.sem});
