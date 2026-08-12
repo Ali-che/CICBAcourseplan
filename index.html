@@ -869,6 +869,13 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 </div>
 
 <div id="panel-exam" class="panel">
+  <div class="card no-print" style="padding:0;margin-bottom:12px">
+    <div id="exam-add-hdr" onclick="examToggleAdd()" style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.25rem;cursor:pointer;user-select:none;border-radius:10px" onmouseover="this.style.background='#f8f8ff'" onmouseout="this.style.background=''">
+      <span><span style="font-size:11px;font-weight:600;color:#534AB7;text-transform:uppercase;letter-spacing:.06em">＋ 新增期末考特例</span> <span id="exam-add-hint" style="font-size:11px;color:#bbb">（点击展开）</span></span>
+      <span id="exam-add-arrow" style="font-size:13px;color:#aaa;transition:transform .2s">▼</span>
+    </div>
+    <div id="exam-add-body" style="display:none;padding:4px 1.25rem 1.25rem;border-top:0.5px solid #f0f0f0"><div id="exam-form"></div></div>
+  </div>
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:.6rem">
       <span class="ct" style="margin:0;font-size:13px">📝 本科期末考特例<span id="exam-n" style="font-weight:400;color:#888;margin-left:6px"></span></span>
@@ -882,9 +889,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <label>学年学期</label><select id="exam-sem-f" onchange="renderExam()"><option value="">全部</option></select>
       <label>系别</label><select id="exam-dept-f" onchange="renderExam()"><option value="">全部</option></select>
       <input id="exam-q" oninput="renderExam()" placeholder="🔍 老师/课程/学号/姓名/学校" style="width:200px">
-      <button class="btn btn-p btn-sm" onclick="examNew()">＋ 新增</button>
     </div>
-    <div id="exam-form" class="no-print" style="display:none;background:#F7F6FE;border-radius:8px;padding:12px 14px;margin-bottom:12px"></div>
     <div class="tbl-wrap" style="overflow:auto;max-height:calc(100vh - 300px)">
       <table><thead><tr>
         <th>#</th><th>任课老师</th><th>课程代码</th><th>班级</th><th>学年学期</th><th>登分学校</th><th>系别</th><th>学号</th><th>姓名(拼音)</th><th>姓名(中文)</th><th>备注</th><th class="no-print">操作</th>
@@ -1642,26 +1647,45 @@ function renderExam(){
     '<td class="no-print" style="white-space:nowrap">'+(isAdmin?'<button class="btn-ic btn-ic-edit" onclick="examEdit('+x.id+')" title="编辑">✎</button> <button class="btn-ic btn-ic-del" onclick="examDel('+x.id+',\''+jsq(x.name_zh||x.sid||'')+'\')" title="删除">🗑</button>':'')+'</td>'+
     '</tr>').join('');
 }
-function examNew(){_examEdit={};_examShowForm();}
-function examEdit(id){const r=(_exam.rows||[]).find(x=>String(x.id)===String(id));if(r){_examEdit=Object.assign({},r);_examShowForm();try{document.getElementById('exam-form').scrollIntoView({block:'center'});}catch(e){}}}
-function examCancel(){_examEdit=null;const f=document.getElementById('exam-form');if(f)f.style.display='none';}
+function examToggleAdd(force){
+  const b=document.getElementById('exam-add-body'),ar=document.getElementById('exam-add-arrow'),hn=document.getElementById('exam-add-hint');
+  if(!b)return;const open=(typeof force==='boolean')?force:(b.style.display==='none');
+  b.style.display=open?'':'none';
+  if(ar)ar.style.transform=open?'rotate(180deg)':'';
+  if(hn)hn.textContent=open?(_examEdit&&_examEdit.id?'（编辑中）':'（填写中）'):'（点击展开）';
+  if(open){if(!_examEdit)_examEdit={};_examShowForm();}else{_examEdit=null;}
+}
+function examNew(){_examEdit={};examToggleAdd(true);}
+function examEdit(id){const r=(_exam.rows||[]).find(x=>String(x.id)===String(id));if(r){_examEdit=Object.assign({},r);examToggleAdd(true);try{document.getElementById('exam-add-hdr').scrollIntoView({block:'center'});}catch(e){}}}
+function examCancel(){_examEdit=null;examToggleAdd(false);}
 function _examShowForm(){
   const f=document.getElementById('exam-form');if(!f)return;const ed=_examEdit||{};
-  const semOpts='<option value="">学期</option>'+(typeof SEMS!=='undefined'?SEMS:[]).map(s=>'<option'+(ed.sem===s?' selected':'')+'>'+eh(s)+'</option>').join('');
-  const tchOpts='<option value="">老师</option>'+[...new Set((typeof T!=='undefined'?T:[]).map(t=>t.n).filter(Boolean))].sort().map(nn=>'<option'+(ed.teacher===nn?' selected':'')+'>'+eh(nn)+'</option>').join('');
-  const crsOpts='<option value="">课程</option>'+[...new Set((typeof C!=='undefined'?C:[]).map(c=>c.c).filter(Boolean))].sort().map(cc=>'<option'+(ed.course===cc?' selected':'')+'>'+eh(cc)+'</option>').join('');
-  const deptOpts='<option value="">系别</option>'+[...new Set([].concat((typeof DEPTS!=='undefined'?DEPTS:[]).map(d=>d&&d.code),Object.keys(typeof CBD!=='undefined'?CBD:{}))).filter(Boolean)].sort().map(d=>'<option'+(ed.dept===d?' selected':'')+'>'+eh(d)+'</option>').join('');
-  const schOpts='<option value="">登分学校</option>'+(_exam.schools||[]).map(s=>'<option'+(ed.school===s.name?' selected':'')+'>'+eh(s.name)+'</option>').join('');
-  const g=(id,ph,v,w)=>'<input id="'+id+'" placeholder="'+ph+'" value="'+eh(v||'')+'" style="width:'+w+';font-size:12px;padding:4px 7px;border:0.5px solid #cbd5e1;border-radius:6px">';
-  const sel=(id,opts)=>'<select id="'+id+'" style="font-size:12px;padding:4px 6px;border:0.5px solid #cbd5e1;border-radius:6px">'+opts+'</select>';
-  f.innerHTML='<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12px">'+
-    '<b style="color:#534AB7">'+(ed.id?'✏️ 改特例':'✍️ 加特例')+'</b>'+
-    sel('exam-sem',semOpts)+sel('exam-teacher',tchOpts)+sel('exam-course',crsOpts)+g('exam-cls','班级',ed.cls,'70px')+
-    sel('exam-school',schOpts)+'<button class="btn btn-sm" onclick="examAddSchool()" title="新增登分学校">＋校</button>'+
-    sel('exam-dept',deptOpts)+g('exam-sid','学号',ed.sid,'100px')+g('exam-py','姓名(拼音)',ed.name_py,'130px')+g('exam-zh','姓名(中文)',ed.name_zh,'90px')+g('exam-note','备注',ed.note,'120px')+
-    '<button class="btn btn-p btn-sm" onclick="examSaveForm()">'+(ed.id?'保存':'+ 新增')+'</button> <button class="btn btn-sm" onclick="examCancel()">取消</button>'+
+  const semOpts='<option value="">请选择</option>'+(typeof SEMS!=='undefined'?SEMS:[]).map(s=>'<option'+(ed.sem===s?' selected':'')+'>'+eh(s)+'</option>').join('');
+  const tchOpts='<option value="">请选择</option>'+[...new Set((typeof T!=='undefined'?T:[]).map(t=>t.n).filter(Boolean))].sort().map(nn=>'<option'+(ed.teacher===nn?' selected':'')+'>'+eh(nn)+'</option>').join('');
+  const crsOpts='<option value="">请选择</option>'+[...new Set((typeof C!=='undefined'?C:[]).map(c=>c.c).filter(Boolean))].sort().map(cc=>'<option'+(ed.course===cc?' selected':'')+'>'+eh(cc)+'</option>').join('');
+  const deptOpts='<option value="">请选择</option>'+[...new Set([].concat((typeof DEPTS!=='undefined'?DEPTS:[]).map(d=>d&&d.code),Object.keys(typeof CBD!=='undefined'?CBD:{}))).filter(Boolean)].sort().map(d=>'<option'+(ed.dept===d?' selected':'')+'>'+eh(d)+'</option>').join('');
+  const schOpts='<option value="">请选择</option>'+(_exam.schools||[]).map(s=>'<option'+(ed.school===s.name?' selected':'')+'>'+eh(s.name)+'</option>').join('');
+  const fg=(lbl,inner)=>'<div class="fg"><label>'+lbl+'</label>'+inner+'</div>';
+  const inp=(id,ph,v)=>'<input id="'+id+'" placeholder="'+ph+'" value="'+eh(v||'')+'">';
+  const sel=(id,opts)=>'<select id="'+id+'">'+opts+'</select>';
+  f.innerHTML=
+    '<div class="g4">'+
+      fg('学年学期',sel('exam-sem',semOpts))+
+      fg('任课老师',sel('exam-teacher',tchOpts))+
+      fg('课程代码',sel('exam-course',crsOpts))+
+      fg('班级',inp('exam-cls','如 KB218',ed.cls))+
+    '</div>'+
+    '<div class="g4">'+
+      fg('登分学校','<div style="display:flex;gap:4px;align-items:center">'+sel('exam-school',schOpts)+'<button class="btn btn-sm" onclick="examAddSchool()" title="新增登分学校" style="flex:0 0 auto;white-space:nowrap">＋校</button></div>')+
+      fg('系别',sel('exam-dept',deptOpts))+
+      fg('学号',inp('exam-sid','学号',ed.sid))+
+      fg('备注',inp('exam-note','选填',ed.note))+
+    '</div>'+
+    '<div class="g3">'+
+      fg('姓名（拼音）',inp('exam-py','English / Pinyin',ed.name_py))+
+      fg('姓名（中文）',inp('exam-zh','中文姓名',ed.name_zh))+
+      fg('&nbsp;','<div style="display:flex;gap:6px"><button class="btn btn-p" onclick="examSaveForm()">'+(ed.id?'💾 保存修改':'＋ 添加特例')+'</button><button class="btn" onclick="examCancel()">取消</button></div>')+
     '</div>';
-  f.style.display='';
 }
 async function examAddSchool(){
   const name=prompt('新增登分学校名称:');if(name===null)return;const nm=name.trim();if(!nm)return;
@@ -1673,7 +1697,7 @@ async function examSaveForm(){
   const body={id:(_examEdit&&_examEdit.id)||null,sem:v('exam-sem'),teacher:v('exam-teacher'),course:v('exam-course'),cls:v('exam-cls').trim(),school:v('exam-school'),dept:v('exam-dept'),sid:v('exam-sid').trim(),name_py:v('exam-py').trim(),name_zh:v('exam-zh').trim(),note:v('exam-note').trim()};
   if(!body.sid&&!body.name_zh&&!body.name_py){alert('至少填学号或姓名');return;}
   const r=await gasPost('adminSetExamSpecial',body);
-  if(r&&r.success){_examEdit=null;const f=document.getElementById('exam-form');if(f)f.style.display='none';await loadExam();}else alert('保存失败:'+((r&&r.error)||'?'));
+  if(r&&r.success){examToggleAdd(false);await loadExam();}else alert('保存失败:'+((r&&r.error)||'?'));
 }
 async function examDel(id,name){if(!confirm('删除「'+name+'」这笔期末考特例?'))return;const r=await gasPost('adminDelExamSpecial',{id});if(r&&r.success)await loadExam();else alert('删除失败:'+((r&&r.error)||'?'));}
 function examExportExcel(){
