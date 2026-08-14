@@ -1765,13 +1765,13 @@ function _examShowForm(target){
     '</div>'+
     '<div class="g4">'+
       fg('学生专业',sel('exam-dept',mjOpts))+
-      fg('课程代码',inp('exam-course','输入代码，如 KB218',ed.course,' list="co-dl" autocomplete="off" oninput="examCourseEn(this.value)"'))+
+      fg('课程代码',inp('exam-course','输入代码，如 KB218',ed.course,' list="co-dl" autocomplete="off" oninput="examCourseEn(this.value);examLookupSchedule()"'))+
       fg('课程英文名（自动）',inp('exam-course-en','自动显示',curEn,' readonly'))+
-      fg('班级代码',sel('exam-cls',clsOpts))+
+      fg('班级代码','<select id="exam-cls" onchange="examLookupSchedule()">'+clsOpts+'</select>')+
     '</div>'+
     '<div class="g4">'+
-      fg('学年学期',sel('exam-sem',semOpts))+
-      fg('任课老师',sel('exam-teacher',tchOpts))+
+      fg('学年学期','<select id="exam-sem" onchange="examLookupSchedule()">'+semOpts+'</select>')+
+      fg('任课老师',sel('exam-teacher',tchOpts)+'<div id="exam-sched-hint" style="display:none;font-size:11px;margin-top:5px;line-height:1.7"></div>')+
       fg('负责学校',sel('exam-school',schOpts))+
       fg('备注',inp('exam-note','选填',ed.note))+
     '</div>'+
@@ -1779,8 +1779,28 @@ function _examShowForm(target){
       '<button class="btn btn-p" onclick="examSaveForm()">'+(ed.id?'💾 保存修改':'＋ 添加特例')+'</button>'+
       '<button class="btn" onclick="examCancel()">取消</button>'+
     '</div>';
+  examLookupSchedule();
 }
 function examCourseEn(code){const el=document.getElementById('exam-course-en');if(!el)return;const f=(typeof C!=='undefined')?C.find(x=>x.c===String(code||'').trim().toUpperCase()):null;el.value=(f&&f.en)||'';}
+// 依 学期+课程+班级 从排课表(schD)带出上半/下半的授课老师
+function examLookupSchedule(){
+  const hint=document.getElementById('exam-sched-hint');if(!hint)return;
+  const sem=((document.getElementById('exam-sem')||{}).value||'').trim();
+  const course=((document.getElementById('exam-course')||{}).value||'').trim().toUpperCase();
+  const cls=((document.getElementById('exam-cls')||{}).value||'').trim();
+  if(!sem||!course||!cls){hint.style.display='none';hint.innerHTML='';return;}
+  const recs=(typeof schD!=='undefined'?schD:[]).filter(r=>String(r.course||'').trim().toUpperCase()===course&&String(r.cls||'').trim()===cls&&String(r.sem||'').trim()===sem);
+  hint.style.display='';
+  if(!recs.length){hint.innerHTML='<span style="color:#b26a00">⚠ 排课表查无「'+eh(sem)+' · '+eh(course)+' · '+eh(cls)+'」，请手动选老师</span>';return;}
+  const hl=h=>h==='上半学期'?'上半':h==='下半学期'?'下半':h==='全学期'?'全学期':(h||'—');
+  const seen={},list=[];recs.forEach(r=>{const k=(r.half||'')+'|'+(r.tc||'');if(!seen[k]){seen[k]=1;list.push(r);}});
+  const uniqT=[...new Set(list.map(r=>r.tc).filter(Boolean))];
+  hint.innerHTML='<span style="color:#3C3489">📋 排课：</span>'+list.map(r=>'<button type="button" class="btn btn-sm" style="margin:2px 3px;padding:2px 8px;color:#3C3489;border-color:#AFA9EC" onclick="examUseTeacher(\''+jsq(r.tc||'')+'\')">'+eh(hl(r.half))+' · '+eh(r.tc||'(未填老师)')+'</button>').join('')+(uniqT.length>1?' <span style="color:#999">← 点选要登分的老师</span>':'');
+  // 单一老师且老师栏还空 → 自动带入
+  const tel=document.getElementById('exam-teacher');
+  if(uniqT.length===1&&tel&&!tel.value)examUseTeacher(uniqT[0]);
+}
+function examUseTeacher(name){const el=document.getElementById('exam-teacher');if(!el)return;el.value=name;if(el.value!==name){/* 老师不在下拉(可能停用)→ 追加一个临时选项 */el.insertAdjacentHTML('beforeend','<option value="'+eh(name)+'" selected>'+eh(name)+'</option>');}}
 async function examAddSchool(){
   const name=prompt('新增登分学校名称:');if(name===null)return;const nm=name.trim();if(!nm)return;
   const r=await gasPost('adminAddExamSchool',{name:nm});
