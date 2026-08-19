@@ -1740,7 +1740,8 @@ function opsNoticeView(){
     form='<div class="ops-add" style="display:block">'+
       '<div style="font-weight:700;color:#3C3489;margin-bottom:8px">'+(ed.id?'✏️ 修改通知':'✍️ 新增通知')+'</div>'+
       '<div class="fg" style="margin-bottom:8px"><label>标题（可加 emoji，如 📣 …）</label><input id="ops-nt-title" value="'+eh(ed.title||'')+'" style="width:100%;box-sizing:border-box" placeholder="📣 2569 新学年 · 教务提醒"></div>'+
-      '<div class="fg" style="margin-bottom:8px"><label>内文（每行一段；【标题】会自动加粗上色）</label><textarea id="ops-nt-body" rows="7" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;resize:vertical" placeholder="下周即将开启 2569 新学年…&#10;【指纹打卡】…&#10;【假期补课】…">'+eh(ed.body||'')+'</textarea></div>'+
+      '<div class="fg" style="margin-bottom:8px"><label>内文（每行一段；【标题】会自动加粗上色）</label><textarea id="ops-nt-body" rows="6" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;resize:vertical" placeholder="下周即将开启 2569 新学年…&#10;【指纹打卡】…&#10;【假期补课】…">'+eh(ed.body||'')+'</textarea></div>'+
+      '<div class="fg" style="margin-bottom:8px"><label>PDF 链接（选填）— 贴 Supabase Storage 公开网址，前台会内嵌该 PDF</label><input id="ops-nt-pdf" value="'+eh(ed.pdf_url||'')+'" style="width:100%;box-sizing:border-box" placeholder="https://xxxx.supabase.co/storage/v1/object/public/notice/xxx.pdf"></div>'+
       '<div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px">'+
         '<div class="fg"><label>主题色</label><select id="ops-nt-accent">'+colOpts+'</select></div>'+
         '<div class="fg"><label>排序（小在上）</label><input id="ops-nt-sort" type="number" value="'+eh(String(ed.sort==null?0:ed.sort))+'" style="width:80px"></div>'+
@@ -1767,7 +1768,7 @@ function opsNoticeCancel(){_opsNoticeEdit=null;opsRenderSec();}
 async function opsNoticeSave(){
   const v=function(id){const e=document.getElementById(id);return e?e.value:'';};
   const title=v('ops-nt-title').trim();if(!title){alert('请填标题');return;}
-  const body={id:(_opsNoticeEdit&&_opsNoticeEdit.id)||null,title:title,body:v('ops-nt-body'),accent:v('ops-nt-accent'),sort:parseInt(v('ops-nt-sort'),10)||0,open:!!(document.getElementById('ops-nt-open')||{}).checked};
+  const body={id:(_opsNoticeEdit&&_opsNoticeEdit.id)||null,title:title,body:v('ops-nt-body'),accent:v('ops-nt-accent'),sort:parseInt(v('ops-nt-sort'),10)||0,open:!!(document.getElementById('ops-nt-open')||{}).checked,pdf:v('ops-nt-pdf').trim()};
   const r=await gasPost('adminSetNotice',body);
   if(r&&r.success){_opsNoticeEdit=null;await loadNotices();opsRenderSec();if(typeof showToast==='function')showToast('已保存通知',{kind:'success',duration:2000});}
   else alert('保存失败:'+((r&&r.error)||'?（可能非管理员权限）'));
@@ -6188,9 +6189,17 @@ function renderNotices(){
         '<span style="font-weight:700;color:'+eh(ac)+';font-size:14px">'+eh(n.title||'')+'</span>'+
         '<span class="nacc-arrow" style="transition:transform .2s;color:'+eh(ac)+';font-size:12px'+(open?';transform:rotate(180deg)':'')+'">▼</span>'+
       '</div>'+
-      '<div style="'+(open?'':'display:none;')+'padding:14px 18px;border-top:0.5px solid #eee">'+_noticeBodyHtml(n.body,ac)+'</div>'+
+      '<div style="'+(open?'':'display:none;')+'padding:14px 18px;border-top:0.5px solid #eee">'+_noticeBodyHtml(n.body,ac)+_noticePdfHtml(n.pdf_url)+'</div>'+
     '</div>';
   }).join('');
+}
+function _noticePdfHtml(url){
+  const u=String(url||'').trim();if(!u)return '';
+  return '<div style="margin-top:12px">'+
+    '<a href="'+eh(u)+'" target="_blank" rel="noopener" class="btn btn-sm" style="color:#534AB7;border-color:#AFA9EC;text-decoration:none">📄 在新分页打开 PDF</a>'+
+    '<div style="margin-top:8px"><iframe src="'+eh(u)+'#toolbar=1&view=FitH" loading="lazy" style="width:100%;height:75vh;border:0.5px solid #E5E3F8;border-radius:8px;background:#fff"></iframe></div>'+
+    '<div style="font-size:11px;color:#999;margin-top:4px">手机若显示不全，请点上方「在新分页打开 PDF」。</div>'+
+  '</div>';
 }
 function switchTab(id){
   ['sch','exam','sp','sum','btec','cs','sta','notice','ops'].forEach((x,i)=>{const tb=document.querySelectorAll('.tab')[i];if(tb)tb.classList.toggle('active',x===id);});
@@ -6516,7 +6525,7 @@ function syncTblHeight(){
     if(action==='adminSetBtecKind')return srpc('admin_set_btec_kind',{p_pin:_pin,p_student_id:body.student_id,p_code:body.code,p_kind:body.kind});
     if(action==='adminAddExamSchool')return srpc('admin_add_exam_school',{p_pin:_pin,p_name:body.name});
     if(action==='adminDelExamSchool')return srpc('admin_del_exam_school',{p_pin:_pin,p_id:body.id});
-    if(action==='adminSetNotice')return srpc('admin_set_notice',{p_pin:_pin,p_id:body.id,p_title:body.title,p_body:body.body,p_accent:body.accent,p_sort:body.sort,p_open:body.open});
+    if(action==='adminSetNotice')return srpc('admin_set_notice',{p_pin:_pin,p_id:body.id,p_title:body.title,p_body:body.body,p_accent:body.accent,p_sort:body.sort,p_open:body.open,p_pdf:body.pdf});
     if(action==='adminDelNotice')return srpc('admin_del_notice',{p_pin:_pin,p_id:body.id});
     if(action==='adminSetExamSpecial')return srpc('admin_set_exam_special',{p_pin:_pin,p_id:body.id,p_sem:body.sem,p_teacher:body.teacher,p_course:body.course,p_cls:body.cls,p_school:body.school,p_dept:body.dept,p_sid:body.sid,p_name_py:body.name_py,p_name_zh:body.name_zh,p_note:body.note,p_salut:body.salut,p_half:body.half});
     if(action==='adminDelExamSpecial')return srpc('admin_del_exam_special',{p_pin:_pin,p_id:body.id});
