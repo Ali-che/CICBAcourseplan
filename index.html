@@ -947,42 +947,9 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     </div>
     <div style="font-size:12px;color:#888;margin:2px 0 14px">教务 / 打卡相关提醒，点标题展开或收起。</div>
 
-    <!-- ── DB 通知（后台可增删改）在此渲染，置于打卡指南之上 ── -->
+    <!-- ── 通知全部由后台（DB）管理，在此渲染 ── -->
     <div id="notice-list"></div>
-
-    <!-- ── 折叠项：上课打卡记录查询（固定·每步配图）── -->
-    <div class="nacc" style="border:0.5px solid #E5E3F8;border-radius:10px;overflow:hidden;margin-bottom:10px">
-      <div onclick="noticeAcc(this)" style="cursor:pointer;user-select:none;padding:13px 16px;background:#F7F6FE;border-left:4px solid #534AB7;display:flex;align-items:center;justify-content:space-between">
-        <span style="font-weight:700;color:#3C3489;font-size:14px">🖐️ 上课打卡记录查询</span>
-        <span class="nacc-arrow" style="transition:transform .2s;color:#9a95c9;font-size:12px">▼</span>
-      </div>
-      <div style="display:none;padding:14px 18px;border-top:0.5px solid #EEE">
-        <div style="font-size:13px;line-height:1.9;margin-bottom:4px">
-          查询网址：<a href="https://dpuintra.dpu.ac.th/eservice" target="_blank" rel="noopener" style="color:#534AB7;font-weight:600">https://dpuintra.dpu.ac.th/eservice</a>
-          <span style="color:#888;font-size:12px">（与 SLCM 帐号密码相同）</span>
-        </div>
-        <div style="margin-top:14px">
-          <div style="font-size:13px;font-weight:600;color:#3C3489;line-height:1.6;margin-bottom:6px">1. 点击（<span style="color:#c62222">红框</span>处）</div>
-          <img src="assets/attendance1.png" loading="lazy" alt="步骤1 点击" style="width:100%;max-width:940px;border:0.5px solid #E5E3F8;border-radius:8px;display:block">
-        </div>
-        <div style="margin-top:16px">
-          <div style="font-size:13px;font-weight:600;color:#3C3489;line-height:1.6;margin-bottom:6px">2. 查看上课打卡记录（左键·<span style="color:#c62222">红框</span>）　／　若上下课忘记打卡，在这里补上（右键·<span style="color:#7a1fa2">紫框</span>）</div>
-          <img src="assets/attendance2.png" loading="lazy" alt="步骤2 查看/补打卡" style="width:100%;max-width:940px;border:0.5px solid #E5E3F8;border-radius:8px;display:block">
-        </div>
-        <div style="margin-top:16px">
-          <div style="font-size:13px;font-weight:600;color:#3C3489;line-height:1.6;margin-bottom:6px">3. 可选语言（右上地球·<span style="color:#c62222">红框</span>）　·　4. 课程上课打卡记录（<span style="color:#c62222">红框</span>整卡）</div>
-          <img src="assets/attendance3.png" loading="lazy" alt="步骤3-4 语言/打卡记录" style="width:100%;max-width:940px;border:0.5px solid #E5E3F8;border-radius:8px;display:block">
-        </div>
-        <div style="margin-top:16px">
-          <div style="font-size:13px;font-weight:600;color:#3C3489;line-height:1.6;margin-bottom:6px">5. 展开颜色的意义（点<span style="color:#c62222">红框</span>「展开全部颜色」）</div>
-          <img src="assets/attendance4.png" loading="lazy" alt="步骤5 展开颜色" style="width:100%;max-width:760px;border:0.5px solid #E5E3F8;border-radius:8px;display:block">
-        </div>
-        <div style="margin-top:16px">
-          <div style="font-size:13px;font-weight:600;color:#3C3489;line-height:1.6;margin-bottom:6px">↓ 展开后 —— 完整颜色对照（圆圈左半＝签到、右半＝签退）</div>
-          <img src="assets/attendance5.png" loading="lazy" alt="完整颜色对照" style="width:100%;max-width:940px;border:0.5px solid #E5E3F8;border-radius:8px;display:block">
-        </div>
-      </div>
-    </div>
+    <div id="notice-empty" style="display:none;color:#aaa;font-size:13px;padding:20px 4px">暂无通知。请到「后台操作 → 教务须知」新增。</div>
 
   </div>
 </div>
@@ -6182,6 +6149,7 @@ async function loadNotices(){try{const r=await gasGet({action:'noticeData'});if(
 function _noticeBodyHtml(body,accent){const ac=accent||'#E8961E';return String(body||'').split('\n').map(function(ln){if(!ln.trim())return '';const h=eh(ln).replace(/【([^】]*)】/g,'<b style="color:'+ac+'">【$1】</b>');return '<div style="font-size:13px;line-height:1.9;color:#333;margin-top:8px">'+h+'</div>';}).join('');}
 function renderNotices(){
   const el=document.getElementById('notice-list');if(!el)return;
+  const em=document.getElementById('notice-empty');if(em)em.style.display=(_notices&&_notices.length)?'none':'block';
   el.innerHTML=(_notices||[]).map(function(n){
     const ac=n.accent||'#E8961E',open=!!n.is_open;
     return '<div class="nacc" style="border:0.5px solid #EEE;border-radius:10px;overflow:hidden;margin-bottom:10px">'+
