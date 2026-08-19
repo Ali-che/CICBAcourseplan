@@ -947,21 +947,10 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     </div>
     <div style="font-size:12px;color:#888;margin:2px 0 14px">教务 / 打卡相关提醒，点标题展开或收起。</div>
 
-    <!-- ── 折叠项：2569 教务提醒（默认展开·置顶）── -->
-    <div class="nacc" style="border:0.5px solid #FCE0B8;border-radius:10px;overflow:hidden;margin-bottom:10px">
-      <div onclick="noticeAcc(this)" style="cursor:pointer;user-select:none;padding:13px 16px;background:#FFFCF6;border-left:4px solid #E8961E;display:flex;align-items:center;justify-content:space-between">
-        <span style="font-weight:700;color:#9A6206;font-size:14px">📣 2569 新学年 · 教务提醒</span>
-        <span class="nacc-arrow" style="transition:transform .2s;color:#d1a55e;font-size:12px;transform:rotate(180deg)">▼</span>
-      </div>
-      <div style="padding:14px 18px;border-top:0.5px solid #FCE9CE">
-        <div style="font-size:13px;line-height:1.9;color:#333">下周即将开启 2569 新学年，请注意以下教务提醒：</div>
-        <div style="font-size:13px;line-height:1.9;color:#333;margin-top:8px"><b style="color:#9A6206">【指纹打卡】</b>行事历已更动，最后一周调整为期末考试周（仍需按时打卡）。请登录 SLCM 系统（学生名单页面）核对上课日期，打卡时间需与系统 <b>100% 一致</b>，确保每门课达到 <b>45 学时</b>。</div>
-        <div style="font-size:13px;line-height:1.9;color:#333;margin-top:8px"><b style="color:#9A6206">【假期补课】</b>因假期停课的课时，请统一在 SLCM 系统申请补课，补齐 <b>45 学时</b>。</div>
-        <div style="font-size:13px;line-height:1.9;color:#333;margin-top:8px"><b style="color:#9A6206">【Active Learning 教学】</b>拟开展校外 Active Learning 活动的课程，需填报《Out of Campus》表格（相关表格随后公告），活动须满足课程 <b>LO</b> 并载入教学大纲。</div>
-      </div>
-    </div>
+    <!-- ── DB 通知（后台可增删改）在此渲染，置于打卡指南之上 ── -->
+    <div id="notice-list"></div>
 
-    <!-- ── 折叠项：上课打卡记录查询（默认收起·每步配图）── -->
+    <!-- ── 折叠项：上课打卡记录查询（固定·每步配图）── -->
     <div class="nacc" style="border:0.5px solid #E5E3F8;border-radius:10px;overflow:hidden;margin-bottom:10px">
       <div onclick="noticeAcc(this)" style="cursor:pointer;user-select:none;padding:13px 16px;background:#F7F6FE;border-left:4px solid #534AB7;display:flex;align-items:center;justify-content:space-between">
         <span style="font-weight:700;color:#3C3489;font-size:14px">🖐️ 上课打卡记录查询</span>
@@ -1011,6 +1000,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <button class="ops-tab" data-sec="cat" onclick="opsSwitch('cat')">课程总库</button>
       <button class="ops-tab" data-sec="grad" onclick="opsSwitch('grad')">毕业学分</button>
       <button class="ops-tab" data-sec="school" onclick="opsSwitch('school')">登分学校</button>
+      <button class="ops-tab" data-sec="notice" onclick="opsSwitch('notice')">教务须知</button>
       <button class="btn btn-sm" onclick="renderOps(true)" style="margin-left:auto">↻ 重载</button>
     </div>
     <div id="ops-body"><div style="color:#888;padding:20px">载入中…</div></div>
@@ -1385,8 +1375,9 @@ async function renderOps(force){
 function opsSwitch(sec){opsSec=sec;document.querySelectorAll('.ops-tab').forEach(x=>x.classList.toggle('active',x.dataset.sec===sec));opsRenderSec();}
 function opsRenderSec(){
   const b=document.getElementById('ops-body');if(!b||!opsD)return;
-  b.innerHTML= opsSec==='sem'?opsSemView(): opsSec==='dept'?opsDeptView(): opsSec==='coh'?opsCohView(): opsSec==='tch'?opsTchView(): opsSec==='pos'?opsPosView(): opsSec==='cat'?opsCatView(): opsSec==='grad'?opsGradView(): opsSec==='school'?opsSchoolView(): '';
+  b.innerHTML= opsSec==='sem'?opsSemView(): opsSec==='dept'?opsDeptView(): opsSec==='coh'?opsCohView(): opsSec==='tch'?opsTchView(): opsSec==='pos'?opsPosView(): opsSec==='cat'?opsCatView(): opsSec==='grad'?opsGradView(): opsSec==='school'?opsSchoolView(): opsSec==='notice'?opsNoticeView(): '';
   if(opsSec==='school'&&!_examLoaded){_examLoaded=true;loadExam().then(function(){if(opsSec==='school')opsRenderSec();});}
+  if(opsSec==='notice'&&!_noticesLoadedOps){_noticesLoadedOps=true;loadNotices().then(function(){if(opsSec==='notice')opsRenderSec();});}
 }
 // 使用中检查(用已加载的 schD/spD)
 function opsUsedBySem(s){return schD.filter(r=>r.sem===s).length+spD.filter(r=>r.sem===s).length;}
@@ -1736,6 +1727,55 @@ async function opsDelSchool(id,name){
   if(!confirm('删除登分学校「'+name+'」?（已填过此校的旧记录不受影响）'))return;
   const r=await gasPost('adminDelExamSchool',{id:id});
   if(r&&r.success){await loadExam();opsRenderSec();if(typeof showToast==='function')showToast('已删除 '+name,{kind:'success',duration:2000});}
+  else alert('删除失败:'+((r&&r.error)||'?（可能非管理员权限）'));
+}
+// ── 后台：教务须知（DB 通知）管理 ──
+let _noticesLoadedOps=false, _opsNoticeEdit=null;
+const NOTICE_COLORS=[['#E8961E','橙'],['#7a1fa2','紫'],['#1565c0','蓝'],['#2e7d32','绿'],['#c62222','红'],['#534AB7','靛']];
+function opsNoticeView(){
+  const ed=_opsNoticeEdit;
+  let form='';
+  if(ed){
+    const colOpts=NOTICE_COLORS.map(function(c){return '<option value="'+c[0]+'"'+((ed.accent||'#E8961E')===c[0]?' selected':'')+'>'+c[1]+'</option>';}).join('');
+    form='<div class="ops-add" style="display:block">'+
+      '<div style="font-weight:700;color:#3C3489;margin-bottom:8px">'+(ed.id?'✏️ 修改通知':'✍️ 新增通知')+'</div>'+
+      '<div class="fg" style="margin-bottom:8px"><label>标题（可加 emoji，如 📣 …）</label><input id="ops-nt-title" value="'+eh(ed.title||'')+'" style="width:100%;box-sizing:border-box" placeholder="📣 2569 新学年 · 教务提醒"></div>'+
+      '<div class="fg" style="margin-bottom:8px"><label>内文（每行一段；【标题】会自动加粗上色）</label><textarea id="ops-nt-body" rows="7" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;padding:8px 10px;border:0.5px solid #cbd5e1;border-radius:6px;resize:vertical" placeholder="下周即将开启 2569 新学年…&#10;【指纹打卡】…&#10;【假期补课】…">'+eh(ed.body||'')+'</textarea></div>'+
+      '<div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px">'+
+        '<div class="fg"><label>主题色</label><select id="ops-nt-accent">'+colOpts+'</select></div>'+
+        '<div class="fg"><label>排序（小在上）</label><input id="ops-nt-sort" type="number" value="'+eh(String(ed.sort==null?0:ed.sort))+'" style="width:80px"></div>'+
+        '<div class="fg"><label>默认展开</label><label style="display:inline-flex;align-items:center;height:30px;cursor:pointer"><input type="checkbox" id="ops-nt-open" '+(ed.is_open?'checked':'')+' style="width:auto"></label></div>'+
+        '<button class="btn btn-p" onclick="opsNoticeSave()">'+(ed.id?'保存':'+ 新增')+'</button>'+
+        '<button class="btn" onclick="opsNoticeCancel()">取消</button>'+
+      '</div></div>';
+  }else{
+    form='<div style="margin-bottom:10px"><button class="btn btn-p" onclick="opsNoticeNew()">+ 新增通知</button></div>';
+  }
+  const rows=(_notices||[]).map(function(n){
+    const ac=n.accent||'#E8961E';
+    return '<tr><td style="white-space:nowrap;color:#999">'+eh(String(n.sort==null?0:n.sort))+'</td>'+
+      '<td><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+eh(ac)+';margin-right:6px;vertical-align:middle"></span>'+eh(n.title||'')+(n.is_open?' <span style="font-size:10px;color:#2e7d32">·默认展开</span>':'')+'</td>'+
+      '<td style="text-align:right;white-space:nowrap"><button class="btn btn-sm" onclick="opsNoticeEdit('+n.id+')">编辑</button> <button class="ops-del" onclick="opsNoticeDel('+n.id+',\''+jsq(n.title||'')+'\')">删除</button></td></tr>';
+  }).join('')||'<tr><td colspan="3" style="color:#aaa">尚无通知，点上方「+ 新增通知」</td></tr>';
+  return '<div style="color:#666;font-size:12px;margin-bottom:8px">这些通知会显示在前台「📌 教务须知」tab（在固定的打卡指南之上，按排序由小到大）。</div>'+
+    form+
+    '<table style="width:100%"><thead><tr><th style="width:50px">排序</th><th>标题</th><th style="width:130px"></th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+function opsNoticeNew(){_opsNoticeEdit={accent:'#E8961E',sort:( (_notices||[]).length?Math.max.apply(null,_notices.map(function(n){return +n.sort||0;}))+1:0 ),is_open:false};opsRenderSec();}
+function opsNoticeEdit(id){const n=(_notices||[]).find(function(x){return String(x.id)===String(id);});if(n){_opsNoticeEdit=Object.assign({},n);opsRenderSec();}}
+function opsNoticeCancel(){_opsNoticeEdit=null;opsRenderSec();}
+async function opsNoticeSave(){
+  const v=function(id){const e=document.getElementById(id);return e?e.value:'';};
+  const title=v('ops-nt-title').trim();if(!title){alert('请填标题');return;}
+  const body={id:(_opsNoticeEdit&&_opsNoticeEdit.id)||null,title:title,body:v('ops-nt-body'),accent:v('ops-nt-accent'),sort:parseInt(v('ops-nt-sort'),10)||0,open:!!(document.getElementById('ops-nt-open')||{}).checked};
+  const r=await gasPost('adminSetNotice',body);
+  if(r&&r.success){_opsNoticeEdit=null;await loadNotices();opsRenderSec();if(typeof showToast==='function')showToast('已保存通知',{kind:'success',duration:2000});}
+  else alert('保存失败:'+((r&&r.error)||'?（可能非管理员权限）'));
+}
+async function opsNoticeDel(id,title){
+  if(!confirm('删除通知「'+title+'」?'))return;
+  const r=await gasPost('adminDelNotice',{id:id});
+  if(r&&r.success){await loadNotices();opsRenderSec();if(typeof showToast==='function')showToast('已删除',{kind:'success',duration:1800});}
   else alert('删除失败:'+((r&&r.error)||'?（可能非管理员权限）'));
 }
 function _examRows(){
@@ -6135,6 +6175,23 @@ async function confirmCsvImportSp(){
 // 教务须知：折叠项 展开/收起
 function noticeAcc(hd){const body=hd.nextElementSibling;if(!body)return;const arr=hd.querySelector('.nacc-arrow');const open=(body.style.display==='none');body.style.display=open?'':'none';if(arr)arr.style.transform=open?'rotate(180deg)':'';}
 function noticeAll(open){document.querySelectorAll('#panel-notice .nacc').forEach(function(it){const hd=it.firstElementChild;if(!hd)return;const body=hd.nextElementSibling,arr=hd.querySelector('.nacc-arrow');if(body)body.style.display=open?'':'none';if(arr)arr.style.transform=open?'rotate(180deg)':'';});}
+// DB 通知（后台可增删改）
+let _notices=[];
+async function loadNotices(){try{const r=await gasGet({action:'noticeData'});if(r&&r.success)_notices=r.rows||[];}catch(e){}renderNotices();}
+function _noticeBodyHtml(body,accent){const ac=accent||'#E8961E';return String(body||'').split('\n').map(function(ln){if(!ln.trim())return '';const h=eh(ln).replace(/【([^】]*)】/g,'<b style="color:'+ac+'">【$1】</b>');return '<div style="font-size:13px;line-height:1.9;color:#333;margin-top:8px">'+h+'</div>';}).join('');}
+function renderNotices(){
+  const el=document.getElementById('notice-list');if(!el)return;
+  el.innerHTML=(_notices||[]).map(function(n){
+    const ac=n.accent||'#E8961E',open=!!n.is_open;
+    return '<div class="nacc" style="border:0.5px solid #EEE;border-radius:10px;overflow:hidden;margin-bottom:10px">'+
+      '<div onclick="noticeAcc(this)" style="cursor:pointer;user-select:none;padding:13px 16px;background:#FAFAFE;border-left:4px solid '+eh(ac)+';display:flex;align-items:center;justify-content:space-between">'+
+        '<span style="font-weight:700;color:'+eh(ac)+';font-size:14px">'+eh(n.title||'')+'</span>'+
+        '<span class="nacc-arrow" style="transition:transform .2s;color:'+eh(ac)+';font-size:12px'+(open?';transform:rotate(180deg)':'')+'">▼</span>'+
+      '</div>'+
+      '<div style="'+(open?'':'display:none;')+'padding:14px 18px;border-top:0.5px solid #eee">'+_noticeBodyHtml(n.body,ac)+'</div>'+
+    '</div>';
+  }).join('');
+}
 function switchTab(id){
   ['sch','exam','sp','sum','btec','cs','sta','notice','ops'].forEach((x,i)=>{const tb=document.querySelectorAll('.tab')[i];if(tb)tb.classList.toggle('active',x===id);});
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
@@ -6147,6 +6204,7 @@ function switchTab(id){
   else if(id==='sta'&&_tabDirty.sta)renderSta();
   else if(id==='btec')loadBtec();
   else if(id==='exam')loadExam();
+  else if(id==='notice')loadNotices();
   else if(id==='ops')renderOps();
   if(id==='sum'){if(!window._sumHintWired){const ps=document.getElementById('panel-sum');if(ps){ps.addEventListener('change',updateSumPrintHint);ps.addEventListener('input',updateSumPrintHint);window._sumHintWired=true;}}updateSumPrintHint();}
   setTimeout(syncTblHeight,50); // 等 panel 显示后再算高度
@@ -6396,6 +6454,7 @@ function syncTblHeight(){
     }
     if(a==='teachBtec'){const d=await sget('teach_btec?select=teacher,val').catch(function(){return [];});const m={};(d||[]).forEach(function(x){m[x.teacher]=+x.val;});return{success:true,map:m};}
     if(a==='examData'){const r=await srpc('exam_special_list',{p_pin:_pin}).catch(function(){return null;});const sc=await sget('exam_school?select=id,name&order=name').catch(function(){return [];});if(r&&!r.error)return{success:true,rows:r.rows||[],schools:sc||[]};return{success:false,rows:[],schools:sc||[],error:(r&&r.error)||'需要登入'};}
+    if(a==='noticeData'){const r=await sget('notice?select=*&order=sort,id').catch(function(){return [];});return{success:true,rows:r||[]};}
     if(a==='opsData'){
       const[se,de,ch,te,ca,po,gr]=await Promise.all([
         sget('semesters?select=sem&order=sem'),
@@ -6457,6 +6516,8 @@ function syncTblHeight(){
     if(action==='adminSetBtecKind')return srpc('admin_set_btec_kind',{p_pin:_pin,p_student_id:body.student_id,p_code:body.code,p_kind:body.kind});
     if(action==='adminAddExamSchool')return srpc('admin_add_exam_school',{p_pin:_pin,p_name:body.name});
     if(action==='adminDelExamSchool')return srpc('admin_del_exam_school',{p_pin:_pin,p_id:body.id});
+    if(action==='adminSetNotice')return srpc('admin_set_notice',{p_pin:_pin,p_id:body.id,p_title:body.title,p_body:body.body,p_accent:body.accent,p_sort:body.sort,p_open:body.open});
+    if(action==='adminDelNotice')return srpc('admin_del_notice',{p_pin:_pin,p_id:body.id});
     if(action==='adminSetExamSpecial')return srpc('admin_set_exam_special',{p_pin:_pin,p_id:body.id,p_sem:body.sem,p_teacher:body.teacher,p_course:body.course,p_cls:body.cls,p_school:body.school,p_dept:body.dept,p_sid:body.sid,p_name_py:body.name_py,p_name_zh:body.name_zh,p_note:body.note,p_salut:body.salut,p_half:body.half});
     if(action==='adminDelExamSpecial')return srpc('admin_del_exam_special',{p_pin:_pin,p_id:body.id});
     if(action==='adminDelBtecStudent')return srpc('admin_del_btec_student',{p_pin:_pin,p_id:body.id});
