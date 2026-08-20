@@ -1716,7 +1716,8 @@ function downloadCsvExamTemplate(){
     ['# 学生称谓：Mr. / Ms.','','','','','','','','','','',''],
     ['# 课程代码：如 LA162（大小写皆可）','','','','','','','','','','',''],
     ['# 负责学校：需与系统「登分学校」名称一致（后台可先新增）','','','','','','','','','','',''],
-    ['# 姓名英文栏仅填英文','','','','','','','','','','','']
+    ['# 姓名英文栏仅填英文','','','','','','','','','','',''],
+    ['# 同(学号+课程+学期+班级+上下半)重复时，上传后可选 跳过/覆盖/强制新增','','','','','','','','','','','']
   ];
   const csv=rows.map(function(r){return r.map(function(c){const s=String(c==null?'':c);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(',');}).join('\n');
   const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
@@ -1733,6 +1734,7 @@ function _parseExamCsvRow(row,ci,lineNum){
   if(rec.sem&&typeof SEMS!=='undefined'&&SEMS.indexOf(rec.sem)<0)errors.push('学期「'+rec.sem+'」不在系统学期列表');
   return {line:lineNum,record:rec,errors:errors};
 }
+function _dupKeyExam(r){return [String(r.sid||'').trim(),String(r.course||'').trim().toUpperCase(),String(r.cls||'').trim(),String(r.sem||'').trim(),String(r.half||'').trim()].join('|');}
 function onCsvExamFileChosen(ev){
   const file=ev.target.files[0];if(!file)return;
   const reader=new FileReader();
@@ -1746,31 +1748,102 @@ function onCsvExamFileChosen(ev){
     if(missing.length){alert('❌ CSV 表头不完整，缺少：'+missing.join('、')+'\n\n请下载模板取得正确表头。');return;}
     const ci={};CSV_EXAM_HEADERS.forEach(function(h){ci[h]=headers.indexOf(h);});
     _csvExamParsed=rows.slice(1).map(function(r,i){return _parseExamCsvRow(r,ci,i+2);}).filter(Boolean);
+    // ── 重复检测（学号+课程+班级+学期+上下半）──
+    _csvExamParsed.forEach(function(p,i){
+      p.dupKind='none';p.csvSiblings=[];p.sheetMatchId=null;p.action='skip';p.include=true;
+      if(p.errors.length){p.include=false;return;}
+      const k=_dupKeyExam(p.record);
+      _csvExamParsed.forEach(function(q,j){if(i===j||q.errors.length)return;if(_dupKeyExam(q.record)===k)p.csvSiblings.push(j);});
+      const m=(_exam.rows||[]).find(function(r){return _dupKeyExam(r)===k;});
+      if(m)p.sheetMatchId=String(m.id);
+      if(m&&p.csvSiblings.length)p.dupKind='both';
+      else if(m)p.dupKind='sheet';
+      else if(p.csvSiblings.length)p.dupKind='csv';
+    });
     buildCsvExamPreview();
   };
   reader.readAsText(file,'UTF-8');
 }
+function setCsvExamRowAction(idx,val){if(_csvExamParsed[idx])_csvExamParsed[idx].action=val;}
+function toggleCsvExamRowInclude(idx){if(_csvExamParsed[idx])_csvExamParsed[idx].include=!_csvExamParsed[idx].include;}
+function csvExamBulkSetAction(val){_csvExamParsed.forEach(function(p){if(!p.errors.length&&p.dupKind!=='none')p.action=val;});buildCsvExamPreview();}
+function csvExamSetAllInclude(val){_csvExamParsed.forEach(function(p){if(!p.errors.length)p.include=val;});buildCsvExamPreview();}
 function buildCsvExamPreview(){
   const el=document.getElementById('csv-exam-preview');if(!el)return;const list=_csvExamParsed||[];
-  const ok=list.filter(function(x){return !x.errors.length;}),bad=list.filter(function(x){return x.errors.length;});
+  if(!list.length){el.innerHTML='<div style="color:#999;padding:14px;text-align:center">没有可解析的资料</div>';return;}
+  const okCount=list.filter(function(x){return !x.errors.length;}).length;
+  const errCount=list.filter(function(x){return x.errors.length;}).length;
+  const dupCount=list.filter(function(x){return !x.errors.length&&x.dupKind!=='none';}).length;
   const hf=function(h){return h==='上半学期'?'上半':h==='下半学期'?'下半':h==='全学期'?'全':'';};
-  let h='<div style="font-size:13px;margin-bottom:8px">共 '+list.length+' 笔：<b style="color:#2e7d32">'+ok.length+' 可导入</b>'+(bad.length?('，<b style="color:#c62222">'+bad.length+' 有误（将跳过）</b>'):'')+'</div>';
-  h+='<div style="max-height:320px;overflow:auto;border:0.5px solid #eee;border-radius:8px"><table style="width:100%;font-size:12px"><thead><tr><th>行</th><th>状态</th><th>学号</th><th>姓名</th><th>专业</th><th>学期</th><th>上/下</th><th>课程</th><th>班级</th><th>老师</th><th>学校</th></tr></thead><tbody>';
-  h+=list.map(function(p){const r=p.record,b=p.errors.length;return '<tr'+(b?' style="background:#FDECEC"':'')+'><td>'+p.line+'</td><td>'+(b?'<span style="color:#c62222;cursor:help" title="'+eh(p.errors.join('；'))+'">✗</span>':'<span style="color:#2e7d32">✓</span>')+'</td><td>'+eh(r.sid)+'</td><td>'+eh(r.name_py||r.name_zh)+'</td><td>'+eh(r.dept)+'</td><td>'+eh(r.sem)+'</td><td>'+eh(hf(r.half))+'</td><td>'+eh(r.course)+'</td><td>'+eh(r.cls)+'</td><td>'+eh(r.teacher)+'</td><td>'+eh(r.school)+'</td></tr>';}).join('');
-  h+='</tbody></table></div>';
-  if(bad.length)h+='<div style="font-size:11px;color:#c62222;margin-top:6px">✗ 的行有误、会跳过；把鼠标移到 ✗ 上看原因。</div>';
-  el.innerHTML=h;
-  const btn=document.getElementById('csv-exam-import-btn');btn.disabled=(ok.length===0);btn.textContent=ok.length?('✅ 导入 '+ok.length+' 笔'):'没有可导入的记录';
+  let H='<div style="display:flex;gap:10px;font-size:12px;margin-bottom:8px;flex-wrap:wrap">';
+  H+='<span class="badge b1">🟢 可导入 '+okCount+'</span>';
+  if(dupCount)H+='<span class="badge b2">🔁 重复 '+dupCount+'（请选择处理方式）</span>';
+  if(errCount)H+='<span class="badge b3">🔴 不可导入 '+errCount+'</span>';
+  H+='</div>';
+  if(dupCount){
+    H+='<div style="font-size:11px;color:#666;margin-bottom:6px">重复行批量套用：'+
+      '<button class="btn btn-sm" onclick="csvExamBulkSetAction(\'skip\')" style="font-size:10px;padding:2px 8px;margin-left:4px">全部跳过</button>'+
+      '<button class="btn btn-sm" onclick="csvExamBulkSetAction(\'overwrite\')" style="font-size:10px;padding:2px 8px;margin-left:4px">全部覆盖</button>'+
+      '<button class="btn btn-sm" onclick="csvExamBulkSetAction(\'append\')" style="font-size:10px;padding:2px 8px;margin-left:4px">全部强制新增</button></div>';
+  }
+  H+='<div style="font-size:11px;color:#666;margin-bottom:6px">导入勾选：'+
+    '<button class="btn btn-sm" onclick="csvExamSetAllInclude(true)" style="font-size:10px;padding:2px 8px;margin-left:4px">全选</button>'+
+    '<button class="btn btn-sm" onclick="csvExamSetAllInclude(false)" style="font-size:10px;padding:2px 8px;margin-left:4px">全不选</button></div>';
+  H+='<div style="max-height:360px;overflow:auto;border:1px solid #eee;border-radius:6px"><table style="font-size:11px;width:100%"><thead><tr style="background:#534AB7;color:#fff;position:sticky;top:0">'+
+    '<th style="padding:5px 8px;width:28px">导入?</th><th style="padding:5px 8px">状态</th><th>行</th><th>学号</th><th>姓名</th><th>专业</th><th>学期</th><th>上/下</th><th>课程</th><th>班级</th><th>老师</th><th>学校</th><th>重复来源</th><th>处理方式</th><th>问题</th></tr></thead><tbody>';
+  H+=list.map(function(p,idx){
+    const r=p.record,isDup=!p.errors.length&&p.dupKind!=='none';
+    const icon=p.errors.length?'🔴':(isDup?'🔁':'🟢');
+    const bg=p.errors.length?'#FEF2F2':(isDup?'#FEF3C7':'');
+    let dupSrc='—';if(p.dupKind==='sheet')dupSrc='📋 名单已有';else if(p.dupKind==='csv')dupSrc='📄 文件内重复';else if(p.dupKind==='both')dupSrc='📋📄 双重';
+    let act='—';
+    if(isDup)act='<select onchange="setCsvExamRowAction('+idx+',this.value);buildCsvExamPreview();" style="font-size:11px;padding:2px 4px">'+
+      '<option value="skip"'+(p.action==='skip'?' selected':'')+'>🟡 跳过</option>'+
+      '<option value="overwrite"'+(p.action==='overwrite'?' selected':'')+'>🔴 覆盖</option>'+
+      '<option value="append"'+(p.action==='append'?' selected':'')+'>⚫ 强制新增</option></select>';
+    const chk=p.errors.length?'<span style="color:#ccc">—</span>':'<input type="checkbox" '+(p.include?'checked':'')+' onchange="toggleCsvExamRowInclude('+idx+');buildCsvExamPreview();" style="cursor:pointer">';
+    const probs=p.errors.map(function(e){return '❌ '+e;}).join('<br>')||'—';
+    return '<tr style="background:'+bg+';'+(!p.include?'opacity:.5':'')+'">'+
+      '<td style="text-align:center">'+chk+'</td><td style="text-align:center">'+icon+'</td><td style="color:#999">'+p.line+'</td>'+
+      '<td><code>'+eh(r.sid||'—')+'</code></td><td>'+eh(r.name_py||r.name_zh)+'</td><td>'+eh(r.dept)+'</td><td>'+eh(r.sem)+'</td><td>'+eh(hf(r.half))+'</td>'+
+      '<td><code>'+eh(r.course)+'</code></td><td>'+eh(r.cls)+'</td><td>'+eh(r.teacher)+'</td><td>'+eh(r.school)+'</td>'+
+      '<td style="white-space:nowrap">'+dupSrc+'</td><td>'+act+'</td><td style="color:#c62222;font-size:10px">'+probs+'</td></tr>';
+  }).join('');
+  H+='</tbody></table></div>';
+  el.innerHTML=H;
+  // 计算待写入数
+  let writes=0;list.forEach(function(p){if(p.errors.length||!p.include)return;if(p.dupKind==='none'){writes++;return;}if(p.action==='append'||p.action==='overwrite')writes++;});
+  const btn=document.getElementById('csv-exam-import-btn');btn.disabled=(writes===0);btn.textContent=writes?('✅ 导入 '+writes+' 笔'):'没有可写入的记录';
 }
 async function confirmCsvImportExam(){
-  const valid=(_csvExamParsed||[]).filter(function(x){return !x.errors.length;});
-  if(!valid.length){alert('没有可导入的记录');return;}
-  if(!confirm('确认导入 '+valid.length+' 笔期末考特例？（逐笔新增，不覆盖既有）'))return;
+  const valid=(_csvExamParsed||[]).filter(function(x){return !x.errors.length&&x.include;});
+  if(!valid.length){alert('没有勾选可导入的记录');return;}
+  const appendList=[],overwriteByKey={};let skipCount=0;
+  valid.forEach(function(p){
+    if(p.dupKind==='none'){appendList.push(p);return;}
+    if(p.action==='skip'){skipCount++;return;}
+    if(p.action==='append'){appendList.push(p);return;}
+    if(p.action==='overwrite'){overwriteByKey[_dupKeyExam(p.record)]=p;}
+  });
+  const overwriteList=Object.keys(overwriteByKey).map(function(k){return overwriteByKey[k];});
+  const total=appendList.length+overwriteList.length;
+  if(!total){alert('全部被跳过，没有写入操作');return;}
+  let msg='确认执行：\n';
+  if(appendList.length)msg+='  新增 '+appendList.length+' 笔\n';
+  if(overwriteList.length)msg+='  覆盖 '+overwriteList.length+' 笔（旧记录字段会被替换）\n';
+  if(skipCount)msg+='  跳过 '+skipCount+' 笔\n';
+  if(!confirm(msg))return;
   const btn=document.getElementById('csv-exam-import-btn');btn.disabled=true;
-  let ok=0,fail=0;
-  for(let i=0;i<valid.length;i++){
-    btn.textContent='导入中… '+(i+1)+'/'+valid.length;
-    const r=await gasPost('adminSetExamSpecial',Object.assign({id:null},valid[i].record));
+  let ok=0,fail=0,done=0;
+  for(const p of overwriteList){
+    done++;btn.textContent='⏳ 处理中 '+done+'/'+total+'…';
+    const m=(_exam.rows||[]).find(function(r){return _dupKeyExam(r)===_dupKeyExam(p.record);});
+    const r=await gasPost('adminSetExamSpecial',Object.assign({id:(m?m.id:null)},p.record));
+    if(r&&r.success)ok++;else fail++;
+  }
+  for(const p of appendList){
+    done++;btn.textContent='⏳ 处理中 '+done+'/'+total+'…';
+    const r=await gasPost('adminSetExamSpecial',Object.assign({id:null},p.record));
     if(r&&r.success)ok++;else fail++;
   }
   closeCsvImportExam();await loadExam();
