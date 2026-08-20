@@ -1759,7 +1759,7 @@ function _examRows(){
 }
 function renderExam(){
   if(!_panelActive('exam'))return;
-  const isAdmin=(currentRole==='admin');
+  const isAdmin=(['admin','director','master','主任'].indexOf(currentRole)>=0);  // 主任/管理员皆可改删（后端 _admin 同样接受 director/主任）
   const tb=document.getElementById('exam-tb'),em=document.getElementById('exam-em');if(!tb)return;
   const rows=_examRows();
   const n=document.getElementById('exam-n');if(n)n.textContent='('+rows.length+'条)';
