@@ -885,6 +885,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <a href="https://changchuanchi.github.io/ciclearninghub/mou_student_grades.html" target="_blank" rel="noopener" class="no-print" onmouseover="var s=this.querySelector('span');if(s)s.style.opacity=1" onmouseout="var s=this.querySelector('span');if(s)s.style.opacity=0" style="position:relative;display:inline-flex;align-items:center;font-size:12px;color:#8A84C9;text-decoration:none;padding:4px 6px;border:0.5px solid #E5E3F8;border-radius:7px">🔗 查询成绩<span style="position:absolute;left:0;top:100%;margin-top:3px;white-space:nowrap;font-size:9.5px;color:#cbc8e0;opacity:0;transition:opacity .25s;pointer-events:none;letter-spacing:.05em">🔑 dpucicba</span></a>
         <button class="btn btn-sm no-print" onclick="examToggleGrade()" style="color:#534AB7;border-color:#AFA9EC" title="期末成绩评分标准">ℹ️ 评分说明</button>
         <button class="btn btn-sm no-print" onclick="examExportExcel()">📊 导出 Excel</button>
+        <button class="btn btn-sm no-print" onclick="openCsvImportExam()" style="color:#8a5a00;border-color:#e6c27a">📥 批量导入</button>
         <button class="btn btn-sm no-print" onclick="printPanel('exam')">🖨️ 列印</button>
       </div>
     </div>
@@ -1132,6 +1133,31 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     <div class="modal-footer">
       <button class="btn" onclick="closeCsvImportSp()">取消</button>
       <button class="btn btn-p" id="csv-sp-import-btn" onclick="confirmCsvImportSp()" disabled>请先选择 CSV 档案</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="csv-exam-modal" onmousedown="modalMouseDown(event,this)" onclick="modalMaybeClose(event,this,closeCsvImportExam)">
+  <div class="modal-box" style="max-width:980px">
+    <div class="modal-hdr">
+      <h3>📥 CSV 批量导入 期末考特例</h3>
+      <button class="modal-close" onclick="closeCsvImportExam()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-sec">操作步骤</div>
+      <ol style="margin-left:20px;font-size:12px;line-height:1.8;color:#444">
+        <li>下载模板（含表头与说明）<button class="btn btn-sm" style="margin-left:8px;color:#3B6D11;border-color:#C0DD97" onclick="downloadCsvExamTemplate()">📥 下载 CSV 模板</button></li>
+        <li>用 <strong>Excel</strong> 或 <strong>Google Sheet</strong> 编辑填写（每行 = 一位学生）</li>
+        <li>另存为 <strong style="color:#a32d2d">CSV UTF-8（逗号分隔）</strong>，避免中文乱码</li>
+        <li>下方选择档案 → 检查预览 → 确认导入</li>
+      </ol>
+      <div class="modal-sec">选择档案</div>
+      <input type="file" id="csv-exam-file" accept=".csv,text/csv" onchange="onCsvExamFileChosen(event)" style="font-size:12px;padding:6px;border:1px dashed #aaa;border-radius:6px;background:#fafafa;width:100%;cursor:pointer">
+      <div id="csv-exam-preview" style="margin-top:14px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeCsvImportExam()">取消</button>
+      <button class="btn btn-p" id="csv-exam-import-btn" onclick="confirmCsvImportExam()" disabled>请先选择 CSV 档案</button>
     </div>
   </div>
 </div>
@@ -1675,6 +1701,81 @@ async function loadExam(){
 }
 function reloadExam(){loadExam();}
 function examToggleGrade(){const el=document.getElementById('exam-grade-info');if(el)el.style.display=(el.style.display==='none'?'':'none');}
+// ── 期末考特例：CSV 批量导入 ──
+const CSV_EXAM_HEADERS=['学号','学生称谓','姓名英文','姓名中文','学生专业','学年学期','上半下半','课程代码','班级','任课老师','负责学校','备注'];
+let _csvExamParsed=[];
+function openCsvImportExam(){const m=document.getElementById('csv-exam-modal');if(!m)return;m.classList.add('open');document.body.style.overflow='hidden';document.getElementById('csv-exam-file').value='';document.getElementById('csv-exam-preview').innerHTML='';const b=document.getElementById('csv-exam-import-btn');b.disabled=true;b.textContent='请先选择 CSV 档案';_csvExamParsed=[];}
+function closeCsvImportExam(){const m=document.getElementById('csv-exam-modal');if(m)m.classList.remove('open');document.body.style.overflow='';}
+function downloadCsvExamTemplate(){
+  const rows=[
+    CSV_EXAM_HEADERS,
+    ['67111710','Mr.','Wu, Yutong','吴雨同','TM','2569-1','下半','LA162','601','Dr. Chang, Chuan-Chi','集美登分','补考'],
+    ['# 说明：学号 或 姓名 至少填一个','','','','','','','','','','',''],
+    ['# 学年学期：如 2569-1（需在系统学期列表里）','','','','','','','','','','',''],
+    ['# 上半下半：上半 / 下半 / 全学期（可留空）','','','','','','','','','','',''],
+    ['# 学生称谓：Mr. / Ms.','','','','','','','','','','',''],
+    ['# 课程代码：如 LA162（大小写皆可）','','','','','','','','','','',''],
+    ['# 负责学校：需与系统「登分学校」名称一致（后台可先新增）','','','','','','','','','','',''],
+    ['# 姓名英文栏仅填英文','','','','','','','','','','','']
+  ];
+  const csv=rows.map(function(r){return r.map(function(c){const s=String(c==null?'':c);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(',');}).join('\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='期末考特例导入模板_'+new Date().toISOString().slice(0,10)+'.csv';a.click();URL.revokeObjectURL(a.href);
+}
+function _examNormHalf(v){v=String(v||'').trim();if(!v)return '';if(v==='上半'||v==='上半学期')return '上半学期';if(v==='下半'||v==='下半学期')return '下半学期';if(v==='全'||v==='全学期'||v==='全期')return '全学期';return v;}
+function _parseExamCsvRow(row,ci,lineNum){
+  const g=function(h){return (row[ci[h]]||'').trim();};
+  if(CSV_EXAM_HEADERS.every(function(h){return !g(h);}))return null;         // 空行
+  if(g('学号').charAt(0)==='#')return null;                                   // 说明行
+  const rec={sid:g('学号'),salut:g('学生称谓'),name_py:g('姓名英文'),name_zh:g('姓名中文'),dept:g('学生专业'),sem:g('学年学期'),half:_examNormHalf(g('上半下半')),course:g('课程代码').toUpperCase(),cls:g('班级'),teacher:g('任课老师'),school:g('负责学校'),note:g('备注')};
+  const errors=[];
+  if(!rec.sid&&!rec.name_zh&&!rec.name_py)errors.push('学号/姓名至少填一个');
+  if(rec.sem&&typeof SEMS!=='undefined'&&SEMS.indexOf(rec.sem)<0)errors.push('学期「'+rec.sem+'」不在系统学期列表');
+  return {line:lineNum,record:rec,errors:errors};
+}
+function onCsvExamFileChosen(ev){
+  const file=ev.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    let text=e.target.result;
+    if(/锟斤拷|�/.test(text)){alert('⚠️ 档案似乎不是 UTF-8（出现乱码）。\n\n请在 Excel 重新「另存为 → CSV UTF-8（逗号分隔）」后再上传。');return;}
+    const rows=parseCsv(text);
+    if(rows.length<2){alert('❌ CSV 内容为空或只有表头');return;}
+    const headers=rows[0].map(function(h){return h.trim();});
+    const missing=CSV_EXAM_HEADERS.filter(function(h){return headers.indexOf(h)<0;});
+    if(missing.length){alert('❌ CSV 表头不完整，缺少：'+missing.join('、')+'\n\n请下载模板取得正确表头。');return;}
+    const ci={};CSV_EXAM_HEADERS.forEach(function(h){ci[h]=headers.indexOf(h);});
+    _csvExamParsed=rows.slice(1).map(function(r,i){return _parseExamCsvRow(r,ci,i+2);}).filter(Boolean);
+    buildCsvExamPreview();
+  };
+  reader.readAsText(file,'UTF-8');
+}
+function buildCsvExamPreview(){
+  const el=document.getElementById('csv-exam-preview');if(!el)return;const list=_csvExamParsed||[];
+  const ok=list.filter(function(x){return !x.errors.length;}),bad=list.filter(function(x){return x.errors.length;});
+  const hf=function(h){return h==='上半学期'?'上半':h==='下半学期'?'下半':h==='全学期'?'全':'';};
+  let h='<div style="font-size:13px;margin-bottom:8px">共 '+list.length+' 笔：<b style="color:#2e7d32">'+ok.length+' 可导入</b>'+(bad.length?('，<b style="color:#c62222">'+bad.length+' 有误（将跳过）</b>'):'')+'</div>';
+  h+='<div style="max-height:320px;overflow:auto;border:0.5px solid #eee;border-radius:8px"><table style="width:100%;font-size:12px"><thead><tr><th>行</th><th>状态</th><th>学号</th><th>姓名</th><th>专业</th><th>学期</th><th>上/下</th><th>课程</th><th>班级</th><th>老师</th><th>学校</th></tr></thead><tbody>';
+  h+=list.map(function(p){const r=p.record,b=p.errors.length;return '<tr'+(b?' style="background:#FDECEC"':'')+'><td>'+p.line+'</td><td>'+(b?'<span style="color:#c62222;cursor:help" title="'+eh(p.errors.join('；'))+'">✗</span>':'<span style="color:#2e7d32">✓</span>')+'</td><td>'+eh(r.sid)+'</td><td>'+eh(r.name_py||r.name_zh)+'</td><td>'+eh(r.dept)+'</td><td>'+eh(r.sem)+'</td><td>'+eh(hf(r.half))+'</td><td>'+eh(r.course)+'</td><td>'+eh(r.cls)+'</td><td>'+eh(r.teacher)+'</td><td>'+eh(r.school)+'</td></tr>';}).join('');
+  h+='</tbody></table></div>';
+  if(bad.length)h+='<div style="font-size:11px;color:#c62222;margin-top:6px">✗ 的行有误、会跳过；把鼠标移到 ✗ 上看原因。</div>';
+  el.innerHTML=h;
+  const btn=document.getElementById('csv-exam-import-btn');btn.disabled=(ok.length===0);btn.textContent=ok.length?('✅ 导入 '+ok.length+' 笔'):'没有可导入的记录';
+}
+async function confirmCsvImportExam(){
+  const valid=(_csvExamParsed||[]).filter(function(x){return !x.errors.length;});
+  if(!valid.length){alert('没有可导入的记录');return;}
+  if(!confirm('确认导入 '+valid.length+' 笔期末考特例？（逐笔新增，不覆盖既有）'))return;
+  const btn=document.getElementById('csv-exam-import-btn');btn.disabled=true;
+  let ok=0,fail=0;
+  for(let i=0;i<valid.length;i++){
+    btn.textContent='导入中… '+(i+1)+'/'+valid.length;
+    const r=await gasPost('adminSetExamSpecial',Object.assign({id:null},valid[i].record));
+    if(r&&r.success)ok++;else fail++;
+  }
+  closeCsvImportExam();await loadExam();
+  alert('导入完成：成功 '+ok+' 笔'+(fail?('，失败 '+fail+' 笔（可能非管理员/主任权限，或字段问题）'):''));
+}
 // ── 后台：登分学校管理 ──
 function opsSchoolView(){
   const list=(_exam.schools||[]).slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
