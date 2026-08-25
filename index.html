@@ -1342,6 +1342,9 @@ function opsEV(sec,f){return (opsEdit&&opsEdit.sec===sec&&opsEdit.vals&&opsEdit.
 function opsStartEdit(sec,key,vals){opsEdit={sec:sec,key:key,vals:vals};opsRenderSec();try{document.getElementById('panel-ops').scrollIntoView({block:'start'});}catch(e){}}
 function opsCancelEdit(){opsEdit=null;opsRenderSec();}
 function opsDeptOpts(sel){return (opsD.depts||[]).map(d=>'<option value="'+eh(d.code)+'"'+(d.code===sel?' selected':'')+'>'+eh(d.code)+'</option>').join('');}
+// 老师「属所部门」= 学生专业库 ∪ 现有老师部门(含 GE 等无学生的教学部门)
+function _opsTeacherDepts(){const s=new Set();(opsD.depts||[]).forEach(function(d){if(d&&d.code)s.add(d.code);});(typeof T!=='undefined'?T:[]).forEach(function(t){if(t&&t.d)s.add(t.d);});return Array.from(s).filter(Boolean).sort();}
+function opsTchDeptOpts(sel){return _opsTeacherDepts().map(function(c){return '<option value="'+eh(c)+'"'+(c===sel?' selected':'')+'>'+eh(c)+'</option>';}).join('');}
 function opsPosOpts(sel){
   const list=opsD.positions||[];
   let opts=list.map(p=>'<option value="'+eh(p.position)+'"'+(p.position===sel?' selected':'')+'>'+eh(p.position)+'（'+p.quota+'）</option>').join('');
@@ -1419,13 +1422,13 @@ function opsTchView(){
   const defPos=opsEV('tch','position')||(((opsD.positions||[])[0]||{}).position||'');
   const defQuota=ed?(opsEV('tch','quota')||''):opsPosQuota(defPos);
   const _fi='width:100%;box-sizing:border-box;font-size:10.5px;padding:2px 5px;border:0;border-radius:4px;font-weight:400;color:#333;background:#fff';
-  const deptF='<select onchange="opsTchF.dept=this.value;opsTchApply()" style="'+_fi+'"><option value="">全部</option>'+(opsD.depts||[]).map(d=>'<option value="'+eh(d.code)+'"'+(opsTchF.dept===d.code?' selected':'')+'>'+eh(d.code)+'</option>').join('')+'</select>';
+  const deptF='<select onchange="opsTchF.dept=this.value;opsTchApply()" style="'+_fi+'"><option value="">全部</option>'+_opsTeacherDepts().map(function(c){return '<option value="'+eh(c)+'"'+(opsTchF.dept===c?' selected':'')+'>'+eh(c)+'</option>';}).join('')+'</select>';
   const _pset={}; (opsD.teachers||[]).forEach(t=>{if(t.position)_pset[t.position]=1;});
   const posF='<select onchange="opsTchF.pos=this.value;opsTchApply()" style="'+_fi+'"><option value="">全部</option>'+Object.keys(_pset).sort().map(p=>'<option value="'+eh(p)+'"'+(opsTchF.pos===p?' selected':'')+'>'+eh(p)+'</option>').join('')+'</select>';
   const hd=function(k,label,filter){const on=opsTchSort.key===k;return '<th style="background:#534AB7;vertical-align:top;padding:5px 6px"><div onclick="opsTchSetSort(\''+k+'\')" style="cursor:pointer;user-select:none;margin-bottom:3px;white-space:nowrap">'+label+' '+(on?(opsTchSort.dir>0?'▲':'▼'):'⇅')+'</div>'+filter+'</th>';};
   return '<div class="ops-add">'+(ed?'<div style="width:100%;font-size:12px;color:#534AB7;font-weight:600;margin-bottom:2px">✏️ 编辑老师(姓名不可改;要改名请删除后重加)</div>':'')+
     '<div class="fg"><label>姓名*</label><input id="ops-tch-name" '+(ed?'readonly style="width:150px;background:#eee"':'style="width:150px"')+' value="'+eh(opsEV('tch','name'))+'" placeholder="Aj. Xxx, Yyy"></div>'+
-    '<div class="fg"><label>专业</label><select id="ops-tch-dept">'+opsDeptOpts(opsEV('tch','dept'))+'</select></div>'+
+    '<div class="fg"><label>专业</label><select id="ops-tch-dept">'+opsTchDeptOpts(opsEV('tch','dept'))+'</select></div>'+
     '<div class="fg"><label>职位</label><select id="ops-tch-pos" onchange="opsFillQuota()" style="min-width:130px">'+opsPosOpts(defPos)+'</select></div>'+
     '<div class="fg"><label>限额</label><input id="ops-tch-quota" type="number" step="0.5" style="width:65px" value="'+eh(String(defQuota||''))+'" placeholder="10"></div>'+
     '<div class="fg"><label>员工号</label><input id="ops-tch-eid" style="width:90px" value="'+eh(opsEV('tch','employee_id'))+'"></div>'+
