@@ -70,7 +70,7 @@
 }
 </style></head><body><div class="wrap">
 <div class="tabs" id="tabs"></div>
-<div class="bar"><select id="fprog" onchange="selDrop(this.value)"></select><input id="fq" placeholder="🔍 全专业搜索 · 代码 / 中文 / 英文 / 对接" oninput="render()"><button class="rf" onclick="loadSheet()">↻ 刷新数据</button><button class="rf" onclick="exportCourseExcel()" style="border-color:#8FC46B;color:#3B6D11" title="导出全部课程资讯（Excel）">📊 导出 Excel</button><button class="rf" onclick="window.print()" style="border-color:#AFA9EC;color:#534AB7" title="列印当前专业（直式 A4）">🖨️ 列印</button></div>
+<div class="bar"><select id="fprog" onchange="selDrop(this.value)"></select><input id="fq" placeholder="🔍 全专业搜索 · 代码 / 中文 / 英文 / 对接" oninput="render()"><button class="rf" onclick="loadSheet()">↻ 刷新数据</button><button class="rf" onclick="exportCourseExcel()" style="border-color:#8FC46B;color:#3B6D11" title="导出当前所选专业（Excel·版式照网页）">📊 导出 Excel</button><button class="rf" onclick="exportCourseExcelAll()" style="border-color:#8FC46B;color:#3B6D11" title="导出全部专业，每个专业一个工作表">📚 全部专业</button><button class="rf" onclick="window.print()" style="border-color:#AFA9EC;color:#534AB7" title="列印当前专业（直式 A4）">🖨️ 列印</button></div>
 <div class="status" id="status">载入中…</div>
 <div id="out"></div>
 </div>
@@ -231,31 +231,25 @@ function loadSheet(){
     document.getElementById('status').textContent='✅ 已从 Supabase 载入 · '+new Date().toLocaleString()+' · 共 '+Object.keys(DATA).length+' 个专业-版本';
   }).catch(e=>{document.getElementById('status').innerHTML='⚠️ 无法读取 Supabase。错误：'+e;});
 }
-// 导出「当前所选专业」的课程结构(照网页版式·Excel)
-function exportCourseExcel(){
-  let pid=cur;
-  if(pid==='CMP-CD')pid='CD-2569';               // 对照视图→导出新版 CD
-  const p=DATA[pid];
-  if(!p||!p.blocks){alert('请先在上方选一个专业再导出');return;}
-  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-  const NC=6, dateStr=new Date().toISOString().slice(0,10);
+// ── 课程结构导出 Excel(版式照网页) ──
+function _cxEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');}
+function _cxSheetName(p){return String(p.label||p.prog).replace(/[\\\/\?\*\[\]:]/g,'').slice(0,31)||'Sheet';}
+function _cxRows(p){       // 回传单一专业的 <tr>… (标题+表头+分类/版块/课程)
+  const esc=_cxEsc, NC=6;
   const span=(txt,bg,fg,size,align)=>'<tr><td colspan="'+NC+'" style="background:'+bg+';color:'+fg+';padding:'+(size>=13?'8px':'5px 10px')+';font-size:'+size+'pt;font-weight:bold;text-align:'+(align||'left')+'">'+txt+'</td></tr>';
-  // ── 课程门数行(同网页)
   const nc=(p.coursesOv!=null?p.coursesOv:p.count);
   const _n=v=>(v==null||v===''||isNaN(v)?null:+v);
   const cN=_n(p.courseN),cC=_n(p.courseCr),iN=_n(p.internN),iC=_n(p.internCr);
   const _parts=[];if(cN!=null||cC!=null)_parts.push('课程'+(cN!=null?' '+cN+' 门':'')+(cC!=null?' '+cC+' 学分':''));if(iN!=null||iC!=null)_parts.push('实习'+(iN!=null?' '+iN+' 门':'')+(iC!=null?' '+iC+' 学分':''));
   const courseLine=(nc||'—')+' 门课'+(_parts.length?' ('+_parts.join(' · ')+')':'');
-  // ── 表头(标题区，照网页)
   let rows='';
   rows+=span('Dhurakij Pundit University','#534AB7','#fff',14,'center');
   rows+=span('Course Structure　·　Chinese International College','#6a5fc0','#fff',11,'center');
   rows+=span(esc(p.name),'#EDEBFB','#3C3489',12,'center');
   rows+=span('Bachelor · 4 Years · '+(p.grad||'—')+' credits　|　'+esc(courseLine),'#F6F5FC','#555',10,'center');
   rows+='<tr>'+['课程代码','中文名','英文名','学分','对接课程','课程说明'].map(h=>'<td style="background:#3C3489;color:#fff;font-weight:bold;padding:5px 8px;border:1px solid #2b2569;white-space:nowrap">'+h+'</td>').join('')+'</tr>';
-  // ── 内容(照 sheet() 的分类/版块结构)
   let _curCat=null;
-  p.blocks.forEach(b=>{
+  (p.blocks||[]).forEach(b=>{
     const en=b.caten||'';
     if(p.prog==='SC'){const bc=bcatOf(b.cat);if(bc&&bc[0]!==_curCat){_curCat=bc[0];rows+=span(esc(bc[0])+'　'+esc(bc[1])+'　—　'+bc[2]+' cr','#3C3489','#fff',12,'left');}}
     const isFree=b.cat.indexOf('自由选修')>=0;
@@ -271,10 +265,31 @@ function exportCourseExcel(){
       '<td style="padding:3px 8px;border:1px solid #ddd;vertical-align:top">'+esc(c.desc)+'</td>'+
     '</tr>';});
   });
-  let html='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>'+esc(p.prog)+'</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>';
-  html+='<table border="0" style="border-collapse:collapse;font-family:Arial">'+rows+'</table></body></html>';
+  return rows;
+}
+function _cxDownload(sheetXmls,tables,fname){
+  const html='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>'+sheetXmls.join('')+'</x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>'+tables.join('')+'</body></html>';
   const blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='课程结构_'+String(p.label||p.prog).replace(/[^\w一-龥-]/g,'')+'_'+dateStr+'.xls';a.click();URL.revokeObjectURL(a.href);
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname+'.xls';a.click();URL.revokeObjectURL(a.href);
+}
+function _cxSheetXml(name){return '<x:ExcelWorksheet><x:Name>'+name+'</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>';}
+function _cxTable(rows){return '<table border="0" style="border-collapse:collapse;font-family:Arial">'+rows+'</table>';}
+// 导出「当前所选专业」
+function exportCourseExcel(){
+  let pid=cur;if(pid==='CMP-CD')pid='CD-2569';
+  const p=DATA[pid];
+  if(!p||!p.blocks){alert('请先在上方选一个专业再导出');return;}
+  const nm=_cxSheetName(p);
+  _cxDownload([_cxSheetXml(nm)],[_cxTable(_cxRows(p))],'课程结构_'+nm+'_'+new Date().toISOString().slice(0,10));
+}
+// 导出「全部专业」——每个专业一个工作表
+function exportCourseExcelAll(){
+  const pids=Object.keys(DATA).filter(k=>DATA[k]&&DATA[k].blocks&&DATA[k].blocks.length);
+  if(!pids.length){alert('资料尚未载入');return;}
+  const xmls=[],tables=[],used={};
+  pids.forEach(pid=>{const p=DATA[pid];let nm=_cxSheetName(p),base=nm,n=2;while(used[nm]){nm=base.slice(0,28)+'_'+n;n++;}used[nm]=1;
+    xmls.push(_cxSheetXml(nm));tables.push(_cxTable(_cxRows(p)));});
+  _cxDownload(xmls,tables,'课程结构_全部专业_'+new Date().toISOString().slice(0,10));
 }
 loadSheet();
 </script></body></html>
