@@ -231,33 +231,50 @@ function loadSheet(){
     document.getElementById('status').textContent='✅ 已从 Supabase 载入 · '+new Date().toLocaleString()+' · 共 '+Object.keys(DATA).length+' 个专业-版本';
   }).catch(e=>{document.getElementById('status').innerHTML='⚠️ 无法读取 Supabase。错误：'+e;});
 }
-// 导出全部课程资讯(去重·Excel)
+// 导出「当前所选专业」的课程结构(照网页版式·Excel)
 function exportCourseExcel(){
-  if(!DATA||!Object.keys(DATA).length){alert('资料尚未载入');return;}
+  let pid=cur;
+  if(pid==='CMP-CD')pid='CD-2569';               // 对照视图→导出新版 CD
+  const p=DATA[pid];
+  if(!p||!p.blocks){alert('请先在上方选一个专业再导出');return;}
   const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-  const seen={},list=[];
-  Object.keys(DATA).forEach(pid=>{(DATA[pid].blocks||[]).forEach(b=>{(b.courses||[]).forEach(c=>{
-    const k=String(c.code||'').replace(/\s/g,'').toUpperCase();if(!k||seen[k])return;seen[k]=1;list.push(c);
-  });});});
-  list.sort((a,b)=>String(a.code||'').localeCompare(String(b.code||'')));
-  if(!list.length){alert('没有课程可导出');return;}
-  const HD=['课程代码','中文名','英文名','学分','对接课程','课程说明'];
-  const dateStr=new Date().toISOString().slice(0,10);
-  let html='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>课程库</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>';
-  html+='<table border="1" style="border-collapse:collapse;font-size:11pt;font-family:Arial">';
-  html+='<tr><td colspan="'+HD.length+'" style="background:#534AB7;color:#fff;font-size:14pt;font-weight:bold;text-align:center;padding:8px">CIC 课程库 · 共 '+list.length+' 门 · '+esc(dateStr)+'</td></tr>';
-  html+='<tr>'+HD.map(h=>'<td style="background:#534AB7;color:#fff;font-weight:bold;padding:6px 8px;white-space:nowrap">'+h+'</td>').join('')+'</tr>';
-  list.forEach(c=>{html+='<tr>'+
-    '<td style="padding:4px 7px;font-weight:bold;white-space:nowrap">'+esc(c.code)+'</td>'+
-    '<td style="padding:4px 7px">'+esc(c.zh)+'</td>'+
-    '<td style="padding:4px 7px">'+esc(c.en)+'</td>'+
-    '<td style="padding:4px 7px;text-align:center">'+esc(c.cr)+'</td>'+
-    '<td style="padding:4px 7px;white-space:nowrap">'+esc(c.link)+'</td>'+
-    '<td style="padding:4px 7px;vertical-align:top">'+esc(c.desc)+'</td>'+
-  '</tr>';});
-  html+='</table></body></html>';
+  const NC=6, dateStr=new Date().toISOString().slice(0,10);
+  const span=(txt,bg,fg,size,align)=>'<tr><td colspan="'+NC+'" style="background:'+bg+';color:'+fg+';padding:'+(size>=13?'8px':'5px 10px')+';font-size:'+size+'pt;font-weight:bold;text-align:'+(align||'left')+'">'+txt+'</td></tr>';
+  // ── 课程门数行(同网页)
+  const nc=(p.coursesOv!=null?p.coursesOv:p.count);
+  const _n=v=>(v==null||v===''||isNaN(v)?null:+v);
+  const cN=_n(p.courseN),cC=_n(p.courseCr),iN=_n(p.internN),iC=_n(p.internCr);
+  const _parts=[];if(cN!=null||cC!=null)_parts.push('课程'+(cN!=null?' '+cN+' 门':'')+(cC!=null?' '+cC+' 学分':''));if(iN!=null||iC!=null)_parts.push('实习'+(iN!=null?' '+iN+' 门':'')+(iC!=null?' '+iC+' 学分':''));
+  const courseLine=(nc||'—')+' 门课'+(_parts.length?' ('+_parts.join(' · ')+')':'');
+  // ── 表头(标题区，照网页)
+  let rows='';
+  rows+=span('Dhurakij Pundit University','#534AB7','#fff',14,'center');
+  rows+=span('Course Structure　·　Chinese International College','#6a5fc0','#fff',11,'center');
+  rows+=span(esc(p.name),'#EDEBFB','#3C3489',12,'center');
+  rows+=span('Bachelor · 4 Years · '+(p.grad||'—')+' credits　|　'+esc(courseLine),'#F6F5FC','#555',10,'center');
+  rows+='<tr>'+['课程代码','中文名','英文名','学分','对接课程','课程说明'].map(h=>'<td style="background:#3C3489;color:#fff;font-weight:bold;padding:5px 8px;border:1px solid #2b2569;white-space:nowrap">'+h+'</td>').join('')+'</tr>';
+  // ── 内容(照 sheet() 的分类/版块结构)
+  let _curCat=null;
+  p.blocks.forEach(b=>{
+    const en=b.caten||'';
+    if(p.prog==='SC'){const bc=bcatOf(b.cat);if(bc&&bc[0]!==_curCat){_curCat=bc[0];rows+=span(esc(bc[0])+'　'+esc(bc[1])+'　—　'+bc[2]+' cr','#3C3489','#fff',12,'left');}}
+    const isFree=b.cat.indexOf('自由选修')>=0;
+    if(isFree){rows+=span(esc(b.cat)+'　'+esc(en)+'　—　'+blkcr(b)+' cr','#8079c0','#fff',11,'left');rows+='<tr><td colspan="'+NC+'" style="padding:4px 10px;color:#888;font-style:italic;border:1px solid #eee">自由选修 · 学生自选，不列课</td></tr>';return;}
+    let _bigSelf=false;if(p.prog==='SC'){const bc=bcatOf(b.cat);_bigSelf=!!(bc&&bc[0]===b.cat);}
+    if(!_bigSelf)rows+=span(esc(b.cat)+'　'+esc(en)+'　—　'+blkcr(b)+' cr','#8079c0','#fff',11,'left');
+    (b.courses||[]).forEach(c=>{rows+='<tr>'+
+      '<td style="padding:3px 8px;border:1px solid #ddd;font-weight:bold;white-space:nowrap">'+esc(c.code)+'</td>'+
+      '<td style="padding:3px 8px;border:1px solid #ddd">'+esc(c.zh)+(c.fixed?' <span style="color:#a05a00">[固定]</span>':'')+'</td>'+
+      '<td style="padding:3px 8px;border:1px solid #ddd">'+esc(c.en)+'</td>'+
+      '<td style="padding:3px 8px;border:1px solid #ddd;text-align:center">'+esc(c.cr)+'</td>'+
+      '<td style="padding:3px 8px;border:1px solid #ddd;white-space:nowrap">'+esc(c.link)+'</td>'+
+      '<td style="padding:3px 8px;border:1px solid #ddd;vertical-align:top">'+esc(c.desc)+'</td>'+
+    '</tr>';});
+  });
+  let html='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>'+esc(p.prog)+'</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>';
+  html+='<table border="0" style="border-collapse:collapse;font-family:Arial">'+rows+'</table></body></html>';
   const blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='CIC课程库_'+dateStr+'.xls';a.click();URL.revokeObjectURL(a.href);
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='课程结构_'+String(p.label||p.prog).replace(/[^\w一-龥-]/g,'')+'_'+dateStr+'.xls';a.click();URL.revokeObjectURL(a.href);
 }
 loadSheet();
 </script></body></html>
