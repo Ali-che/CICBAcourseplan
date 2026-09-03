@@ -70,7 +70,7 @@
 }
 </style></head><body><div class="wrap">
 <div class="tabs" id="tabs"></div>
-<div class="bar"><select id="fprog" onchange="selDrop(this.value)"></select><input id="fq" placeholder="🔍 全专业搜索 · 代码 / 中文 / 英文 / 对接" oninput="render()"><button class="rf" onclick="loadSheet()">↻ 刷新数据</button><button class="rf" onclick="window.print()" style="border-color:#AFA9EC;color:#534AB7" title="列印当前专业（直式 A4）">🖨️ 列印</button></div>
+<div class="bar"><select id="fprog" onchange="selDrop(this.value)"></select><input id="fq" placeholder="🔍 全专业搜索 · 代码 / 中文 / 英文 / 对接" oninput="render()"><button class="rf" onclick="loadSheet()">↻ 刷新数据</button><button class="rf" onclick="exportCourseExcel()" style="border-color:#8FC46B;color:#3B6D11" title="导出全部课程资讯（Excel）">📊 导出 Excel</button><button class="rf" onclick="window.print()" style="border-color:#AFA9EC;color:#534AB7" title="列印当前专业（直式 A4）">🖨️ 列印</button></div>
 <div class="status" id="status">载入中…</div>
 <div id="out"></div>
 </div>
@@ -230,6 +230,34 @@ function loadSheet(){
     initTabs(); render();
     document.getElementById('status').textContent='✅ 已从 Supabase 载入 · '+new Date().toLocaleString()+' · 共 '+Object.keys(DATA).length+' 个专业-版本';
   }).catch(e=>{document.getElementById('status').innerHTML='⚠️ 无法读取 Supabase。错误：'+e;});
+}
+// 导出全部课程资讯(去重·Excel)
+function exportCourseExcel(){
+  if(!DATA||!Object.keys(DATA).length){alert('资料尚未载入');return;}
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  const seen={},list=[];
+  Object.keys(DATA).forEach(pid=>{(DATA[pid].blocks||[]).forEach(b=>{(b.courses||[]).forEach(c=>{
+    const k=String(c.code||'').replace(/\s/g,'').toUpperCase();if(!k||seen[k])return;seen[k]=1;list.push(c);
+  });});});
+  list.sort((a,b)=>String(a.code||'').localeCompare(String(b.code||'')));
+  if(!list.length){alert('没有课程可导出');return;}
+  const HD=['课程代码','中文名','英文名','学分','对接课程','课程说明'];
+  const dateStr=new Date().toISOString().slice(0,10);
+  let html='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>课程库</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>';
+  html+='<table border="1" style="border-collapse:collapse;font-size:11pt;font-family:Arial">';
+  html+='<tr><td colspan="'+HD.length+'" style="background:#534AB7;color:#fff;font-size:14pt;font-weight:bold;text-align:center;padding:8px">CIC 课程库 · 共 '+list.length+' 门 · '+esc(dateStr)+'</td></tr>';
+  html+='<tr>'+HD.map(h=>'<td style="background:#534AB7;color:#fff;font-weight:bold;padding:6px 8px;white-space:nowrap">'+h+'</td>').join('')+'</tr>';
+  list.forEach(c=>{html+='<tr>'+
+    '<td style="padding:4px 7px;font-weight:bold;white-space:nowrap">'+esc(c.code)+'</td>'+
+    '<td style="padding:4px 7px">'+esc(c.zh)+'</td>'+
+    '<td style="padding:4px 7px">'+esc(c.en)+'</td>'+
+    '<td style="padding:4px 7px;text-align:center">'+esc(c.cr)+'</td>'+
+    '<td style="padding:4px 7px;white-space:nowrap">'+esc(c.link)+'</td>'+
+    '<td style="padding:4px 7px;vertical-align:top">'+esc(c.desc)+'</td>'+
+  '</tr>';});
+  html+='</table></body></html>';
+  const blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='CIC课程库_'+dateStr+'.xls';a.click();URL.revokeObjectURL(a.href);
 }
 loadSheet();
 </script></body></html>
