@@ -170,8 +170,8 @@ function sheet(p,cmp){
       rh+=`<div class="r" onclick="tg('${id}')"><span class="c">${fx}${c.code}</span><span class="n"><span class="zh">${c.zh}${dot}${memo}</span><span class="en">${c.en||''}</span></span><span class="g">${c.cr}${lk}</span></div>`;
       if(c.desc) rh+=`<div class="dz" id="${id}" style="display:none">${c.desc}</div>`;
     });
-    let _bigSelf=false; if(p.prog==='SC'){const bc=bcatOf(b.cat); _bigSelf=!!(bc&&bc[0]===b.cat);}  // 该块本身就是大类(必修课程/专业课程)→只留大类横幅，不再重复小标题
-    secs+= _bigSelf ? `<div class="sec">${rh}</div>` : `<div class="sec"><div class="sh">${b.cat} <span class="en">${en}</span><em>${blkcr(b)} cr</em></div>${rh}</div>`;
+    let _bigSelf=false,_geSub=false; if(p.prog==='SC'){const bc=bcatOf(b.cat); _bigSelf=!!(bc&&bc[0]===b.cat); _geSub=!!(bc&&bc[0]==='通识教育');}  // _bigSelf:块本身即大类(必修/专业)→只留大类横幅；_geSub:通识小组→24学分只在大类显示、小组不重复
+    secs+= _bigSelf ? `<div class="sec">${rh}</div>` : `<div class="sec"><div class="sh">${b.cat} <span class="en">${en}</span>${_geSub?'':`<em>${blkcr(b)} cr</em>`}</div>${rh}</div>`;
   });
   const nc=(p.coursesOv!=null?p.coursesOv:p.count);
   const _n=v=>(v==null||v===''||isNaN(v)?null:+v);
@@ -235,8 +235,9 @@ function loadSheet(){
 function _cxEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');}
 function _cxSheetName(p){return String(p.label||p.prog).replace(/[\\\/\?\*\[\]:]/g,'').slice(0,31)||'Sheet';}
 function _cxRows(p){       // 回传单一专业的 <tr>… (标题+表头+分类/版块/课程)
-  const esc=_cxEsc, NC=6;
+  const esc=_cxEsc, NC=7;
   const span=(txt,bg,fg,size,align)=>'<tr><td colspan="'+NC+'" style="background:'+bg+';color:'+fg+';padding:'+(size>=13?'8px':'5px 10px')+';font-size:'+size+'pt;font-weight:bold;text-align:'+(align||'left')+'">'+txt+'</td></tr>';
+  const isGEsub=b=>{if(p.prog!=='SC')return false;const bc=bcatOf(b.cat);return !!(bc&&bc[0]==='通识教育');};  // SC 通识小组:24 学分只在大类显示，小组不重复
   const nc=(p.coursesOv!=null?p.coursesOv:p.count);
   const _n=v=>(v==null||v===''||isNaN(v)?null:+v);
   const cN=_n(p.courseN),cC=_n(p.courseCr),iN=_n(p.internN),iC=_n(p.internCr);
@@ -247,7 +248,7 @@ function _cxRows(p){       // 回传单一专业的 <tr>… (标题+表头+分�
   rows+=span('Course Structure　·　Chinese International College','#6a5fc0','#fff',11,'center');
   rows+=span(esc(p.name),'#EDEBFB','#3C3489',12,'center');
   rows+=span('Bachelor · 4 Years · '+(p.grad||'—')+' credits　|　'+esc(courseLine),'#F6F5FC','#555',10,'center');
-  rows+='<tr>'+['课程代码','中文名','英文名','学分','对接课程','课程说明'].map(h=>'<td style="background:#3C3489;color:#fff;font-weight:bold;padding:5px 8px;border:1px solid #2b2569;white-space:nowrap">'+h+'</td>').join('')+'</tr>';
+  rows+='<tr>'+['课程代码','中文名','英文名','学分','对接课程','课程说明','备注'].map(h=>'<td style="background:#3C3489;color:#fff;font-weight:bold;padding:5px 8px;border:1px solid #2b2569;white-space:nowrap">'+h+'</td>').join('')+'</tr>';
   let _curCat=null;
   (p.blocks||[]).forEach(b=>{
     const en=b.caten||'';
@@ -255,7 +256,7 @@ function _cxRows(p){       // 回传单一专业的 <tr>… (标题+表头+分�
     const isFree=b.cat.indexOf('自由选修')>=0;
     if(isFree){rows+=span(esc(b.cat)+'　'+esc(en)+'　—　'+blkcr(b)+' cr','#8079c0','#fff',11,'left');rows+='<tr><td colspan="'+NC+'" style="padding:4px 10px;color:#888;font-style:italic;border:1px solid #eee">自由选修 · 学生自选，不列课</td></tr>';return;}
     let _bigSelf=false;if(p.prog==='SC'){const bc=bcatOf(b.cat);_bigSelf=!!(bc&&bc[0]===b.cat);}
-    if(!_bigSelf)rows+=span(esc(b.cat)+'　'+esc(en)+'　—　'+blkcr(b)+' cr','#8079c0','#fff',11,'left');
+    if(!_bigSelf)rows+=span(esc(b.cat)+'　'+esc(en)+(isGEsub(b)?'':'　—　'+blkcr(b)+' cr'),'#8079c0','#fff',11,'left');
     (b.courses||[]).forEach(c=>{rows+='<tr>'+
       '<td style="padding:3px 8px;border:1px solid #ddd;font-weight:bold;white-space:nowrap">'+esc(c.code)+'</td>'+
       '<td style="padding:3px 8px;border:1px solid #ddd">'+esc(c.zh)+(c.fixed?' <span style="color:#a05a00">[固定]</span>':'')+'</td>'+
@@ -263,6 +264,7 @@ function _cxRows(p){       // 回传单一专业的 <tr>… (标题+表头+分�
       '<td style="padding:3px 8px;border:1px solid #ddd;text-align:center">'+esc(c.cr)+'</td>'+
       '<td style="padding:3px 8px;border:1px solid #ddd;white-space:nowrap">'+esc(c.link)+'</td>'+
       '<td style="padding:3px 8px;border:1px solid #ddd;vertical-align:top">'+esc(c.desc)+'</td>'+
+      '<td style="padding:3px 8px;border:1px solid #ddd;vertical-align:top;white-space:nowrap">'+esc(c.memo)+'</td>'+
     '</tr>';});
   });
   return rows;
