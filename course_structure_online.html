@@ -30,6 +30,7 @@
 .lk{color:#B91C1C;font-weight:700} .dot{color:#534AB7;font-size:9px}
 .fx{display:inline-block;background:#2E7D32;color:#fff;font-size:9px;font-weight:700;border-radius:3px;padding:0 3px;margin-right:3px;vertical-align:middle}
 .memo{display:inline-block;background:#FFF3C4;color:#7a5b00;font-size:9.5px;border-radius:3px;padding:0 4px;margin-left:5px}
+.memoL{display:inline-block;background:#FFF3C4;color:#7a5b00;font-size:10px;font-weight:600;border:0.5px solid #EAD48A;border-radius:4px;padding:1px 6px;margin-top:3px;line-height:1.5}
 .dz{font-size:10.5px;color:#555;background:#FBFAFE;border-left:2px solid #cfc9ee;padding:5px 8px;margin:2px 0 5px;line-height:1.55}
 .frnote{font-size:10.5px;color:#999;padding:4px 2px}
 .note{margin-top:10px;font-size:11px;color:#888;text-align:center}
@@ -81,8 +82,8 @@ const SKEY='sb_publishable_hWK78P_LTzHgKcuFMI2FVg_44Yw_tsZ';
 const tabsListBase=['IB-2565','FA-2565','TM-2565','CMP-CD','CA-2566','IT-2568','SC-2569','EV-2568'];
 const GE_BASES=new Set(['人文与社会科学','科学与技术','语言','通识语言课程','健康科学','终身学习课程','价值与伦理课程','生活质量课程','跨文化交际课程','通识教育']);
 // SC 官方三大类:每个小块归到哪个大类(GE 下保留 语言/科学/健康 等小组)[大类中,大类英,大类学分]
-const BCAT={'通识语言课程':['通识教育','General Education',24],'人文与社会科学':['通识教育','General Education',24],'健康科学':['通识教育','General Education',24],'科学与技术':['通识教育','General Education',24],'英语':['通识教育','General Education',24],'日语':['通识教育','General Education',24],'韩语':['通识教育','General Education',24],'中文':['通识教育','General Education',24],'泰语':['通识教育','General Education',24],'自由选修':['通识教育','General Education',24],'专业基础课':['必修课程','Required Courses',21],'必修课程':['必修课程','Required Courses',21],'专业必修课':['专业课程','Major Courses',60],'专业选修课':['专业课程','Major Courses',60],'专业实习':['专业课程','Major Courses',60],'专业课程':['专业课程','Major Courses',60]};
-const CATN={'通识教育':0,'必修课程':1,'专业课程':2};
+const BCAT={'通识语言课程':['通识教育','General Education',24],'人文与社会科学':['通识教育','General Education',24],'健康科学':['通识教育','General Education',24],'科学与技术':['通识教育','General Education',24],'英语':['通识教育','General Education',24],'日语':['通识教育','General Education',24],'韩语':['通识教育','General Education',24],'中文':['通识教育','General Education',24],'泰语':['通识教育','General Education',24],'自由选修':['自由选修','Free Elective',6],'专业基础课':['必修课程','Required Courses',21],'必修课程':['必修课程','Required Courses',21],'专业必修课':['专业课程','Major Courses',60],'专业选修课':['专业课程','Major Courses',60],'专业实习':['专业课程','Major Courses',60],'专业课程':['专业课程','Major Courses',60]};
+const CATN={'通识教育':0,'必修课程':1,'专业课程':2,'自由选修':3};
 // SC 专用:GE 32 门 → 官方小组（照官方结构图；GE201–204 归科学与技术）。纯页面、不动数据、只 SC。
 const SC_GE={EO100:'人文与社会科学',GE122:'人文与社会科学',GE123:'人文与社会科学',GE136:'人文与社会科学',GE138:'人文与社会科学',GE147:'人文与社会科学',GE172:'人文与社会科学',GE173:'人文与社会科学',GE174:'人文与社会科学',GE176:'人文与社会科学',GE177:'人文与社会科学',GE205:'人文与社会科学',LW103:'人文与社会科学',PA101:'人文与社会科学',CE100:'科学与技术',CT101:'科学与技术',CT102:'科学与技术',MA109:'科学与技术',SC106:'科学与技术',GE201:'健康科学',GE202:'健康科学',GE203:'健康科学',GE204:'健康科学',LA161:'英语',LA162:'英语',JP101:'日语',JP102:'日语',KO101:'韩语',KO102:'韩语',ZH301:'中文',ZH302:'中文',KH150:'泰语',KH160:'泰语'};
 const SC_SUBORD={'人文与社会科学':0,'科学与技术':1,'健康科学':2,'英语':3,'日语':4,'韩语':5,'中文':6,'泰语':7};
@@ -132,6 +133,8 @@ function buildData(rows){
     const subOrd=c=>{const v=SC_SUBORD[c];return v==null?99:v;};
     groups=groups.map((g,i)=>[i,g]).sort((a,b)=>((prog==='SC')?((catOrd(a[1].cat)-catOrd(b[1].cat))||(subOrd(a[1].cat)-subOrd(b[1].cat))):0)||(bidx[baseOf(a[1].cat)]-bidx[baseOf(b[1].cat)])||(lr(a[1].cat)-lr(b[1].cat))||(a[0]-b[0])).map(x=>x[1]);
     groups.forEach(g=>{let nd=g.need;const n=parseFloat(nd);if(!isNaN(n))nd=String(Math.round(n));g.need=nd;g.caten=en_of(g.cat);g.kexiu=Math.round(g.courses.reduce((s,c)=>s+(parseFloat(c.cr)||0),0));});
+    // SC 官方结构最后有 Free Elective 6cr，但 DB 缺此块 → 前端补一个空的自由选修块(不列课·排最后)
+    if(prog==='SC'&&!groups.some(g=>g.cat.indexOf('自由选修')>=0))groups.push({cat:'自由选修',need:'6',courses:[],caten:en_of('自由选修'),kexiu:0});
     out[pid]={prog,ver,name:ENAME[prog]||prog,label:LABEL[pid]||pid,grad:gradOv||GRAD[prog]||'',total:Math.round(pr.rows.reduce((s,r)=>s+(parseFloat(get(r,'学分'))||0),0)),count:ccount,blocks:groups};
   });
   const ordered={}; ORDER.forEach(k=>{if(out[k])ordered[k]=out[k];}); Object.keys(out).forEach(k=>{if(!ordered[k])ordered[k]=out[k];});
@@ -159,15 +162,15 @@ function sheet(p,cmp){
     const en=b.caten||'';
     if(p.prog==='SC'){const bc=bcatOf(b.cat);if(bc&&bc[0]!==_curCat){_curCat=bc[0];secs+=`<div class="cathd">${bc[0]} <span class="caten">${bc[1]}</span><em>${bc[2]} cr</em></div>`;}}
     const isFree=b.cat.indexOf('自由选修')>=0;
-    if(isFree){ secs+=`<div class="sec"><div class="sh">${b.cat} <span class="en">${en}</span><em>${blkcr(b)} cr</em></div><div class="frnote">自由选修 · 学生自选，不列课</div></div>`; return; }
+    if(isFree){ const _fb=(p.prog==='SC')&&(function(){const bc=bcatOf(b.cat);return !!(bc&&bc[0]===b.cat);})(); secs+= _fb ? `<div class="sec"><div class="frnote">自由选修 · 学生自选，不列课</div></div>` : `<div class="sec"><div class="sh">${b.cat} <span class="en">${en}</span><em>${blkcr(b)} cr</em></div><div class="frnote">自由选修 · 学生自选，不列课</div></div>`; return; }
     let rh='';
     b.courses.forEach(c=>{
       const id='d'+p.label.replace(/[^A-Za-z0-9]/g,'')+(RID++);
       const lk=c.link?` <span class=lk>←${c.link}</span>`:'';
       const dot=c.desc?' <span class=dot>ⓘ</span>':'';
       const fx=c.fixed?'<span class=fx>常</span>':'';
-      const memo=c.memo?`<span class=memo>📝${c.memo}</span>`:'';
-      rh+=`<div class="r" onclick="tg('${id}')"><span class="c">${fx}${c.code}</span><span class="n"><span class="zh">${c.zh}${dot}${memo}</span><span class="en">${c.en||''}</span></span><span class="g">${c.cr}${lk}</span></div>`;
+      const memoL=c.memo?`<div class=memoL>📝 备注：${c.memo}</div>`:'';
+      rh+=`<div class="r" onclick="tg('${id}')"><span class="c">${fx}${c.code}</span><span class="n"><span class="zh">${c.zh}${dot}</span><span class="en">${c.en||''}</span>${memoL}</span><span class="g">${c.cr}${lk}</span></div>`;
       if(c.desc) rh+=`<div class="dz" id="${id}" style="display:none">${c.desc}</div>`;
     });
     let _bigSelf=false,_geSub=false; if(p.prog==='SC'){const bc=bcatOf(b.cat); _bigSelf=!!(bc&&bc[0]===b.cat); _geSub=!!(bc&&bc[0]==='通识教育');}  // _bigSelf:块本身即大类(必修/专业)→只留大类横幅；_geSub:通识小组→24学分只在大类显示、小组不重复
@@ -254,7 +257,7 @@ function _cxRows(p){       // 回传单一专业的 <tr>… (标题+表头+分�
     const en=b.caten||'';
     if(p.prog==='SC'){const bc=bcatOf(b.cat);if(bc&&bc[0]!==_curCat){_curCat=bc[0];rows+=span(esc(bc[0])+'　'+esc(bc[1])+'　—　'+bc[2]+' cr','#3C3489','#fff',12,'left');}}
     const isFree=b.cat.indexOf('自由选修')>=0;
-    if(isFree){rows+=span(esc(b.cat)+'　'+esc(en)+'　—　'+blkcr(b)+' cr','#8079c0','#fff',11,'left');rows+='<tr><td colspan="'+NC+'" style="padding:4px 10px;color:#888;font-style:italic;border:1px solid #eee">自由选修 · 学生自选，不列课</td></tr>';return;}
+    if(isFree){const _fb=(p.prog==='SC')&&(function(){const bc=bcatOf(b.cat);return !!(bc&&bc[0]===b.cat);})();if(!_fb)rows+=span(esc(b.cat)+'　'+esc(en)+'　—　'+blkcr(b)+' cr','#8079c0','#fff',11,'left');rows+='<tr><td colspan="'+NC+'" style="padding:4px 10px;color:#888;font-style:italic;border:1px solid #eee">自由选修 · 学生自选，不列课</td></tr>';return;}
     let _bigSelf=false;if(p.prog==='SC'){const bc=bcatOf(b.cat);_bigSelf=!!(bc&&bc[0]===b.cat);}
     if(!_bigSelf)rows+=span(esc(b.cat)+'　'+esc(en)+(isGEsub(b)?'':'　—　'+blkcr(b)+' cr'),'#8079c0','#fff',11,'left');
     (b.courses||[]).forEach(c=>{rows+='<tr>'+
