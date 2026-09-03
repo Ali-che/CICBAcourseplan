@@ -169,7 +169,7 @@ function sheet(p,cmp){
       const lk=c.link?` <span class=lk>←${c.link}</span>`:'';
       const dot=c.desc?' <span class=dot>ⓘ</span>':'';
       const fx=c.fixed?'<span class=fx>常</span>':'';
-      const memoL=c.memo?`<div class=memoL>📝 备注：${c.memo}</div>`:'';
+      const memoL=c.memo?`<div class=memoL>📝 ${c.memo}</div>`:'';
       rh+=`<div class="r" onclick="tg('${id}')"><span class="c">${fx}${c.code}</span><span class="n"><span class="zh">${c.zh}${dot}</span><span class="en">${c.en||''}</span>${memoL}</span><span class="g">${c.cr}${lk}</span></div>`;
       if(c.desc) rh+=`<div class="dz" id="${id}" style="display:none">${c.desc}</div>`;
     });
