@@ -111,14 +111,16 @@ const SKEY='sb_publishable_hWK78P_LTzHgKcuFMI2FVg_44Yw_tsZ';
 const tabsListBase=['IB-2565','FA-2565','TM-2565','CMP-CD','CA-2566','IT-2568','SC-2569','EV-2568'];
 const GE_BASES=new Set(['人文与社会科学','科学与技术','语言','通识语言课程','健康科学','终身学习课程','价值与伦理课程','生活质量课程','跨文化交际课程','通识教育']);
 // SC 官方三大类:每个小块归到哪个大类(GE 下保留 语言/科学/健康 等小组)[大类中,大类英,大类学分]
-const BCAT={'通识语言课程':['通识教育','General Education',24],'人文与社会科学':['通识教育','General Education',24],'健康科学':['通识教育','General Education',24],'科学与技术':['通识教育','General Education',24],'英语':['通识教育','General Education',24],'日语':['通识教育','General Education',24],'韩语':['通识教育','General Education',24],'中文':['通识教育','General Education',24],'泰语':['通识教育','General Education',24],'自由选修':['自由选修','Free Elective',6],'专业基础课':['必修课程','Required Courses',21],'必修课程':['必修课程','Required Courses',21],'专业必修课':['专业课程','Major Courses',60],'专业选修课':['专业课程','Major Courses',60],'专业实习':['专业课程','Major Courses',60],'专业课程':['专业课程','Major Courses',60]};
-const CATN={'通识教育':0,'必修课程':1,'专业课程':2,'自由选修':3};
+const BCAT={'通识语言课程':['通识教育','General Education',24],'人文与社会科学':['通识教育','General Education',24],'健康科学':['通识教育','General Education',24],'科学与技术':['通识教育','General Education',24],'英语':['通识教育','General Education',24],'日语':['通识教育','General Education',24],'韩语':['通识教育','General Education',24],'中文':['通识教育','General Education',24],'泰语':['通识教育','General Education',24],'自由选修':['自由选修','Free Elective',6],'专业基础课':['必修课程','Required Courses',21],'必修课程':['必修课程','Required Courses',21],'专业必修课':['专业必修课','Major Courses (Required)',60],'私人教练方向':['专业选修课','Major Courses (Elective)',6],'运动体能方向':['专业选修课','Major Courses (Elective)',6],'健身管理方向':['专业选修课','Major Courses (Elective)',6],'专业选修课':['专业选修课','Major Courses (Elective)',6],'专业实习':['专业实习','Cooperative Education',6],'专业课程':['专业课程','Major Courses',60]};
+const CATN={'通识教育':0,'必修课程':1,'专业必修课':2,'专业课程':2,'专业选修课':3,'专业实习':4,'自由选修':5};
 // SC 专用:GE 32 门 → 官方小组（照官方结构图；GE201–204 归科学与技术）。纯页面、不动数据、只 SC。
 const SC_GE={EO100:'人文与社会科学',GE122:'人文与社会科学',GE123:'人文与社会科学',GE136:'人文与社会科学',GE138:'人文与社会科学',GE147:'人文与社会科学',GE172:'人文与社会科学',GE173:'人文与社会科学',GE174:'人文与社会科学',GE176:'人文与社会科学',GE177:'人文与社会科学',GE205:'人文与社会科学',LW103:'人文与社会科学',PA101:'人文与社会科学',CE100:'科学与技术',CT101:'科学与技术',CT102:'科学与技术',MA109:'科学与技术',SC106:'科学与技术',GE201:'健康科学',GE202:'健康科学',GE203:'健康科学',GE204:'健康科学',LA161:'英语',LA162:'英语',JP101:'日语',JP102:'日语',KO101:'韩语',KO102:'韩语',ZH301:'中文',ZH302:'中文',KH150:'泰语',KH160:'泰语'};
-const SC_SUBORD={'人文与社会科学':0,'科学与技术':1,'健康科学':2,'英语':3,'日语':4,'韩语':5,'中文':6,'泰语':7};
+const SC_SUBORD={'人文与社会科学':0,'科学与技术':1,'健康科学':2,'英语':3,'日语':4,'韩语':5,'中文':6,'泰语':7,'私人教练方向':10,'运动体能方向':11,'健身管理方向':12};
+// SC 专业课(DB 单块「专业课程」)→ 官方细分:专业必修 / 专业选修3方向 / 专业实习
+const SC_MAJOR={SS301:'专业必修课',SS302:'专业必修课',SS303:'专业必修课',SS304:'专业必修课',SS305:'专业必修课',SS306:'专业必修课',SS307:'专业必修课',SS308:'专业必修课',SS309:'专业必修课',SS310:'专业必修课',SS311:'专业必修课',SS312:'专业必修课',SS313:'专业必修课',SS314:'专业必修课',SS315:'专业必修课',SS316:'专业必修课',SS317:'专业必修课',SS318:'专业必修课',SS411:'专业必修课',SS401:'私人教练方向',SS402:'私人教练方向',SS403:'私人教练方向',SS404:'运动体能方向',SS405:'运动体能方向',SS406:'运动体能方向',SS407:'健身管理方向',SS408:'健身管理方向',SS409:'健身管理方向',SS410:'健身管理方向',SS412:'专业实习'};
 function bcatOf(cat){var b=String(cat||'');for(const s of['-必修','-选修','-主修'])if(b.endsWith(s)){b=b.slice(0,-s.length);break;}return BCAT[b]||null;}
 function catOrd(cat){const bc=bcatOf(cat);return bc?CATN[bc[0]]:999;}
-const ENM=[['英语','English Language'],['日语','Japanese'],['韩语','Korean'],['中文','Chinese'],['泰语','Thai'],['人文与社会科学','Humanities & Social Sciences'],['科学与技术','Science & Technology'],['跨文化交际课程','Cross-cultural Communication'],['语言与跨文化交际','Language & Cross-cultural Comm.'],['通识语言课程','Languages'],['语言','Languages'],['终身学习','Lifelong Learning'],['价值与伦理','Values & Ethics'],['生活质量','Quality of Life'],['健康科学','Health Science'],['通识教育','General Education'],['专业基础课','Foundation Courses'],['专业核心课','Core Courses'],['专业必修课','Required Major Courses'],['专业选修/辅修','Electives or Minor'],['专业选修课','Major Electives'],['专业实习','Professional Experience'],['自由选修','Free Electives'],['必修课程','Required Courses'],['专业课程','Major Courses']];
+const ENM=[['私人教练方向','Personal Trainer Track'],['运动体能方向','Athlete Fitness Track'],['健身管理方向','Fitness Management Track'],['英语','English Language'],['日语','Japanese'],['韩语','Korean'],['中文','Chinese'],['泰语','Thai'],['人文与社会科学','Humanities & Social Sciences'],['科学与技术','Science & Technology'],['跨文化交际课程','Cross-cultural Communication'],['语言与跨文化交际','Language & Cross-cultural Comm.'],['通识语言课程','Languages'],['语言','Languages'],['终身学习','Lifelong Learning'],['价值与伦理','Values & Ethics'],['生活质量','Quality of Life'],['健康科学','Health Science'],['通识教育','General Education'],['专业基础课','Foundation Courses'],['专业核心课','Core Courses'],['专业必修课','Required Major Courses'],['专业选修/辅修','Electives or Minor'],['专业选修课','Major Electives'],['专业实习','Professional Experience'],['自由选修','Free Electives'],['必修课程','Required Courses'],['专业课程','Major Courses']];
 function en_of(cat){let suf='',base=cat;const S=[['-必修',' (Required)'],['-选修',' (Elective)'],['-主修',' (Major)']];for(const sa of S){if(base.endsWith(sa[0])){suf=sa[1];base=base.slice(0,-sa[0].length);break;}}if(base.indexOf('·')>=0){const parts=base.split('·');for(const kv of ENM){if(parts[0].indexOf(kv[0])>=0)return kv[1]+' ('+parts[1]+')';}}for(const kv of ENM){if(base.indexOf(kv[0])>=0)return kv[1]+suf;}return base;}
 
 function parseCSV(text){
@@ -150,6 +152,7 @@ function buildData(rows){
       let eff=cat;
       if(GE_BASES.has(cat)&&cat.indexOf('必修')<0&&cat.indexOf('选修')<0&&(lvl=='必修'||lvl=='选修'))eff=cat+'-'+lvl;
       if(prog==='SC'&&cat==='通识教育课程'){const _cd=String(get(r,'课程代码')||'').replace(/ /g,'').toUpperCase();if(SC_GE[_cd])eff=SC_GE[_cd];}
+      if(prog==='SC'&&cat==='专业课程'){const _cd=String(get(r,'课程代码')||'').replace(/ /g,'').toUpperCase();if(SC_MAJOR[_cd])eff=SC_MAJOR[_cd];}
       const key=eff+'||'+need;
       if(!gm[key]){gm[key]={cat:eff,need:need,courses:[]};order.push(key);}
       const code=get(r,'课程代码');
@@ -204,7 +207,7 @@ function sheet(p,cmp){
       rh+=`<div class="r" onclick="tg('${id}')"><span class="c">${fx}${c.code}</span><span class="n"><span class="zh">${c.zh}${dot}</span><span class="en">${c.en||''}</span>${memoL}</span><span class="g">${c.cr}${lk}</span>${edt}</div>`;
       if(c.desc) rh+=`<div class="dz" id="${id}" style="display:none">${c.desc}</div>`;
     });
-    let _bigSelf=false,_geSub=false; if(p.prog==='SC'){const bc=bcatOf(b.cat); _bigSelf=!!(bc&&bc[0]===b.cat); _geSub=!!(bc&&bc[0]==='通识教育');}  // _bigSelf:块本身即大类(必修/专业)→只留大类横幅；_geSub:通识小组→24学分只在大类显示、小组不重复
+    let _bigSelf=false,_geSub=false; if(p.prog==='SC'){const bc=bcatOf(b.cat); _bigSelf=!!(bc&&bc[0]===b.cat); _geSub=!!(bc&&(bc[0]==='通识教育'||bc[0]==='专业选修课'));}  // _bigSelf:块本身即大类→只留大类横幅；_geSub:通识/专业选修小组→总学分只在大类显示、小组不重复
     secs+= _bigSelf ? `<div class="sec">${rh}</div>` : `<div class="sec"><div class="sh">${b.cat} <span class="en">${en}</span>${_geSub?'':`<em>${blkcr(b)} cr</em>`}</div>${rh}</div>`;
   });
   const nc=(p.coursesOv!=null?p.coursesOv:p.count);
@@ -271,7 +274,7 @@ function _cxSheetName(p){return String(p.label||p.prog).replace(/[\\\/\?\*\[\]:]
 function _cxRows(p){       // 回传单一专业的 <tr>… (标题+表头+分类/版块/课程)
   const esc=_cxEsc, NC=7;
   const span=(txt,bg,fg,size,align)=>'<tr><td colspan="'+NC+'" style="background:'+bg+';color:'+fg+';padding:'+(size>=13?'8px':'5px 10px')+';font-size:'+size+'pt;font-weight:bold;text-align:'+(align||'left')+'">'+txt+'</td></tr>';
-  const isGEsub=b=>{if(p.prog!=='SC')return false;const bc=bcatOf(b.cat);return !!(bc&&bc[0]==='通识教育');};  // SC 通识小组:24 学分只在大类显示，小组不重复
+  const isGEsub=b=>{if(p.prog!=='SC')return false;const bc=bcatOf(b.cat);return !!(bc&&(bc[0]==='通识教育'||bc[0]==='专业选修课'));};  // SC 通识/专业选修小组:总学分只在大类显示，小组不重复
   const nc=(p.coursesOv!=null?p.coursesOv:p.count);
   const _n=v=>(v==null||v===''||isNaN(v)?null:+v);
   const cN=_n(p.courseN),cC=_n(p.courseCr),iN=_n(p.internN),iC=_n(p.internCr);
