@@ -76,7 +76,7 @@
 }
 </style></head><body><div class="wrap">
 <div class="tabs" id="tabs"></div>
-<div class="bar"><select id="fprog" onchange="selDrop(this.value)"></select><input id="fq" placeholder="🔍 全专业搜索 · 代码 / 中文 / 英文 / 对接" oninput="render()"><button class="rf" onclick="loadSheet()">↻ 刷新数据</button><button class="rf" onclick="exportCourseExcel()" style="border-color:#8FC46B;color:#3B6D11" title="导出当前所选专业（Excel·版式照网页）">📊 导出 Excel</button><button class="rf" onclick="exportCourseExcelAll()" style="border-color:#8FC46B;color:#3B6D11" title="导出全部专业 xlsx，每个专业一个工作表">📚 全部专业</button><button class="rf" onclick="window.print()" style="border-color:#AFA9EC;color:#534AB7" title="列印当前专业（直式 A4）">🖨️ 列印</button><button class="rf" onclick="exportCourseAllPDF()" style="border-color:#AFA9EC;color:#534AB7" title="全部专业照网页版式排出→列印时存成彩色 PDF">📄 全部专业 PDF</button></div>
+<div class="bar"><select id="fprog" onchange="selDrop(this.value)"></select><input id="fq" placeholder="🔍 全专业搜索 · 代码 / 中文 / 英文 / 对接" oninput="render()"><button class="rf" onclick="loadSheet()">↻ 刷新数据</button><button id="btn-xls1" class="rf" onclick="exportCourseExcel()" style="border-color:#8FC46B;color:#3B6D11;display:none" title="导出当前所选专业（Excel·版式照网页）">📊 导出 Excel</button><button id="btn-xls2" class="rf" onclick="exportCourseExcelAll()" style="border-color:#8FC46B;color:#3B6D11;display:none" title="导出全部专业 xlsx，每个专业一个工作表">📚 全部专业</button><button class="rf" onclick="window.print()" style="border-color:#AFA9EC;color:#534AB7" title="列印当前专业（直式 A4）">🖨️ 列印</button><button class="rf" onclick="openPdfSel()" style="border-color:#AFA9EC;color:#534AB7" title="勾选要列印/存 PDF 的专业（可单个/多个/全部）">📄 PDF（选专业）</button></div>
 <div class="status" id="status">载入中…</div>
 <div id="out"></div>
 </div>
@@ -102,6 +102,23 @@
     <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid #eee">
       <button onclick="cxCloseEdit()" style="padding:6px 14px;border:1px solid #ccc;background:#fff;border-radius:7px;cursor:pointer">取消</button>
       <button id="cxm-save" onclick="cxSaveCourse()" style="padding:6px 16px;border:0;background:#534AB7;color:#fff;border-radius:7px;cursor:pointer;font-weight:600">保存</button>
+    </div>
+  </div>
+</div>
+
+<div id="pdfsel" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;max-width:440px;width:92%;max-height:88vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.3)">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #eee">
+      <b style="color:#3C3489">📄 选择要列印 / 存 PDF 的专业</b>
+      <span onclick="closePdfSel()" style="cursor:pointer;color:#999;font-size:18px">✕</span>
+    </div>
+    <div style="padding:14px 18px">
+      <div style="font-size:12px;color:#666;margin-bottom:8px"><a onclick="pdfSelAll(true)" style="cursor:pointer;color:#534AB7">全选</a> · <a onclick="pdfSelAll(false)" style="cursor:pointer;color:#534AB7">全不选</a></div>
+      <div id="pdfsel-list" style="display:flex;flex-direction:column;gap:6px;font-size:13px"></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid #eee">
+      <button onclick="closePdfSel()" style="padding:6px 14px;border:1px solid #ccc;background:#fff;border-radius:7px;cursor:pointer">取消</button>
+      <button onclick="pdfSelGo()" style="padding:6px 16px;border:0;background:#534AB7;color:#fff;border-radius:7px;cursor:pointer;font-weight:600">生成 PDF</button>
     </div>
   </div>
 </div>
@@ -265,7 +282,7 @@ function loadSheet(){
     const gm={},cm={},gb={}; (Array.isArray(grad)?grad:[]).forEach(x=>{if(x&&x.pid){gm[x.pid]=String(x.total);if(x.courses_count!=null&&x.courses_count!=='')cm[x.pid]=parseInt(x.courses_count,10);gb[x.pid]={cn:x.course_n,ccr:x.course_cr,inn:x.intern_n,icr:x.intern_cr,isub:!!x.intern_sub};}});
     Object.keys(DATA).forEach(pid=>{if(gm[pid])DATA[pid].grad=gm[pid];if(cm[pid]!=null&&!isNaN(cm[pid]))DATA[pid].coursesOv=cm[pid];if(gb[pid]){DATA[pid].courseN=gb[pid].cn;DATA[pid].courseCr=gb[pid].ccr;DATA[pid].internN=gb[pid].inn;DATA[pid].internCr=gb[pid].icr;DATA[pid].internSub=gb[pid].isub;}});
     if(!cur||!DATA[cur])cur=tabsListBase.find(k=>DATA[k])||Object.keys(DATA)[0];
-    initTabs(); render();
+    initTabs(); render(); _cxApplyPerm();
     document.getElementById('status').textContent='✅ 已从 Supabase 载入 · '+new Date().toLocaleString()+' · 共 '+Object.keys(DATA).length+' 个专业-版本';
   }).catch(e=>{document.getElementById('status').innerHTML='⚠️ 无法读取 Supabase。错误：'+e;});
 }
@@ -356,16 +373,26 @@ function exportCourseExcelAll(){
     XLSX.writeFile(wb,'课程结构_全部专业_'+new Date().toISOString().slice(0,10)+'.xlsx');
   });
 }
-// 全部专业 → 彩色列印(存成 PDF):把所有专业照网页版式排进 #out，每专业一页，列印后还原
-function exportCourseAllPDF(){
-  const pids=Object.keys(DATA).filter(k=>DATA[k]&&DATA[k].blocks&&DATA[k].blocks.length);
-  if(!pids.length){alert('资料尚未载入');return;}
+// 选定专业 → 彩色列印(存成 PDF):照网页版式每专业一页排进 #out，列印后还原
+function _cxPrintPids(pids){
+  if(!pids||!pids.length){alert('请至少勾选一个专业');return;}
   const out=document.getElementById('out');const saved=out.innerHTML;
-  out.innerHTML=pids.map(function(pid){return '<div class="pdfpage">'+sheet(DATA[pid])+'</div>';}).join('');
+  out.innerHTML=pids.map(function(pid){return DATA[pid]?'<div class="pdfpage">'+sheet(DATA[pid])+'</div>':'';}).join('');
   const restore=function(){out.innerHTML=saved;window.removeEventListener('afterprint',restore);};
   window.addEventListener('afterprint',restore);
   setTimeout(function(){window.print();},80);
 }
+function openPdfSel(){
+  const pids=Object.keys(DATA).filter(k=>DATA[k]&&DATA[k].blocks&&DATA[k].blocks.length);
+  if(!pids.length){alert('资料尚未载入');return;}
+  document.getElementById('pdfsel-list').innerHTML=pids.map(function(pid){return '<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" class="pdfselck" value="'+pid+'" checked> '+((DATA[pid].label||pid)+' · '+(DATA[pid].name||''))+'</label>';}).join('');
+  document.getElementById('pdfsel').style.display='flex';
+}
+function closePdfSel(){document.getElementById('pdfsel').style.display='none';}
+function pdfSelAll(v){document.querySelectorAll('#pdfsel-list .pdfselck').forEach(function(c){c.checked=v;});}
+function pdfSelGo(){var pids=[];document.querySelectorAll('#pdfsel-list .pdfselck').forEach(function(c){if(c.checked)pids.push(c.value);});if(!pids.length){alert('请至少勾选一个专业');return;}closePdfSel();setTimeout(function(){_cxPrintPids(pids);},60);}
+// Excel 下载仅管理员(master/admin)可见,其他人锁起来
+function _cxApplyPerm(){const show=_cxCanEdit();['btn-xls1','btn-xls2'].forEach(function(id){const b=document.getElementById(id);if(b)b.style.display=show?'':'none';});}
 // ── 课程结构页内嵌编辑(限有后台权限者:master/admin，PIN 从同源 localStorage 取) ──
 function _cxCanEdit(){try{const r=localStorage.getItem('cic_role');return (r==='master'||r==='admin')&&!!localStorage.getItem('cic_pin');}catch(e){return false;}}
 function _cxFindCourse(id){id=String(id);for(const k in DATA){const p=DATA[k];if(!p||!p.blocks)continue;for(const b of p.blocks){for(const c of (b.courses||[])){if(String(c.id)===id)return c;}}}return null;}
