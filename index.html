@@ -6346,6 +6346,8 @@ function _noticePdfHtml(url){
     '<div style="font-size:11px;color:#999;margin-top:4px">手机若显示不全，请点上方「在新分页打开 PDF」。</div>'+
   '</div>';
 }
+// 课程结构 iframe 要求认证时,把当前角色+PIN 传给它(同源;iframe 的 localStorage 可能被分区隔离故用 postMessage)
+window.addEventListener('message',function(e){try{if(e.origin!==location.origin)return;if(e.data&&e.data.t==='cs-need-auth'){var f=document.getElementById('cs-frame');if(f&&f.contentWindow)f.contentWindow.postMessage({t:'cs-auth',role:(typeof currentRole!=='undefined'?currentRole:''),pin:(localStorage.getItem('cic_pin')||'')},location.origin);}}catch(_){}});
 function switchTab(id){
   ['sch','exam','sp','sum','btec','cs','sta','notice','ops'].forEach((x,i)=>{const tb=document.querySelectorAll('.tab')[i];if(tb)tb.classList.toggle('active',x===id);});
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
