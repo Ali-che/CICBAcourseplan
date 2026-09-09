@@ -322,13 +322,38 @@ function exportCourseExcel(){
   _cxDownload([_cxSheetXml(nm)],[_cxTable(_cxRows(p))],'课程结构_'+nm+'_'+new Date().toISOString().slice(0,10));
 }
 // 导出「全部专业」——每个专业一个工作表
+// 全部专业 → 真正的 .xlsx 多工作表(用 SheetJS，Excel/Numbers 都正确分页)
+function _cxLoadXLSX(cb){if(window.XLSX){cb();return;}var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=function(){cb();};s.onerror=function(){alert('无法载入 Excel 库(需联网)');};document.head.appendChild(s);}
+function _cxAOA(p){   // 单一专业 → 二维数组(照版块结构，一行一格)
+  const nc=(p.coursesOv!=null?p.coursesOv:p.count);const _n=v=>(v==null||v===''||isNaN(v)?null:+v);
+  const cN=_n(p.courseN),cC=_n(p.courseCr),iN=_n(p.internN),iC=_n(p.internCr);
+  const _parts=[];if(cN!=null||cC!=null)_parts.push('课程'+(cN!=null?' '+cN+' 门':'')+(cC!=null?' '+cC+' 学分':''));if(iN!=null||iC!=null)_parts.push('实习'+(iN!=null?' '+iN+' 门':'')+(iC!=null?' '+iC+' 学分':''));
+  const courseLine=(nc||'—')+' 门课'+(_parts.length?' ('+_parts.join(' · ')+')':'');
+  const A=[['Dhurakij Pundit University'],['Course Structure · Chinese International College'],[p.name||p.prog],['Bachelor · 4 Years · '+(p.grad||'—')+' credits | '+courseLine],['课程代码','中文名','英文名','学分','对接课程','课程说明','备注']];
+  let _curCat=null;
+  (p.blocks||[]).forEach(b=>{
+    const en=b.caten||'';
+    if(p.prog==='SC'){const bc=bcatOf(b.cat);if(bc&&bc[0]!==_curCat){_curCat=bc[0];A.push(['【'+bc[0]+' '+bc[1]+' — '+bc[2]+' cr】']);}}
+    const isFree=b.cat.indexOf('自由选修')>=0;
+    const geSub=(function(){if(p.prog!=='SC')return false;const bc=bcatOf(b.cat);return !!(bc&&(bc[0]==='通识教育'||bc[0]==='专业选修课'));})();
+    let bigSelf=false;if(p.prog==='SC'){const bc=bcatOf(b.cat);bigSelf=!!(bc&&bc[0]===b.cat);}
+    if(isFree){if(!bigSelf)A.push(['〔'+b.cat+' '+en+(geSub?'':' — '+blkcr(b)+' cr')+'〕']);A.push(['（自由选修 · 学生自选，不列课）']);return;}
+    if(!bigSelf)A.push(['〔'+b.cat+' '+en+(geSub?'':' — '+blkcr(b)+' cr')+'〕']);
+    (b.courses||[]).forEach(c=>{A.push([c.code||'',(c.zh||'')+(c.fixed?' [固定]':''),c.en||'',c.cr||'',c.link||'',c.desc||'',c.memo||'']);});
+  });
+  return A;
+}
 function exportCourseExcelAll(){
   const pids=Object.keys(DATA).filter(k=>DATA[k]&&DATA[k].blocks&&DATA[k].blocks.length);
   if(!pids.length){alert('资料尚未载入');return;}
-  const xmls=[],tables=[],used={};
-  pids.forEach(pid=>{const p=DATA[pid];let nm=_cxSheetName(p),base=nm,n=2;while(used[nm]){nm=base.slice(0,28)+'_'+n;n++;}used[nm]=1;
-    xmls.push(_cxSheetXml(nm));tables.push(_cxTable(_cxRows(p)));});
-  _cxDownload(xmls,tables,'课程结构_全部专业_'+new Date().toISOString().slice(0,10));
+  _cxLoadXLSX(function(){
+    const wb=XLSX.utils.book_new();const used={};
+    pids.forEach(pid=>{const p=DATA[pid];const ws=XLSX.utils.aoa_to_sheet(_cxAOA(p));
+      ws['!cols']=[{wch:10},{wch:26},{wch:34},{wch:6},{wch:12},{wch:52},{wch:20}];
+      let nm=_cxSheetName(p),base=nm,n=2;while(used[nm]){nm=base.slice(0,28)+'_'+n;n++;}used[nm]=1;
+      XLSX.utils.book_append_sheet(wb,ws,nm);});
+    XLSX.writeFile(wb,'课程结构_全部专业_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  });
 }
 // ── 课程结构页内嵌编辑(限有后台权限者:master/admin，PIN 从同源 localStorage 取) ──
 function _cxCanEdit(){try{const r=localStorage.getItem('cic_role');return (r==='master'||r==='admin')&&!!localStorage.getItem('cic_pin');}catch(e){return false;}}
