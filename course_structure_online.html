@@ -33,6 +33,7 @@
 .memoL{display:inline-block;background:#FFF3C4;color:#7a5b00;font-size:10px;font-weight:600;border:0.5px solid #EAD48A;border-radius:4px;padding:1px 6px;margin-top:3px;line-height:1.5}
 .edt{flex:0 0 auto;cursor:pointer;font-size:11px;opacity:.4;user-select:none}.edt:hover{opacity:1}
 @media print{.edt{display:none!important}}
+@media print{.pdfpage{break-before:page}.pdfpage:first-child{break-before:auto}}
 .cxin{width:100%;box-sizing:border-box;padding:6px 9px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px}
 .cxlb{display:block;margin:10px 0 3px;font-weight:600;color:#555;font-size:12px}
 .dz{font-size:10.5px;color:#555;background:#FBFAFE;border-left:2px solid #cfc9ee;padding:5px 8px;margin:2px 0 5px;line-height:1.55}
@@ -75,7 +76,7 @@
 }
 </style></head><body><div class="wrap">
 <div class="tabs" id="tabs"></div>
-<div class="bar"><select id="fprog" onchange="selDrop(this.value)"></select><input id="fq" placeholder="🔍 全专业搜索 · 代码 / 中文 / 英文 / 对接" oninput="render()"><button class="rf" onclick="loadSheet()">↻ 刷新数据</button><button class="rf" onclick="exportCourseExcel()" style="border-color:#8FC46B;color:#3B6D11" title="导出当前所选专业（Excel·版式照网页）">📊 导出 Excel</button><button class="rf" onclick="exportCourseExcelAll()" style="border-color:#8FC46B;color:#3B6D11" title="导出全部专业，每个专业一个工作表">📚 全部专业</button><button class="rf" onclick="window.print()" style="border-color:#AFA9EC;color:#534AB7" title="列印当前专业（直式 A4）">🖨️ 列印</button></div>
+<div class="bar"><select id="fprog" onchange="selDrop(this.value)"></select><input id="fq" placeholder="🔍 全专业搜索 · 代码 / 中文 / 英文 / 对接" oninput="render()"><button class="rf" onclick="loadSheet()">↻ 刷新数据</button><button class="rf" onclick="exportCourseExcel()" style="border-color:#8FC46B;color:#3B6D11" title="导出当前所选专业（Excel·版式照网页）">📊 导出 Excel</button><button class="rf" onclick="exportCourseExcelAll()" style="border-color:#8FC46B;color:#3B6D11" title="导出全部专业 xlsx，每个专业一个工作表">📚 全部专业</button><button class="rf" onclick="window.print()" style="border-color:#AFA9EC;color:#534AB7" title="列印当前专业（直式 A4）">🖨️ 列印</button><button class="rf" onclick="exportCourseAllPDF()" style="border-color:#AFA9EC;color:#534AB7" title="全部专业照网页版式排出→列印时存成彩色 PDF">📄 全部专业 PDF</button></div>
 <div class="status" id="status">载入中…</div>
 <div id="out"></div>
 </div>
@@ -354,6 +355,16 @@ function exportCourseExcelAll(){
       XLSX.utils.book_append_sheet(wb,ws,nm);});
     XLSX.writeFile(wb,'课程结构_全部专业_'+new Date().toISOString().slice(0,10)+'.xlsx');
   });
+}
+// 全部专业 → 彩色列印(存成 PDF):把所有专业照网页版式排进 #out，每专业一页，列印后还原
+function exportCourseAllPDF(){
+  const pids=Object.keys(DATA).filter(k=>DATA[k]&&DATA[k].blocks&&DATA[k].blocks.length);
+  if(!pids.length){alert('资料尚未载入');return;}
+  const out=document.getElementById('out');const saved=out.innerHTML;
+  out.innerHTML=pids.map(function(pid){return '<div class="pdfpage">'+sheet(DATA[pid])+'</div>';}).join('');
+  const restore=function(){out.innerHTML=saved;window.removeEventListener('afterprint',restore);};
+  window.addEventListener('afterprint',restore);
+  setTimeout(function(){window.print();},80);
 }
 // ── 课程结构页内嵌编辑(限有后台权限者:master/admin，PIN 从同源 localStorage 取) ──
 function _cxCanEdit(){try{const r=localStorage.getItem('cic_role');return (r==='master'||r==='admin')&&!!localStorage.getItem('cic_pin');}catch(e){return false;}}
