@@ -917,6 +917,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     <div class="fbar no-print" style="margin-bottom:.6rem;flex-wrap:wrap">
       <label>学年学期</label><select id="exam-sem-f" onchange="renderExam()"><option value="">全部</option></select>
       <label>系别</label><select id="exam-dept-f" onchange="renderExam()"><option value="">全部</option></select>
+      <label>类型</label><select id="exam-kind-f" onchange="renderExam()"><option value="">全部</option><option>登分</option><option>补考</option><option>缓考</option><option>考试冲突</option><option>其他</option></select>
       <input id="exam-q" oninput="renderExam()" placeholder="🔍 老师/课程/学号/姓名/学校" style="width:200px">
     </div>
     <div class="tbl-wrap" style="overflow:auto;max-height:calc(100vh - 300px)">
@@ -1705,14 +1706,16 @@ async function loadExam(){
 function reloadExam(){loadExam();}
 function examToggleGrade(){const el=document.getElementById('exam-grade-info');if(el)el.style.display=(el.style.display==='none'?'':'none');}
 // ── 期末考特例：CSV 批量导入 ──
-const CSV_EXAM_HEADERS=['学号','学生称谓','姓名英文','姓名中文','学生专业','学年学期','上半下半','课程代码','班级','任课老师','负责学校','备注'];
+const CSV_EXAM_HEADERS=['学号','学生称谓','姓名英文','姓名中文','学生专业','学年学期','上半下半','课程代码','班级','任课老师','负责学校','类型','冲突课程','备注'];
 let _csvExamParsed=[];
 function openCsvImportExam(){const m=document.getElementById('csv-exam-modal');if(!m)return;m.classList.add('open');document.body.style.overflow='hidden';document.getElementById('csv-exam-file').value='';document.getElementById('csv-exam-preview').innerHTML='';const b=document.getElementById('csv-exam-import-btn');b.disabled=true;b.textContent='请先选择 CSV 档案';_csvExamParsed=[];}
 function closeCsvImportExam(){const m=document.getElementById('csv-exam-modal');if(m)m.classList.remove('open');document.body.style.overflow='';}
 function downloadCsvExamTemplate(){
   const rows=[
     CSV_EXAM_HEADERS,
-    ['67111710','Mr.','Wu, Yutong','吴雨同','TM','2569-1','下半','LA162','601','Dr. Chang, Chuan-Chi','集美登分','补考'],
+    ['67111710','Mr.','Wu, Yutong','吴雨同','TM','2569-1','下半','LA162','601','Dr. Chang, Chuan-Chi','集美登分','考试冲突','KL307','与 KL307 撞时，LA162 改期'],
+    ['# 类型：登分 / 补考 / 缓考 / 考试冲突 / 其他（留空=登分）','','','','','','','','','','','','',''],
+    ['# 冲突课程：仅「考试冲突」时填，撞时的另一门课代码','','','','','','','','','','','','',''],
     ['# 说明：学号 或 姓名 至少填一个','','','','','','','','','','',''],
     ['# 学年学期：如 2569-1（需在系统学期列表里）','','','','','','','','','','',''],
     ['# 上半下半：上半 / 下半 / 全学期（可留空）','','','','','','','','','','',''],
@@ -1731,7 +1734,7 @@ function _parseExamCsvRow(row,ci,lineNum){
   const g=function(h){return (row[ci[h]]||'').trim();};
   if(CSV_EXAM_HEADERS.every(function(h){return !g(h);}))return null;         // 空行
   if(g('学号').charAt(0)==='#')return null;                                   // 说明行
-  const rec={sid:g('学号'),salut:g('学生称谓'),name_py:g('姓名英文'),name_zh:g('姓名中文'),dept:g('学生专业'),sem:g('学年学期'),half:_examNormHalf(g('上半下半')),course:g('课程代码').toUpperCase(),cls:g('班级'),teacher:g('任课老师'),school:g('负责学校'),note:g('备注')};
+  const _k=g('类型')||'登分';const rec={sid:g('学号'),salut:g('学生称谓'),name_py:g('姓名英文'),name_zh:g('姓名中文'),dept:g('学生专业'),sem:g('学年学期'),half:_examNormHalf(g('上半下半')),course:g('课程代码').toUpperCase(),cls:g('班级'),teacher:g('任课老师'),school:g('负责学校'),kind:_k,conflict:(_k==='考试冲突'?g('冲突课程').toUpperCase():''),note:g('备注')};
   const errors=[];
   if(!rec.sid&&!rec.name_zh&&!rec.name_py)errors.push('学号/姓名至少填一个');
   if(rec.sem&&typeof SEMS!=='undefined'&&SEMS.indexOf(rec.sem)<0)errors.push('学期「'+rec.sem+'」不在系统学期列表');
@@ -1927,9 +1930,11 @@ function _examRows(){
   let list=[...(_exam.rows||[])];
   const sm=(document.getElementById('exam-sem-f')||{}).value||'';
   const df=(document.getElementById('exam-dept-f')||{}).value||'';
+  const kf=(document.getElementById('exam-kind-f')||{}).value||'';
   const q=((document.getElementById('exam-q')||{}).value||'').trim().toLowerCase();
   if(sm)list=list.filter(x=>x.sem===sm);
   if(df)list=list.filter(x=>x.dept===df);
+  if(kf)list=list.filter(x=>(x.kind||'登分')===kf);
   if(q)list=list.filter(x=>((x.teacher||'')+(x.course||'')+(x.sid||'')+(x.name_py||'')+(x.name_zh||'')+(x.school||'')+(x.cls||'')).toLowerCase().includes(q));
   if(_examSK){const key=_examSK;list.sort((a,b)=>_examSD*String(a[key]||'').localeCompare(String(b[key]||''),'zh'));}
   return list;
@@ -1951,7 +1956,7 @@ function renderExam(){
     '<td style="white-space:nowrap">'+nameCell(x)+'</td>'+
     '<td>'+deptChip(x.dept)+'</td>'+
     '<td>'+(x.sem?semBadge(x.sem):'')+(x.half?' <span style="font-size:10px;color:#777;white-space:nowrap">'+(x.half==='上半学期'?'上半':x.half==='下半学期'?'下半':x.half==='全学期'?'全期':eh(x.half))+'</span>':'')+'</td>'+
-    '<td><span class="badge b0">'+eh(x.course||'')+'</span>'+(function(){const en=((typeof C!=='undefined'?(C.find(c=>c.c===x.course)||{}):{}).en)||'';return en?'<br><span style="font-size:10px;color:#999">'+eh(en)+'</span>':'';})()+'</td>'+
+    '<td><span class="badge b0">'+eh(x.course||'')+'</span>'+examKindBadge(x.kind)+(function(){const en=((typeof C!=='undefined'?(C.find(c=>c.c===x.course)||{}):{}).en)||'';return en?'<br><span style="font-size:10px;color:#999">'+eh(en)+'</span>':'';})()+((x.kind==='考试冲突'&&x.conflict_course)?'<br><span style="font-size:10px;color:#c62222;font-weight:600">⚡ 与 '+eh(x.conflict_course)+' 撞考</span>':'')+'</td>'+
     '<td>'+eh(x.cls||'')+'</td>'+
     '<td style="white-space:nowrap">'+eh(x.teacher||'')+'</td>'+
     '<td style="white-space:nowrap">'+eh(x.school||'')+'</td>'+
@@ -2000,6 +2005,8 @@ function _examShowForm(target){
   const schOpts='<option value="">请选择</option>'+(_exam.schools||[]).map(s=>opt(s.name,ed.school)).join('');
   const salutOpts=['Mr.','Ms.'].map(s=>opt(s,ed.salut||'Mr.')).join('');
   const halfOpts=[['','—'],['全学期','全学期'],['上半学期','上半'],['下半学期','下半']].map(h=>'<option value="'+eh(h[0])+'"'+((ed.half||'')===h[0]?' selected':'')+'>'+eh(h[1])+'</option>').join('');
+  const kindOpts=['登分','补考','缓考','考试冲突','其他'].map(k=>opt(k,ed.kind||'登分')).join('');
+  const _isConf=((ed.kind||'登分')==='考试冲突');
   const curEn=((typeof C!=='undefined'?(C.find(x=>x.c===ed.course)||{}):{}).en)||'';
   const fg=(lbl,inner)=>'<div class="fg"><label>'+lbl+'</label>'+inner+'</div>';
   const inp=(id,ph,v,extra)=>'<input id="'+id+'" placeholder="'+ph+'" value="'+eh(v||'')+'"'+(extra||'')+'>';
@@ -2023,14 +2030,20 @@ function _examShowForm(target){
       fg('任课老师',sel('exam-teacher',tchOpts)+'<div id="exam-sched-hint" style="display:none;font-size:11px;margin-top:5px;line-height:1.7"></div>')+
       fg('负责学校',sel('exam-school',schOpts))+
     '</div>'+
+    '<div class="g4">'+
+      fg('特例类型',sel('exam-kind',kindOpts).replace('<select id="exam-kind">','<select id="exam-kind" onchange="examToggleConflict()">'))+
+      '<div class="fg" id="exam-conflict-fg" style="'+(_isConf?'':'display:none')+'"><label>冲突课程（撞时的另一门）</label>'+inp('exam-conflict','输入代码，如 KL307',ed.conflict_course,' list="co-dl" autocomplete="off" oninput="this.value=this.value.toUpperCase()"')+'</div>'+
+    '</div>'+
     '<div style="margin-bottom:10px"><div class="fg"><label>备注</label>'+inp('exam-note','选填',ed.note)+'</div></div>'+
     '<div style="display:flex;gap:8px;margin-top:2px">'+
       '<button class="btn btn-p" onclick="examSaveForm()">'+(ed.id?'💾 保存修改':'＋ 添加特例')+'</button>'+
       '<button class="btn" onclick="examCancel()">取消</button>'+
     '</div>';
-  examLookupSchedule();
+  examLookupSchedule();examToggleConflict();
 }
 function examCourseEn(code){const el=document.getElementById('exam-course-en');if(!el)return;const f=(typeof C!=='undefined')?C.find(x=>x.c===String(code||'').trim().toUpperCase()):null;el.value=(f&&f.en)||'';}
+function examToggleConflict(){const k=((document.getElementById('exam-kind')||{}).value)||'';const fg=document.getElementById('exam-conflict-fg');if(fg)fg.style.display=(k==='考试冲突')?'':'none';}
+function examKindBadge(k){if(!k||k==='登分')return '';const c={'补考':['#1565c0','#E3F2FD'],'缓考':['#8a5a00','#FFF3E0'],'考试冲突':['#c62222','#FDECEC'],'其他':['#666','#eee']}[k]||['#666','#eee'];return ' <span class="badge" style="background:'+c[1]+';color:'+c[0]+';font-size:10px">'+eh(k)+'</span>';}
 // 依 学期+课程+班级 从排课表(schD)带出上半/下半的授课老师
 function examLookupSchedule(){
   const hint=document.getElementById('exam-sched-hint');if(!hint)return;
@@ -2057,7 +2070,7 @@ async function examAddSchool(){
 }
 async function examSaveForm(){
   const v=id=>(document.getElementById(id)||{}).value||'';
-  const body={id:(_examEdit&&_examEdit.id)||null,sem:v('exam-sem'),teacher:v('exam-teacher'),course:v('exam-course').trim().toUpperCase(),cls:v('exam-cls').trim(),school:v('exam-school'),dept:v('exam-dept'),sid:v('exam-sid').trim(),name_py:v('exam-py').trim(),name_zh:v('exam-zh').trim(),note:v('exam-note').trim(),salut:v('exam-salut'),half:v('exam-half')};
+  const body={id:(_examEdit&&_examEdit.id)||null,sem:v('exam-sem'),teacher:v('exam-teacher'),course:v('exam-course').trim().toUpperCase(),cls:v('exam-cls').trim(),school:v('exam-school'),dept:v('exam-dept'),sid:v('exam-sid').trim(),name_py:v('exam-py').trim(),name_zh:v('exam-zh').trim(),note:v('exam-note').trim(),salut:v('exam-salut'),half:v('exam-half'),kind:v('exam-kind'),conflict:(v('exam-kind')==='考试冲突'?v('exam-conflict').trim().toUpperCase():'')};
   if(!body.sid&&!body.name_zh&&!body.name_py){alert('至少填学号或姓名');return;}
   const r=await gasPost('adminSetExamSpecial',body);
   if(r&&r.success){if(_examModalMode)examModalClose();else examToggleAdd(false);await loadExam();}else alert('保存失败:'+((r&&r.error)||'?'));
@@ -2067,14 +2080,14 @@ function examExportExcel(){
   const rows=_examRows();if(!rows.length){alert('无记录可导出');return;}
   const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const dateStr=new Date().toISOString().slice(0,10);
-  const HD=['#','学号','称谓','姓名(英文)','姓名(中文)','学生专业','学年学期','上半/下半','课程代码','课程英文名','班级','任课老师','负责学校','备注'];
+  const HD=['#','学号','称谓','姓名(英文)','姓名(中文)','学生专业','学年学期','上半/下半','课程代码','课程英文名','班级','任课老师','负责学校','类型','冲突课程','备注'];
   const coEn=cc=>((typeof C!=='undefined'?(C.find(c=>c.c===cc)||{}):{}).en)||'';
   let html='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>期末考特例</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>';
   html+='<table border="1" style="border-collapse:collapse;font-size:11pt;font-family:Arial">';
   html+='<tr><td colspan="'+HD.length+'" style="background:#534AB7;color:#fff;font-size:14pt;font-weight:bold;text-align:center;padding:8px">本科期末考特例 · '+esc(dateStr)+'</td></tr>';
   html+='<tr>'+HD.map(h=>'<td style="background:#534AB7;color:#fff;font-weight:bold;padding:6px 8px;white-space:nowrap">'+h+'</td>').join('')+'</tr>';
   const hlx=h=>h==='上半学期'?'上半':h==='下半学期'?'下半':h==='全学期'?'全学期':(h||'');
-  rows.forEach((x,i)=>{html+='<tr>'+[i+1,x.sid,x.salut,x.name_py,x.name_zh,x.dept,x.sem,hlx(x.half),x.course,coEn(x.course),x.cls,x.teacher,x.school,x.note].map(c=>'<td style="padding:4px 7px">'+esc(c)+'</td>').join('')+'</tr>';});
+  rows.forEach((x,i)=>{html+='<tr>'+[i+1,x.sid,x.salut,x.name_py,x.name_zh,x.dept,x.sem,hlx(x.half),x.course,coEn(x.course),x.cls,x.teacher,x.school,(x.kind||''),(x.conflict_course||''),x.note].map(c=>'<td style="padding:4px 7px">'+esc(c)+'</td>').join('')+'</tr>';});
   html+='</table></body></html>';
   const blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='本科期末考特例_'+dateStr+'.xls';a.click();URL.revokeObjectURL(a.href);
@@ -6674,7 +6687,7 @@ function syncTblHeight(){
     if(action==='adminDelExamSchool')return srpc('admin_del_exam_school',{p_pin:_pin,p_id:body.id});
     if(action==='adminSetNotice')return srpc('admin_set_notice',{p_pin:_pin,p_id:body.id,p_title:body.title,p_body:body.body,p_accent:body.accent,p_sort:body.sort,p_open:body.open,p_pdf:body.pdf});
     if(action==='adminDelNotice')return srpc('admin_del_notice',{p_pin:_pin,p_id:body.id});
-    if(action==='adminSetExamSpecial')return srpc('admin_set_exam_special',{p_pin:_pin,p_id:body.id,p_sem:body.sem,p_teacher:body.teacher,p_course:body.course,p_cls:body.cls,p_school:body.school,p_dept:body.dept,p_sid:body.sid,p_name_py:body.name_py,p_name_zh:body.name_zh,p_note:body.note,p_salut:body.salut,p_half:body.half});
+    if(action==='adminSetExamSpecial')return srpc('admin_set_exam_special',{p_pin:_pin,p_id:body.id,p_sem:body.sem,p_teacher:body.teacher,p_course:body.course,p_cls:body.cls,p_school:body.school,p_dept:body.dept,p_sid:body.sid,p_name_py:body.name_py,p_name_zh:body.name_zh,p_note:body.note,p_salut:body.salut,p_half:body.half,p_kind:body.kind,p_conflict:body.conflict});
     if(action==='adminDelExamSpecial')return srpc('admin_del_exam_special',{p_pin:_pin,p_id:body.id});
     if(action==='adminDelBtecStudent')return srpc('admin_del_btec_student',{p_pin:_pin,p_id:body.id});
     if(action==='adminSetBtecPlan')return srpc('admin_set_btec_plan',{p_pin:_pin,p_student_id:body.student_id,p_code:body.code,p_sem:body.sem});
