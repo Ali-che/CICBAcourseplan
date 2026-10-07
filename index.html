@@ -970,6 +970,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <button class="ops-tab" data-sec="grad" onclick="opsSwitch('grad')">毕业学分</button>
       <button class="ops-tab" data-sec="school" onclick="opsSwitch('school')">登分学校</button>
       <button class="ops-tab" data-sec="notice" onclick="opsSwitch('notice')">教务须知</button>
+      <button class="ops-tab" id="ops-tab-acct" data-sec="acct" onclick="opsSwitch('acct')" style="display:none">🔑 账号权限</button>
       <button class="btn btn-sm" onclick="renderOps(true)" style="margin-left:auto">↻ 重载</button>
     </div>
     <div id="ops-body"><div style="color:#888;padding:20px">载入中…</div></div>
@@ -1257,6 +1258,12 @@ function applyRoleVisibility(){
     opsTabBtn.style.display = canOps ? '' : 'none';
     if(!canOps && opsTabBtn.classList.contains('active')) switchTab('sch');
   }
+  // 账号权限子分页:仅 admin 可见;非 admin 若正停在该子页则退回「学期」
+  const acctBtn = document.getElementById('ops-tab-acct');
+  if(acctBtn){
+    acctBtn.style.display = (currentRole==='admin') ? '' : 'none';
+    if(currentRole!=='admin' && typeof opsSec!=='undefined' && opsSec==='acct' && typeof opsSwitch==='function') opsSwitch('sem');
+  }
 }
 
 // ══════════ ⚙️ 后台操作(参考数据管理,admin 专属;写入走 admin_* RPC,服务端再验权限)══════════
@@ -1372,7 +1379,7 @@ async function renderOps(force){
 function opsSwitch(sec){opsSec=sec;document.querySelectorAll('.ops-tab').forEach(x=>x.classList.toggle('active',x.dataset.sec===sec));opsRenderSec();}
 function opsRenderSec(){
   const b=document.getElementById('ops-body');if(!b||!opsD)return;
-  b.innerHTML= opsSec==='sem'?opsSemView(): opsSec==='dept'?opsDeptView(): opsSec==='coh'?opsCohView(): opsSec==='tch'?opsTchView(): opsSec==='pos'?opsPosView(): opsSec==='cat'?opsCatView(): opsSec==='grad'?opsGradView(): opsSec==='school'?opsSchoolView(): opsSec==='notice'?opsNoticeView(): '';
+  b.innerHTML= opsSec==='sem'?opsSemView(): opsSec==='dept'?opsDeptView(): opsSec==='coh'?opsCohView(): opsSec==='tch'?opsTchView(): opsSec==='pos'?opsPosView(): opsSec==='cat'?opsCatView(): opsSec==='grad'?opsGradView(): opsSec==='school'?opsSchoolView(): opsSec==='notice'?opsNoticeView(): opsSec==='acct'?opsAcctView(): '';
   if(opsSec==='school'&&!_examLoaded){_examLoaded=true;loadExam().then(function(){if(opsSec==='school')opsRenderSec();});}
   if(opsSec==='notice'&&!_noticesLoadedOps){_noticesLoadedOps=true;loadNotices().then(function(){if(opsSec==='notice')opsRenderSec();});}
 }
@@ -1927,6 +1934,74 @@ async function opsNoticeDel(id,title){
   const r=await gasPost('adminDelNotice',{id:id});
   if(r&&r.success){await loadNotices();opsRenderSec();if(typeof showToast==='function')showToast('已删除',{kind:'success',duration:1800});}
   else alert('删除失败:'+((r&&r.error)||'?（可能非管理员权限）'));
+}
+// ── 后台:账号与权限管理(仅 admin) ──
+let _acct={rows:[],me:'',loaded:false,loading:false,err:''}, _acctEdit=null, _acctReveal={};
+const ACCT_ROLES=['teacher','director','主任','master','admin'];
+const ACCT_ROLE_DESC={teacher:'老师(基本)',director:'主任/组长(可改排课数据)','主任':'主任(可改排课数据)',master:'最高(可进后台)',admin:'管理员(全权·含账号)'};
+async function acctLoad(){
+  if(_acct.loading)return;_acct.loading=true;_acct.err='';
+  try{const r=await gasPost('adminListPins',{});if(r&&r.success){_acct.rows=r.rows||[];_acct.me=r.me||'';}else{_acct.rows=[];_acct.err=(r&&r.error)||'读取失败';}}catch(e){_acct.rows=[];_acct.err='读取失败';}
+  _acct.loaded=true;_acct.loading=false;if(typeof opsSec!=='undefined'&&opsSec==='acct')opsRenderSec();
+}
+function opsAcctReload(){_acct.loaded=false;_acct.rows=[];acctLoad();}
+function _acctRoleOpts(cur){return ACCT_ROLES.map(function(r){return '<option value="'+eh(r)+'"'+(r===cur?' selected':'')+'>'+eh(r)+(ACCT_ROLE_DESC[r]?(' — '+ACCT_ROLE_DESC[r]):'')+'</option>';}).join('');}
+function opsAcctView(){
+  if(currentRole!=='admin')return '<div style="color:#c0392b;padding:12px">仅 admin 可管理账号与权限。</div>';
+  if(!_acct.loaded){acctLoad();return '<div style="color:#888;padding:16px">账号加载中…</div>';}
+  const ed=_acctEdit;
+  const roleBadge=function(r){const c={admin:['#8a1d1d','#FDECEC'],master:['#8a5a00','#FFF3E0'],director:['#1565c0','#E3F2FD'],'主任':['#1565c0','#E3F2FD'],teacher:['#555','#eee']}[r]||['#555','#eee'];return '<span style="background:'+c[1]+';color:'+c[0]+';font-size:10px;font-weight:700;border-radius:4px;padding:1px 7px">'+eh(r||'')+'</span>';};
+  const rows=(_acct.rows||[]).slice().sort(function(a,b){return (ACCT_ROLES.indexOf(b.role)-ACCT_ROLES.indexOf(a.role))||String(a.name||'').localeCompare(String(b.name||''));});
+  const body=rows.map(function(p){
+    const isMe=(String(p.pin)===String(_acct.me));
+    const rev=!!_acctReveal[p.pin];
+    const pinCell=rev?('<span style="font-family:ui-monospace;font-size:12px">'+eh(p.pin)+'</span> <span onclick="opsAcctReveal(\''+jsq(p.pin)+'\',false)" style="cursor:pointer;color:#888;font-size:11px">隐藏</span>')
+      :('<span style="letter-spacing:2px;color:#aaa">••••••</span> <span onclick="opsAcctReveal(\''+jsq(p.pin)+'\',true)" style="cursor:pointer;color:#534AB7;font-size:11px">显示</span>');
+    return '<tr>'
+      +'<td style="padding:4px 10px">'+eh(p.name||'')+(isMe?' <span style="font-size:10px;color:#2e7d32">(本人)</span>':'')+'</td>'
+      +'<td style="padding:4px 10px">'+roleBadge(p.role)+'</td>'
+      +'<td style="padding:4px 10px;white-space:nowrap">'+pinCell+'</td>'
+      +'<td style="padding:4px 10px;color:#666;font-size:12px">'+eh(p.note||'')+'</td>'
+      +'<td style="padding:4px 10px;text-align:right;white-space:nowrap"><button class="btn btn-sm" onclick="opsAcctEdit(\''+jsq(p.pin)+'\')">编辑</button> '
+      +(isMe?'<span style="color:#bbb;font-size:11px" title="不能删除自己">删除</span>':'<button class="ops-del" onclick="opsAcctDel(\''+jsq(p.pin)+'\',\''+jsq(p.name||'')+'\')">删除</button>')
+      +'</td></tr>';
+  }).join('')||'<tr><td colspan="5" style="color:#aaa;padding:10px">暂无账号</td></tr>';
+  const f=function(id,ph,v,w){return '<input id="'+id+'" placeholder="'+ph+'" value="'+eh(v||'')+'" style="width:'+w+';font-size:13px;padding:5px 8px;border:0.5px solid #cbd5e1;border-radius:6px">';};
+  const form='<div class="ops-add" style="flex-wrap:wrap;gap:8px;align-items:center">'
+    +'<input type="hidden" id="acct-old" value="'+eh(ed?ed.pin:'')+'">'
+    +f('acct-name','姓名',ed?ed.name:'','120px')
+    +f('acct-pin','PIN 登录码',ed?ed.pin:'','150px')
+    +'<select id="acct-role" style="font-size:13px;padding:5px;border:0.5px solid #cbd5e1;border-radius:6px">'+_acctRoleOpts(ed?ed.role:'teacher')+'</select>'
+    +f('acct-note','备注(可空)',ed?ed.note:'','200px')
+    +'<button class="btn btn-p" onclick="opsAcctSave()">'+(ed?'保存修改':'+ 新增账号')+'</button>'
+    +(ed?' <button class="btn" onclick="opsAcctCancel()">取消</button>':'')
+    +'</div>';
+  return '<div style="color:#666;font-size:12px;margin-bottom:8px;line-height:1.7">每个账号 = 一个登录 PIN + 角色。<b>admin</b> 全权(含本页)、<b>master</b> 可进后台、<b>director/主任</b> 可改排课/BTEC/期末考数据、<b>teacher</b> 只读常用。改了谁的 PIN,对方下次用新 PIN 登录。</div>'
+    +(_acct.err?'<div style="color:#c0392b;font-size:12px;margin-bottom:8px">读取出错:'+eh(_acct.err)+'(账号 RPC 可能尚未建立——需先跑配套 SQL)</div>':'')
+    +form
+    +'<table style="width:auto;min-width:560px;margin-top:4px"><thead><tr><th style="text-align:left;padding:4px 10px">姓名</th><th style="text-align:left;padding:4px 10px">角色</th><th style="text-align:left;padding:4px 10px">PIN</th><th style="text-align:left;padding:4px 10px">备注</th><th></th></tr></thead><tbody>'+body+'</tbody></table>';
+}
+function opsAcctReveal(pin,on){_acctReveal[pin]=!!on;opsRenderSec();}
+function opsAcctEdit(pin){const p=(_acct.rows||[]).find(function(x){return String(x.pin)===String(pin);});if(p){_acctEdit=Object.assign({},p);opsRenderSec();try{document.getElementById('acct-name').focus();}catch(e){}}}
+function opsAcctCancel(){_acctEdit=null;opsRenderSec();}
+async function opsAcctSave(){
+  const old=(document.getElementById('acct-old')||{}).value||'';
+  const name=((document.getElementById('acct-name')||{}).value||'').trim();
+  const pin=((document.getElementById('acct-pin')||{}).value||'').trim();
+  const role=(document.getElementById('acct-role')||{}).value||'teacher';
+  const note=((document.getElementById('acct-note')||{}).value||'').trim();
+  if(!name){alert('请填姓名');return;}
+  if(!pin){alert('请填 PIN 登录码');return;}
+  if(ACCT_ROLES.indexOf(role)<0){alert('角色无效');return;}
+  const r=await gasPost('adminUpsertPin',{old:old,pin:pin,name:name,role:role,note:note});
+  if(r&&r.success){_acctEdit=null;opsAcctReload();if(typeof showToast==='function')showToast(old?'已保存':'已新增账号',{kind:'success',duration:1800});}
+  else alert('保存失败:'+((r&&r.error)||'?'));
+}
+async function opsAcctDel(pin,name){
+  if(!confirm('删除账号「'+name+'」(PIN '+pin+')?删除后此 PIN 无法再登录。'))return;
+  const r=await gasPost('adminDelPin',{target:pin});
+  if(r&&r.success){opsAcctReload();if(typeof showToast==='function')showToast('已删除',{kind:'success',duration:1800});}
+  else alert('删除失败:'+((r&&r.error)||'?'));
 }
 function _examRows(){
   let list=[...(_exam.rows||[])];
@@ -6701,6 +6776,9 @@ function syncTblHeight(){
     if(action==='adminDelExamSchool')return srpc('admin_del_exam_school',{p_pin:_pin,p_id:body.id});
     if(action==='adminSetNotice')return srpc('admin_set_notice',{p_pin:_pin,p_id:body.id,p_title:body.title,p_body:body.body,p_accent:body.accent,p_sort:body.sort,p_open:body.open,p_pdf:body.pdf});
     if(action==='adminDelNotice')return srpc('admin_del_notice',{p_pin:_pin,p_id:body.id});
+    if(action==='adminListPins')return srpc('admin_list_pins',{p_pin:_pin});
+    if(action==='adminUpsertPin')return srpc('admin_upsert_pin',{p_pin:_pin,p_old_pin:body.old||'',p_new_pin:body.pin,p_name:body.name,p_role:body.role,p_note:body.note||''});
+    if(action==='adminDelPin')return srpc('admin_del_pin',{p_pin:_pin,p_target_pin:body.target});
     if(action==='adminSetExamSpecial')return srpc('admin_set_exam_special',{p_pin:_pin,p_id:body.id,p_sem:body.sem,p_teacher:body.teacher,p_course:body.course,p_cls:body.cls,p_school:body.school,p_dept:body.dept,p_sid:body.sid,p_name_py:body.name_py,p_name_zh:body.name_zh,p_note:body.note,p_salut:body.salut,p_half:body.half,p_kind:body.kind,p_conflict:body.conflict});
     if(action==='adminDelExamSpecial')return srpc('admin_del_exam_special',{p_pin:_pin,p_id:body.id});
     if(action==='adminDelBtecStudent')return srpc('admin_del_btec_student',{p_pin:_pin,p_id:body.id});
