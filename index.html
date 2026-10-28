@@ -1421,7 +1421,7 @@ async function opsDelDept(code){const n=opsUsedByDept(code);if(!confirm('删除�
 // ── 届别 ──
 function opsCohView(){
   const deptOpts=(opsD.depts||[]).map(d=>'<option value="'+eh(d.code)+'">'+eh(d.code)+'</option>').join('');
-  const body=(opsD.cohorts||[]).slice().sort((a,b)=>(a.dept+a.cohort).localeCompare(b.dept+b.cohort)).map(c=>'<tr><td>'+eh(c.dept)+'</td><td style="font-family:ui-monospace,monospace">'+eh(c.cohort)+'</td><td style="text-align:right"><button class="ops-del" onclick="opsDelCoh('+c.id+',\''+jsq(c.cohort)+'\')">删除</button></td></tr>').join('')||'<tr><td colspan="3" style="color:#aaa">无</td></tr>';
+  const body=(opsD.cohorts||[]).slice().sort((a,b)=>(a.dept+a.cohort).localeCompare(b.dept+b.cohort,undefined,{numeric:true,sensitivity:'base'})).map(c=>'<tr><td>'+eh(c.dept)+'</td><td style="font-family:ui-monospace,monospace">'+eh(c.cohort)+'</td><td style="text-align:right"><button class="ops-del" onclick="opsDelCoh('+c.id+',\''+jsq(c.cohort)+'\')">删除</button></td></tr>').join('')||'<tr><td colspan="3" style="color:#aaa">无</td></tr>';
   return '<div class="ops-add"><div class="fg"><label>专业</label><select id="ops-coh-dept">'+deptOpts+'</select></div><div class="fg"><label>届别代码</label><input id="ops-coh-code" placeholder="TM70"></div><button class="btn btn-p" onclick="opsAddCoh()">+ 新增</button></div><div class="tbl-wrap" style="max-height:calc(100vh - 430px)"><table><thead><tr><th>专业</th><th>届别</th><th></th></tr></thead><tbody>'+body+'</tbody></table></div>';
 }
 async function opsAddCoh(){const coh=document.getElementById('ops-coh-code').value.trim();if(!coh){alert('请输入届别代码');return;}opsAfter(await gasPost('adminAddCohort',{dept:document.getElementById('ops-coh-dept').value,cohort:coh}),'已新增届别 '+coh);}
@@ -2634,6 +2634,8 @@ async function loadRefFromSheets(){
     if(data.teachers&&data.teachers.length)T=data.teachers;
     if(data.cohorts&&data.cohorts.length){
       CBD={};data.cohorts.forEach(c=>{if(!CBD[c.dept])CBD[c.dept]=[];CBD[c.dept].push(c.cohort);});
+      // 班级代码按自然数值排序(TM66<TM67<TM68-2<TM68-2.1<TM68-3<TM68ZSB…),所有下拉读 CBD 即有序
+      Object.keys(CBD).forEach(d=>CBD[d].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'})));
     }
     if(data.depts&&data.depts.length)DEPTS=data.depts;  // 完整专业表(供 BTEC 加学生下拉等)
     // v7.3: 接收学期列表
