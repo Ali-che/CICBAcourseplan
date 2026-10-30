@@ -3215,15 +3215,9 @@ function buildEG(id,cc){
       const chk=cm.hasOwnProperty(cohort);
       const grad=(typeof _cohGraduated==='function'&&_cohGraduated(cohort));
       const w=_egPill(d,cohort,chk,cm[cohort]||'');
-      if(grad&&!chk){gradWrap.appendChild(w);gradN++;}else act.push(w);
+      if(grad&&!chk){gradWrap.appendChild(w);gradN++;}else act.push({w:w,cohort:cohort});
     });
-    if(act.length){
-      const grp=document.createElement('div');grp.className='egdept';grp.dataset.dgrp=d;
-      const hdr=document.createElement('div');hdr.textContent=d;hdr.style.cssText='font-size:11px;color:#9a93c9;font-weight:600;margin-bottom:5px;letter-spacing:.04em';
-      const pills=document.createElement('div');pills.style.cssText='display:flex;flex-wrap:wrap;gap:7px';
-      act.forEach(w=>pills.appendChild(w));
-      grp.appendChild(hdr);grp.appendChild(pills);pool.appendChild(grp);
-    }
+    if(act.length)pool.appendChild(_deptGroupEl(d,act));
   });
   g.appendChild(pool);
   if(gradN>0){const tgl=document.createElement('button');tgl.type='button';tgl.style.cssText='font-size:12px;color:#888;background:none;border:none;cursor:pointer;padding:6px 0;margin-top:4px;display:block';tgl.textContent='▸ '+gradN+' 个已毕业';tgl.onclick=function(){var open=gradWrap.style.display==='none';gradWrap.style.display=open?'flex':'none';tgl.textContent=(open?'▾ ':'▸ ')+gradN+' 个已毕业';};g.appendChild(tgl);}
@@ -3795,17 +3789,16 @@ function mBuildCohGrid(existCC){
   const pool=document.createElement('div');pool.id='m-coh-pool';pool.style.cssText='display:flex;flex-direction:column;gap:9px';
   const gradWrap=document.createElement('div');gradWrap.id='m-coh-grad';gradWrap.style.cssText='display:none;flex-wrap:wrap;gap:7px;margin-top:8px;opacity:.6';
   const renderedNames=new Set();let gradN=0;
-  const _grp=function(d){const grp=document.createElement('div');grp.className='egdept';grp.dataset.dgrp=d;const hdr=document.createElement('div');hdr.textContent=d;hdr.style.cssText='font-size:11px;color:#9a93c9;font-weight:600;margin-bottom:5px;letter-spacing:.04em';const pills=document.createElement('div');pills.style.cssText='display:flex;flex-wrap:wrap;gap:7px';grp.appendChild(hdr);grp.appendChild(pills);grp._pills=pills;return grp;};
   Object.entries(CBD).forEach(([d,cohorts])=>{
     const act=[];
-    cohorts.forEach(cohort=>{renderedNames.add(cohort);const chk=cm.hasOwnProperty(cohort);const grad=(typeof _cohGraduated==='function'&&_cohGraduated(cohort));const w=_mPill(d,cohort,chk,cm[cohort]||'',false);if(grad&&!chk){gradWrap.appendChild(w);gradN++;}else act.push(w);});
-    if(act.length){const grp=_grp(d);act.forEach(w=>grp._pills.appendChild(w));pool.appendChild(grp);}
+    cohorts.forEach(cohort=>{renderedNames.add(cohort);const chk=cm.hasOwnProperty(cohort);const grad=(typeof _cohGraduated==='function'&&_cohGraduated(cohort));const w=_mPill(d,cohort,chk,cm[cohort]||'',false);if(grad&&!chk){gradWrap.appendChild(w);gradN++;}else act.push({w:w,cohort:cohort});});
+    if(act.length)pool.appendChild(_deptGroupEl(d,act));
   });
   grid.appendChild(pool);
   if(gradN>0){const tgl=document.createElement('button');tgl.type='button';tgl.id='m-coh-gradtog';tgl.style.cssText='font-size:12px;color:#888;background:none;border:none;cursor:pointer;padding:6px 0;margin-top:4px;display:block';tgl.textContent='▸ '+gradN+' 个已毕业';tgl.onclick=function(){var open=gradWrap.style.display==='none';gradWrap.style.display=open?'flex':'none';tgl.textContent=(open?'▾ ':'▸ ')+gradN+' 个已毕业';};grid.appendChild(tgl);}
   grid.appendChild(gradWrap);
   const orphans=(existCC||[]).filter(x=>!renderedNames.has(x.cohort));
-  if(orphans.length){const grp=_grp('⚠ 不在届别库');orphans.forEach(x=>{const m=String(x.cohort).match(/^[A-Za-z]+/);const dept=m?m[0].substring(0,2).toUpperCase():'?';const w=_mPill(dept,x.cohort,true,x.count||'',true);grp._pills.appendChild(w);});pool.appendChild(grp);}
+  if(orphans.length){const items=orphans.map(function(x){const m=String(x.cohort).match(/^[A-Za-z]+/);const dept=m?m[0].substring(0,2).toUpperCase():'?';return {w:_mPill(dept,x.cohort,true,x.count||'',true),cohort:x.cohort};});pool.appendChild(_deptGroupEl('⚠ 不在届别库',items));}
   mRefreshSel();mFilterCohGrid();updateMCohTotal();
 }
 function mRefreshSel(){
@@ -4029,6 +4022,26 @@ function _cohGradBE(code){var m=String(code||'').match(/(\d{2})/);if(!m)return n
 function _curBE(){var d=new Date();var be=d.getFullYear()+543;if((d.getMonth()+1)<8)be-=1;return be;}
 // 已毕业 = 当前学年 已达/超过 毕业年(CA67 要到 2570 才毕业;2569 仍在读·最后一年)
 function _cohGraduated(code){var g=_cohGradBE(code);return g!=null&&_curBE()>=g;}
+// 入学年(代码第一个两位数),用于组内按年级分段
+function _cohEntryYr(code){var m=String(code||'').match(/(\d{2})/);return m?m[1]:'?';}
+// 建「专业组」:标题 + 组内按入学年分行(67 ─ / 68 ─ …)。items=[{w:pill元素, cohort}]
+function _deptGroupEl(dept,items){
+  var grp=document.createElement('div');grp.className='egdept';grp.dataset.dgrp=dept;
+  var hdr=document.createElement('div');hdr.textContent=dept;hdr.style.cssText='font-size:11px;color:#9a93c9;font-weight:600;margin-bottom:5px;letter-spacing:.04em';grp.appendChild(hdr);
+  var yrWrap=document.createElement('div');yrWrap.style.cssText='display:flex;flex-direction:column;gap:6px';
+  var curYr=null,curPills=null;
+  items.forEach(function(it){
+    var yr=_cohEntryYr(it.cohort);
+    if(yr!==curYr){curYr=yr;
+      var row=document.createElement('div');row.style.cssText='display:flex;align-items:flex-start;gap:8px';
+      var lbl=document.createElement('span');lbl.textContent=yr;lbl.style.cssText='font-size:10px;color:#b0aad6;font-weight:700;min-width:20px;padding-top:6px;font-family:ui-monospace';
+      var pills=document.createElement('div');pills.style.cssText='display:flex;flex-wrap:wrap;gap:7px;flex:1';
+      row.appendChild(lbl);row.appendChild(pills);yrWrap.appendChild(row);curPills=pills;
+    }
+    curPills.appendChild(it.w);
+  });
+  grp.appendChild(yrWrap);return grp;
+}
 function cohortTag(cohort,count){
   const c=COHORT_COLOR[cohortPrefix(cohort)];
   const style=c?'background:'+c.bg+';color:'+c.fg:'';
