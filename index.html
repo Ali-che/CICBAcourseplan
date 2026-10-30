@@ -430,6 +430,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   <button class="tab" id="tab-notice" onclick="switchTab('notice')">📌 教务须知</button>
   <button class="tab" id="tab-sta" onclick="switchTab('sta')">📈 教学统计</button>
   <button class="tab" id="tab-ops" onclick="switchTab('ops')" style="display:none">⚙️ 后台操作</button>
+  <button class="tab" id="tab-addcoh" onclick="openAddCoh()" title="新增班级/届别" style="display:none;margin-left:auto;color:#1b7a5a;border-color:#9FE1CB">➕ 新增班级</button>
 </div>
 </div><!-- /.sticky-top -->
 
@@ -535,26 +536,21 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     </div>
     <div class="empty" id="sch-em">暂无排课记录</div>
   </div>
-  <div id="addcoh-wrap" style="display:none;margin-top:14px">
-    <div style="background:#fff;border-radius:12px;padding:14px 18px;box-shadow:0 1px 3px rgba(0,0,0,.06)">
-      <div onclick="toggleAddCoh()" style="cursor:pointer;font-weight:700;color:#534AB7;font-size:13px;user-select:none"><span id="addcoh-arrow">▸</span> ➕ 新增班级 <span style="font-weight:400;font-size:11px;color:#999">（专业 + 届别代码 + 修业年限 → 自动算毕业）</span></div>
-      <div id="addcoh-body" style="display:none;margin-top:12px">
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <label style="font-size:12px;color:#555">专业</label>
-          <select id="addcoh-dept" style="font-size:13px;padding:5px 8px;border:0.5px solid #cbd5e1;border-radius:6px"></select>
-          <input id="addcoh-code" placeholder="届别代码(如 TM70)" style="font-size:13px;padding:5px 8px;border:0.5px solid #cbd5e1;border-radius:6px;width:160px">
-          <label style="font-size:12px;color:#555">修业年限</label>
-          <select id="addcoh-dur" onchange="addCohDurChange()" style="font-size:13px;padding:5px 8px;border:0.5px solid #cbd5e1;border-radius:6px">
-            <option value="3">全新生 · 3 年</option>
-            <option value="2">专升本(ZSB) · 2 年</option>
-            <option value="other">其他…</option>
-          </select>
-          <input id="addcoh-dur-n" type="number" min="1" max="8" value="4" style="display:none;width:56px;font-size:13px;padding:5px 6px;border:0.5px solid #cbd5e1;border-radius:6px"><span id="addcoh-dur-unit" style="display:none;font-size:12px;color:#555">年</span>
-          <button class="btn btn-p btn-sm" onclick="addCohSubmit()">+ 新增</button>
-        </div>
-        <div id="addcoh-msg" style="font-size:12px;margin-top:8px"></div>
-      </div>
+</div>
+
+<!-- ══ 新增班级 弹窗(admin + Director) ════════ -->
+<div id="addcoh-modal" onclick="closeAddCoh()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9999;align-items:center;justify-content:center">
+  <div onclick="event.stopPropagation()" style="background:#fff;border-radius:12px;padding:18px 20px;min-width:340px;max-width:92vw;box-shadow:0 12px 44px rgba(0,0,0,.25)">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;color:#3C3489;font-size:15px">➕ 新增班级</span><span onclick="closeAddCoh()" style="cursor:pointer;color:#999;font-size:16px">✕</span></div>
+    <div style="font-size:11px;color:#999;margin:2px 0 14px">专业 + 届别代码 + 修业年限 → 自动算毕业</div>
+    <div style="display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:center;font-size:13px">
+      <label style="color:#555">专业</label><select id="addcoh-dept" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px"></select>
+      <label style="color:#555">届别代码</label><input id="addcoh-code" placeholder="如 TM70" onkeydown="if(event.key==='Enter')addCohSubmit()" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px">
+      <label style="color:#555">修业年限</label>
+      <div style="display:flex;gap:8px;align-items:center"><select id="addcoh-dur" onchange="addCohDurChange()" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px;flex:1"><option value="3">全新生 · 3 年</option><option value="2">专升本(ZSB) · 2 年</option><option value="other">其他…</option></select><input id="addcoh-dur-n" type="number" min="1" max="8" value="4" style="display:none;width:54px;padding:6px;border:0.5px solid #cbd5e1;border-radius:6px"><span id="addcoh-dur-unit" style="display:none;color:#555">年</span></div>
     </div>
+    <div id="addcoh-msg" style="font-size:12px;margin-top:10px;min-height:16px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button class="btn btn-sm" onclick="closeAddCoh()">取消</button><button class="btn btn-p btn-sm" onclick="addCohSubmit()">+ 新增</button></div>
   </div>
 </div>
 
@@ -1301,10 +1297,10 @@ function applyRoleVisibility(){
   }
   // 账号权限子分页:仅 admin 可见;非 admin 若正停在该子页则退回「学期」
   const _canCoh = (currentRole==='admin'||currentRole==='director');
-  const addcoh = document.getElementById('addcoh-wrap');
-  if(addcoh) addcoh.style.display = _canCoh ? '' : 'none';
   const addcohBtn = document.getElementById('sch-addcoh-btn');
   if(addcohBtn) addcohBtn.style.display = _canCoh ? '' : 'none';
+  const addcohTab = document.getElementById('tab-addcoh');
+  if(addcohTab) addcohTab.style.display = _canCoh ? '' : 'none';
   const acctBtn = document.getElementById('ops-tab-acct');
   if(acctBtn){
     acctBtn.style.display = (currentRole==='admin') ? '' : 'none';
@@ -1477,7 +1473,8 @@ async function opsAddCoh(){const coh=document.getElementById('ops-coh-code').val
 async function opsDelCoh(id,coh){const n=opsUsedByCohort(coh);if(!confirm('删除届别「'+coh+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 笔排课用到此届别。仍要删?':'')))return;opsAfter(await gasPost('adminDelCohort',{id}),'已删除届别 '+coh);}
 // 排课表底部「新增班级」(admin + Director 可用;后端 _admin 允许 director)
 function toggleAddCoh(){var b=document.getElementById('addcoh-body'),a=document.getElementById('addcoh-arrow');if(!b)return;var open=(b.style.display==='none');b.style.display=open?'':'none';if(a)a.textContent=open?'▾':'▸';if(open)addCohFillDept();}
-function openAddCoh(){var w=document.getElementById('addcoh-wrap');if(!w)return;var b=document.getElementById('addcoh-body');if(b&&b.style.display==='none')toggleAddCoh();try{w.scrollIntoView({behavior:'smooth',block:'center'});}catch(e){try{w.scrollIntoView();}catch(_){}}try{setTimeout(function(){var c=document.getElementById('addcoh-code');if(c)c.focus();},300);}catch(e){}}
+function openAddCoh(){var m=document.getElementById('addcoh-modal');if(!m)return;addCohFillDept();var msg=document.getElementById('addcoh-msg');if(msg)msg.textContent='';m.style.display='flex';try{setTimeout(function(){var c=document.getElementById('addcoh-code');if(c)c.focus();},50);}catch(e){}}
+function closeAddCoh(){var m=document.getElementById('addcoh-modal');if(m)m.style.display='none';}
 function addCohFillDept(){var dd=document.getElementById('addcoh-dept');if(!dd)return;var ds=[...new Set([].concat((typeof DEPTS!=='undefined'?DEPTS:[]).map(function(d){return d&&d.code;}),Object.keys(typeof CBD!=='undefined'?CBD:{})))].filter(Boolean).sort();var cur=dd.value;dd.innerHTML=ds.map(function(d){return '<option'+(d===cur?' selected':'')+'>'+eh(d)+'</option>';}).join('');}
 function addCohDurChange(){var s=(document.getElementById('addcoh-dur')||{}).value;var n=document.getElementById('addcoh-dur-n'),u=document.getElementById('addcoh-dur-unit');var other=(s==='other');if(n)n.style.display=other?'':'none';if(u)u.style.display=other?'':'none';}
 async function addCohSubmit(){
