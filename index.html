@@ -3673,49 +3673,63 @@ function mBuildDeptChips(){
   wrap.appendChild(all);
 }
 
-function mBuildCohGrid(existCC){
-  const grid=document.getElementById('m-coh-grid');grid.innerHTML='';
-  const cm={};(existCC||[]).forEach(x=>cm[x.cohort]=x.count);
-  Object.entries(CBD).forEach(([d,cohorts])=>{
-    cohorts.forEach(cohort=>{
-      const k=sk(cohort),chk=cm.hasOwnProperty(cohort),cnt=cm[cohort]||'';
-      const w=document.createElement('div');w.className='ei';w.dataset.d=d;
-      w.innerHTML='<input type="checkbox" id="mc-'+k+'" value="'+eh(cohort)+'"'+(chk?' checked':'')+'>'+
-        '<label for="mc-'+k+'" title="'+eh(cohort)+'" style="font-size:10px">'+eh(cohort)+'</label>'+
-        '<input type="number" id="mn-'+k+'" min="0" value="'+cnt+'"'+(chk?'':' disabled')+' style="width:40px;font-size:11px;padding:2px 4px;text-align:center">';
-      const cb=w.querySelector('input[type=checkbox]'),ni=w.querySelector('input[type=number]');
-      cb.onchange=()=>{ni.disabled=!cb.checked;if(!cb.checked)ni.value='';updateMCohTotal();};
-      ni.oninput=updateMCohTotal;
-      grid.appendChild(w);
-    });
-  });
-  // FIX: 渲染「孤儿屆别」—— 记录里有但屆别库已经没有的（被改名/删除）
-  // 不显示就等于丢失，黄色框警告让使用者知道
-  const renderedNames=new Set();
-  Object.values(CBD).forEach(arr=>arr.forEach(c=>renderedNames.add(c)));
-  const orphans=(existCC||[]).filter(x=>!renderedNames.has(x.cohort));
-  orphans.forEach(x=>{
-    const k=sk(x.cohort);
-    const m=String(x.cohort).match(/^[A-Za-z]+/);
-    const dept=m?m[0].substring(0,2).toUpperCase():'?';
-    const w=document.createElement('div');w.className='ei';w.dataset.d=dept;w.dataset.orphan='1';
-    w.style.cssText='border-left:3px solid #f59e0b;background:#FFFBEB';
-    w.innerHTML='<input type="checkbox" id="mc-'+k+'" value="'+eh(x.cohort)+'" checked>'+
-      '<label for="mc-'+k+'" title="⚠️ 此屆别不在「屆别库」分页中（可能被改名/删除）。记录仍保留它。" style="font-size:10px;color:#854F0B">⚠️ '+eh(x.cohort)+'</label>'+
-      '<input type="number" id="mn-'+k+'" min="0" value="'+(x.count||'')+'" style="width:40px;font-size:11px;padding:2px 4px;text-align:center">';
-    const cb=w.querySelector('input[type=checkbox]'),ni=w.querySelector('input[type=number]');
-    cb.onchange=()=>{ni.disabled=!cb.checked;if(!cb.checked)ni.value='';updateMCohTotal();};
-    ni.oninput=updateMCohTotal;
-    grid.appendChild(w);
-  });
-  updateMCohTotal(); // 重建后立即刷新合计
+function _mPill(d,cohort,chk,cnt,orphan){
+  const k=sk(cohort);
+  const w=document.createElement('div');w.className='ei';w.dataset.d=d;if(orphan)w.dataset.orphan='1';
+  w.innerHTML='<input type="checkbox" id="mc-'+k+'" value="'+eh(cohort)+'"'+(chk?' checked':'')+' style="display:none">'+
+    (orphan?'<span title="⚠️ 此届别不在届别库(可能被改名/删除),记录仍保留">⚠️</span>':'')+'<span>'+eh(cohort)+'</span>'+
+    '<input type="number" id="mn-'+k+'" min="0" value="'+cnt+'"'+(chk?'':' disabled')+' style="width:36px;font-size:12px;padding:1px 0;text-align:center;border:0.5px solid #AFA9EC;border-radius:5px;'+(chk?'':'display:none')+'">';
+  const cb=w.querySelector('input[type=checkbox]'),ni=w.querySelector('input[type=number]');
+  _mPillSync(w,cb,ni);
+  w.onclick=function(e){if(e.target===ni)return;cb.checked=!cb.checked;_mPillSync(w,cb,ni);mRefreshSel();updateMCohTotal();};
+  ni.onclick=function(e){e.stopPropagation();};
+  ni.oninput=function(){updateMCohTotal();mRefreshSel();};
+  return w;
 }
-
-function mFilterCohGrid(){
-  document.querySelectorAll('#m-coh-grid .ei').forEach(el=>{
-    el.style.display=(_mSelDpts.size===0||_mSelDpts.has(el.dataset.d))?'':'none';
+function _mPillSync(w,cb,ni){
+  ni.disabled=!cb.checked;
+  const orphan=!!w.dataset.orphan;
+  if(cb.checked){ni.style.display='';w.style.cssText='display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:4px 11px;border-radius:999px;cursor:pointer;user-select:none;white-space:nowrap;border:0.5px solid #7F77DD;background:#EEEDFE;color:#3C3489';}
+  else{ni.value='';ni.style.display='none';w.style.cssText='display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:4px 11px;border-radius:999px;cursor:pointer;user-select:none;white-space:nowrap;border:0.5px solid #cbd5e1;background:'+(orphan?'#FFFBEB':'#fff')+';color:'+(orphan?'#854F0B':'#666')+'';}
+}
+function mBuildCohGrid(existCC){
+  const grid=document.getElementById('m-coh-grid');if(!grid)return;grid.innerHTML='';grid.style.display='block';
+  const cm={};(existCC||[]).forEach(x=>cm[x.cohort]=x.count);
+  const sel=document.createElement('div');sel.id='m-coh-sel';sel.style.cssText='display:flex;flex-wrap:wrap;gap:6px;min-height:32px;padding:7px 8px;border:0.5px dashed #AFA9EC;border-radius:8px;margin-bottom:10px';grid.appendChild(sel);
+  const pool=document.createElement('div');pool.id='m-coh-pool';pool.style.cssText='display:flex;flex-wrap:wrap;gap:7px';
+  const gradWrap=document.createElement('div');gradWrap.id='m-coh-grad';gradWrap.style.cssText='display:none;flex-wrap:wrap;gap:7px;margin-top:8px;opacity:.6';
+  const renderedNames=new Set();let gradN=0;
+  Object.entries(CBD).forEach(([d,cohorts])=>{cohorts.forEach(cohort=>{
+    renderedNames.add(cohort);
+    const chk=cm.hasOwnProperty(cohort);
+    const grad=(typeof _cohGraduated==='function'&&_cohGraduated(cohort));
+    const w=_mPill(d,cohort,chk,cm[cohort]||'',false);
+    if(grad&&!chk){gradWrap.appendChild(w);gradN++;}else pool.appendChild(w);
+  });});
+  grid.appendChild(pool);
+  if(gradN>0){const tgl=document.createElement('button');tgl.type='button';tgl.id='m-coh-gradtog';tgl.style.cssText='font-size:12px;color:#888;background:none;border:none;cursor:pointer;padding:6px 0;margin-top:4px;display:block';tgl.textContent='▸ '+gradN+' 个已毕业';tgl.onclick=function(){var open=gradWrap.style.display==='none';gradWrap.style.display=open?'flex':'none';tgl.textContent=(open?'▾ ':'▸ ')+gradN+' 个已毕业';};grid.appendChild(tgl);}
+  grid.appendChild(gradWrap);
+  const orphans=(existCC||[]).filter(x=>!renderedNames.has(x.cohort));
+  orphans.forEach(x=>{const m=String(x.cohort).match(/^[A-Za-z]+/);const dept=m?m[0].substring(0,2).toUpperCase():'?';pool.appendChild(_mPill(dept,x.cohort,true,x.count||'',true));});
+  mRefreshSel();mFilterCohGrid();updateMCohTotal();
+}
+function mRefreshSel(){
+  const sel=document.getElementById('m-coh-sel');if(!sel)return;sel.innerHTML='';
+  const checked=document.querySelectorAll('#m-coh-grid .ei input[type=checkbox]:checked');
+  if(!checked.length){sel.innerHTML='<span style="font-size:12px;color:#aaa;align-self:center">点下方届别加入…</span>';return;}
+  checked.forEach(function(cb){const k=sk(cb.value),n=document.getElementById('mn-'+k);const cnt=n?(n.value||'0'):'0';
+    const c=document.createElement('span');c.style.cssText='display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 10px;border-radius:999px;background:#EEEDFE;color:#3C3489;border:0.5px solid #7F77DD;cursor:pointer';
+    c.innerHTML='<span>'+eh(cb.value)+'</span><span style="color:#7F77DD">· '+eh(String(cnt))+'</span><span style="color:#7F77DD;font-weight:700">✕</span>';c.title='点击移除';
+    c.onclick=function(){cb.checked=false;const w=cb.closest('.ei'),ni=document.getElementById('mn-'+k);if(w&&ni)_mPillSync(w,cb,ni);mRefreshSel();updateMCohTotal();};
+    sel.appendChild(c);
   });
-  updateMCohTotal(); // 切 chip 时刷新合计
+}
+function mFilterCohGrid(){
+  document.querySelectorAll('#m-coh-pool .ei, #m-coh-grad .ei').forEach(el=>{
+    const cb=el.querySelector('input[type=checkbox]');
+    el.style.display=((cb&&cb.checked)||_mSelDpts.size===0||_mSelDpts.has(el.dataset.d))?'':'none';
+  });
+  updateMCohTotal();
 }
 
 function mCollectCoh(){
