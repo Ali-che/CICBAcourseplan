@@ -623,6 +623,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <button class="stab" onclick="switchSub('sco')">班级总表</button>
       <button class="stab" onclick="switchSub('sss')">SG/IS·学生</button>
       <button class="stab" onclick="switchSub('sst')">SG/IS·老师</button>
+      <button class="stab" onclick="switchSub('smx')">📋 专业班级课表</button>
     </div>
     <div class="no-print" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
       <span id="sum-print-hint" style="font-size:11px;color:#888;text-align:right;line-height:1.35;max-width:520px"></span>
@@ -699,6 +700,18 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <div class="ct">SG/IS 排课总表 · 老师维度</div>
       <div id="st-cards" class="ss-grid"></div>
       <div class="empty" id="st-em"></div>
+    </div>
+  </div>
+  <div id="sub-smx" class="spanel">
+    <div class="fbar">
+      <label>专业</label><select id="f-mx-d" onchange="renderDeptMatrix()"><option value="">请选择</option></select>
+      <label>学年学期</label><select id="f-mx-s" onchange="renderDeptMatrix()"><option value="">请选择</option></select>
+      <span style="font-size:11px;color:#888">行=课程 · 列=该专业各届别 · 格=人数</span>
+    </div>
+    <div class="card">
+      <div class="ct" id="mx-ttl">专业班级课表矩阵</div>
+      <div id="mx-wrap" style="overflow:auto"></div>
+      <div class="empty" id="mx-em">请选择专业 + 学年学期</div>
     </div>
   </div>
   <div id="sco-print"></div>
@@ -4360,6 +4373,52 @@ function renderCoh(){
     '<td>'+halfBadge(r.half)+'</td><td style="font-size:11px">'+(r.tc?eh(r.tc):'<span style="background:#FEE2E2;color:#B91C1C;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;display:inline-block">⏳ 待定</span>')+'</td>'+
     '<td class="note-cell" style="font-size:11px;color:#888;max-width:130px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(r.nt?eh(r.nt):'')+'</div>'+(r.nt?'<div class="note-tip">'+eh(r.nt)+'</div>':'')+'</td></tr>').join('');
 }
+// ── 专业班级课表矩阵(行=课程 · 列=该专业各届别 · 格=人数) ──
+function _mxFillSelectors(){
+  const dd=document.getElementById('f-mx-d');
+  if(dd){const cur=dd.value;const ds=Object.keys(typeof CBD!=='undefined'?CBD:{}).sort();const want='<option value="">请选择</option>'+ds.map(d=>'<option'+(d===cur?' selected':'')+'>'+eh(d)+'</option>').join('');if(dd.innerHTML!==want)dd.innerHTML=want;}
+  const sd=document.getElementById('f-mx-s');
+  if(sd){const cur=sd.value;const ss={};_filtArch([...schD]).forEach(r=>{if(r.sem)ss[r.sem]=1;});(typeof SEMS!=='undefined'?SEMS:[]).forEach(s=>{if(s)ss[s]=1;});const xs=Object.keys(ss).sort();const byYr={};xs.forEach(s=>{const y=String(s).substring(0,4);(byYr[y]=byYr[y]||[]).push(s);});let want='<option value="">请选择</option>';Object.keys(byYr).sort().forEach(y=>{want+='<optgroup label="─ '+y+' ─">'+byYr[y].map(s=>'<option'+(s===cur?' selected':'')+'>'+eh(s)+'</option>').join('')+'</optgroup>';});if(sd.innerHTML!==want)sd.innerHTML=want;}
+}
+function renderDeptMatrix(){
+  _mxFillSelectors();
+  const dept=(document.getElementById('f-mx-d')||{}).value||'';
+  const sem=(document.getElementById('f-mx-s')||{}).value||'';
+  const wrap=document.getElementById('mx-wrap'),em=document.getElementById('mx-em'),ttl=document.getElementById('mx-ttl');
+  if(!wrap)return;
+  if(ttl)ttl.textContent='专业班级课表矩阵'+(dept?(' · '+dept):'')+(sem?(' · '+sem):'');
+  if(!dept||!sem){wrap.innerHTML='';if(em){em.textContent='请选择专业 + 学年学期';em.style.display='block';}return;}
+  let rows=_filtArch([...schD]).filter(r=>r.sem===sem&&(r.cc||[]).some(c=>cohortPrefix(c.cohort)===dept));
+  if(!rows.length){wrap.innerHTML='';if(em){em.textContent=dept+' 在 '+sem+' 暂无排课';em.style.display='block';}return;}
+  if(em)em.style.display='none';
+  const cohSet={};rows.forEach(r=>(r.cc||[]).forEach(c=>{if(cohortPrefix(c.cohort)===dept)cohSet[c.cohort]=1;}));
+  const cohs=Object.keys(cohSet).sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'}));
+  const _HR={'上半学期':1,'上半':1,'下半学期':2,'下半':2,'全学期':3,'全':3};
+  rows.sort((a,b)=>((_HR[a.half]||9)-(_HR[b.half]||9))||String(a.course||'').localeCompare(String(b.course||'')));
+  const colTot={};cohs.forEach(c=>colTot[c]=0);
+  let h='<table style="border-collapse:collapse;font-size:12px"><thead><tr>'
+    +'<th style="position:sticky;left:0;background:#3C3489;color:#fff;text-align:left;padding:6px 10px;z-index:2">课程</th>'
+    +'<th style="background:#534AB7;color:#fff;padding:6px 6px">上下半</th>'
+    +'<th style="background:#534AB7;color:#fff;padding:6px 8px;text-align:left">老师</th>'
+    +cohs.map(c=>'<th style="background:#534AB7;color:#fff;padding:6px 9px;white-space:nowrap">'+eh(c)+'</th>').join('')
+    +'<th style="background:#EEEDFE;color:#3C3489;padding:6px 8px">合计</th></tr></thead><tbody>';
+  rows.forEach(r=>{
+    const cmap={};(r.cc||[]).forEach(c=>{cmap[c.cohort]=c.count;});
+    let rowTot=0;
+    const cells=cohs.map(c=>{const n=cmap[c];if(n!=null){colTot[c]+=(+n||0);rowTot+=(+n||0);return '<td style="text-align:center;background:#F1F8F4;color:#1b7a5a;font-weight:600;border-top:0.5px solid #eee">'+eh(String(n))+'</td>';}return '<td style="text-align:center;color:#dcdce4;border-top:0.5px solid #eee">·</td>';}).join('');
+    h+='<tr>'
+      +'<td style="position:sticky;left:0;background:#fff;padding:5px 10px;white-space:nowrap;border-top:0.5px solid #eee"><b style="color:#185FA5;font-family:ui-monospace">'+eh(r.course)+'</b>'+(r.btec?' <span style="background:#534AB7;color:#fff;font-size:8px;padding:0 5px;border-radius:10px;vertical-align:middle">BTEC</span>':'')+' <span style="color:#999;font-size:10px">'+eh(r.en||'')+'</span></td>'
+      +'<td style="text-align:center;border-top:0.5px solid #eee">'+halfBadge(r.half)+'</td>'
+      +'<td style="font-size:11px;padding:5px 8px;white-space:nowrap;border-top:0.5px solid #eee">'+(r.tc?eh(r.tc):'<span style="color:#B91C1C">⏳待定</span>')+'</td>'
+      +cells
+      +'<td style="text-align:center;background:#EEEDFE;font-weight:700;color:#3C3489;border-top:0.5px solid #eee">'+rowTot+'</td></tr>';
+  });
+  h+='<tr style="border-top:2px double #534AB7"><td style="position:sticky;left:0;background:#EEEDFE;font-weight:700;color:#3C3489;padding:5px 10px">各班：课数 / 人次</td><td style="background:#EEEDFE"></td><td style="background:#EEEDFE"></td>'
+    +cohs.map(c=>{let nC=0;rows.forEach(r=>{if((r.cc||[]).some(x=>x.cohort===c))nC++;});return '<td style="text-align:center;background:#EEEDFE;color:#3C3489;font-weight:700;padding:4px">'+nC+' 门<div style="font-size:9px;font-weight:400;color:#888">'+colTot[c]+' 人次</div></td>';}).join('')
+    +'<td style="background:#EEEDFE"></td></tr>';
+  h+='</tbody></table>';
+  wrap.innerHTML=h;
+}
 function renderSpStu(){
   const q=(document.getElementById('f-stu').value||'').toLowerCase();
   const mj=document.getElementById('f-sm').value;
@@ -4507,7 +4566,7 @@ function renderSpTchr(){
     '</div>';
   }).join('');
 }
-function renderAllSum(){if(!_panelActive('sum')){_tabDirty.sum=true;return;}_tabDirty.sum=false;renderTchr();renderCoh();renderSpStu();renderSpTchr();}
+function renderAllSum(){if(!_panelActive('sum')){_tabDirty.sum=true;return;}_tabDirty.sum=false;renderTchr();renderCoh();renderSpStu();renderSpTchr();renderDeptMatrix();}
 
 // ── 教学统计 ──────────────────────────────
 // v8.17: Capstone 课时 = 全学期 Capstone 学生数(届别去重加总) ÷ 授课老师数 → 查官方表
@@ -6554,6 +6613,7 @@ function switchSub(id){
   document.querySelectorAll('.stab').forEach(t=>t.classList.toggle('active',t.getAttribute('onclick').includes(id)));
   document.querySelectorAll('.spanel').forEach(p=>p.classList.remove('active'));
   document.getElementById('sub-'+id).classList.add('active');
+  if(id==='smx')renderDeptMatrix();
   updateSumPrintHint();
   setTimeout(syncTblHeight,50);
 }
