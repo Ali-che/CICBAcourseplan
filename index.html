@@ -672,11 +672,11 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   </div>
   <div id="sub-stc" class="spanel active">
     <div class="fbar">
+      <label>学年学期</label>
+      <select id="f-tc-s" onchange="renderTchr()"><option value="">全部</option></select>
       <label>专业</label>
       <select id="f-tc-d" onchange="filterTchrByDept()"><option value="">全部</option></select>
       <label>任课老师</label><select id="f-tc" onchange="renderTchr()"><option value="">请选择</option></select>
-      <label>学期</label>
-      <select id="f-tc-s" onchange="renderTchr()"><option value="">全部</option></select>
       <label>课程类型</label>
       <select id="f-tc-t" onchange="renderTchr()"><option value="">全部</option><option>正常</option><option>英文</option><option>CD-实习</option><option>实习</option><option>SG</option><option>Capstone</option></select>
       <input id="f-tc-q" oninput="renderTchr()" placeholder="🔍 课程代码 / 英文名 / 班级" style="width:200px">
