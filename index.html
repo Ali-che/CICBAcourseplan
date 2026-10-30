@@ -692,11 +692,11 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   </div>
   <div id="sub-sco" class="spanel">
     <div class="fbar">
+      <label>学期</label>
+      <select id="f-co-s" onchange="renderCoh()"><option value="">全部</option></select>
       <label>专业</label>
       <select id="f-co-d" onchange="filterCohByDept()"><option value="">全部</option></select>
       <label>届别</label><select id="f-co" onchange="renderCoh()"><option value="">请选择</option></select>
-      <label>学期</label>
-      <select id="f-co-s" onchange="renderCoh()"><option value="">全部</option></select>
       <input id="f-co-q" oninput="renderCoh()" placeholder="🔍 课程代码 / 英文名 / 班级" style="width:200px">
     </div>
     <div class="card">
@@ -710,10 +710,10 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   </div>
   <div id="sub-sss" class="spanel">
     <div class="fbar">
-      <label>搜索</label><input id="f-stu" placeholder="🔍 姓名 / 学号" style="width:150px" oninput="renderSpStu()">
-      <label>学生专业</label><select id="f-sm" onchange="renderSpStu()"><option value="">全部</option></select>
       <label>学期</label>
       <select id="f-sp-sem" onchange="renderSpStu()"><option value="">全部</option></select>
+      <label>学生专业</label><select id="f-sm" onchange="renderSpStu()"><option value="">全部</option></select>
+      <label>搜索</label><input id="f-stu" placeholder="🔍 姓名 / 学号" style="width:150px" oninput="renderSpStu()">
       <input id="f-sss-q" oninput="renderSpStu()" placeholder="🔍 课程代码 / 英文名" style="width:170px">
     </div>
     <div class="card">
@@ -724,11 +724,11 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   </div>
   <div id="sub-sst" class="spanel">
     <div class="fbar">
+      <label>学期</label>
+      <select id="f-st-s" onchange="renderSpTchr()"><option value="">全部</option></select>
       <label>专业</label>
       <select id="f-st-d" onchange="filterSpTchrByDept()"><option value="">全部</option></select>
       <label>授课老师</label><select id="f-st" onchange="renderSpTchr()"><option value="">请选择</option></select>
-      <label>学期</label>
-      <select id="f-st-s" onchange="renderSpTchr()"><option value="">全部</option></select>
       <input id="f-sst-q" oninput="renderSpTchr()" placeholder="🔍 课程代码 / 英文名" style="width:170px">
     </div>
     <div class="card">
@@ -739,8 +739,8 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   </div>
   <div id="sub-smx" class="spanel">
     <div class="fbar">
-      <label>专业</label><select id="f-mx-d" onchange="renderDeptMatrix()"><option value="">请选择</option></select>
       <label>学年学期</label><select id="f-mx-s" onchange="renderDeptMatrix()"><option value="">请选择</option></select>
+      <label>专业</label><select id="f-mx-d" onchange="renderDeptMatrix()"><option value="">请选择</option></select>
       <span style="font-size:11px;color:#888">行=课程 · 列=该专业各届别 · 格=人数</span>
     </div>
     <div class="card">
