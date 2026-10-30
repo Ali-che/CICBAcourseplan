@@ -3161,15 +3161,25 @@ function buildEG(id,cc){
   const g=document.getElementById(id);if(!g)return;g.innerHTML='';g.style.display='block';
   const cm={};if(cc)cc.forEach(x=>cm[x.cohort]=x.count);
   const sel=document.createElement('div');sel.id='s-eg-sel';sel.style.cssText='display:flex;flex-wrap:wrap;gap:6px;min-height:32px;padding:7px 8px;border:0.5px dashed #AFA9EC;border-radius:8px;margin-bottom:10px';g.appendChild(sel);
-  const pool=document.createElement('div');pool.id='s-eg-pool';pool.style.cssText='display:flex;flex-wrap:wrap;gap:7px';
+  const pool=document.createElement('div');pool.id='s-eg-pool';pool.style.cssText='display:flex;flex-direction:column;gap:9px';
   const gradWrap=document.createElement('div');gradWrap.id='s-eg-grad';gradWrap.style.cssText='display:none;flex-wrap:wrap;gap:7px;margin-top:8px;opacity:.6';
   let gradN=0;
-  Object.entries(CBD).forEach(([d,cohorts])=>{cohorts.forEach(cohort=>{
-    const chk=cm.hasOwnProperty(cohort);
-    const grad=(typeof _cohGraduated==='function'&&_cohGraduated(cohort));
-    const w=_egPill(d,cohort,chk,cm[cohort]||'');
-    if(grad&&!chk){gradWrap.appendChild(w);gradN++;}else pool.appendChild(w);
-  });});
+  Object.entries(CBD).forEach(([d,cohorts])=>{
+    const act=[];
+    cohorts.forEach(cohort=>{
+      const chk=cm.hasOwnProperty(cohort);
+      const grad=(typeof _cohGraduated==='function'&&_cohGraduated(cohort));
+      const w=_egPill(d,cohort,chk,cm[cohort]||'');
+      if(grad&&!chk){gradWrap.appendChild(w);gradN++;}else act.push(w);
+    });
+    if(act.length){
+      const grp=document.createElement('div');grp.className='egdept';grp.dataset.dgrp=d;
+      const hdr=document.createElement('div');hdr.textContent=d;hdr.style.cssText='font-size:11px;color:#9a93c9;font-weight:600;margin-bottom:5px;letter-spacing:.04em';
+      const pills=document.createElement('div');pills.style.cssText='display:flex;flex-wrap:wrap;gap:7px';
+      act.forEach(w=>pills.appendChild(w));
+      grp.appendChild(hdr);grp.appendChild(pills);pool.appendChild(grp);
+    }
+  });
   g.appendChild(pool);
   if(gradN>0){const tgl=document.createElement('button');tgl.type='button';tgl.style.cssText='font-size:12px;color:#888;background:none;border:none;cursor:pointer;padding:6px 0;margin-top:4px;display:block';tgl.textContent='▸ '+gradN+' 个已毕业';tgl.onclick=function(){var open=gradWrap.style.display==='none';gradWrap.style.display=open?'flex':'none';tgl.textContent=(open?'▾ ':'▸ ')+gradN+' 个已毕业';};g.appendChild(tgl);}
   g.appendChild(gradWrap);
@@ -3187,7 +3197,11 @@ function egRefreshSel(){
   });
 }
 function egFilterPool(){
-  document.querySelectorAll('#s-eg-pool .ei, #s-eg-grad .ei').forEach(el=>{
+  document.querySelectorAll('#s-eg-pool .egdept').forEach(grp=>{
+    const d=grp.dataset.dgrp,hasSel=!!grp.querySelector('input[type=checkbox]:checked');
+    grp.style.display=(selDpts.size===0||selDpts.has(d)||hasSel)?'':'none';
+  });
+  document.querySelectorAll('#s-eg-grad .ei').forEach(el=>{
     const cb=el.querySelector('input[type=checkbox]');
     el.style.display=((cb&&cb.checked)||selDpts.size===0||selDpts.has(el.dataset.d))?'':'none';
   });
@@ -3733,21 +3747,20 @@ function mBuildCohGrid(existCC){
   const grid=document.getElementById('m-coh-grid');if(!grid)return;grid.innerHTML='';grid.style.display='block';
   const cm={};(existCC||[]).forEach(x=>cm[x.cohort]=x.count);
   const sel=document.createElement('div');sel.id='m-coh-sel';sel.style.cssText='display:flex;flex-wrap:wrap;gap:6px;min-height:32px;padding:7px 8px;border:0.5px dashed #AFA9EC;border-radius:8px;margin-bottom:10px';grid.appendChild(sel);
-  const pool=document.createElement('div');pool.id='m-coh-pool';pool.style.cssText='display:flex;flex-wrap:wrap;gap:7px';
+  const pool=document.createElement('div');pool.id='m-coh-pool';pool.style.cssText='display:flex;flex-direction:column;gap:9px';
   const gradWrap=document.createElement('div');gradWrap.id='m-coh-grad';gradWrap.style.cssText='display:none;flex-wrap:wrap;gap:7px;margin-top:8px;opacity:.6';
   const renderedNames=new Set();let gradN=0;
-  Object.entries(CBD).forEach(([d,cohorts])=>{cohorts.forEach(cohort=>{
-    renderedNames.add(cohort);
-    const chk=cm.hasOwnProperty(cohort);
-    const grad=(typeof _cohGraduated==='function'&&_cohGraduated(cohort));
-    const w=_mPill(d,cohort,chk,cm[cohort]||'',false);
-    if(grad&&!chk){gradWrap.appendChild(w);gradN++;}else pool.appendChild(w);
-  });});
+  const _grp=function(d){const grp=document.createElement('div');grp.className='egdept';grp.dataset.dgrp=d;const hdr=document.createElement('div');hdr.textContent=d;hdr.style.cssText='font-size:11px;color:#9a93c9;font-weight:600;margin-bottom:5px;letter-spacing:.04em';const pills=document.createElement('div');pills.style.cssText='display:flex;flex-wrap:wrap;gap:7px';grp.appendChild(hdr);grp.appendChild(pills);grp._pills=pills;return grp;};
+  Object.entries(CBD).forEach(([d,cohorts])=>{
+    const act=[];
+    cohorts.forEach(cohort=>{renderedNames.add(cohort);const chk=cm.hasOwnProperty(cohort);const grad=(typeof _cohGraduated==='function'&&_cohGraduated(cohort));const w=_mPill(d,cohort,chk,cm[cohort]||'',false);if(grad&&!chk){gradWrap.appendChild(w);gradN++;}else act.push(w);});
+    if(act.length){const grp=_grp(d);act.forEach(w=>grp._pills.appendChild(w));pool.appendChild(grp);}
+  });
   grid.appendChild(pool);
   if(gradN>0){const tgl=document.createElement('button');tgl.type='button';tgl.id='m-coh-gradtog';tgl.style.cssText='font-size:12px;color:#888;background:none;border:none;cursor:pointer;padding:6px 0;margin-top:4px;display:block';tgl.textContent='▸ '+gradN+' 个已毕业';tgl.onclick=function(){var open=gradWrap.style.display==='none';gradWrap.style.display=open?'flex':'none';tgl.textContent=(open?'▾ ':'▸ ')+gradN+' 个已毕业';};grid.appendChild(tgl);}
   grid.appendChild(gradWrap);
   const orphans=(existCC||[]).filter(x=>!renderedNames.has(x.cohort));
-  orphans.forEach(x=>{const m=String(x.cohort).match(/^[A-Za-z]+/);const dept=m?m[0].substring(0,2).toUpperCase():'?';pool.appendChild(_mPill(dept,x.cohort,true,x.count||'',true));});
+  if(orphans.length){const grp=_grp('⚠ 不在届别库');orphans.forEach(x=>{const m=String(x.cohort).match(/^[A-Za-z]+/);const dept=m?m[0].substring(0,2).toUpperCase():'?';const w=_mPill(dept,x.cohort,true,x.count||'',true);grp._pills.appendChild(w);});pool.appendChild(grp);}
   mRefreshSel();mFilterCohGrid();updateMCohTotal();
 }
 function mRefreshSel(){
@@ -3762,7 +3775,11 @@ function mRefreshSel(){
   });
 }
 function mFilterCohGrid(){
-  document.querySelectorAll('#m-coh-pool .ei, #m-coh-grad .ei').forEach(el=>{
+  document.querySelectorAll('#m-coh-pool .egdept').forEach(grp=>{
+    const d=grp.dataset.dgrp,hasSel=!!grp.querySelector('input[type=checkbox]:checked');
+    grp.style.display=(_mSelDpts.size===0||_mSelDpts.has(d)||hasSel)?'':'none';
+  });
+  document.querySelectorAll('#m-coh-grad .ei').forEach(el=>{
     const cb=el.querySelector('input[type=checkbox]');
     el.style.display=((cb&&cb.checked)||_mSelDpts.size===0||_mSelDpts.has(el.dataset.d))?'':'none';
   });
