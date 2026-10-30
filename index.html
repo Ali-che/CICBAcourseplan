@@ -3206,6 +3206,7 @@ function buildEG(id,cc){
   const g=document.getElementById(id);if(!g)return;g.innerHTML='';g.style.display='block';
   const cm={};if(cc)cc.forEach(x=>cm[x.cohort]=x.count);
   const sel=document.createElement('div');sel.id='s-eg-sel';sel.style.cssText='display:flex;flex-wrap:wrap;gap:6px;min-height:32px;padding:7px 8px;border:0.5px dashed #AFA9EC;border-radius:8px;margin-bottom:10px';g.appendChild(sel);
+  const hint=document.createElement('div');hint.id='s-eg-hint';hint.style.cssText='font-size:12px;color:#aaa;padding:12px 2px;display:none';hint.textContent='↑ 请先点选上方专业，显示该专业的各届别';g.appendChild(hint);
   const pool=document.createElement('div');pool.id='s-eg-pool';pool.style.cssText='display:flex;flex-direction:column;gap:9px';
   const gradWrap=document.createElement('div');gradWrap.id='s-eg-grad';gradWrap.style.cssText='display:none;flex-wrap:wrap;gap:7px;margin-top:8px;opacity:.6';
   let gradN=0;
@@ -3220,7 +3221,7 @@ function buildEG(id,cc){
     if(act.length)pool.appendChild(_deptGroupEl(d,act));
   });
   g.appendChild(pool);
-  if(gradN>0){const tgl=document.createElement('button');tgl.type='button';tgl.style.cssText='font-size:12px;color:#888;background:none;border:none;cursor:pointer;padding:6px 0;margin-top:4px;display:block';tgl.textContent='▸ '+gradN+' 个已毕业';tgl.onclick=function(){var open=gradWrap.style.display==='none';gradWrap.style.display=open?'flex':'none';tgl.textContent=(open?'▾ ':'▸ ')+gradN+' 个已毕业';};g.appendChild(tgl);}
+  if(gradN>0){const tgl=document.createElement('button');tgl.type='button';tgl.id='s-eg-gradtgl';tgl.style.cssText='font-size:12px;color:#888;background:none;border:none;cursor:pointer;padding:6px 0;margin-top:4px;display:block';tgl.textContent='▸ '+gradN+' 个已毕业';tgl.onclick=function(){var open=gradWrap.style.display==='none';gradWrap.style.display=open?'flex':'none';tgl.textContent=(open?'▾ ':'▸ ')+gradN+' 个已毕业';};g.appendChild(tgl);}
   g.appendChild(gradWrap);
   egRefreshSel();egFilterPool();updateSEGTotal();
 }
@@ -3236,14 +3237,19 @@ function egRefreshSel(){
   });
 }
 function egFilterPool(){
+  // 未选专业时不铺开所有届别:仅显示已选专业(或已勾选的届别),先点上方专业再展出
   document.querySelectorAll('#s-eg-pool .egdept').forEach(grp=>{
     const d=grp.dataset.dgrp,hasSel=!!grp.querySelector('input[type=checkbox]:checked');
-    grp.style.display=(selDpts.size===0||selDpts.has(d)||hasSel)?'':'none';
+    grp.style.display=(selDpts.has(d)||hasSel)?'':'none';
   });
   document.querySelectorAll('#s-eg-grad .ei').forEach(el=>{
     const cb=el.querySelector('input[type=checkbox]');
-    el.style.display=((cb&&cb.checked)||selDpts.size===0||selDpts.has(el.dataset.d))?'':'none';
+    el.style.display=((cb&&cb.checked)||selDpts.has(el.dataset.d))?'':'none';
   });
+  const anySel=!!document.querySelector('#s-eg-pool .ei input[type=checkbox]:checked, #s-eg-grad .ei input[type=checkbox]:checked');
+  const empty=selDpts.size===0&&!anySel;
+  const hint=document.getElementById('s-eg-hint');if(hint)hint.style.display=empty?'':'none';
+  const gtgl=document.getElementById('s-eg-gradtgl');if(gtgl)gtgl.style.display=(selDpts.size===0)?'none':'';
   updateSEGTotal();
 }
 function getEG(){const r=[];document.querySelectorAll('#s-eg input[type=checkbox]:checked').forEach(cb=>{const k=sk(cb.value),n=document.getElementById('cnt-'+k);r.push({cohort:cb.value,count:n?parseInt(n.value)||0:0});});return r;}
