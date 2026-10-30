@@ -4406,7 +4406,7 @@ function renderDeptMatrix(){
     const cmap={};(r.cc||[]).forEach(c=>{cmap[c.cohort]=c.count;});
     let rowTot=0;
     const cells=cohs.map(c=>{const n=cmap[c];if(n!=null){colTot[c]+=(+n||0);rowTot+=(+n||0);return '<td style="text-align:center;background:#F1F8F4;color:#1b7a5a;font-weight:600;border-top:0.5px solid #eee">'+eh(String(n))+'</td>';}return '<td style="text-align:center;color:#dcdce4;border-top:0.5px solid #eee">·</td>';}).join('');
-    h+='<tr>'
+    h+='<tr onclick="startES(\''+r.id+'\')" style="cursor:pointer" title="点击编辑这笔排课">'
       +'<td style="position:sticky;left:0;background:#fff;padding:5px 10px;white-space:nowrap;border-top:0.5px solid #eee"><b style="color:#185FA5;font-family:ui-monospace">'+eh(r.course)+'</b>'+(r.btec?' <span style="background:#534AB7;color:#fff;font-size:8px;padding:0 5px;border-radius:10px;vertical-align:middle">BTEC</span>':'')+' <span style="color:#999;font-size:10px">'+eh(r.en||'')+'</span></td>'
       +'<td style="text-align:center;border-top:0.5px solid #eee">'+halfBadge(r.half)+'</td>'
       +'<td style="font-size:11px;padding:5px 8px;white-space:nowrap;border-top:0.5px solid #eee">'+(r.tc?eh(r.tc):'<span style="color:#B91C1C">⏳待定</span>')+'</td>'
