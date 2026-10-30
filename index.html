@@ -516,6 +516,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <button class="btn btn-sm no-print" onclick="exportSchExcel()" style="color:#1a6b2f;border-color:#9ed4ae" title="导出当前筛选结果为 Excel">📊 Excel</button>
         <button class="btn btn-sm no-print" onclick="openCsvImport()" style="color:#854F0B;border-color:#FCD34D" title="从 CSV 批量导入">📥 批量导入</button>
         <button class="btn btn-sm no-print" onclick="openCohortCleanup()" style="color:#7c2d92;border-color:#d8b4e2" title="精准移除某个届别:独占的整笔删,共享的仅摘除该届别">🧹 按届别清理</button>
+        <button id="sch-addcoh-btn" class="btn btn-sm no-print" onclick="openAddCoh()" style="color:#1b7a5a;border-color:#9FE1CB;display:none" title="新增班级/届别(admin 与 Director 可用)">➕ 新增班级</button>
         <button id="sch-batch-del" class="btn btn-sm no-print" onclick="deleteFiltered('schedule')" style="color:#a32d2d;border-color:#f7c1c1;display:none" title="按目前筛选条件删除全部">🗑 批量删除 <span id="sch-batch-del-n">0</span></button>
         <span style="width:1px;height:18px;background:#e0e0e0;margin:0 2px"></span>
         <span class="no-print" style="font-size:11px;color:#888">依当前筛选 · 横向 A4</span>
@@ -1299,8 +1300,11 @@ function applyRoleVisibility(){
     if(!canOps && opsTabBtn.classList.contains('active')) switchTab('sch');
   }
   // 账号权限子分页:仅 admin 可见;非 admin 若正停在该子页则退回「学期」
+  const _canCoh = (currentRole==='admin'||currentRole==='director');
   const addcoh = document.getElementById('addcoh-wrap');
-  if(addcoh) addcoh.style.display = (currentRole==='admin'||currentRole==='director') ? '' : 'none';
+  if(addcoh) addcoh.style.display = _canCoh ? '' : 'none';
+  const addcohBtn = document.getElementById('sch-addcoh-btn');
+  if(addcohBtn) addcohBtn.style.display = _canCoh ? '' : 'none';
   const acctBtn = document.getElementById('ops-tab-acct');
   if(acctBtn){
     acctBtn.style.display = (currentRole==='admin') ? '' : 'none';
@@ -1473,6 +1477,7 @@ async function opsAddCoh(){const coh=document.getElementById('ops-coh-code').val
 async function opsDelCoh(id,coh){const n=opsUsedByCohort(coh);if(!confirm('删除届别「'+coh+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 笔排课用到此届别。仍要删?':'')))return;opsAfter(await gasPost('adminDelCohort',{id}),'已删除届别 '+coh);}
 // 排课表底部「新增班级」(admin + Director 可用;后端 _admin 允许 director)
 function toggleAddCoh(){var b=document.getElementById('addcoh-body'),a=document.getElementById('addcoh-arrow');if(!b)return;var open=(b.style.display==='none');b.style.display=open?'':'none';if(a)a.textContent=open?'▾':'▸';if(open)addCohFillDept();}
+function openAddCoh(){var w=document.getElementById('addcoh-wrap');if(!w)return;var b=document.getElementById('addcoh-body');if(b&&b.style.display==='none')toggleAddCoh();try{w.scrollIntoView({behavior:'smooth',block:'center'});}catch(e){try{w.scrollIntoView();}catch(_){}}try{setTimeout(function(){var c=document.getElementById('addcoh-code');if(c)c.focus();},300);}catch(e){}}
 function addCohFillDept(){var dd=document.getElementById('addcoh-dept');if(!dd)return;var ds=[...new Set([].concat((typeof DEPTS!=='undefined'?DEPTS:[]).map(function(d){return d&&d.code;}),Object.keys(typeof CBD!=='undefined'?CBD:{})))].filter(Boolean).sort();var cur=dd.value;dd.innerHTML=ds.map(function(d){return '<option'+(d===cur?' selected':'')+'>'+eh(d)+'</option>';}).join('');}
 function addCohDurChange(){var s=(document.getElementById('addcoh-dur')||{}).value;var n=document.getElementById('addcoh-dur-n'),u=document.getElementById('addcoh-dur-unit');var other=(s==='other');if(n)n.style.display=other?'':'none';if(u)u.style.display=other?'':'none';}
 async function addCohSubmit(){
