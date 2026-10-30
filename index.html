@@ -363,9 +363,12 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 <div class="pin-overlay" id="pin-overlay">
   <div class="pin-box">
     <div class="pin-logo">CIC 本科排课管理系统</div>
-    <div class="pin-sub">v2569 · 2026年7月更新</div>
-    <input class="pin-input" id="pin-input" type="password" placeholder="••••••••"
-      maxlength="20" onkeydown="if(event.key==='Enter')checkPin()">
+    <div class="pin-sub">v2569 · 2026年10月更新</div>
+    <div style="position:relative">
+      <input class="pin-input" id="pin-input" type="password" placeholder="••••••••" style="padding-right:44px"
+        maxlength="20" onkeydown="if(event.key==='Enter')checkPin()">
+      <span id="pin-eye" onclick="togglePinEye()" title="显示 / 隐藏 PIN" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;line-height:1;color:#8a8fb5;user-select:none">👁</span>
+    </div>
     <button class="pin-btn" onclick="checkPin()">进入系统</button>
     <div class="pin-err" id="pin-err"></div>
   </div>
@@ -1212,6 +1215,7 @@ try { currentToken  = localStorage.getItem(TOKEN_KEY)  || ''; } catch(e){}
 try { currentRole   = localStorage.getItem(ROLE_KEY)   || 'teacher'; } catch(e){}
 
 // v7.5: PIN 验证整个搬到后端。前端不再持有 PIN 列表。
+function togglePinEye(){var i=document.getElementById('pin-input'),e=document.getElementById('pin-eye');if(!i)return;if(i.type==='password'){i.type='text';if(e)e.textContent='🙈';}else{i.type='password';if(e)e.textContent='👁';}try{i.focus();}catch(_){}}
 async function checkPin(){
   const val = document.getElementById('pin-input').value.trim();
   if(!val) return;
