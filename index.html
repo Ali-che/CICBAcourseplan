@@ -444,7 +444,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   <button class="tab" id="tab-notice" onclick="switchTab('notice')">📌 教务须知</button>
   <button class="tab" id="tab-sta" onclick="switchTab('sta')">📈 教学统计</button>
   <button class="tab" id="tab-ops" onclick="switchTab('ops')" style="display:none">⚙️ 后台操作</button>
-  <button class="tab" id="tab-addcoh" onclick="openAddCoh()" title="新增班级/届别" style="display:none;margin-left:auto;color:#1b7a5a;border-color:#9FE1CB">➕ 新增班级</button>
+  <button class="tab" id="tab-addcoh" onclick="openAddCoh()" title="新增届别" style="display:none;margin-left:auto;color:#1b7a5a;border-color:#9FE1CB">➕ 新增届别</button>
 </div>
 </div><!-- /.sticky-top -->
 
@@ -531,7 +531,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <button class="btn btn-sm no-print" onclick="exportSchExcel()" style="color:#1a6b2f;border-color:#9ed4ae" title="导出当前筛选结果为 Excel">📊 Excel</button>
         <button class="btn btn-sm no-print" onclick="openCsvImport()" style="color:#854F0B;border-color:#FCD34D" title="从 CSV 批量导入">📥 批量导入</button>
         <button class="btn btn-sm no-print" onclick="openCohortCleanup()" style="color:#7c2d92;border-color:#d8b4e2" title="精准移除某个届别:独占的整笔删,共享的仅摘除该届别">🧹 按届别清理</button>
-        <button id="sch-addcoh-btn" class="btn btn-sm no-print" onclick="openAddCoh()" style="color:#1b7a5a;border-color:#9FE1CB;display:none" title="新增班级/届别(admin 与 Director 可用)">➕ 新增班级</button>
+        <button id="sch-addcoh-btn" class="btn btn-sm no-print" onclick="openAddCoh()" style="color:#1b7a5a;border-color:#9FE1CB;display:none" title="新增届别(admin 与 Director 可用)">➕ 新增届别</button>
         <button id="sch-batch-del" class="btn btn-sm no-print" onclick="deleteFiltered('schedule')" style="color:#a32d2d;border-color:#f7c1c1;display:none" title="按目前筛选条件删除全部">🗑 批量删除 <span id="sch-batch-del-n">0</span></button>
         <span style="width:1px;height:18px;background:#e0e0e0;margin:0 2px"></span>
         <span class="no-print" style="font-size:11px;color:#888">依当前筛选 · 横向 A4</span>
@@ -555,7 +555,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 <!-- ══ 新增班级 弹窗(admin + Director) ════════ -->
 <div id="addcoh-modal" onclick="closeAddCoh()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9999;align-items:center;justify-content:center">
   <div onclick="event.stopPropagation()" style="background:#fff;border-radius:12px;padding:18px 20px;min-width:340px;max-width:92vw;box-shadow:0 12px 44px rgba(0,0,0,.25)">
-    <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;color:#3C3489;font-size:15px">➕ 新增班级</span><span onclick="closeAddCoh()" style="cursor:pointer;color:#999;font-size:16px">✕</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;color:#3C3489;font-size:15px">➕ 新增届别</span><span onclick="closeAddCoh()" style="cursor:pointer;color:#999;font-size:16px">✕</span></div>
     <div style="font-size:11px;color:#999;margin:2px 0 14px">专业 + 届别代码 + 修业年限 → 自动算毕业</div>
     <div style="display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:center;font-size:13px">
       <label style="color:#555">专业</label><select id="addcoh-dept" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px"></select>
@@ -1473,15 +1473,24 @@ function opsDeptView(){
 async function opsAddDept(){const code=document.getElementById('ops-dept-code').value.trim();if(!code){alert('请输入专业代码');return;}opsAfter(await gasPost('adminAddDept',{code,name:document.getElementById('ops-dept-name').value.trim()}),'已新增/更新专业 '+code);}
 async function opsDelDept(code){const n=opsUsedByDept(code);if(!confirm('删除专业「'+code+'」?'+(n>0?'\n\n⚠️ 该专业下有 '+n+' 个届别,删专业不会删届别但会失去归属。仍要删?':'')))return;opsAfter(await gasPost('adminDelDept',{code}),'已删除专业 '+code);}
 // ── 届别 ──
+var _cohDeptF='',_cohHideGrad=true;
 function opsCohView(){
   const deptOpts=(opsD.depts||[]).map(d=>'<option value="'+eh(d.code)+'">'+eh(d.code)+'</option>').join('');
-  const list=(opsD.cohorts||[]).slice().sort((a,b)=>String(a.dept).localeCompare(String(b.dept))||((_cohGraduated(a.cohort)?1:0)-(_cohGraduated(b.cohort)?1:0))||String(a.cohort).localeCompare(String(b.cohort),undefined,{numeric:true,sensitivity:'base'}));
+  const filtOpts=(opsD.depts||[]).map(d=>'<option value="'+eh(d.code)+'"'+(d.code===_cohDeptF?' selected':'')+'>'+eh(d.code)+'</option>').join('');
+  let list=(opsD.cohorts||[]).slice().sort((a,b)=>String(a.dept).localeCompare(String(b.dept))||((_cohGraduated(a.cohort)?1:0)-(_cohGraduated(b.cohort)?1:0))||String(a.cohort).localeCompare(String(b.cohort),undefined,{numeric:true,sensitivity:'base'}));
+  const total=list.length;
+  if(_cohDeptF)list=list.filter(c=>c.dept===_cohDeptF);
+  if(_cohHideGrad)list=list.filter(c=>!_cohGraduated(c.cohort));
   const body=list.map(c=>{var grad=_cohGraduated(c.cohort);var yrs=_cohYears(c.cohort);var gb=_cohGradBE(c.cohort);
     return '<tr style="'+(grad?'opacity:.5':'')+'"><td>'+eh(c.dept)+'</td><td style="font-family:ui-monospace,monospace">'+eh(c.cohort)+'</td>'
     +'<td style="text-align:center;font-size:12px"><input type="number" min="0.5" max="8" step="0.5" value="'+yrs+'" onchange="opsSetCohYears(\''+jsq(c.cohort)+'\',this.value)" style="width:52px;text-align:center;font-size:12px;padding:2px;border:0.5px solid #cbd5e1;border-radius:5px" title="修业年限(可小数,改了即存)"> 年'+(COHORT_YEARS[c.cohort]==null?'<span style="color:#ccc" title="默认值,尚未设定">*</span>':'')+'</td>'
     +'<td style="text-align:center">'+(grad?('<span style="background:#eee;color:#888;font-size:10px;border-radius:4px;padding:1px 7px">已毕业'+(gb?' '+gb:'')+'</span>'):'<span style="background:#E3F7EF;color:#1b7a5a;font-size:10px;border-radius:4px;padding:1px 7px">在读</span>')+'</td>'
     +'<td style="text-align:right"><button class="ops-del" onclick="opsDelCoh('+c.id+',\''+jsq(c.cohort)+'\')">删除</button></td></tr>';}).join('')||'<tr><td colspan="5" style="color:#aaa">无</td></tr>';
-  return '<div class="ops-add"><div class="fg"><label>专业</label><select id="ops-coh-dept">'+deptOpts+'</select></div><div class="fg"><label>届别代码</label><input id="ops-coh-code" placeholder="TM70"></div><button class="btn btn-p" onclick="opsAddCoh()">+ 新增</button> <span style="font-size:11px;color:#888">年限在「排课表→新增班级」里设;此处新增暂用默认(ZSB=2/否则3)</span></div><div class="tbl-wrap" style="max-height:calc(100vh - 430px)"><table><thead><tr><th>专业</th><th>届别</th><th>年限</th><th>状态</th><th></th></tr></thead><tbody>'+body+'</tbody></table></div>';
+  return '<div class="ops-add"><div class="fg"><label>专业</label><select id="ops-coh-dept">'+deptOpts+'</select></div><div class="fg"><label>届别代码</label><input id="ops-coh-code" placeholder="TM70"></div><button class="btn btn-p" onclick="opsAddCoh()">+ 新增</button> <span style="font-size:11px;color:#888">年限在「排课表→新增届别」里设;此处新增暂用默认(ZSB=2/否则3)</span></div>'
+    +'<div class="fbar" style="margin:4px 0 8px;align-items:center">筛选 <select onchange="_cohDeptF=this.value;opsRenderSec()" style="font-size:12px;padding:4px 8px"><option value="">全部专业</option>'+filtOpts+'</select>'
+    +'<label style="font-size:12px;color:#555;cursor:pointer;margin-left:10px"><input type="checkbox"'+(_cohHideGrad?'':' checked')+' onchange="_cohHideGrad=!this.checked;opsRenderSec()" style="width:auto;vertical-align:middle"> 显示已毕业</label>'
+    +'<span style="font-size:11px;color:#888;margin-left:10px">显示 '+list.length+' / 共 '+total+' 届</span></div>'
+    +'<div class="tbl-wrap" style="max-height:calc(100vh - 470px)"><table><thead><tr><th>专业</th><th>届别</th><th>年限</th><th>状态</th><th></th></tr></thead><tbody>'+body+'</tbody></table></div>';
 }
 async function opsAddCoh(){const coh=document.getElementById('ops-coh-code').value.trim();if(!coh){alert('请输入届别代码');return;}opsAfter(await gasPost('adminAddCohort',{dept:document.getElementById('ops-coh-dept').value,cohort:coh}),'已新增届别 '+coh);}
 async function opsDelCoh(id,coh){const n=opsUsedByCohort(coh);if(!confirm('删除届别「'+coh+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 笔排课用到此届别。仍要删?':'')))return;opsAfter(await gasPost('adminDelCohort',{id}),'已删除届别 '+coh);}
