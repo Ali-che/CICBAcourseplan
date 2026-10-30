@@ -534,6 +534,27 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     </div>
     <div class="empty" id="sch-em">暂无排课记录</div>
   </div>
+  <div id="addcoh-wrap" style="display:none;margin-top:14px">
+    <div style="background:#fff;border-radius:12px;padding:14px 18px;box-shadow:0 1px 3px rgba(0,0,0,.06)">
+      <div onclick="toggleAddCoh()" style="cursor:pointer;font-weight:700;color:#534AB7;font-size:13px;user-select:none"><span id="addcoh-arrow">▸</span> ➕ 新增班级 <span style="font-weight:400;font-size:11px;color:#999">（专业 + 届别代码 + 修业年限 → 自动算毕业）</span></div>
+      <div id="addcoh-body" style="display:none;margin-top:12px">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <label style="font-size:12px;color:#555">专业</label>
+          <select id="addcoh-dept" style="font-size:13px;padding:5px 8px;border:0.5px solid #cbd5e1;border-radius:6px"></select>
+          <input id="addcoh-code" placeholder="届别代码(如 TM70)" style="font-size:13px;padding:5px 8px;border:0.5px solid #cbd5e1;border-radius:6px;width:160px">
+          <label style="font-size:12px;color:#555">修业年限</label>
+          <select id="addcoh-dur" onchange="addCohDurChange()" style="font-size:13px;padding:5px 8px;border:0.5px solid #cbd5e1;border-radius:6px">
+            <option value="3">全新生 · 3 年</option>
+            <option value="2">专升本(ZSB) · 2 年</option>
+            <option value="other">其他…</option>
+          </select>
+          <input id="addcoh-dur-n" type="number" min="1" max="8" value="4" style="display:none;width:56px;font-size:13px;padding:5px 6px;border:0.5px solid #cbd5e1;border-radius:6px"><span id="addcoh-dur-unit" style="display:none;font-size:12px;color:#555">年</span>
+          <button class="btn btn-p btn-sm" onclick="addCohSubmit()">+ 新增</button>
+        </div>
+        <div id="addcoh-msg" style="font-size:12px;margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ══ 特别排课 ════════════════════════════ -->
@@ -1278,6 +1299,8 @@ function applyRoleVisibility(){
     if(!canOps && opsTabBtn.classList.contains('active')) switchTab('sch');
   }
   // 账号权限子分页:仅 admin 可见;非 admin 若正停在该子页则退回「学期」
+  const addcoh = document.getElementById('addcoh-wrap');
+  if(addcoh) addcoh.style.display = (currentRole==='admin'||currentRole==='director') ? '' : 'none';
   const acctBtn = document.getElementById('ops-tab-acct');
   if(acctBtn){
     acctBtn.style.display = (currentRole==='admin') ? '' : 'none';
@@ -1438,11 +1461,39 @@ async function opsDelDept(code){const n=opsUsedByDept(code);if(!confirm('删除�
 // ── 届别 ──
 function opsCohView(){
   const deptOpts=(opsD.depts||[]).map(d=>'<option value="'+eh(d.code)+'">'+eh(d.code)+'</option>').join('');
-  const body=(opsD.cohorts||[]).slice().sort((a,b)=>(a.dept+a.cohort).localeCompare(b.dept+b.cohort,undefined,{numeric:true,sensitivity:'base'})).map(c=>'<tr><td>'+eh(c.dept)+'</td><td style="font-family:ui-monospace,monospace">'+eh(c.cohort)+'</td><td style="text-align:right"><button class="ops-del" onclick="opsDelCoh('+c.id+',\''+jsq(c.cohort)+'\')">删除</button></td></tr>').join('')||'<tr><td colspan="3" style="color:#aaa">无</td></tr>';
-  return '<div class="ops-add"><div class="fg"><label>专业</label><select id="ops-coh-dept">'+deptOpts+'</select></div><div class="fg"><label>届别代码</label><input id="ops-coh-code" placeholder="TM70"></div><button class="btn btn-p" onclick="opsAddCoh()">+ 新增</button></div><div class="tbl-wrap" style="max-height:calc(100vh - 430px)"><table><thead><tr><th>专业</th><th>届别</th><th></th></tr></thead><tbody>'+body+'</tbody></table></div>';
+  const list=(opsD.cohorts||[]).slice().sort((a,b)=>String(a.dept).localeCompare(String(b.dept))||((_cohGraduated(a.cohort)?1:0)-(_cohGraduated(b.cohort)?1:0))||String(a.cohort).localeCompare(String(b.cohort),undefined,{numeric:true,sensitivity:'base'}));
+  const body=list.map(c=>{var grad=_cohGraduated(c.cohort);var yrs=_cohYears(c.cohort);var gb=_cohGradBE(c.cohort);
+    return '<tr style="'+(grad?'opacity:.5':'')+'"><td>'+eh(c.dept)+'</td><td style="font-family:ui-monospace,monospace">'+eh(c.cohort)+'</td>'
+    +'<td style="text-align:center;font-size:12px">'+yrs+' 年'+(COHORT_YEARS[c.cohort]==null?'<span style="color:#ccc" title="未设,暂用默认">*</span>':'')+'</td>'
+    +'<td style="text-align:center">'+(grad?('<span style="background:#eee;color:#888;font-size:10px;border-radius:4px;padding:1px 7px">已毕业'+(gb?' '+gb:'')+'</span>'):'<span style="background:#E3F7EF;color:#1b7a5a;font-size:10px;border-radius:4px;padding:1px 7px">在读</span>')+'</td>'
+    +'<td style="text-align:right"><button class="ops-del" onclick="opsDelCoh('+c.id+',\''+jsq(c.cohort)+'\')">删除</button></td></tr>';}).join('')||'<tr><td colspan="5" style="color:#aaa">无</td></tr>';
+  return '<div class="ops-add"><div class="fg"><label>专业</label><select id="ops-coh-dept">'+deptOpts+'</select></div><div class="fg"><label>届别代码</label><input id="ops-coh-code" placeholder="TM70"></div><button class="btn btn-p" onclick="opsAddCoh()">+ 新增</button> <span style="font-size:11px;color:#888">年限在「排课表→新增班级」里设;此处新增暂用默认(ZSB=2/否则3)</span></div><div class="tbl-wrap" style="max-height:calc(100vh - 430px)"><table><thead><tr><th>专业</th><th>届别</th><th>年限</th><th>状态</th><th></th></tr></thead><tbody>'+body+'</tbody></table></div>';
 }
 async function opsAddCoh(){const coh=document.getElementById('ops-coh-code').value.trim();if(!coh){alert('请输入届别代码');return;}opsAfter(await gasPost('adminAddCohort',{dept:document.getElementById('ops-coh-dept').value,cohort:coh}),'已新增届别 '+coh);}
 async function opsDelCoh(id,coh){const n=opsUsedByCohort(coh);if(!confirm('删除届别「'+coh+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 笔排课用到此届别。仍要删?':'')))return;opsAfter(await gasPost('adminDelCohort',{id}),'已删除届别 '+coh);}
+// 排课表底部「新增班级」(admin + Director 可用;后端 _admin 允许 director)
+function toggleAddCoh(){var b=document.getElementById('addcoh-body'),a=document.getElementById('addcoh-arrow');if(!b)return;var open=(b.style.display==='none');b.style.display=open?'':'none';if(a)a.textContent=open?'▾':'▸';if(open)addCohFillDept();}
+function addCohFillDept(){var dd=document.getElementById('addcoh-dept');if(!dd)return;var ds=[...new Set([].concat((typeof DEPTS!=='undefined'?DEPTS:[]).map(function(d){return d&&d.code;}),Object.keys(typeof CBD!=='undefined'?CBD:{})))].filter(Boolean).sort();var cur=dd.value;dd.innerHTML=ds.map(function(d){return '<option'+(d===cur?' selected':'')+'>'+eh(d)+'</option>';}).join('');}
+function addCohDurChange(){var s=(document.getElementById('addcoh-dur')||{}).value;var n=document.getElementById('addcoh-dur-n'),u=document.getElementById('addcoh-dur-unit');var other=(s==='other');if(n)n.style.display=other?'':'none';if(u)u.style.display=other?'':'none';}
+async function addCohSubmit(){
+  var dept=(document.getElementById('addcoh-dept')||{}).value||'';
+  var code=((document.getElementById('addcoh-code')||{}).value||'').trim().replace(/\s+/g,' ');
+  var durSel=(document.getElementById('addcoh-dur')||{}).value||'3';
+  var years=(durSel==='other')?parseInt((document.getElementById('addcoh-dur-n')||{}).value,10):parseInt(durSel,10);
+  var msg=document.getElementById('addcoh-msg');
+  function setMsg(t,ok){if(msg){msg.textContent=t;msg.style.color=ok?'#2e7d32':'#c0392b';}}
+  if(!dept){setMsg('请选专业');return;}
+  if(!code){setMsg('请填届别代码');return;}
+  if(!(years>=1&&years<=8)){setMsg('修业年限请填 1–8 年');return;}
+  var exists=Object.keys(CBD).some(function(d){return (CBD[d]||[]).some(function(c){return String(c).toLowerCase()===code.toLowerCase();});});
+  if(exists){setMsg('「'+code+'」已存在,不重复新增',false);return;}
+  var r=await gasPost('adminAddCohort',{dept:dept,cohort:code});
+  if(!(r&&r.success)){setMsg('新增失败:'+((r&&r.error)||'?(需管理员/主任权限)'),false);return;}
+  await gasPost('adminSetCohortYears',{cohort:code,years:years});
+  setMsg('✅ 已新增 '+code+'（'+years+' 年·末学年 '+(2500+parseInt((code.match(/(\d{2})/)||[0,0])[1],10)+years-1)+'）',true);
+  document.getElementById('addcoh-code').value='';
+  try{await loadRefFromSheets();rebuildUI();}catch(e){}
+}
 // ── 老师库 ──
 function opsTchView(){
   const ed=opsIsEdit('tch');
@@ -2657,8 +2708,10 @@ async function loadRefFromSheets(){
     if(data.teachers&&data.teachers.length)T=data.teachers;
     if(data.cohorts&&data.cohorts.length){
       CBD={};data.cohorts.forEach(c=>{if(!CBD[c.dept])CBD[c.dept]=[];CBD[c.dept].push(c.cohort);});
-      // 班级代码按自然数值排序(TM66<TM67<TM68-2<TM68-2.1<TM68-3<TM68ZSB…),所有下拉读 CBD 即有序
-      Object.keys(CBD).forEach(d=>CBD[d].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'})));
+      // 先载入各届别修业年限(供毕业判定),再排序
+      try{const _cy=await gasGet({action:'cohortYears'});if(_cy&&_cy.success){COHORT_YEARS={};(_cy.rows||[]).forEach(x=>{if(x.cohort!=null)COHORT_YEARS[x.cohort]=x.years;});}}catch(e){}
+      // 排序:在读优先(已毕业沉底),组内按自然数值(TM66<TM67<TM68-2<TM68-2.1<TM68-3<TM68ZSB…);所有下拉读 CBD 即有序
+      Object.keys(CBD).forEach(d=>CBD[d].sort((a,b)=>((_cohGraduated(a)?1:0)-(_cohGraduated(b)?1:0))||String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'})));
     }
     if(data.depts&&data.depts.length)DEPTS=data.depts;  // 完整专业表(供 BTEC 加学生下拉等)
     // v7.3: 接收学期列表
@@ -3852,6 +3905,14 @@ function cohortPrefix(cohort){
   const m=String(cohort||'').match(/^[A-Za-z]+/);
   return m?m[0].substring(0,2).toUpperCase():'';
 }
+// ═══════ §COHORT-GRAD 届别修业年限 + 自动毕业判定 ═══════
+// 年限:新增班级时选(全新生3/专升本2/其他N),存 cohort_years;未设则 fallback(含ZSB=2,否则3)。
+// 入学年=代码第一个两位数+2500;末学年=入学年+年限-1;当前学年<末学年→已毕业。
+var COHORT_YEARS={};
+function _cohYears(code){var y=COHORT_YEARS[code];if(y!=null&&!isNaN(parseInt(y,10)))return parseInt(y,10);return /ZSB/i.test(String(code))?2:3;}
+function _cohGradBE(code){var m=String(code||'').match(/(\d{2})/);if(!m)return null;return 2500+parseInt(m[1],10)+_cohYears(code)-1;}
+function _curBE(){var mx=0;(typeof schD!=='undefined'?schD:[]).forEach(function(r){if(r&&r.sem&&!(typeof _isArch==='function'&&_isArch(r.sem))){var y=parseInt(String(r.sem).slice(0,4),10);if(y&&y>mx)mx=y;}});if(!mx)mx=(new Date().getFullYear()+543);return mx;}
+function _cohGraduated(code){var g=_cohGradBE(code);return g!=null&&g<_curBE();}
 function cohortTag(cohort,count){
   const c=COHORT_COLOR[cohortPrefix(cohort)];
   const style=c?'background:'+c.bg+';color:'+c.fg:'';
@@ -6851,6 +6912,7 @@ function syncTblHeight(){
     if(a==='teachBtec'){const d=await sget('teach_btec?select=teacher,val').catch(function(){return [];});const m={};(d||[]).forEach(function(x){m[x.teacher]=+x.val;});return{success:true,map:m};}
     if(a==='examData'){const r=await srpc('exam_special_list',{p_pin:_pin}).catch(function(){return null;});const sc=await sget('exam_school?select=id,name&order=name').catch(function(){return [];});if(r&&!r.error)return{success:true,rows:r.rows||[],schools:sc||[]};return{success:false,rows:[],schools:sc||[],error:(r&&r.error)||'需要登入'};}
     if(a==='archData'){const d=await sget('archived_terms?select=sem').catch(function(){return [];});return{success:true,terms:(d||[]).map(function(x){return x.sem;})};}
+    if(a==='cohortYears'){const d=await sget('cohort_years?select=cohort,years').catch(function(){return [];});return{success:true,rows:(d||[]).map(function(x){return {cohort:x.cohort,years:x.years};})};}
     if(a==='noticeData'){const r=await sget('notice?select=*&order=sort,id').catch(function(){return [];});return{success:true,rows:r||[]};}
     if(a==='opsData'){
       const[se,de,ch,te,ca,po,gr]=await Promise.all([
@@ -6890,6 +6952,7 @@ function syncTblHeight(){
     if(action==='adminAddDept')return srpc('admin_add_dept',{p_pin:_pin,p_code:body.code,p_name:body.name});
     if(action==='adminDelDept')return srpc('admin_del_dept',{p_pin:_pin,p_code:body.code});
     if(action==='adminAddCohort')return srpc('admin_add_cohort',{p_pin:_pin,p_dept:body.dept,p_cohort:body.cohort});
+    if(action==='adminSetCohortYears')return srpc('admin_set_cohort_years',{p_pin:_pin,p_cohort:body.cohort,p_years:(body.years==null?null:+body.years)});
     if(action==='adminDelCohort')return srpc('admin_del_cohort',{p_pin:_pin,p_id:body.id});
     if(action==='adminAddTeacher')return srpc('admin_add_teacher',{p_pin:_pin,p_name:body.name,p_dept:body.dept,p_position:body.position,p_quota:+body.quota||0,p_employee_id:body.employee_id||''});
     if(action==='adminDelTeacher')return srpc('admin_del_teacher',{p_pin:_pin,p_name:body.name});
