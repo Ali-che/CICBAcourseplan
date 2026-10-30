@@ -547,7 +547,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <label style="color:#555">专业</label><select id="addcoh-dept" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px"></select>
       <label style="color:#555">届别代码</label><input id="addcoh-code" placeholder="如 TM70" onkeydown="if(event.key==='Enter')addCohSubmit()" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px">
       <label style="color:#555">修业年限</label>
-      <div style="display:flex;gap:8px;align-items:center"><select id="addcoh-dur" onchange="addCohDurChange()" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px;flex:1"><option value="3">全新生 · 3 年</option><option value="2">专升本(ZSB) · 2 年</option><option value="other">其他…</option></select><input id="addcoh-dur-n" type="number" min="1" max="8" value="4" style="display:none;width:54px;padding:6px;border:0.5px solid #cbd5e1;border-radius:6px"><span id="addcoh-dur-unit" style="display:none;color:#555">年</span></div>
+      <div style="display:flex;gap:8px;align-items:center"><select id="addcoh-dur" onchange="addCohDurChange()" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px;flex:1"><option value="3">全新生 · 3 年</option><option value="2">专升本(ZSB) · 2 年</option><option value="other">其他…</option></select><input id="addcoh-dur-n" type="number" min="0.5" max="8" step="0.5" value="4" placeholder="如 3.5" style="display:none;width:64px;padding:6px;border:0.5px solid #cbd5e1;border-radius:6px"><span id="addcoh-dur-unit" style="display:none;color:#555">年</span></div>
     </div>
     <div id="addcoh-msg" style="font-size:12px;margin-top:10px;min-height:16px"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button class="btn btn-sm" onclick="closeAddCoh()">取消</button><button class="btn btn-p btn-sm" onclick="addCohSubmit()">+ 新增</button></div>
@@ -1464,14 +1464,14 @@ function opsCohView(){
   const list=(opsD.cohorts||[]).slice().sort((a,b)=>String(a.dept).localeCompare(String(b.dept))||((_cohGraduated(a.cohort)?1:0)-(_cohGraduated(b.cohort)?1:0))||String(a.cohort).localeCompare(String(b.cohort),undefined,{numeric:true,sensitivity:'base'}));
   const body=list.map(c=>{var grad=_cohGraduated(c.cohort);var yrs=_cohYears(c.cohort);var gb=_cohGradBE(c.cohort);
     return '<tr style="'+(grad?'opacity:.5':'')+'"><td>'+eh(c.dept)+'</td><td style="font-family:ui-monospace,monospace">'+eh(c.cohort)+'</td>'
-    +'<td style="text-align:center;font-size:12px"><input type="number" min="1" max="8" value="'+yrs+'" onchange="opsSetCohYears(\''+jsq(c.cohort)+'\',this.value)" style="width:46px;text-align:center;font-size:12px;padding:2px;border:0.5px solid #cbd5e1;border-radius:5px" title="修业年限(改了即存)"> 年'+(COHORT_YEARS[c.cohort]==null?'<span style="color:#ccc" title="默认值,尚未设定">*</span>':'')+'</td>'
+    +'<td style="text-align:center;font-size:12px"><input type="number" min="0.5" max="8" step="0.5" value="'+yrs+'" onchange="opsSetCohYears(\''+jsq(c.cohort)+'\',this.value)" style="width:52px;text-align:center;font-size:12px;padding:2px;border:0.5px solid #cbd5e1;border-radius:5px" title="修业年限(可小数,改了即存)"> 年'+(COHORT_YEARS[c.cohort]==null?'<span style="color:#ccc" title="默认值,尚未设定">*</span>':'')+'</td>'
     +'<td style="text-align:center">'+(grad?('<span style="background:#eee;color:#888;font-size:10px;border-radius:4px;padding:1px 7px">已毕业'+(gb?' '+gb:'')+'</span>'):'<span style="background:#E3F7EF;color:#1b7a5a;font-size:10px;border-radius:4px;padding:1px 7px">在读</span>')+'</td>'
     +'<td style="text-align:right"><button class="ops-del" onclick="opsDelCoh('+c.id+',\''+jsq(c.cohort)+'\')">删除</button></td></tr>';}).join('')||'<tr><td colspan="5" style="color:#aaa">无</td></tr>';
   return '<div class="ops-add"><div class="fg"><label>专业</label><select id="ops-coh-dept">'+deptOpts+'</select></div><div class="fg"><label>届别代码</label><input id="ops-coh-code" placeholder="TM70"></div><button class="btn btn-p" onclick="opsAddCoh()">+ 新增</button> <span style="font-size:11px;color:#888">年限在「排课表→新增班级」里设;此处新增暂用默认(ZSB=2/否则3)</span></div><div class="tbl-wrap" style="max-height:calc(100vh - 430px)"><table><thead><tr><th>专业</th><th>届别</th><th>年限</th><th>状态</th><th></th></tr></thead><tbody>'+body+'</tbody></table></div>';
 }
 async function opsAddCoh(){const coh=document.getElementById('ops-coh-code').value.trim();if(!coh){alert('请输入届别代码');return;}opsAfter(await gasPost('adminAddCohort',{dept:document.getElementById('ops-coh-dept').value,cohort:coh}),'已新增届别 '+coh);}
 async function opsDelCoh(id,coh){const n=opsUsedByCohort(coh);if(!confirm('删除届别「'+coh+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 笔排课用到此届别。仍要删?':'')))return;opsAfter(await gasPost('adminDelCohort',{id}),'已删除届别 '+coh);}
-async function opsSetCohYears(cohort,val){const y=parseInt(val,10);if(!(y>=1&&y<=8)){alert('修业年限请填 1–8 年');return;}const r=await gasPost('adminSetCohortYears',{cohort:cohort,years:y});if(r&&r.success){COHORT_YEARS[cohort]=y;if(typeof renderOps==='function')renderOps(true);if(typeof showToast==='function')showToast('已设 '+cohort+' = '+y+' 年',{kind:'success',duration:1500});}else alert('保存失败:'+((r&&r.error)||'?')+'\n(需先在 Supabase 建好 cohort_years 表那段 SQL)');}
+async function opsSetCohYears(cohort,val){const y=parseFloat(val);if(!(y>=0.5&&y<=8)){alert('修业年限请填 0.5–8 年(可小数)');return;}const r=await gasPost('adminSetCohortYears',{cohort:cohort,years:y});if(r&&r.success){COHORT_YEARS[cohort]=y;if(typeof renderOps==='function')renderOps(true);if(typeof showToast==='function')showToast('已设 '+cohort+' = '+y+' 年',{kind:'success',duration:1500});}else alert('保存失败:'+((r&&r.error)||'?')+'\n(需先在 Supabase 建好 cohort_years 表那段 SQL)');}
 // 排课表底部「新增班级」(admin + Director 可用;后端 _admin 允许 director)
 function toggleAddCoh(){var b=document.getElementById('addcoh-body'),a=document.getElementById('addcoh-arrow');if(!b)return;var open=(b.style.display==='none');b.style.display=open?'':'none';if(a)a.textContent=open?'▾':'▸';if(open)addCohFillDept();}
 function openAddCoh(){var m=document.getElementById('addcoh-modal');if(!m)return;addCohFillDept();var msg=document.getElementById('addcoh-msg');if(msg)msg.textContent='';m.style.display='flex';try{setTimeout(function(){var c=document.getElementById('addcoh-code');if(c)c.focus();},50);}catch(e){}}
@@ -1482,18 +1482,18 @@ async function addCohSubmit(){
   var dept=(document.getElementById('addcoh-dept')||{}).value||'';
   var code=((document.getElementById('addcoh-code')||{}).value||'').trim().replace(/\s+/g,' ');
   var durSel=(document.getElementById('addcoh-dur')||{}).value||'3';
-  var years=(durSel==='other')?parseInt((document.getElementById('addcoh-dur-n')||{}).value,10):parseInt(durSel,10);
+  var years=(durSel==='other')?parseFloat((document.getElementById('addcoh-dur-n')||{}).value):parseFloat(durSel);
   var msg=document.getElementById('addcoh-msg');
   function setMsg(t,ok){if(msg){msg.textContent=t;msg.style.color=ok?'#2e7d32':'#c0392b';}}
   if(!dept){setMsg('请选专业');return;}
   if(!code){setMsg('请填届别代码');return;}
-  if(!(years>=1&&years<=8)){setMsg('修业年限请填 1–8 年');return;}
+  if(!(years>=0.5&&years<=8)){setMsg('修业年限请填 0.5–8 年(可小数,如 3.5)');return;}
   var exists=Object.keys(CBD).some(function(d){return (CBD[d]||[]).some(function(c){return String(c).toLowerCase()===code.toLowerCase();});});
   if(exists){setMsg('「'+code+'」已存在,不重复新增',false);return;}
   var r=await gasPost('adminAddCohort',{dept:dept,cohort:code});
   if(!(r&&r.success)){setMsg('新增失败:'+((r&&r.error)||'?(需管理员/主任权限)'),false);return;}
   await gasPost('adminSetCohortYears',{cohort:code,years:years});
-  setMsg('✅ 已新增 '+code+'（'+years+' 年·末学年 '+(2500+parseInt((code.match(/(\d{2})/)||[0,0])[1],10)+years-1)+'）',true);
+  setMsg('✅ 已新增 '+code+'（'+years+' 年·毕业年 '+(2500+parseInt((code.match(/(\d{2})/)||[0,0])[1],10)+years)+'）',true);
   document.getElementById('addcoh-code').value='';
   try{await loadRefFromSheets();rebuildUI();}catch(e){}
 }
@@ -3103,7 +3103,7 @@ function buildDeptChips(){
   const w=document.getElementById('dc-wrap');if(!w)return;w.innerHTML='';
   Object.keys(CBD).forEach(d=>{
     const b=document.createElement('button');b.className='dc'+(selDpts.has(d)?' on':'');b.textContent=d;
-    b.onclick=()=>{if(selDpts.has(d))selDpts.delete(d);else selDpts.add(d);b.classList.toggle('on',selDpts.has(d));buildEG('s-eg',null);updateSEGTotal();};
+    b.onclick=()=>{if(selDpts.has(d))selDpts.delete(d);else selDpts.add(d);b.classList.toggle('on',selDpts.has(d));egFilterPool();};
     w.appendChild(b);
   });
 }
@@ -3139,25 +3139,59 @@ function updateSEGTotal(){
 function updateMCohTotal(){
   renderTotalBar('m-coh-total',computeCohTotal('m-coh-grid',_mSelDpts),_mSelDpts);
 }
+function _egPillSync(w,cb,ni){
+  ni.disabled=!cb.checked;
+  if(cb.checked){ni.style.display='';w.style.cssText='display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:4px 11px;border-radius:999px;cursor:pointer;user-select:none;white-space:nowrap;border:0.5px solid #7F77DD;background:#EEEDFE;color:#3C3489';}
+  else{ni.value='';ni.style.display='none';w.style.cssText='display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:4px 11px;border-radius:999px;cursor:pointer;user-select:none;white-space:nowrap;border:0.5px solid #cbd5e1;background:#fff;color:#666';}
+}
+function _egPill(d,cohort,chk,cnt){
+  const k=sk(cohort);
+  const w=document.createElement('div');w.className='ei';w.dataset.d=d;
+  w.innerHTML='<input type="checkbox" id="chk-'+k+'" value="'+eh(cohort)+'"'+(chk?' checked':'')+' style="display:none">'+
+    '<span>'+eh(cohort)+'</span>'+
+    '<input type="number" id="cnt-'+k+'" min="0" value="'+cnt+'"'+(chk?'':' disabled')+' style="width:36px;font-size:12px;padding:1px 0;text-align:center;border:0.5px solid #AFA9EC;border-radius:5px;'+(chk?'':'display:none')+'">';
+  const cb=w.querySelector('input[type=checkbox]'),ni=w.querySelector('input[type=number]');
+  _egPillSync(w,cb,ni);
+  w.onclick=function(e){if(e.target===ni)return;cb.checked=!cb.checked;_egPillSync(w,cb,ni);egRefreshSel();updateSEGTotal();};
+  ni.onclick=function(e){e.stopPropagation();};
+  ni.oninput=function(){updateSEGTotal();egRefreshSel();};
+  return w;
+}
 function buildEG(id,cc){
-  const g=document.getElementById(id);if(!g)return;g.innerHTML='';
+  const g=document.getElementById(id);if(!g)return;g.innerHTML='';g.style.display='block';
   const cm={};if(cc)cc.forEach(x=>cm[x.cohort]=x.count);
-  const depts=selDpts.size>0?[...selDpts]:Object.keys(CBD);
-  depts.forEach(d=>{
-    if(!CBD[d])return;
-    CBD[d].forEach(cohort=>{
-      const k=sk(cohort),chk=cm.hasOwnProperty(cohort),cnt=cm[cohort]||'';
-      const w=document.createElement('div');w.className='ei';w.dataset.d=d;
-      w.innerHTML='<input type="checkbox" id="chk-'+k+'" value="'+eh(cohort)+'"'+(chk?' checked':'')+'>'+
-        '<label for="chk-'+k+'" title="'+eh(cohort)+'">'+eh(cohort)+'</label>'+
-        '<input type="number" id="cnt-'+k+'" min="0" value="'+cnt+'"'+(chk?'':' disabled')+' style="width:46px;font-size:12px;padding:2px 5px;text-align:center">';
-      const cb=w.querySelector('input[type=checkbox]'),ni=w.querySelector('input[type=number]');
-      cb.onchange=()=>{ni.disabled=!cb.checked;if(!cb.checked)ni.value='';updateSEGTotal();};
-      ni.oninput=updateSEGTotal;
-      g.appendChild(w);
-    });
+  const sel=document.createElement('div');sel.id='s-eg-sel';sel.style.cssText='display:flex;flex-wrap:wrap;gap:6px;min-height:32px;padding:7px 8px;border:0.5px dashed #AFA9EC;border-radius:8px;margin-bottom:10px';g.appendChild(sel);
+  const pool=document.createElement('div');pool.id='s-eg-pool';pool.style.cssText='display:flex;flex-wrap:wrap;gap:7px';
+  const gradWrap=document.createElement('div');gradWrap.id='s-eg-grad';gradWrap.style.cssText='display:none;flex-wrap:wrap;gap:7px;margin-top:8px;opacity:.6';
+  let gradN=0;
+  Object.entries(CBD).forEach(([d,cohorts])=>{cohorts.forEach(cohort=>{
+    const chk=cm.hasOwnProperty(cohort);
+    const grad=(typeof _cohGraduated==='function'&&_cohGraduated(cohort));
+    const w=_egPill(d,cohort,chk,cm[cohort]||'');
+    if(grad&&!chk){gradWrap.appendChild(w);gradN++;}else pool.appendChild(w);
+  });});
+  g.appendChild(pool);
+  if(gradN>0){const tgl=document.createElement('button');tgl.type='button';tgl.style.cssText='font-size:12px;color:#888;background:none;border:none;cursor:pointer;padding:6px 0;margin-top:4px;display:block';tgl.textContent='▸ '+gradN+' 个已毕业';tgl.onclick=function(){var open=gradWrap.style.display==='none';gradWrap.style.display=open?'flex':'none';tgl.textContent=(open?'▾ ':'▸ ')+gradN+' 个已毕业';};g.appendChild(tgl);}
+  g.appendChild(gradWrap);
+  egRefreshSel();egFilterPool();updateSEGTotal();
+}
+function egRefreshSel(){
+  const sel=document.getElementById('s-eg-sel');if(!sel)return;sel.innerHTML='';
+  const checked=document.querySelectorAll('#s-eg .ei input[type=checkbox]:checked');
+  if(!checked.length){sel.innerHTML='<span style="font-size:12px;color:#aaa;align-self:center">点下方届别加入…</span>';return;}
+  checked.forEach(function(cb){const k=sk(cb.value),n=document.getElementById('cnt-'+k);const cnt=n?(n.value||'0'):'0';
+    const c=document.createElement('span');c.style.cssText='display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 10px;border-radius:999px;background:#EEEDFE;color:#3C3489;border:0.5px solid #7F77DD;cursor:pointer';
+    c.innerHTML='<span>'+eh(cb.value)+'</span><span style="color:#7F77DD">· '+eh(String(cnt))+'</span><span style="color:#7F77DD;font-weight:700">✕</span>';c.title='点击移除';
+    c.onclick=function(){cb.checked=false;const w=cb.closest('.ei'),ni=document.getElementById('cnt-'+k);if(w&&ni)_egPillSync(w,cb,ni);egRefreshSel();updateSEGTotal();};
+    sel.appendChild(c);
   });
-  updateSEGTotal(); // 重建后立即刷新合计
+}
+function egFilterPool(){
+  document.querySelectorAll('#s-eg-pool .ei, #s-eg-grad .ei').forEach(el=>{
+    const cb=el.querySelector('input[type=checkbox]');
+    el.style.display=((cb&&cb.checked)||selDpts.size===0||selDpts.has(el.dataset.d))?'':'none';
+  });
+  updateSEGTotal();
 }
 function getEG(){const r=[];document.querySelectorAll('#s-eg input[type=checkbox]:checked').forEach(cb=>{const k=sk(cb.value),n=document.getElementById('cnt-'+k);r.push({cohort:cb.value,count:n?parseInt(n.value)||0:0});});return r;}
 function cohEditHTML(rid,cc){
@@ -3926,7 +3960,7 @@ function cohortPrefix(cohort){
 // 年限:新增班级时选(全新生3/专升本2/其他N),存 cohort_years;未设则 fallback(含ZSB=2,否则3)。
 // 入学年=代码第一个两位数+2500;末学年=入学年+年限-1;当前学年<末学年→已毕业。
 var COHORT_YEARS={};
-function _cohYears(code){var y=COHORT_YEARS[code];if(y!=null&&!isNaN(parseInt(y,10)))return parseInt(y,10);return /ZSB/i.test(String(code))?2:3;}
+function _cohYears(code){var y=COHORT_YEARS[code];if(y!=null&&!isNaN(parseFloat(y)))return parseFloat(y);return /ZSB/i.test(String(code))?2:3;}
 // 毕业年 = 入学年 + 年限(读满该年限,次年起算已毕业)。例:CA67 入学2567 + 3 年 = 2570 结束(69 为最后一年)
 function _cohGradBE(code){var m=String(code||'').match(/(\d{2})/);if(!m)return null;return 2500+parseInt(m[1],10)+_cohYears(code);}
 // 当前学年(佛历):按日历,泰制学年 8 月起算 → 现在(2026-10)=2569
