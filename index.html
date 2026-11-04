@@ -79,7 +79,7 @@ tr.dt td{background:#F5F4FE;font-size:11px;color:#888;font-style:italic}
 /* v8.21 排课表列分组分隔线已移除 —— 与 IS/SG 表一致的干净框线 */
 .badge,.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500;line-height:1.5;margin:1px;gap:3px}
 .b0{background:#E6F1FB;color:#0C447C}.b1{background:#EAF3DE;color:#3B6D11}.b2{background:#FAEEDA;color:#854F0B}
-.b3{background:#FAECE7;color:#993C1D}.b4{background:#F1EFE8;color:#444441}.b5{background:#EEEDFE;color:#3C3489}.b6{background:#E1F5EE;color:#0F6E56}
+.b3{background:#FAECE7;color:#993C1D}.b4{background:#F1EFE8;color:#444441}.b5{background:#EEEDFE;color:#3C3489}.b6{background:#E1F5EE;color:#0F6E56}.b7{background:#FFF3E0;color:#EF6C00}
 .tag{background:#f0f0f0;color:#666}
 .es-sec{border:0.5px solid #ddd;border-radius:8px;padding:.875rem;margin-bottom:10px;background:#fafafa}
 .eg{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;margin-top:8px}
@@ -210,6 +210,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   .b4{background:#F1EFE8!important;color:#444441!important}
   .b5{background:#EEEDFE!important;color:#3C3489!important}
   .b6{background:#E1F5EE!important;color:#0F6E56!important}
+  .b7{background:#FFF3E0!important;color:#EF6C00!important}
   .tag{font-size:7pt;padding:0 3pt}
 
   /* ── 统计卡片 ── */
@@ -2886,7 +2887,7 @@ async function loadRefFromSheets(){
     if(data.courses&&data.courses.length)C=data.courses;
     if(data.teachers&&data.teachers.length)T=data.teachers;
     if(data.cohorts&&data.cohorts.length){
-      CBD={};data.cohorts.forEach(c=>{if(!CBD[c.dept])CBD[c.dept]=[];CBD[c.dept].push(c.cohort);});
+      CBD={};COH_DEPT={};data.cohorts.forEach(c=>{if(!CBD[c.dept])CBD[c.dept]=[];CBD[c.dept].push(c.cohort);if(c.cohort)COH_DEPT[c.cohort]=c.dept;});
       // 先载入各届别修业年限(供毕业判定),再排序
       try{const _cy=await gasGet({action:'cohortYears'});if(_cy&&_cy.success){COHORT_YEARS={};(_cy.rows||[]).forEach(x=>{if(x.cohort!=null)COHORT_YEARS[x.cohort]=x.years;});}}catch(e){}
       // 届别状态覆写(容错:字段未建好时静默跳过,状态退回自动判定)
@@ -4127,7 +4128,7 @@ function semBadge(s){
 }
 // v7.1: 课程→专业 查询 + badge（资料来自「课程库」D 栏）
 // 配色：CA=蓝 CD=粉 FA=橘 TM=绿 IB=紫 GE=灰 IT=青 SE=蓝 IC=橘 EV=绿
-const DEPT_BADGE={CA:'b0',CD:'b3',FA:'b2',TM:'b1',IB:'b5',GE:'b4',IT:'b6',SE:'b0',IC:'b2',EV:'b1'};
+const DEPT_BADGE={CA:'b0',CD:'b3',FA:'b2',TM:'b1',IB:'b5',GE:'b4',IT:'b6',SE:'b0',IC:'b7',EV:'b1'};
 
 // v7.2: 屆別 chip 按系别上色（取屆別代码前两个英文字母判定）
 // 例：TM68(7) → TM 绿、IB66-1FAN-A → IB 蓝、CD69 → CD 桃红
@@ -4146,10 +4147,13 @@ const COHORT_COLOR={
   CIC:{bg:'#E0F7FA',fg:'#00838F'}, // 青（CIC 外聘）
   IC:{bg:'#FFF3E0',fg:'#EF6C00'}  // 橙（IC 国际学院，跟 CD 桃红拉开）
 };
+var COH_DEPT={};  // 届别代码 → 真正专业(dept),载入 cohorts 时建;代码前缀≠专业时(如 IC 的 IB_CE/62/66)靠它上对颜色
 function cohortPrefix(cohort){
   const m=String(cohort||'').match(/^[A-Za-z]+/);
   return m?m[0].substring(0,2).toUpperCase():'';
 }
+// 届别的真正专业:优先查 cohorts 表(COH_DEPT),查不到才退回「代码前两字母」
+function cohortDept(cohort){var d=COH_DEPT[cohort];return d||cohortPrefix(cohort);}
 // ═══════ §COHORT-GRAD 届别修业年限 + 自动毕业判定 ═══════
 // 年限:新增班级时选(全新生3/专升本2/其他N),存 cohort_years;未设则 fallback(含ZSB=2,否则3)。
 // 入学年=代码第一个两位数+2500;末学年=入学年+年限-1;当前学年<末学年→已毕业。
@@ -4183,7 +4187,7 @@ function _deptGroupEl(dept,items){
   grp.appendChild(yrWrap);return grp;
 }
 function cohortTag(cohort,count){
-  const c=COHORT_COLOR[cohortPrefix(cohort)];
+  const c=COHORT_COLOR[cohortDept(cohort)];
   const style=c?'background:'+c.bg+';color:'+c.fg:'';
   // v7.9.6: 完全继承 .badge,.tag 统一尺寸，只覆盖颜色
   const fullTxt=eh(cohort)+(count?' · '+count+'人':'');
