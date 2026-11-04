@@ -243,7 +243,7 @@ function sheet(p,cmp){
   const brk=_parts.length?' ('+_parts.join(' · ')+')':'';
   const courseLine=(nc||'—')+' 门课'+brk;
   if(cmp) return `<div class="sheet cmpsheet"><div class="hd2"><b>${p.label}</b> · ${p.name}<div class="m2">Bachelor · 4 Years · ${p.grad||'—'} credits<br>${courseLine}</div></div><div class="cols one">${secs}</div></div>`;
-  return `<div class="sheet"><div class="hd"><div class="u">Dhurakij Pundit University</div><div class="t">Course Structure</div><div class="c">Chinese International College</div><div class="p">${p.name}</div><div class="cr2">Bachelor · 4 Years · ${p.grad||'—'} credits<br>${courseLine}</div></div><div class="cols">${secs||'<div class=note>无课程</div>'}</div></div>`;
+  return `<div class="sheet"><div class="hd"><div class="u">Dhurakij Pundit University</div><div class="t">Course Structure</div><div class="c">International College</div><div class="p">${p.name}</div><div class="cr2">Bachelor · 4 Years · ${p.grad||'—'} credits<br>${courseLine}</div></div><div class="cols">${secs||'<div class=note>无课程</div>'}</div></div>`;
 }
 function searchAll(q){
   const scope=document.getElementById('fprog').value; let hits=[];
@@ -305,7 +305,7 @@ function _cxRows(p){       // 回传单一专业的 <tr>… (标题+表头+分�
   const courseLine=(nc||'—')+' 门课'+(_parts.length?' ('+_parts.join(' · ')+')':'');
   let rows='';
   rows+=span('Dhurakij Pundit University','#534AB7','#fff',14,'center');
-  rows+=span('Course Structure　·　Chinese International College','#6a5fc0','#fff',11,'center');
+  rows+=span('Course Structure　·　International College','#6a5fc0','#fff',11,'center');
   rows+=span(esc(p.name),'#EDEBFB','#3C3489',12,'center');
   rows+=span('Bachelor · 4 Years · '+(p.grad||'—')+' credits　|　'+esc(courseLine),'#F6F5FC','#555',10,'center');
   rows+='<tr>'+['课程代码','中文名','英文名','学分','对接课程','课程说明','备注'].map(h=>'<td style="background:#3C3489;color:#fff;font-weight:bold;padding:5px 8px;border:1px solid #2b2569;white-space:nowrap">'+h+'</td>').join('')+'</tr>';
@@ -352,7 +352,7 @@ function _cxAOA(p){   // 单一专业 → 二维数组(照版块结构，一行�
   const cN=_n(p.courseN),cC=_n(p.courseCr),iN=_n(p.internN),iC=_n(p.internCr);
   const _parts=[];if(cN!=null||cC!=null)_parts.push('课程'+(cN!=null?' '+cN+' 门':'')+(cC!=null?' '+cC+' 学分':''));if(iN!=null||iC!=null)_parts.push('实习'+(iN!=null?' '+iN+' 门':'')+(iC!=null?' '+iC+' 学分':''));
   const courseLine=(nc||'—')+' 门课'+(_parts.length?' ('+_parts.join(' · ')+')':'');
-  const A=[['Dhurakij Pundit University'],['Course Structure · Chinese International College'],[p.name||p.prog],['Bachelor · 4 Years · '+(p.grad||'—')+' credits | '+courseLine],['课程代码','中文名','英文名','学分','对接课程','课程说明','备注']];
+  const A=[['Dhurakij Pundit University'],['Course Structure · International College'],[p.name||p.prog],['Bachelor · 4 Years · '+(p.grad||'—')+' credits | '+courseLine],['课程代码','中文名','英文名','学分','对接课程','课程说明','备注']];
   let _curCat=null;
   (p.blocks||[]).forEach(b=>{
     const en=b.caten||'';
