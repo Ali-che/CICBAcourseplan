@@ -4128,7 +4128,7 @@ function semBadge(s){
 }
 // v7.1: 课程→专业 查询 + badge（资料来自「课程库」D 栏）
 // 配色：CA=蓝 CD=粉 FA=橘 TM=绿 IB=紫 GE=灰 IT=青 SE=蓝 IC=橘 EV=绿
-const DEPT_BADGE={CA:'b0',CD:'b3',FA:'b2',TM:'b1',IB:'b5',GE:'b4',IT:'b6',SE:'b0',IC:'b7',EV:'b1'};
+const DEPT_BADGE={CA:'b0',CD:'b3',FA:'b2',TM:'b1',IB:'b5',GE:'b4',IT:'b6',SE:'b0',IC:'b7',IBCE:'b7',EV:'b1'};
 
 // v7.2: 屆別 chip 按系别上色（取屆別代码前两个英文字母判定）
 // 例：TM68(7) → TM 绿、IB66-1FAN-A → IB 蓝、CD69 → CD 桃红
@@ -4145,7 +4145,8 @@ const COHORT_COLOR={
   GE:{bg:'#ECEFF1',fg:'#546E7A'}, // 石板灰（通识）
   DPU:{bg:'#E8EAF6',fg:'#3949AB'},// 靛蓝（DPU 外聘）
   CIC:{bg:'#E0F7FA',fg:'#00838F'}, // 青（CIC 外聘）
-  IC:{bg:'#FFF3E0',fg:'#EF6C00'}  // 橙（IC 国际学院，跟 CD 桃红拉开）
+  IC:{bg:'#FFF3E0',fg:'#EF6C00'}, // 橙（IC 国际学院，跟 CD 桃红拉开）
+  IBCE:{bg:'#FFF3E0',fg:'#EF6C00'} // 与 IC 同色：国际学院(IC·老师挂)与国际商务专业(IBCE·学生/届别挂)视为同组
 };
 var COH_DEPT={};  // 届别代码 → 真正专业(dept),载入 cohorts 时建;代码前缀≠专业时(如 IC 的 IB_CE/62/66)靠它上对颜色
 function cohortPrefix(cohort){
