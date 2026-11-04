@@ -1651,7 +1651,7 @@ function opsCatView(){
     '<div class="fg"><label>备注</label><input id="ops-cat-note" style="width:120px" value="'+eh(opsEV('cat','note'))+'"></div>'+
     '<div class="fg" style="flex:1 1 280px;min-width:240px"><label>说明(课程结构页 ⓘ 展开的介绍)</label><textarea id="ops-cat-desc" rows="2" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:12px;padding:5px 8px;border:0.5px solid #cbd5e1;border-radius:6px;resize:vertical" placeholder="课程简介…">'+eh(curDesc)+'</textarea></div>'+
     '<button class="btn btn-p" onclick="opsAddCat()">'+(ed?'保存修改':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>'+
-    '<div style="margin-bottom:8px"><input id="ops-cat-q" value="'+eh(opsCatQ)+'" oninput="opsCatQ=this.value;opsCatApply()" placeholder="🔍 全局搜(代码/中英文/对接/模块/版本/备注/说明)" style="width:320px;padding:6px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:12px"> <span id="ops-cat-count" style="font-size:11px;color:#888">共 '+all.length+' 条，筛出 '+rows.length+' 条</span> <button class="btn btn-sm" id="ops-cat-batch" onclick="opsCatBatchDel()" style="display:none;color:#a32d2d;border-color:#f7c1c1;vertical-align:middle">🗑 删除选中 <span id="ops-cat-batch-n">0</span></button> <button class="btn btn-sm" onclick="opsCatExport()" title="导出当前课程库为 CSV(带 id,可在 Excel 改好再导入)" style="vertical-align:middle">📤 导出 CSV</button> <button class="btn btn-sm" onclick="opsCatImportOpen()" title="从 Excel/CSV 批量导入·以(专业+代码+版本)或 id 为键 upsert" style="vertical-align:middle;color:#185FA5;border-color:#AFcbE8">📥 批量导入</button></div>'+
+    '<div style="margin-bottom:8px"><input id="ops-cat-q" value="'+eh(opsCatQ)+'" oninput="opsCatQ=this.value;opsCatApply()" placeholder="🔍 全局搜(代码/中英文/对接/模块/版本/备注/说明)" style="width:320px;padding:6px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:12px"> <span id="ops-cat-count" style="font-size:11px;color:#888">共 '+all.length+' 条，筛出 '+rows.length+' 条</span> <button class="btn btn-sm" id="ops-cat-batch" onclick="opsCatBatchDel()" style="display:none;color:#a32d2d;border-color:#f7c1c1;vertical-align:middle">🗑 删除选中 <span id="ops-cat-batch-n">0</span></button> <button class="btn btn-sm" onclick="opsCatExport()" title="导出当前课程库为 CSV(带 id,可在 Excel 改好再导入)" style="vertical-align:middle">📤 导出 CSV</button> <button class="btn btn-sm" onclick="opsCatTemplate()" title="下载空白导入模版(CSV,含表头与示例行)" style="vertical-align:middle">📄 下载模版</button> <button class="btn btn-sm" onclick="opsCatImportOpen()" title="从 Excel/CSV 批量导入·以(专业+代码+版本)或 id 为键 upsert" style="vertical-align:middle;color:#185FA5;border-color:#AFcbE8">📥 批量导入</button></div>'+
     '<div class="tbl-wrap" style="max-height:calc(100vh - 490px)"><table><thead><tr>'+
       '<th style="background:#534AB7;text-align:center;vertical-align:top;padding:4px 5px"><input type="checkbox" id="ops-cat-master" onclick="opsCatToggleAll(this.checked)" title="全选/全不选(当前筛选)"></th>'+
       hd('code','代码',ti('code'))+hd('zh','中文名',ti('zh'))+hd('en','英文名',ti('en'))+
@@ -1702,6 +1702,18 @@ function opsCatExport(){
   a.href=URL.createObjectURL(blob);a.download='课程库_'+new Date().toISOString().slice(0,10)+'.csv';
   document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},100);
   if(typeof showToast==='function')showToast('已导出 '+cat.length+' 条课程',{kind:'success',duration:1800});
+}
+function opsCatTemplate(){
+  var hdr='id,代码,中文名,英文名,专业,版本,必选,学分,模块,模块学分,对接,固定,备注,说明';
+  var ex=[
+    ',CA201,传播原理与理论,Principles and Theories of Communication,CA,2567,必修,3,Core Courses,27,,,示例行·导入前请删除',
+    ',GE174,可持续社会与经济,Society and Economy for Sustainability,CA,2567,选修,3,General Education,,,,示例行·导入前请删除'
+  ];
+  var csv='﻿'+[hdr].concat(ex).join('\r\n');
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='课程库导入模版.csv';
+  document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},100);
+  if(typeof showToast==='function')showToast('已下载导入模版(含 2 行示例,填完请删示例行)',{kind:'success',duration:2600});
 }
 function opsCatImportOpen(){_catImpParsed=null;var m=document.getElementById('catimp-modal');if(!m)return;document.getElementById('catimp-ta').value='';document.getElementById('catimp-preview').innerHTML='';document.getElementById('catimp-progress').textContent='';m.style.display='flex';}
 function opsCatImportClose(){var m=document.getElementById('catimp-modal');if(m)m.style.display='none';}
