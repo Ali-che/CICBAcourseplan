@@ -568,6 +568,17 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   </div>
 </div>
 
+<!-- ══ 课程库批量导入 Modal ══════════════════ -->
+<div id="catimp-modal" onclick="if(event.target===this)opsCatImportClose()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9999;align-items:center;justify-content:center">
+  <div onclick="event.stopPropagation()" style="background:#fff;border-radius:12px;max-width:780px;width:92%;max-height:88vh;overflow:auto;padding:18px 20px;box-shadow:0 12px 44px rgba(0,0,0,.25)">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;color:#3C3489;font-size:15px">📥 课程库批量导入</span><span onclick="opsCatImportClose()" style="cursor:pointer;color:#999;font-size:16px">✕</span></div>
+    <div style="font-size:12px;color:#666;margin:8px 0 6px;line-height:1.7">从 Excel/Google Sheet 复制整块(含表头)贴到下方(也支持 CSV)。<b>以「id」或「专业+代码+版本」为键</b>:对得上就更新、对不上就新增(＝加新课/新课纲);<b>只会改你表里有的栏位</b>,没填的不动。<br>表头可用中文:<code>id, 代码, 中文名, 英文名, 专业, 版本, 必选, 学分, 模块, 模块学分, 对接, 固定, 备注, 说明</code>(至少要有「代码」;新增需「专业」)。<b>建议先按「📤 导出 CSV」</b>拿到现有数据(带 id)改好再贴回,最稳。</div>
+    <textarea id="catimp-ta" rows="8" style="width:100%;box-sizing:border-box;font-family:ui-monospace,monospace;font-size:12px;padding:8px;border:0.5px solid #cbd5e1;border-radius:8px" placeholder="代码&#9;专业&#9;版本&#9;中文名&#10;KL305&#9;TM&#9;2568&#9;课程名…"></textarea>
+    <div style="margin-top:8px;display:flex;align-items:center;gap:10px"><button class="btn btn-sm" onclick="opsCatImportParse()">🔍 解析预览</button> <span id="catimp-progress" style="font-size:12px;color:#888"></span></div>
+    <div id="catimp-preview" style="margin-top:10px"></div>
+  </div>
+</div>
+
 <!-- ══ 特别排课 ════════════════════════════ -->
 <div id="panel-sp" class="panel">
   <div class="card" style="padding:0;overflow:hidden">
@@ -1640,7 +1651,7 @@ function opsCatView(){
     '<div class="fg"><label>备注</label><input id="ops-cat-note" style="width:120px" value="'+eh(opsEV('cat','note'))+'"></div>'+
     '<div class="fg" style="flex:1 1 280px;min-width:240px"><label>说明(课程结构页 ⓘ 展开的介绍)</label><textarea id="ops-cat-desc" rows="2" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:12px;padding:5px 8px;border:0.5px solid #cbd5e1;border-radius:6px;resize:vertical" placeholder="课程简介…">'+eh(curDesc)+'</textarea></div>'+
     '<button class="btn btn-p" onclick="opsAddCat()">'+(ed?'保存修改':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>'+
-    '<div style="margin-bottom:8px"><input id="ops-cat-q" value="'+eh(opsCatQ)+'" oninput="opsCatQ=this.value;opsCatApply()" placeholder="🔍 全局搜(代码/中英文/对接/模块/版本/备注/说明)" style="width:320px;padding:6px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:12px"> <span id="ops-cat-count" style="font-size:11px;color:#888">共 '+all.length+' 条，筛出 '+rows.length+' 条</span> <button class="btn btn-sm" id="ops-cat-batch" onclick="opsCatBatchDel()" style="display:none;color:#a32d2d;border-color:#f7c1c1;vertical-align:middle">🗑 删除选中 <span id="ops-cat-batch-n">0</span></button></div>'+
+    '<div style="margin-bottom:8px"><input id="ops-cat-q" value="'+eh(opsCatQ)+'" oninput="opsCatQ=this.value;opsCatApply()" placeholder="🔍 全局搜(代码/中英文/对接/模块/版本/备注/说明)" style="width:320px;padding:6px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:12px"> <span id="ops-cat-count" style="font-size:11px;color:#888">共 '+all.length+' 条，筛出 '+rows.length+' 条</span> <button class="btn btn-sm" id="ops-cat-batch" onclick="opsCatBatchDel()" style="display:none;color:#a32d2d;border-color:#f7c1c1;vertical-align:middle">🗑 删除选中 <span id="ops-cat-batch-n">0</span></button> <button class="btn btn-sm" onclick="opsCatExport()" title="导出当前课程库为 CSV(带 id,可在 Excel 改好再导入)" style="vertical-align:middle">📤 导出 CSV</button> <button class="btn btn-sm" onclick="opsCatImportOpen()" title="从 Excel/CSV 批量导入·以(专业+代码+版本)或 id 为键 upsert" style="vertical-align:middle;color:#185FA5;border-color:#AFcbE8">📥 批量导入</button></div>'+
     '<div class="tbl-wrap" style="max-height:calc(100vh - 490px)"><table><thead><tr>'+
       '<th style="background:#534AB7;text-align:center;vertical-align:top;padding:4px 5px"><input type="checkbox" id="ops-cat-master" onclick="opsCatToggleAll(this.checked)" title="全选/全不选(当前筛选)"></th>'+
       hd('code','代码',ti('code'))+hd('zh','中文名',ti('zh'))+hd('en','英文名',ti('en'))+
@@ -1659,6 +1670,98 @@ async function opsAddCat(){
   else opsAfter(await gasPost('adminAddCatalog',{row:fields}),'已新增 课程 '+code);
 }
 async function opsDelCat(id,code){const n=opsUsedByCourse(code);if(!confirm('删除 catalog「'+code+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 笔排课用到此课程代码,删后课程下拉/对接会受影响。仍要删?':'')))return;opsAfter(await gasPost('adminDelCatalog',{id}),'已删除 课程 '+code);}
+// ── 课程库 导出 / 批量导入(键 = id 或 专业+代码+版本;只改填了的栏) ──
+var _catImpParsed=null;
+var _CATIMP_MAP={'id':'id','代码':'code','課程代碼':'code','课程代码':'code','code':'code','中文名':'zh','中文':'zh','zh':'zh','英文名':'en','英文':'en','en':'en','专业':'dept','專業':'dept','dept':'dept','版本':'version','课纲':'version','課綱':'version','version':'version','必选':'req','必/选':'req','必修/选修':'req','req':'req','学分':'credit','學分':'credit','credit':'credit','模块学分':'block_credit','模組學分':'block_credit','block_credit':'block_credit','模块':'block','模組':'block','block':'block','对接':'mapping','對接':'mapping','mapping':'mapping','固定':'fixed','固定开课':'fixed','fixed':'fixed','备注':'note','備註':'note','note':'note','说明':'description','說明':'description','description':'description','desc':'description'};
+function _normFixed(v){return /^(y|常|是|固定|true|1)$/i.test(String(v||'').trim())?'Y':'';}
+function _parseDSV(text){
+  text=String(text||'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
+  var firstNL=text.indexOf('\n'),head=firstNL<0?text:text.slice(0,firstNL);
+  var delim=head.indexOf('\t')>=0?'\t':',';
+  var rows=[],row=[],cell='',i=0,inq=false,n=text.length;
+  while(i<n){var ch=text[i];
+    if(inq){ if(ch==='"'){ if(text[i+1]==='"'){cell+='"';i+=2;continue;} inq=false;i++;continue; } cell+=ch;i++;continue; }
+    if(ch==='"'){inq=true;i++;continue;}
+    if(ch===delim){row.push(cell);cell='';i++;continue;}
+    if(ch==='\n'){row.push(cell);rows.push(row);row=[];cell='';i++;continue;}
+    cell+=ch;i++;
+  }
+  row.push(cell);rows.push(row);
+  while(rows.length&&rows[rows.length-1].length===1&&rows[rows.length-1][0]==='')rows.pop();
+  return rows;
+}
+function opsCatExport(){
+  var cols=[['id','id'],['code','代码'],['zh','中文名'],['en','英文名'],['dept','专业'],['version','版本'],['req','必选'],['credit','学分'],['block','模块'],['block_credit','模块学分'],['mapping','对接'],['fixed','固定'],['note','备注'],['description','说明']];
+  var cat=(opsD&&opsD.catalog||[]).slice().sort(function(a,b){return String(a.dept||'').localeCompare(String(b.dept||''))||String(a.code||'').localeCompare(String(b.code||''))||String(a.version||'').localeCompare(String(b.version||''));});
+  var q=function(v){v=(v==null?'':String(v));return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  var lines=[cols.map(function(c){return c[1];}).join(',')];
+  cat.forEach(function(c){lines.push(cols.map(function(cc){return q(c[cc[0]]);}).join(','));});
+  var csv='﻿'+lines.join('\r\n');
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='课程库_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},100);
+  if(typeof showToast==='function')showToast('已导出 '+cat.length+' 条课程',{kind:'success',duration:1800});
+}
+function opsCatImportOpen(){_catImpParsed=null;var m=document.getElementById('catimp-modal');if(!m)return;document.getElementById('catimp-ta').value='';document.getElementById('catimp-preview').innerHTML='';document.getElementById('catimp-progress').textContent='';m.style.display='flex';}
+function opsCatImportClose(){var m=document.getElementById('catimp-modal');if(m)m.style.display='none';}
+function opsCatImportParse(){
+  var raw=document.getElementById('catimp-ta').value||'';
+  if(!raw.trim()){alert('请先贴上数据');return;}
+  var rows=_parseDSV(raw);
+  if(rows.length<2){alert('至少需要:表头行 + 一行数据');return;}
+  var hdr=rows[0].map(function(h){var k=_CATIMP_MAP[(h||'').trim()];return k||('?'+(h||'').trim());});
+  if(hdr.indexOf('code')<0){alert('表头必须包含「代码」(或 code)栏');return;}
+  var unknown=rows[0].filter(function(h,j){return hdr[j][0]==='?'&&(h||'').trim()!=='';});
+  var catalog=opsD&&opsD.catalog||[];
+  var byId={};catalog.forEach(function(c){byId[String(c.id)]=c;});
+  var byKey={};catalog.forEach(function(c){var k=(c.dept||'')+'|'+String(c.code||'').toUpperCase()+'|'+(c.version||'');(byKey[k]=byKey[k]||[]).push(c);});
+  var out=[];
+  for(var r=1;r<rows.length;r++){
+    var cells=rows[r];if(cells.every(function(x){return (x||'').trim()==='';}))continue;
+    var f={};for(var j=0;j<hdr.length;j++){var key=hdr[j];if(key&&key[0]!=='?')f[key]=(cells[j]||'').trim();}
+    var code=String(f.code||'').toUpperCase();
+    if(!code){out.push({action:'error',msg:'第'+(r+1)+'行:缺「代码」'});continue;}
+    f.code=code;if('fixed'in f)f.fixed=_normFixed(f.fixed);
+    if(f.id&&byId[String(f.id)]){var old=byId[String(f.id)];out.push({action:'update',id:+f.id,f:f,label:code+(f.dept?(' / '+f.dept):'')+(f.version?(' / '+f.version):'')+'(id='+f.id+')'});continue;}
+    if(f.id&&!byId[String(f.id)]){out.push({action:'error',msg:'第'+(r+1)+'行 '+code+':id='+f.id+' 不存在'});continue;}
+    var k=(f.dept||'')+'|'+code+'|'+(f.version||'');var m=byKey[k]||[];
+    if(m.length===0){ if(!f.dept){out.push({action:'error',msg:'第'+(r+1)+'行 '+code+':新增需填「专业」'});continue;} out.push({action:'insert',f:f,label:code+' / '+(f.dept||'')+' / '+(f.version||'')}); }
+    else if(m.length===1){ out.push({action:'update',id:m[0].id,f:f,label:code+' / '+(f.dept||'')+' / '+(f.version||'')+'(id='+m[0].id+')'}); }
+    else { out.push({action:'error',msg:'第'+(r+1)+'行 '+code+':('+(f.dept||'')+'/'+code+'/'+(f.version||'')+') 对应 '+m.length+' 行,请改用带 id 的导出表定位'}); }
+  }
+  _catImpParsed=out;
+  var up=out.filter(function(x){return x.action==='update';}),ins=out.filter(function(x){return x.action==='insert';}),er=out.filter(function(x){return x.action==='error';});
+  var h='<div style="font-size:13px;margin-bottom:8px">预览:<b style="color:#1b7a5a">更新 '+up.length+'</b> · <b style="color:#185FA5">新增 '+ins.length+'</b> · <b style="color:#a32d2d">错误 '+er.length+'</b></div>';
+  if(unknown.length)h+='<div style="font-size:11px;color:#a67c00;margin-bottom:6px">⚠️ 忽略无法识别的表头:'+eh(unknown.join('、'))+'</div>';
+  var samp=function(arr,color){return arr.slice(0,8).map(function(x){return '<div style="font-size:11px;color:'+color+'">'+eh(x.label||x.msg)+'</div>';}).join('')+(arr.length>8?'<div style="font-size:11px;color:#aaa">…共 '+arr.length+' 条</div>':'');};
+  if(er.length)h+='<div style="background:#FDECEC;border-radius:6px;padding:6px 10px;margin-bottom:6px"><div style="font-size:12px;font-weight:600;color:#a32d2d">错误(不会导入):</div>'+samp(er,'#a32d2d')+'</div>';
+  if(ins.length)h+='<div style="margin-bottom:4px"><div style="font-size:12px;font-weight:600;color:#185FA5">将新增:</div>'+samp(ins,'#185FA5')+'</div>';
+  if(up.length)h+='<div style="margin-bottom:4px"><div style="font-size:12px;font-weight:600;color:#1b7a5a">将更新:</div>'+samp(up,'#1b7a5a')+'</div>';
+  if(up.length+ins.length>0)h+='<div style="margin-top:10px"><button class="btn btn-p btn-sm" id="catimp-run" onclick="opsCatImportRun()">✅ 确认导入('+(up.length+ins.length)+' 笔)</button> <span style="font-size:11px;color:#888">只会改你表里填了的栏位</span></div>';
+  else h+='<div style="font-size:12px;color:#a32d2d;margin-top:8px">没有可导入的行</div>';
+  document.getElementById('catimp-preview').innerHTML=h;
+}
+async function opsCatImportRun(){
+  if(!_catImpParsed)return;
+  var todo=_catImpParsed.filter(function(x){return x.action==='update'||x.action==='insert';});
+  if(!todo.length){alert('没有可导入的行');return;}
+  var nu=todo.filter(function(x){return x.action==='update';}).length,ni=todo.length-nu;
+  if(!confirm('确认导入?\n\n更新 '+nu+' 笔、新增 '+ni+' 笔。\n(只会改你表里填了的栏位,不可一键撤销)'))return;
+  var btn=document.getElementById('catimp-run');if(btn)btn.disabled=true;
+  var pe=document.getElementById('catimp-progress');
+  var ok=0,fail=0,failMsg=[];
+  for(var i=0;i<todo.length;i++){
+    var t=todo[i],r;
+    var clean={};for(var kk in t.f){if(kk!=='id')clean[kk]=t.f[kk];}  // 不送 id;code 在更新时也剔除(代码不可改)
+    try{ if(t.action==='update'){var upd={};for(var k2 in clean){if(k2!=='code')upd[k2]=clean[k2];}r=await gasPost('adminUpdateCatalog',{id:t.id,fields:upd});} else r=await gasPost('adminAddCatalog',{row:clean}); }
+    catch(e){r={success:false,error:String(e&&e.message||e)};}
+    if(r&&r.success)ok++;else{fail++;if(failMsg.length<6)failMsg.push((t.f.code||'?')+':'+((r&&r.error)||'?'));}
+    if(pe)pe.textContent='进度 '+(i+1)+'/'+todo.length+'(成功 '+ok+'、失败 '+fail+')';
+  }
+  opsCatImportClose();
+  opsAfter({success:true},'导入完成:成功 '+ok+' 笔'+(fail?('、失败 '+fail+' 笔'+(failMsg.length?'('+failMsg.join('; ')+')':'')):''));
+}
 
 // ═══════ §AUTH 登录·权限·公告横幅 ═══════
 function checkAuth(){
