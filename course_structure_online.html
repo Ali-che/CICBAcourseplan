@@ -189,7 +189,7 @@ function buildData(rows){
     groups=groups.map((g,i)=>[i,g]).sort((a,b)=>((prog==='SC')?((catOrd(a[1].cat)-catOrd(b[1].cat))||(subOrd(a[1].cat)-subOrd(b[1].cat))):0)||(bidx[baseOf(a[1].cat)]-bidx[baseOf(b[1].cat)])||(lr(a[1].cat)-lr(b[1].cat))||(a[0]-b[0])).map(x=>x[1]);
     groups.forEach(g=>{let nd=g.need;const n=parseFloat(nd);if(!isNaN(n))nd=String(Math.round(n));g.need=nd;g.caten=en_of(g.cat);g.kexiu=Math.round(g.courses.reduce((s,c)=>s+(parseFloat(c.cr)||0),0));});
     // SC 官方结构最后有 Free Elective 6cr，但 DB 缺此块 → 前端补一个空的自由选修块(不列课·排最后)
-    if(prog==='SC'&&!groups.some(g=>g.cat.indexOf('自由选修')>=0))groups.push({cat:'自由选修',need:'6',courses:[],caten:en_of('自由选修'),kexiu:0});
+    if((prog==='SC'||prog==='IBCE')&&!groups.some(g=>g.cat.indexOf('自由选修')>=0))groups.push({cat:'自由选修',need:'6',courses:[],caten:en_of('自由选修'),kexiu:0});
     out[pid]={prog,ver,name:ENAME[prog]||prog,label:LABEL[pid]||pid,grad:gradOv||GRAD[prog]||'',total:Math.round(pr.rows.reduce((s,r)=>s+(parseFloat(get(r,'学分'))||0),0)),count:ccount,blocks:groups};
   });
   const ordered={}; ORDER.forEach(k=>{if(out[k])ordered[k]=out[k];}); Object.keys(out).forEach(k=>{if(!ordered[k])ordered[k]=out[k];});
