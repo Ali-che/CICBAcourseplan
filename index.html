@@ -686,7 +686,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     <div class="fbar">
       <label>学年学期</label>
       <select id="f-tc-s" onchange="renderTchr()"><option value="">全部</option></select>
-      <label>专业</label>
+      <label>所属部门</label>
       <select id="f-tc-d" onchange="filterTchrByDept()"><option value="">全部</option></select>
       <label>任课老师</label><select id="f-tc" onchange="renderTchr()"><option value="">请选择</option></select>
       <label>课程类型</label>
@@ -4637,7 +4637,7 @@ function renderTchr(){
   const tc=document.getElementById('f-tc').value,sem=document.getElementById('f-tc-s').value,tp=document.getElementById('f-tc-t').value;
   const dept=document.getElementById('f-tc-d')?document.getElementById('f-tc-d').value:'';
   const tb=document.getElementById('tc-tb'),em=document.getElementById('tc-em');
-  const lbl=(tc?tc:(dept?dept+'专业':'全部老师'))+(sem?' · '+sem:'');
+  const lbl=(tc?tc:(dept?dept+'部门':'全部老师'))+(sem?' · '+sem:'');
   document.getElementById('tc-ttl').textContent='任课老师课程总表 · '+lbl;
   // v8.12：课程代码 / 英文名 / 班级 搜索
   const qEl=document.getElementById('f-tc-q');
@@ -5930,14 +5930,14 @@ function buildStcPrint(){
     let tchrs=[...new Set(T.filter(t=>t.d===d).map(t=>t.n))].sort();
     if(tcF)tchrs=tchrs.filter(n=>n===tcF);
     let body=''; tchrs.forEach(n=>{body+=teacherBody(n);});
-    if(body)html+='<section class="sco-dept"><h2 class="sco-dept-h">专业 '+eh(d)+'</h2>'+body+'</section>';
+    if(body)html+='<section class="sco-dept"><h2 class="sco-dept-h">部门 '+eh(d)+'</h2>'+body+'</section>';
   });
   cont.innerHTML=html||'<div style="padding:20px;color:#999">此筛选下无排课数据</div>';
 }
 function printPanel(id){
   switchTab(id);
   const titles={sch:'排课记录',sp:'IS/SG 排课记录',sum:'学期总表',sta:'教学统计 · 各授课老师工作量',btec:'BTEC 修课计划',exam:'本科期末考特例'};
-  const subtitles={sch:'课程安排总览',sp:'IS/SG 特别排课学生名单',sum:'学期课程综合总表',sta:'专业分组工作量统计（含BTEC）',btec:'各生 BTEC 单元学期分布',exam:'期末考特殊安排学生名单'};
+  const subtitles={sch:'课程安排总览',sp:'IS/SG 特别排课学生名单',sum:'学期课程综合总表',sta:'部门分组工作量统计（含BTEC）',btec:'各生 BTEC 单元学期分布',exam:'期末考特殊安排学生名单'};
   const now=new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
   // 班级总表(sub-sco)活跃时,列印走「按专业分组」模式
   const scoActive=(id==='sum'&&document.getElementById('sub-sco')&&document.getElementById('sub-sco').classList.contains('active'));
@@ -5952,7 +5952,7 @@ function printPanel(id){
   const titleT=scoActive?'学期总表 · 班级课程总表':stcActive?'学期总表 · 任课老师课程总表':titles[id];
   let subT;
   if(scoActive){const d=gv('f-co-d'),c=gv('f-co');subT='按专业·届别分组 · '+(d?'专业 '+d:'全部专业')+(c?' · 届别 '+c:'');}
-  else if(stcActive){const d=gv('f-tc-d'),tc=gv('f-tc');subT='按专业·老师分组 · '+(d?'专业 '+d:'全部专业')+(tc?' · 老师 '+tc:'');}
+  else if(stcActive){const d=gv('f-tc-d'),tc=gv('f-tc');subT='按部门·老师分组 · '+(d?'部门 '+d:'全部部门')+(tc?' · 老师 '+tc:'');}
   else subT=subtitles[id];
   const hdr=document.getElementById('print-header');
   if(hdr){
@@ -6943,7 +6943,7 @@ function updateSumPrintHint(){
     t='🖨️ 将印:'+(d?'专业 '+d:'全部专业')+' · '+(c?'届别 '+c:'全部届别')+' · '+(s?'学期 '+s:'全部学年学期')+' —— 按专业→届别分组 · 直向 A4';
   }else if(active==='sub-stc'){
     const d=v('f-tc-d'),tc=v('f-tc'),s=v('f-tc-s');
-    t='🖨️ 将印:'+(d?'专业 '+d:'全部专业')+' · '+(tc?'老师 '+tc:'全部老师')+' · '+(s?'学期 '+s:'全部学年学期')+' —— 按专业→老师分组 · 直向 A4';
+    t='🖨️ 将印:'+(d?'部门 '+d:'全部部门')+' · '+(tc?'老师 '+tc:'全部老师')+' · '+(s?'学期 '+s:'全部学年学期')+' —— 按部门→老师分组 · 直向 A4';
   }else if(active==='sub-sss'){
     t='🖨️ 将印:SG/IS 学生名单(依当前筛选)· 横向 A4';
   }else if(active==='sub-sst'){
