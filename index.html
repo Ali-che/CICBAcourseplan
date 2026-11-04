@@ -4216,7 +4216,7 @@ function deptBadge(dept){
 }
 // v7.3: 排课记录上方「课程代码」筛选下拉 —— 固定 13 项，与课程库 D 栏对应
 // 选中某项时严格匹配（GE 跟 GE-KE/GE-KH/GE-LA 分别独立筛选）
-const SCH_DEPT_OPTIONS=['CA','CD','EV','FA','GE','GE-KE','GE-KH','GE-LA','IB','IT','KB','SC','TM'];
+const SCH_DEPT_OPTIONS=['CA','CD','EV','FA','GE','GE-KE','GE-KH','GE-LA','IB','IBCE','IT','KB','SC','TM'];
 function buildSchDeptFilter(){
   const sel=document.getElementById('sch-dept-f');if(!sel)return;
   const cur=sel.value;
