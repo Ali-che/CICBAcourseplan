@@ -1034,6 +1034,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <button class="ops-tab" data-sec="notice" onclick="opsSwitch('notice')">教务须知</button>
       <button class="ops-tab" data-sec="arch" onclick="opsSwitch('arch')">📦 归档</button>
       <button class="ops-tab" id="ops-tab-acct" data-sec="acct" onclick="opsSwitch('acct')" style="display:none">🔑 账号权限</button>
+      <button class="ops-tab" id="ops-tab-edits" data-sec="edits" onclick="opsSwitch('edits')" style="display:none">📋 编辑记录</button>
       <button class="btn btn-sm" onclick="renderOps(true)" style="margin-left:auto">↻ 重载</button>
     </div>
     <div id="ops-body"><div style="color:#888;padding:20px">载入中…</div></div>
@@ -1331,6 +1332,11 @@ function applyRoleVisibility(){
     acctBtn.style.display = (currentRole==='admin') ? '' : 'none';
     if(currentRole!=='admin' && typeof opsSec!=='undefined' && opsSec==='acct' && typeof opsSwitch==='function') opsSwitch('sem');
   }
+  const editsBtn = document.getElementById('ops-tab-edits');
+  if(editsBtn){
+    editsBtn.style.display = (currentRole==='admin') ? '' : 'none';
+    if(currentRole!=='admin' && typeof opsSec!=='undefined' && opsSec==='edits' && typeof opsSwitch==='function') opsSwitch('sem');
+  }
 }
 
 // ══════════ ⚙️ 后台操作(参考数据管理,admin 专属;写入走 admin_* RPC,服务端再验权限)══════════
@@ -1446,9 +1452,10 @@ async function renderOps(force){
 function opsSwitch(sec){opsSec=sec;document.querySelectorAll('.ops-tab').forEach(x=>x.classList.toggle('active',x.dataset.sec===sec));opsRenderSec();}
 function opsRenderSec(){
   const b=document.getElementById('ops-body');if(!b||!opsD)return;
-  b.innerHTML= opsSec==='sem'?opsSemView(): opsSec==='dept'?opsDeptView(): opsSec==='coh'?opsCohView(): opsSec==='tch'?opsTchView(): opsSec==='pos'?opsPosView(): opsSec==='cat'?opsCatView(): opsSec==='grad'?opsGradView(): opsSec==='school'?opsSchoolView(): opsSec==='notice'?opsNoticeView(): opsSec==='arch'?opsArchView(): opsSec==='acct'?opsAcctView(): '';
+  b.innerHTML= opsSec==='sem'?opsSemView(): opsSec==='dept'?opsDeptView(): opsSec==='coh'?opsCohView(): opsSec==='tch'?opsTchView(): opsSec==='pos'?opsPosView(): opsSec==='cat'?opsCatView(): opsSec==='grad'?opsGradView(): opsSec==='school'?opsSchoolView(): opsSec==='notice'?opsNoticeView(): opsSec==='arch'?opsArchView(): opsSec==='acct'?opsAcctView(): opsSec==='edits'?opsEditsView(): '';
   if(opsSec==='school'&&!_examLoaded){_examLoaded=true;loadExam().then(function(){if(opsSec==='school')opsRenderSec();});}
   if(opsSec==='arch'&&!_examLoaded){_examLoaded=true;loadExam().then(function(){if(opsSec==='arch')opsRenderSec();});}  // 归档面板也需期末考数据,否则「期末考」数恒 0
+  if(opsSec==='edits'&&!_examLoaded){_examLoaded=true;loadExam().then(function(){if(opsSec==='edits')opsRenderSec();});}  // 编辑记录面板也汇总期末考
   if(opsSec==='notice'&&!_noticesLoadedOps){_noticesLoadedOps=true;loadNotices().then(function(){if(opsSec==='notice')opsRenderSec();});}
 }
 // 使用中检查(用已加载的 schD/spD)
@@ -2303,6 +2310,31 @@ function opsArchView(){
   return h;
 }
 function _archRerender(){if(typeof renderSch==='function')renderSch();if(typeof renderSp==='function')renderSp();if(typeof renderExam==='function')renderExam();if(typeof renderAllSum==='function')renderAllSum();}
+// ── 后台:编辑记录(各记录「最后一次修改」快照,仅 admin)──
+function opsEditsView(){
+  if(currentRole!=='admin')return '<div style="color:#aaa;padding:12px">仅管理员可见</div>';
+  var items=[];
+  (schD||[]).forEach(function(r){if(r&&(r.editor||r.updated))items.push({t:r.updated||'',who:r.editor||'',kind:'排课',kc:'b0',obj:(r.course||'')+(r.sem?(' · '+r.sem):'')+(r.cls?(' · '+r.cls):''),tc:r.tc||''});});
+  (spD||[]).forEach(function(r){if(r&&(r.editor||r.updated))items.push({t:r.updated||'',who:r.editor||'',kind:'IS/SG',kc:'b5',obj:(r.co||'')+(r.sem?(' · '+r.sem):'')+(r.cls?(' · '+r.cls):''),tc:r.tc||''});});
+  (_exam.rows||[]).forEach(function(r){if(!r)return;var tt=r.updated_at||r.updated||'',ed=r.editor||'';if(ed||tt)items.push({t:tt,who:ed,kind:'期末考',kc:'b4',obj:(r.course||'')+(r.sem?(' · '+r.sem):'')+(r.cls?(' · '+r.cls):''),tc:r.teacher||''});});
+  items.sort(function(a,b){return String(b.t||'').localeCompare(String(a.t||''));});
+  var total=items.length,CAP=400,shown=items.slice(0,CAP);
+  var fmt=function(t){if(!t)return '—';var d=new Date(t);if(isNaN(d))return eh(String(t));var p=function(n){return String(n).padStart(2,'0');};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());};
+  var h='<div style="color:#666;font-size:12px;margin-bottom:8px;line-height:1.7">各记录的<b>最后一次修改</b>(谁·何时),按时间新→旧,涵盖排课 / IS·SG / 期末考特例。<span style="color:#999">注:这是「最后修改」快照,非逐次历史。</span></div>';
+  h+='<div style="font-size:11px;color:#888;margin-bottom:6px">共 '+total+' 笔'+(total>CAP?(' · 只显示最近 '+CAP+' 笔'):'')+'</div>';
+  if(!total)return h+'<div style="color:#aaa;padding:12px">暂无编辑记录</div>';
+  var th=function(t){return '<th style="background:#534AB7;color:#fff;text-align:left;padding:6px 9px;position:sticky;top:0">'+t+'</th>';};
+  h+='<div class="tbl-wrap" style="max-height:calc(100vh - 320px);overflow:auto"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr>'+th('修改时间')+th('修改人')+th('类型')+th('对象(课程·学期·班级)')+th('老师')+'</tr></thead><tbody>';
+  shown.forEach(function(x){
+    h+='<tr>'+
+      '<td style="padding:4px 9px;white-space:nowrap;color:#666;border-bottom:1px solid #eee">'+fmt(x.t)+'</td>'+
+      '<td style="padding:4px 9px;white-space:nowrap;border-bottom:1px solid #eee">'+(x.who?eh(x.who):'<span style="color:#bbb">—</span>')+'</td>'+
+      '<td style="padding:4px 9px;border-bottom:1px solid #eee"><span class="badge '+x.kc+'" style="font-size:10px">'+x.kind+'</span></td>'+
+      '<td style="padding:4px 9px;border-bottom:1px solid #eee">'+eh(x.obj)+'</td>'+
+      '<td style="padding:4px 9px;white-space:nowrap;color:#555;border-bottom:1px solid #eee">'+eh(x.tc)+'</td></tr>';
+  });
+  return h+'</tbody></table></div>';
+}
 async function opsArchSet(sem,archived){
   const r=await gasPost('adminSetTermArchived',{sem:sem,archived:archived});
   if(r&&r.success){await loadArchTerms();opsRenderSec();_archRerender();if(typeof showToast==='function')showToast(archived?('已归档 '+sem):('已恢复 '+sem),{kind:'success',duration:1800});}
@@ -4337,13 +4369,6 @@ function mpHint(code){
 // 搜索是否命中该课程的「对接」课程代码(小写 q)
 function _mapMatch(code,q){const cf=C.find(x=>x.c===code);return !!(cf&&cf.mapping&&String(cf.mapping).toLowerCase().includes(q));}
 // ═══════ §SCHEDULE 排课表 ═══════
-// A方案:行内显示「最后修改人·时间」(淡灰小字,完整时间放 title)
-function _editLineHtml(r){
-  if(!r||(!r.editor&&!r.updated))return '';
-  var who=r.editor?eh(r.editor):'—',full=who,short=who;
-  if(r.updated){var d=new Date(r.updated);if(!isNaN(d)){var p=function(n){return String(n).padStart(2,'0');};full=who+' · '+d.toLocaleString();short=who+' · '+(d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes());}}
-  return '<div style="font-size:9.5px;color:#aaa;margin-top:2px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="最后修改:'+full+'">✎ '+short+'</div>';
-}
 function renderSch(){
   if(!_panelActive('sch')){_tabDirty.sch=true;return;}
   _tabDirty.sch=false;
@@ -4411,7 +4436,7 @@ function renderSch(){
       '<td>'+semBadge(r.sem)+'</td><td>'+halfBadge(r.half)+'</td>'+
       '<td>'+r.cls+'</td><td style="white-space:nowrap">'+teacherTag(r.tc)+'</td>'+
       '<td style="white-space:normal;min-width:340px;line-height:1.7">'+tags+'</td><td><strong>'+tot+'</strong></td>'+
-      '<td class="note-cell" style="font-size:11px;color:#888;max-width:130px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(r.nt?eh(r.nt):'')+'</div>'+(r.nt?'<div class="note-tip">'+eh(r.nt)+'</div>':'')+_editLineHtml(r)+'</td>'+
+      '<td class="note-cell" style="font-size:11px;color:#888;max-width:130px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(r.nt?eh(r.nt):'')+'</div>'+(r.nt?'<div class="note-tip">'+eh(r.nt)+'</div>':'')+'</td>'+
       '<td style="white-space:nowrap"><button class="btn-ic btn-ic-edit" onclick="startES('+r.id+')" title="更动"><svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zm.708 1.06L11.5 2.5l2 2L14.5 3.5 12.854 1.207zM10.5 3.5l-9 9 1.5 1.5 9-9-1.5-1.5z"/></svg></button><button class="btn-ic btn-ic-del" onclick="delSch('+r.id+')" title="删除"><svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H3.5V0a1 1 0 0 1 1-1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg></button></td></tr>';
   }).join('');
   if(typeof syncTblHeight==='function')syncTblHeight();
@@ -4689,7 +4714,7 @@ function renderTchr(){
       '<td style="font-size:11px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="background:#FEE2E2;color:#B91C1C;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;display:inline-block">⏳ 待定</span>')+'</td>'+
       '<td>'+r.cls+'</td><td>'+semBadge(r.sem)+'</td>'+
       '<td>'+halfBadge(r.half)+'</td><td>'+(tot||'—')+'</td>'+
-      '<td class="note-cell" style="font-size:11px;color:#888;max-width:130px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(r.nt?eh(r.nt):'')+'</div>'+(r.nt?'<div class="note-tip">'+eh(r.nt)+'</div>':'')+_editLineHtml(r)+'</td></tr>';}).join('');
+      '<td class="note-cell" style="font-size:11px;color:#888;max-width:130px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(r.nt?eh(r.nt):'')+'</div>'+(r.nt?'<div class="note-tip">'+eh(r.nt)+'</div>':'')+'</td></tr>';}).join('');
   const sgRows=spRows.map((r,i)=>
     '<tr style="background:#FFF8F0"><td>'+(data.length+i+1)+'</td>'+
     '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.co+'</span><span class="badge b3" style="font-size:9.5px;padding:1px 6px;opacity:.85">SG/IS</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+mpHint(r.co)+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
