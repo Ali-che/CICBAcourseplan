@@ -2386,13 +2386,14 @@ function _auditRender(){
   rows.sort(function(a,b){
     if(k==='tbl'){var at=(tblOrd[a.tbl]==null?9:tblOrd[a.tbl]),bt=(tblOrd[b.tbl]==null?9:tblOrd[b.tbl]);return d*(at-bt)||(String(b.at||'').localeCompare(String(a.at||'')));}
     if(k==='op'){var ao=(opOrd[a.op]==null?9:opOrd[a.op]),bo=(opOrd[b.op]==null?9:opOrd[b.op]);return d*(ao-bo)||(String(b.at||'').localeCompare(String(a.at||'')));}
+    if(k==='obj'){var ja=a.after||a.before||{},jb=b.after||b.before||{};var ka=(ja.sem||'')+'|'+(ja.course_code||ja.course||'')+'|'+(ja.class_code||''),kb=(jb.sem||'')+'|'+(jb.course_code||jb.course||'')+'|'+(jb.class_code||'');return d*ka.localeCompare(kb);}
     return d*String(a[k]||'').localeCompare(String(b[k]||''));
   });
   var arr=function(kk){return _auditSort.key===kk?(_auditSort.dir>0?'▲':'▼'):'⇅';};
   var thS=function(kk,t){return '<th onclick="opsAuditSort(\''+kk+'\')" style="background:#534AB7;color:#fff;text-align:left;padding:6px 9px;position:sticky;top:0;cursor:pointer;user-select:none;white-space:nowrap" title="点击排序">'+t+' <span style="opacity:.75;font-size:10px">'+arr(kk)+'</span></th>';};
   var thP=function(t){return '<th style="background:#534AB7;color:#fff;text-align:left;padding:6px 9px;position:sticky;top:0">'+t+'</th>';};
   var h='<div style="font-size:11px;color:#888;margin-bottom:6px">显示 '+rows.length+' 笔'+(rows.length>=300?' · 已达单页上限,请用上方筛选缩小':'')+'</div>';
-  h+='<div class="tbl-wrap" style="max-height:calc(100vh - 360px);overflow:auto"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr>'+thS('at','时间')+thS('editor','修改人')+thS('tbl','类型')+thS('op','动作')+thP('对象')+thP('改动')+'</tr></thead><tbody>';
+  h+='<div class="tbl-wrap" style="max-height:calc(100vh - 360px);overflow:auto"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr>'+thS('at','时间')+thS('editor','修改人')+thS('tbl','类型')+thS('op','动作')+thS('obj','对象')+thP('改动')+'</tr></thead><tbody>';
   rows.forEach(function(x){
     h+='<tr style="vertical-align:top">'+
       '<td style="padding:4px 9px;white-space:nowrap;color:#666;border-bottom:1px solid #eee">'+fmt(x.at)+'</td>'+
