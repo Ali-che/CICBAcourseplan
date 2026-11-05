@@ -2337,14 +2337,20 @@ function opsAuditApply(){
   opsAuditLoad();
 }
 function opsAuditReset(){_auditFilter={editor:'',tbl:'',op:'',from:'',to:''};if(typeof opsRenderSec==='function')opsRenderSec();}
+var _auditSort={key:'at',dir:-1}, _auditRows=[];
+function opsAuditSort(k){if(_auditSort.key===k)_auditSort.dir*=-1;else{_auditSort.key=k;_auditSort.dir=(k==='at'?-1:1);}_auditRender();}
 async function opsAuditLoad(){
   var box=document.getElementById('ops-edits-body');if(!box)return;
   box.innerHTML='<div style="color:#888;padding:12px">加载中…</div>';
   var f=_auditFilter;
   var r=await gasGet({action:'auditList',editor:f.editor||null,tbl:f.tbl||null,op:f.op||null,from:f.from||null,to:f.to||null,limit:300,offset:0});
   if(!r||!r.success){box.innerHTML='<div style="color:#c62222;padding:12px">读取失败:'+eh((r&&r.error)||'?')+'</div>';return;}
-  var rows=r.rows||[];
-  if(!rows.length){box.innerHTML='<div style="color:#aaa;padding:12px">没有符合的记录</div>';return;}
+  _auditRows=r.rows||[];
+  _auditRender();
+}
+function _auditRender(){
+  var box=document.getElementById('ops-edits-body');if(!box)return;
+  if(!_auditRows.length){box.innerHTML='<div style="color:#aaa;padding:12px">没有符合的记录</div>';return;}
   var TBL={schedule:'排课',special:'IS/SG',exam_special:'期末考'},TBLC={schedule:'b0',special:'b5',exam_special:'b4'};
   var OP={INSERT:'新增',UPDATE:'修改',DELETE:'删除',BASELINE:'基线'},OPC={INSERT:'#1b7a5a',UPDATE:'#8a5a00',DELETE:'#a32d2d',BASELINE:'#6b7280'};
   var FN={course_code:'代码',course_en:'英文名',sem:'学期',half:'上下半',type:'类型',class_code:'班级',teacher:'老师',cohorts:'届别',total:'人数',note:'备注',btec:'BTEC',student_id:'学号',name:'姓名',major:'专业',title:'题目',course:'课程',dept:'系别',kind:'种类',school:'登分学校',conflict_course:'冲突课'};
@@ -2370,9 +2376,19 @@ async function opsAuditLoad(){
     if(x.op==='DELETE'){var b=x.before||{};return '<span style="color:#a32d2d">－ 删除整笔</span>'+(b.teacher?' · 老师 '+eh(b.teacher):'')+(b.cohorts?' · 届别 '+cohList(b.cohorts):'');}
     if(x.op==='BASELINE'){var c=x.after||{};return '<span style="color:#6b7280">迁移前最后状态</span>'+(c.teacher?' · 老师 '+eh(c.teacher):'')+(c.cohorts?' · 届别 '+cohList(c.cohorts):'');}
     return '';};
-  var th=function(t){return '<th style="background:#534AB7;color:#fff;text-align:left;padding:6px 9px;position:sticky;top:0">'+t+'</th>';};
+  // 排序(点表头)
+  var rows=_auditRows.slice(),k=_auditSort.key,d=_auditSort.dir;
+  var tblOrd={schedule:0,special:1,exam_special:2},opOrd={INSERT:0,UPDATE:1,DELETE:2,BASELINE:3};
+  rows.sort(function(a,b){
+    if(k==='tbl'){var at=(tblOrd[a.tbl]==null?9:tblOrd[a.tbl]),bt=(tblOrd[b.tbl]==null?9:tblOrd[b.tbl]);return d*(at-bt)||(String(b.at||'').localeCompare(String(a.at||'')));}
+    if(k==='op'){var ao=(opOrd[a.op]==null?9:opOrd[a.op]),bo=(opOrd[b.op]==null?9:opOrd[b.op]);return d*(ao-bo)||(String(b.at||'').localeCompare(String(a.at||'')));}
+    return d*String(a[k]||'').localeCompare(String(b[k]||''));
+  });
+  var arr=function(kk){return _auditSort.key===kk?(_auditSort.dir>0?'▲':'▼'):'⇅';};
+  var thS=function(kk,t){return '<th onclick="opsAuditSort(\''+kk+'\')" style="background:#534AB7;color:#fff;text-align:left;padding:6px 9px;position:sticky;top:0;cursor:pointer;user-select:none;white-space:nowrap" title="点击排序">'+t+' <span style="opacity:.75;font-size:10px">'+arr(kk)+'</span></th>';};
+  var thP=function(t){return '<th style="background:#534AB7;color:#fff;text-align:left;padding:6px 9px;position:sticky;top:0">'+t+'</th>';};
   var h='<div style="font-size:11px;color:#888;margin-bottom:6px">显示 '+rows.length+' 笔'+(rows.length>=300?' · 已达单页上限,请用上方筛选缩小':'')+'</div>';
-  h+='<div class="tbl-wrap" style="max-height:calc(100vh - 360px);overflow:auto"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr>'+th('时间')+th('修改人')+th('类型')+th('动作')+th('对象')+th('改动')+'</tr></thead><tbody>';
+  h+='<div class="tbl-wrap" style="max-height:calc(100vh - 360px);overflow:auto"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr>'+thS('at','时间')+thS('editor','修改人')+thS('tbl','类型')+thS('op','动作')+thP('对象')+thP('改动')+'</tr></thead><tbody>';
   rows.forEach(function(x){
     h+='<tr style="vertical-align:top">'+
       '<td style="padding:4px 9px;white-space:nowrap;color:#666;border-bottom:1px solid #eee">'+fmt(x.at)+'</td>'+
