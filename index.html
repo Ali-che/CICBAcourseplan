@@ -3165,7 +3165,8 @@ async function heartbeatTick(){
   if(isActivelyUsing()){
     try{await gasHeartbeat();}catch(e){}
   }
-  // 不管发不发，都拉一次 whoOnline 让 badge 显示
+  // whoOnline 只有管理员要(徽标仅 admin);其他人照常心跳但不拉名单
+  if(typeof currentRole==='undefined'||currentRole!=='admin')return;
   try{
     const r=await gasWhoOnline();
     if(r&&r.success){
@@ -3177,13 +3178,13 @@ async function heartbeatTick(){
 
 function updateOnlineBadge(){
   const b=document.getElementById('online-badge');if(!b)return;
-  const n=_onlineList.length;
-  // 仅管理员可见,且只在有其他人在线时现身
+  // 仅管理员可见;常驻可点(就算只有你)
   const canSee=(typeof currentRole!=='undefined'&&currentRole==='admin');
-  if(!canSee||!n){b.style.display='none';return;}
+  if(!canSee){b.style.display='none';return;}
+  const n=_onlineList.length;
   b.style.display='';
   b.textContent='👥 在线 '+n;
-  b.title='在线: '+_onlineList.map(u=>u.editor).join('、'); // hover 看名单
+  b.title=n?'其他在线: '+_onlineList.map(u=>u.editor).join('、'):'目前只有你在线';
 }
 
 function showOnlineList(){
@@ -7210,7 +7211,7 @@ function syncTblHeight(){
       if(params.idsOnly){const d=await sget('schedule?select=id&order=id.asc');return{success:true,data:(d||[]).map(x=>({id:x.id}))};}
       const d=await sget('schedule?select=*&order=id.asc');return{success:true,data:(d||[]).map(mSch)};
     }
-    if(a==='whoOnline')return{success:true,users:[]};
+    if(a==='whoOnline'){var rw=await srpc('presence_list',{p_pin:_pin,p_me:(typeof currentEditor!=='undefined'?currentEditor:null)}).catch(function(){return null;});return (rw&&rw.success)?{success:true,users:rw.users||[]}:{success:true,users:[]};}
     if(a==='listBackups')return{success:true,snapshots:[]};
     if(a==='btecData'){
       // 学生个资不再匿名直读:改走验 PIN 的 security-definer RPC btec_data(p_pin)
@@ -7261,7 +7262,8 @@ function syncTblHeight(){
     if(action==='deleteMultiple')return srpc('delete_multiple',{p_pin:_pin,p_type:t,p_ids:body.ids||[]});
     if(action==='upsertBtec')return srpc('upsert_btec',{p_pin:_pin,p_name:body.name,p_value:+body.value||0});
     if(action==='deleteBtec')return srpc('delete_btec',{p_pin:_pin,p_name:body.name});
-    if(action==='heartbeat'||action==='goodbye')return{success:true};
+    if(action==='heartbeat')return srpc('presence_beat',{p_editor:(typeof currentEditor!=='undefined'?currentEditor:'')||''}).catch(function(){return{success:true};});
+    if(action==='goodbye')return srpc('presence_bye',{p_editor:(typeof currentEditor!=='undefined'?currentEditor:'')||''}).catch(function(){return{success:true};});
     // ⚙️ 后台操作 admin RPC(服务端 _admin 再验权限)
     if(action==='adminAddSemester')return srpc('admin_add_semester',{p_pin:_pin,p_sem:body.sem});
     if(action==='adminDelSemester')return srpc('admin_del_semester',{p_pin:_pin,p_sem:body.sem});
