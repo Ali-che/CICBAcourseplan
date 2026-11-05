@@ -1363,7 +1363,7 @@ function applyRoleVisibility(){
 // ═══════ §OPS 后台操作·参考数据管理 ═══════
 let opsD=null, opsSec='sem', opsLoading=false, opsCatQ='', opsEdit=null;
 let _catSel=new Set();   // 课程总库多选删除
-let opsTchSort={key:'name',dir:1}, opsTchF={name:'',dept:'',pos:'',quota:'',eid:''};
+let opsTchSort={key:'name',dir:1}, opsTchF={name:'',dept:'',pos:'',quota:'',eid:'',showResigned:false};
 function opsTchSetSort(k){if(opsTchSort.key===k)opsTchSort.dir*=-1;else{opsTchSort.key=k;opsTchSort.dir=1;}opsRenderSec();}
 function opsTchRows(){
   let list=(opsD.teachers||[]).slice();
@@ -1373,9 +1373,10 @@ function opsTchRows(){
   if(f.pos)list=list.filter(t=>t.position===f.pos);
   if(f.quota)list=list.filter(t=>String(t.quota).includes(f.quota));
   if(f.eid)list=list.filter(t=>String(t.employee_id||'').includes(f.eid));
+  if(!f.showResigned)list=list.filter(t=>!t.resigned);
   const k=opsTchSort.key,d=opsTchSort.dir;
   list.sort(function(a,b){if(k==='quota')return d*((+a.quota||0)-(+b.quota||0));return d*String(a[k]||'').localeCompare(String(b[k]||''));});
-  return list.map(t=>'<tr><td style="white-space:nowrap">'+eh(t.name)+'</td><td>'+eh(t.dept)+'</td><td style="font-size:11px">'+eh(t.position)+'</td><td style="text-align:center">'+t.quota+'</td><td style="font-family:ui-monospace,monospace;font-size:11px">'+(t.employee_id?eh(t.employee_id):'—')+'</td><td style="text-align:right;white-space:nowrap"><button class="ops-edit" onclick="opsStartEdit(\'tch\',\''+jsq(t.name)+'\',{name:\''+jsq(t.name)+'\',dept:\''+jsq(t.dept)+'\',position:\''+jsq(t.position)+'\',quota:'+(t.quota||0)+',employee_id:\''+jsq(t.employee_id)+'\'})">编辑</button> <button class="ops-del" onclick="opsDelTch(\''+jsq(t.name)+'\')">删除</button></td></tr>').join('')||'<tr><td colspan="6" style="color:#aaa">无匹配</td></tr>';
+  return list.map(t=>{var rz=!!t.resigned;return '<tr style="'+(rz?'opacity:.55':'')+'"><td style="white-space:nowrap">'+eh(t.name)+(rz?' <span style="background:#eee;color:#888;font-size:9px;border-radius:4px;padding:1px 6px">离职</span>':'')+'</td><td>'+eh(t.dept)+'</td><td style="font-size:11px">'+eh(t.position)+'</td><td style="text-align:center">'+t.quota+'</td><td style="font-family:ui-monospace,monospace;font-size:11px">'+(t.employee_id?eh(t.employee_id):'—')+'</td><td style="text-align:right;white-space:nowrap"><button class="ops-edit" onclick="opsStartEdit(\'tch\',\''+jsq(t.name)+'\',{name:\''+jsq(t.name)+'\',dept:\''+jsq(t.dept)+'\',position:\''+jsq(t.position)+'\',quota:'+(t.quota||0)+',employee_id:\''+jsq(t.employee_id)+'\'})">编辑</button> <button class="ops-edit" onclick="opsSetTchResigned(\''+jsq(t.name)+'\','+(rz?'false':'true')+')" style="color:'+(rz?'#1b7a5a':'#8a5a00')+';border-color:'+(rz?'#9FE1CB':'#e6c27a')+'">'+(rz?'复职':'离职')+'</button> <button class="ops-del" onclick="opsDelTch(\''+jsq(t.name)+'\')">删除</button></td></tr>';}).join('')||'<tr><td colspan="6" style="color:#aaa">无匹配</td></tr>';
 }
 function opsTchApply(){const tb=document.getElementById('ops-tch-tb');if(tb)tb.innerHTML=opsTchRows();}
 // 课程总库 排序+每列漏斗
@@ -1609,6 +1610,7 @@ function opsTchView(){
     '<div class="fg"><label>限额</label><input id="ops-tch-quota" type="number" step="0.5" style="width:65px" value="'+eh(String(defQuota||''))+'" placeholder="10"></div>'+
     '<div class="fg"><label>员工号</label><input id="ops-tch-eid" style="width:90px" value="'+eh(opsEV('tch','employee_id'))+'"></div>'+
     '<button class="btn btn-p" onclick="opsAddTch()">'+(ed?'保存修改':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>'+
+    '<div style="margin:2px 0 6px"><label style="font-size:12px;color:#555;cursor:pointer;user-select:none"><input type="checkbox" '+(opsTchF.showResigned?'checked':'')+' onchange="opsTchF.showResigned=this.checked;opsTchApply()"> 显示离职老师</label></div>'+
     '<div class="tbl-wrap" style="max-height:calc(100vh - 460px)"><table><thead><tr>'+
       hd('name','姓名','<input value="'+eh(opsTchF.name)+'" oninput="opsTchF.name=this.value;opsTchApply()" placeholder="筛" style="'+_fi+'">')+
       hd('dept','所属部门',deptF)+
@@ -1620,6 +1622,7 @@ function opsTchView(){
 }
 async function opsAddTch(){const name=document.getElementById('ops-tch-name').value.trim();if(!name){alert('请输入姓名');return;}opsAfter(await gasPost('adminAddTeacher',{name,dept:document.getElementById('ops-tch-dept').value,position:document.getElementById('ops-tch-pos').value.trim(),quota:document.getElementById('ops-tch-quota').value,employee_id:document.getElementById('ops-tch-eid').value.trim()}),'已新增/更新老师 '+name);}
 async function opsDelTch(name){const n=opsUsedByTeacher(name);if(!confirm('删除老师「'+name+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 笔排课/特别排课是此老师。仍要删?':'')))return;opsAfter(await gasPost('adminDelTeacher',{name}),'已删除老师 '+name);}
+async function opsSetTchResigned(name,resigned){if(!confirm((resigned?'将「'+name+'」标记为离职(存档)?':'让「'+name+'」复职?')+'\n\n'+(resigned?'离职后:不出现在新增排课的老师选单、名单默认隐藏;历史排课与统计不受影响,随时可复职。':'复职后:恢复出现在选单与在职名单。')))return;opsAfter(await gasPost('adminSetTeacherResigned',{name:name,resigned:resigned}),(resigned?'已将 '+name+' 标记离职':'已让 '+name+' 复职'));}
 // ── 职位(默认限额)──
 function opsPosView(){
   const ed=opsIsEdit('pos');
@@ -2361,7 +2364,7 @@ function opsEditsView(){
   var edSel='<select id="aud-editor" style="'+ib+';width:150px"><option value="">全部修改人</option>'+names.map(function(nm){return '<option value="'+eh(nm)+'"'+(f.editor===nm?' selected':'')+'>'+eh(nm)+'</option>';}).join('')+(!_acct.loaded?'<option value="" disabled>(账号载入中…)</option>':'')+'</select>';
   var h='<div style="display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 10px;background:#F7F6FD;border-radius:8px">'+
      edSel+
-     '<select id="aud-tbl" style="'+ib+';width:100px">'+o('','全部类型',f.tbl)+o('schedule','排课',f.tbl)+o('special','IS/SG',f.tbl)+o('exam_special','期末考',f.tbl)+o('cohorts','届别',f.tbl)+'</select>'+
+     '<select id="aud-tbl" style="'+ib+';width:100px">'+o('','全部类型',f.tbl)+o('schedule','排课',f.tbl)+o('special','IS/SG',f.tbl)+o('exam_special','期末考',f.tbl)+o('cohorts','届别',f.tbl)+o('teachers','老师',f.tbl)+'</select>'+
      '<select id="aud-op" style="'+ib+';width:96px">'+o('','全部动作',f.op)+o('INSERT','新增',f.op)+o('UPDATE','修改',f.op)+o('DELETE','删除',f.op)+o('BASELINE','起始',f.op)+'</select>'+
      '<span style="font-size:11px;color:#888">时间</span>'+
      '<input id="aud-from" type="date" value="'+eh(f.from)+'" style="'+ib+';width:140px">'+
@@ -2369,7 +2372,7 @@ function opsEditsView(){
      '<input id="aud-to" type="date" value="'+eh(f.to)+'" style="'+ib+';width:140px">'+
      '<button class="btn btn-sm" onclick="opsAuditApply()">🔍 查询</button>'+
      '<button class="btn btn-sm" onclick="opsAuditReset()">清除</button>'+
-     '<span style="flex:1"></span><span style="font-size:11px;color:#999">排课 / IS·SG / 期末考 / 届别 的每一次增·改·删</span></div>';
+     '<span style="flex:1"></span><span style="font-size:11px;color:#999">排课 / IS·SG / 期末考 / 届别 / 老师 的每一次增·改·删</span></div>';
   h+='<div id="ops-edits-body"><div style="color:#888;padding:12px">加载中…</div></div>';
   setTimeout(opsAuditLoad,0);
   return h;
@@ -2395,11 +2398,11 @@ async function opsAuditLoad(){
 function _auditRender(){
   var box=document.getElementById('ops-edits-body');if(!box)return;
   if(!_auditRows.length){box.innerHTML='<div style="color:#aaa;padding:12px">没有符合的记录</div>';return;}
-  var TBL={schedule:'排课',special:'IS/SG',exam_special:'期末考',cohorts:'届别'},TBLC={schedule:'b0',special:'b5',exam_special:'b4',cohorts:'b2'};
+  var TBL={schedule:'排课',special:'IS/SG',exam_special:'期末考',cohorts:'届别',teachers:'老师'},TBLC={schedule:'b0',special:'b5',exam_special:'b4',cohorts:'b2',teachers:'b6'};
   var OP={INSERT:'新增',UPDATE:'修改',DELETE:'删除',BASELINE:'起始'},OPC={INSERT:'#1b7a5a',UPDATE:'#8a5a00',DELETE:'#a32d2d',BASELINE:'#6b7280'};
   var FN={course_code:'代码',course_en:'英文名',sem:'学期',half:'上下半',type:'类型',class_code:'班级',teacher:'老师',cohorts:'届别',total:'人数',note:'备注',btec:'BTEC',student_id:'学号',name:'姓名',major:'专业',title:'题目',course:'课程',dept:'系别',kind:'种类',school:'登分学校',conflict_course:'冲突课'};
   var fmt=function(t){if(!t)return '—';var d=new Date(t);if(isNaN(d))return eh(String(t));var p=function(n){return String(n).padStart(2,'0');};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());};
-  var objOf=function(j){if(!j)return '';if(j.cohort&&!Array.isArray(j.cohorts))return eh(String(j.cohort)+(j.dept?(' · '+j.dept):''));var c=j.course_code||j.course||'',s=j.sem||'',cl=j.class_code||'';return eh([s,c,cl].filter(Boolean).join(' · '));};  // 顺序:学年学期·课程·班级;届别:代码·专业
+  var objOf=function(j){if(!j)return '';if(typeof j.resigned!=='undefined'&&j.name)return eh(String(j.name));if(j.cohort&&!Array.isArray(j.cohorts))return eh(String(j.cohort)+(j.dept?(' · '+j.dept):''));var c=j.course_code||j.course||'',s=j.sem||'',cl=j.class_code||'';return eh([s,c,cl].filter(Boolean).join(' · '));};  // 顺序:学年学期·课程·班级;届别:代码·专业;老师:姓名
   var cohMap=function(arr){var m={};(arr||[]).forEach(function(x){if(x&&x.cohort)m[x.cohort]=(x.count==null?'':x.count);});return m;};
   var cohDiffStr=function(b,a){var mb=cohMap(b),ma=cohMap(a),keys={},out=[];Object.keys(mb).forEach(function(k){keys[k]=1;});Object.keys(ma).forEach(function(k){keys[k]=1;});
     Object.keys(keys).sort().forEach(function(k){var x=mb[k],y=ma[k];
@@ -2415,6 +2418,7 @@ function _auditRender(){
       out.push('<span style="white-space:nowrap"><b style="color:#555">'+eh(FN[k]||k)+'</b> <span style="color:#a32d2d">'+eh(_short((b||{})[k]))+'</span>→<span style="color:#1b7a5a">'+eh(_short((a||{})[k]))+'</span></span>');});
     return out.length?('<span style="line-height:1.7">'+out.join('<span style="color:#bbb">,</span> ')+'</span>'):'<span style="color:#bbb">(无字段变化)</span>';};
   var detailOf=function(x){
+    if(x.tbl==='teachers'){var ta=x.after||{};return ta.resigned?'<span style="color:#a32d2d">离职存档</span>':'<span style="color:#1b7a5a">复职</span>';}
     if(x.op==='UPDATE')return diffOf(x.before,x.after);
     if(x.op==='INSERT'){var a=x.after||{};if(a.cohort&&!Array.isArray(a.cohorts))return '<span style="color:#1b7a5a">＋ 新增届别</span> '+eh(String(a.cohort))+(a.dept?' · 专业 '+eh(a.dept):'');return '<span style="color:#1b7a5a">＋ 新建</span>'+(a.teacher?' · 老师 '+eh(a.teacher):'')+(a.cohorts?' · 届别 '+cohList(a.cohorts):'');}
     if(x.op==='DELETE'){var b=x.before||{};if(b.cohort&&!Array.isArray(b.cohorts))return '<span style="color:#a32d2d">－ 删除届别</span> '+eh(String(b.cohort))+(b.dept?' · 专业 '+eh(b.dept):'');return '<span style="color:#a32d2d">－ 删除整笔</span>'+(b.teacher?' · 老师 '+eh(b.teacher):'')+(b.cohorts?' · 届别 '+cohList(b.cohorts):'');}
@@ -2422,7 +2426,7 @@ function _auditRender(){
     return '';};
   // 排序(点表头)
   var rows=_auditRows.slice(),k=_auditSort.key,d=_auditSort.dir;
-  var tblOrd={schedule:0,special:1,exam_special:2,cohorts:3},opOrd={INSERT:0,UPDATE:1,DELETE:2,BASELINE:3};
+  var tblOrd={schedule:0,special:1,exam_special:2,cohorts:3,teachers:4},opOrd={INSERT:0,UPDATE:1,DELETE:2,BASELINE:3};
   rows.sort(function(a,b){
     if(k==='tbl'){var at=(tblOrd[a.tbl]==null?9:tblOrd[a.tbl]),bt=(tblOrd[b.tbl]==null?9:tblOrd[b.tbl]);return d*(at-bt)||(String(b.at||'').localeCompare(String(a.at||'')));}
     if(k==='op'){var ao=(opOrd[a.op]==null?9:opOrd[a.op]),bo=(opOrd[b.op]==null?9:opOrd[b.op]);return d*(ao-bo)||(String(b.at||'').localeCompare(String(a.at||'')));}
@@ -3337,15 +3341,15 @@ function sk(s){return String(s).replace(/[^a-zA-Z0-9]/g,'_');}
 function eh(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function enOnly(el){el.value=el.value.replace(/[^\x00-\x7F]/g,'');}
 function siIcon(k,ck,d){if(k!==ck)return'<span style="opacity:.35;font-size:10px">⇅</span>';return'<span style="font-size:10px">'+(d>0?'▲':'▼')+'</span>';}
-function tchrDrop(){return[...T].sort((a,b)=>a.d.localeCompare(b.d)||a.n.localeCompare(b.n));}
+function tchrDrop(keep){return[...T].filter(t=>!t.rs||(keep&&t.n===keep)).sort((a,b)=>a.d.localeCompare(b.d)||a.n.localeCompare(b.n));}
 function tchrOptHTML(selectedName,placeholder){
   const label=selectedName?'— 更改老师 —':'— 选择老师 —';
   let html='<option value="">'+(placeholder||label)+'</option>';
   const bd={};
-  tchrDrop().forEach(t=>{if(!bd[t.d])bd[t.d]=[];bd[t.d].push(t);});
+  tchrDrop(selectedName).forEach(t=>{if(!bd[t.d])bd[t.d]=[];bd[t.d].push(t);});
   Object.keys(bd).sort().forEach(d=>{
     html+='<optgroup label="'+d+'">';
-    bd[d].forEach(t=>{html+='<option value="'+eh(t.n)+'"'+(t.n===selectedName?' selected':'')+'>'+eh(t.n)+'</option>';});
+    bd[d].forEach(t=>{html+='<option value="'+eh(t.n)+'"'+(t.n===selectedName?' selected':'')+'>'+eh(t.n)+(t.rs?'(离职)':'')+'</option>';});
     html+='</optgroup>';
   });
   return html;
@@ -3362,8 +3366,8 @@ function rebuildUI(){
   ['s-tc','p-tc'].forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
     const cur=el.value;el.innerHTML='<option value="">请选择</option>';
-    const bd={};tchrDrop().forEach(t=>{if(!bd[t.d])bd[t.d]=[];bd[t.d].push(t);});
-    Object.keys(bd).sort().forEach(d=>{const g=document.createElement('optgroup');g.label=d;bd[d].forEach(t=>{const o=document.createElement('option');o.value=t.n;o.textContent=t.n;g.appendChild(o);});el.appendChild(g);});
+    const bd={};tchrDrop(cur).forEach(t=>{if(!bd[t.d])bd[t.d]=[];bd[t.d].push(t);});
+    Object.keys(bd).sort().forEach(d=>{const g=document.createElement('optgroup');g.label=d;bd[d].forEach(t=>{const o=document.createElement('option');o.value=t.n;o.textContent=t.n+(t.rs?'(离职)':'');g.appendChild(o);});el.appendChild(g);});
     el.value=cur;
   });
   const ftcd=document.getElementById('f-tc-d');
@@ -7312,10 +7316,10 @@ function syncTblHeight(){
     const a=(params||{}).action;
     if(a==='authenticate')return srpc('authenticate',{p_pin:params.pin||''});
     if(a==='readRef'){
-      const[co,te,ch,de,se]=await Promise.all([sget('courses?select=code,en,dept,note,mapping'),sget('teachers?select=name,dept,position,quota,employee_id'),sget('cohorts?select=dept,cohort'),sget('depts?select=code,name'),sget('semesters?select=sem')]);
+      const[co,te,ch,de,se]=await Promise.all([sget('courses?select=code,en,dept,note,mapping'),sget('teachers?select=name,dept,position,quota,employee_id,resigned'),sget('cohorts?select=dept,cohort'),sget('depts?select=code,name'),sget('semesters?select=sem')]);
       return{success:true,
         courses:(co||[]).map(x=>({c:x.code,en:x.en||'',dept:x.dept||'',note:x.note||'',mapping:x.mapping||''})),
-        teachers:(te||[]).map(x=>({n:x.name,d:x.dept||'',r:x.position||'',l:+x.quota||0,eid:x.employee_id||''})),
+        teachers:(te||[]).map(x=>({n:x.name,d:x.dept||'',r:x.position||'',l:+x.quota||0,eid:x.employee_id||'',rs:!!x.resigned})),
         cohorts:(ch||[]).map(x=>({dept:x.dept,cohort:x.cohort})),
         depts:(de||[]).map(x=>({code:x.code,name:x.name||''})),
         sems:(se||[]).map(x=>x.sem),directors:[]};
@@ -7353,7 +7357,7 @@ function syncTblHeight(){
         sget('semesters?select=sem&order=sem'),
         sget('depts?select=code,name&order=code'),
         sget('cohorts?select=id,dept,cohort&order=dept,cohort'),
-        sget('teachers?select=name,dept,position,quota,employee_id&order=name'),
+        sget('teachers?select=name,dept,position,quota,employee_id,resigned&order=name'),
         sget('catalog?select=id,dept,version,code,zh,en,credit,mapping,req,block,block_credit,fixed,note,source,description&order=code'),
         sget('positions?select=position,quota&order=quota.desc').catch(function(){return [];}),
         sget('grad?select=pid,total,courses_count,course_n,course_cr,intern_n,intern_cr,intern_sub&order=pid').catch(function(){return [];})
@@ -7364,7 +7368,7 @@ function syncTblHeight(){
         semesters:(se||[]).map(x=>x.sem),
         depts:(de||[]).map(x=>({code:x.code,name:x.name||''})),
         cohorts:(ch||[]).map(x=>({id:x.id,dept:x.dept||'',cohort:x.cohort||''})),
-        teachers:(te||[]).map(x=>({name:x.name,dept:x.dept||'',position:x.position||'',quota:+x.quota||0,employee_id:x.employee_id||''})),
+        teachers:(te||[]).map(x=>({name:x.name,dept:x.dept||'',position:x.position||'',quota:+x.quota||0,employee_id:x.employee_id||'',resigned:!!x.resigned})),
         catalog:(ca||[]).map(x=>({id:x.id,dept:x.dept||'',version:x.version||'',code:x.code||'',zh:x.zh||'',en:x.en||'',credit:x.credit||'',mapping:x.mapping||'',req:x.req||'',block:x.block||'',block_credit:x.block_credit||'',fixed:x.fixed||'',note:x.note||'',source:x.source||'',description:x.description||''}))};
     }
     return{success:true};
@@ -7393,6 +7397,7 @@ function syncTblHeight(){
     if(action==='adminUpdateCohort')return srpc('admin_update_cohort',{p_pin:_pin,p_id:body.id,p_dept:body.dept,p_cohort:body.cohort,p_grad_override:(body.grad_override||null)});
     if(action==='adminAddTeacher')return srpc('admin_add_teacher',{p_pin:_pin,p_name:body.name,p_dept:body.dept,p_position:body.position,p_quota:+body.quota||0,p_employee_id:body.employee_id||''});
     if(action==='adminDelTeacher')return srpc('admin_del_teacher',{p_pin:_pin,p_name:body.name});
+    if(action==='adminSetTeacherResigned')return srpc('admin_set_teacher_resigned',{p_pin:_pin,p_name:body.name,p_resigned:!!body.resigned});
     if(action==='adminAddCatalog')return srpc('admin_add_catalog',{p_pin:_pin,p_row:body.row});
     if(action==='adminUpdateCatalog')return srpc('admin_update_catalog',{p_pin:_pin,p_id:body.id,p_fields:body.fields});
     if(action==='adminDelCatalog')return srpc('admin_del_catalog',{p_pin:_pin,p_id:body.id});
