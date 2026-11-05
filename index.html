@@ -1448,6 +1448,7 @@ function opsRenderSec(){
   const b=document.getElementById('ops-body');if(!b||!opsD)return;
   b.innerHTML= opsSec==='sem'?opsSemView(): opsSec==='dept'?opsDeptView(): opsSec==='coh'?opsCohView(): opsSec==='tch'?opsTchView(): opsSec==='pos'?opsPosView(): opsSec==='cat'?opsCatView(): opsSec==='grad'?opsGradView(): opsSec==='school'?opsSchoolView(): opsSec==='notice'?opsNoticeView(): opsSec==='arch'?opsArchView(): opsSec==='acct'?opsAcctView(): '';
   if(opsSec==='school'&&!_examLoaded){_examLoaded=true;loadExam().then(function(){if(opsSec==='school')opsRenderSec();});}
+  if(opsSec==='arch'&&!_examLoaded){_examLoaded=true;loadExam().then(function(){if(opsSec==='arch')opsRenderSec();});}  // 归档面板也需期末考数据,否则「期末考」数恒 0
   if(opsSec==='notice'&&!_noticesLoadedOps){_noticesLoadedOps=true;loadNotices().then(function(){if(opsSec==='notice')opsRenderSec();});}
 }
 // 使用中检查(用已加载的 schD/spD)
