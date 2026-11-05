@@ -634,6 +634,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <select id="sp-dept-f" onchange="renderSp()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">课程代码</option></select>
         <select id="sp-mj-f" onchange="renderSp()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">全部专业</option></select>
         <input id="sp-search" type="text" oninput="renderSp()" placeholder="🔍 搜课程代码 / 英文名 / 学号 / 姓名 / 班级" style="font-size:11px;padding:4px 8px;width:260px;border-color:#E5E3F8">
+        <label style="font-size:11px;color:#888;cursor:pointer;white-space:nowrap" title="显示已归档学期(全局)"><input type="checkbox" id="sp-showarch" onchange="toggleShowArch(this.checked)" style="width:auto;vertical-align:middle"> 显示已归档</label>
       </div>
       <!-- 操作区 -->
       <div style="display:flex;gap:4px;align-items:center;flex:1;justify-content:flex-end;flex-wrap:wrap">
@@ -675,6 +676,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     </div>
     <div class="no-print" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
       <span id="sum-print-hint" style="font-size:11px;color:#888;text-align:right;line-height:1.35;max-width:520px"></span>
+      <label style="font-size:11px;color:#888;cursor:pointer;white-space:nowrap" title="显示已归档学期(全局)"><input type="checkbox" id="sum-showarch" onchange="toggleShowArch(this.checked)" style="width:auto;vertical-align:middle"> 显示已归档</label>
       <button class="btn btn-sm" onclick="printPanel('sum')" title="依当前子页与筛选列印">🖨️ 列印</button>
     </div>
   </div>
@@ -981,6 +983,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <label>系别</label><select id="exam-dept-f" onchange="renderExam()"><option value="">全部</option></select>
       <label>类型</label><select id="exam-kind-f" onchange="renderExam()"><option value="">全部</option><option>登分</option><option>补考</option><option>缓考</option><option>考试冲突</option><option>其他</option></select>
       <input id="exam-q" oninput="renderExam()" placeholder="🔍 老师/课程/学号/姓名/学校" style="width:200px">
+      <label style="font-size:11px;color:#888;cursor:pointer;white-space:nowrap" title="显示已归档学期(全局)"><input type="checkbox" id="exam-showarch" onchange="toggleShowArch(this.checked)" style="width:auto;vertical-align:middle"> 显示已归档</label>
     </div>
     <div class="tbl-wrap" style="overflow:auto;max-height:calc(100vh - 300px)">
       <table><thead><tr>
@@ -1967,7 +1970,8 @@ let _archT={}, _showArch=false;   // _archT[sem]={sch:true,exam:true} 哪几类�
 function _isArch(sem,type){type=type||'sch';return !!(sem && _archT[sem] && _archT[sem][type]);}
 function _filtArch(list,type){type=type||'sch';return (list||[]).filter(function(r){return _showArch || !(r && _isArch(r.sem,type));});}
 async function loadArchTerms(){try{const r=await gasGet({action:'archData'});if(r&&r.success){_archT={};(r.rows||[]).forEach(function(x){if(x&&x.sem){_archT[x.sem]=_archT[x.sem]||{};_archT[x.sem][x.type||'sch']=true;}});}}catch(e){}}
-function toggleShowArch(v){_showArch=!!v;try{var c=document.getElementById('sch-showarch');if(c)c.checked=_showArch;}catch(e){}if(typeof renderSch==='function')renderSch();if(typeof renderSp==='function')renderSp();if(typeof renderExam==='function')renderExam();if(typeof renderAllSum==='function')renderAllSum();}
+function _syncShowArchBoxes(){try{['sch-showarch','sp-showarch','exam-showarch','sum-showarch'].forEach(function(id){var c=document.getElementById(id);if(c)c.checked=_showArch;});}catch(e){}}
+function toggleShowArch(v){_showArch=!!v;_syncShowArchBoxes();if(typeof renderSch==='function')renderSch();if(typeof renderSp==='function')renderSp();if(typeof renderExam==='function')renderExam();if(typeof renderAllSum==='function')renderAllSum();}
 function examSort(k){if(_examSK===k)_examSD=-_examSD;else{_examSK=k;_examSD=1;}renderExam();}
 async function loadExam(){
   try{const r=await gasGet({action:'examData'});if(r&&r.success)_exam={rows:r.rows||[],schools:r.schools||[]};}catch(e){}
@@ -7039,6 +7043,7 @@ function switchTab(id){
   ['sch','exam','sp','sum','btec','cs','sta','notice','ops'].forEach((x,i)=>{const tb=document.querySelectorAll('.tab')[i];if(tb)tb.classList.toggle('active',x===id);});
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+id).classList.add('active');
+  if(typeof _syncShowArchBoxes==='function')_syncShowArchBoxes();  // 各视图「显示已归档」勾状态跟上全局
   if(id==='cs'){var _f=document.getElementById('cs-frame');if(_f&&!_f.src)_f.src=_f.dataset.src+'?cb='+Date.now();}
   // v8.18 P0: 切到某 Tab 时，若它在隐藏期间被标脏才渲染（否则保留现有 DOM/滚动位置）
   if(id==='sch'&&_tabDirty.sch)renderSch();
