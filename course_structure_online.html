@@ -276,14 +276,14 @@ function loadSheet(){
   document.getElementById('status').textContent='从 Supabase 载入中…';
   const H={apikey:SKEY};
   Promise.all([
-    fetch(SUPA+'/rest/v1/catalog?select=dept,version,block,req,block_credit,code,zh,en,credit,mapping,fixed,note,source,description&order=id&limit=5000',{headers:H,cache:'no-store'}).then(r=>r.json()),
+    fetch(SUPA+'/rest/v1/catalog?select=id,dept,version,block,req,block_credit,code,zh,en,credit,mapping,fixed,note,source,description&order=id&limit=5000',{headers:H,cache:'no-store'}).then(r=>r.json()),
     fetch(SUPA+'/rest/v1/grad?select=pid,total,courses_count,course_n,course_cr,intern_n,intern_cr,intern_sub',{headers:H,cache:'no-store'}).then(r=>r.json()).catch(()=>[])
   ]).then(([cat,grad])=>{
     // 课程说明:优先用 catalog.description(后台可编辑),没有再用写死的 DESC 兜底
     DBDESC={}; (cat||[]).forEach(x=>{if(x&&x.code&&x.description)DBDESC[String(x.code).replace(/ /g,'').toUpperCase()]=x.description;});
     // 组成跟原本 Sheet 一样的「中文表头 + 行」结构，喂给既有 buildData（解析逻辑不动）
     const rows=[['专业','版本','版块中文','必修/选修','区块学分','课程代码','中文名','英文名','学分','对接课程','固定开课','备注','数据来源','id']];
-    (cat||[]).forEach(x=>rows.push([x.dept||'',x.version||'',x.block||'',x.req||'',x.block_credit||'',x.code||'',x.zh||'',x.en||'',x.credit||'',x.mapping||'',x.fixed||'',x.note||'',x.source||'',x.id]));
+    (cat||[]).forEach(x=>rows.push([x.dept||'',x.version||'',x.block||'',x.req||'',x.block_credit||'',x.code||'',x.zh||'',x.en||'',x.credit||'',x.mapping||'',x.fixed||'',x.note||'',x.source||'',(x.id==null?'':''+x.id)]));
     DATA=buildData(rows);
     const gm={},cm={},gb={}; (Array.isArray(grad)?grad:[]).forEach(x=>{if(x&&x.pid){gm[x.pid]=String(x.total);if(x.courses_count!=null&&x.courses_count!=='')cm[x.pid]=parseInt(x.courses_count,10);gb[x.pid]={cn:x.course_n,ccr:x.course_cr,inn:x.intern_n,icr:x.intern_cr,isub:!!x.intern_sub};}});
     Object.keys(DATA).forEach(pid=>{if(gm[pid])DATA[pid].grad=gm[pid];if(cm[pid]!=null&&!isNaN(cm[pid]))DATA[pid].coursesOv=cm[pid];if(gb[pid]){DATA[pid].courseN=gb[pid].cn;DATA[pid].courseCr=gb[pid].ccr;DATA[pid].internN=gb[pid].inn;DATA[pid].internCr=gb[pid].icr;DATA[pid].internSub=gb[pid].isub;}});
