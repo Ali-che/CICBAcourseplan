@@ -20,6 +20,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .tab.active{background:#534AB7;color:#fff;border-color:#534AB7;box-shadow:0 2px 8px rgba(83,74,183,.3)}
 .ops-tab{padding:6px 14px;font-size:12.5px;font-weight:500;border:0.5px solid #ddd;background:#fff;color:#666;border-radius:8px;cursor:pointer;font-family:inherit;transition:all .15s}
 .ops-tab.active{background:#534AB7;color:#fff;border-color:#534AB7}
+.ops-tab.sys{color:#185FA5;border-color:#B5D4F4;background:#F3F8FE}
+.ops-tab.sys.active{background:#185FA5;color:#fff;border-color:#185FA5}
+.ops-grp-lbl{font-size:10.5px;color:#9a93c9;font-weight:600;letter-spacing:.04em;margin-bottom:5px}
+.ops-grp-btns{display:flex;gap:5px;flex-wrap:wrap}
+.ops-chip{display:inline-flex;align-items:center;gap:7px;background:#fff;border:0.5px solid #e2e0ee;border-radius:8px;padding:5px 8px 5px 11px;font-size:13px;font-family:ui-monospace,monospace;color:#3C3489}
+.ops-chip .x{font-size:14px;line-height:1;color:#c7c3dc;cursor:pointer;font-family:system-ui;padding:0 1px}
+.ops-chip .x:hover{color:#c0392b}
+.ops-chipwrap{display:flex;flex-wrap:wrap;gap:8px}
 .ops-add{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;background:#F7F6FE;border:0.5px solid #E4E1F3;border-radius:8px;padding:10px 12px;margin-bottom:12px}
 .ops-add .fg{display:flex;flex-direction:column;gap:3px}
 .ops-add label{font-size:10.5px;color:#888}
@@ -1026,20 +1034,28 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   <div class="card">
     <div class="sechdr"><span class="ct" style="margin:0">⚙️ 后台操作 · 参考数据管理</span></div>
     <div style="background:#FDECEC;border:0.5px solid #F5C2C2;color:#9B2C2C;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:12px">⚠️ 这里直接改<strong>参考数据</strong>，影响全系统、立即生效。删除前会检查是否被排课引用。仅管理员可见可用。</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-      <button class="ops-tab active" data-sec="sem" onclick="opsSwitch('sem')">学年学期</button>
-      <button class="ops-tab" data-sec="dept" onclick="opsSwitch('dept')">专业</button>
-      <button class="ops-tab" data-sec="coh" onclick="opsSwitch('coh')">届别</button>
-      <button class="ops-tab" data-sec="tch" onclick="opsSwitch('tch')">老师库</button>
-      <button class="ops-tab" data-sec="pos" onclick="opsSwitch('pos')">职位</button>
-      <button class="ops-tab" data-sec="cat" onclick="opsSwitch('cat')">课程总库</button>
-      <button class="ops-tab" data-sec="grad" onclick="opsSwitch('grad')">毕业学分</button>
-      <button class="ops-tab" data-sec="school" onclick="opsSwitch('school')">登分学校</button>
-      <button class="ops-tab" data-sec="notice" onclick="opsSwitch('notice')">教务须知</button>
-      <button class="ops-tab" data-sec="arch" onclick="opsSwitch('arch')">📦 归档</button>
-      <button class="ops-tab" id="ops-tab-acct" data-sec="acct" onclick="opsSwitch('acct')" style="display:none">🔑 账号权限</button>
-      <button class="ops-tab" id="ops-tab-edits" data-sec="edits" onclick="opsSwitch('edits')" style="display:none">📋 编辑记录</button>
-      <button class="btn btn-sm" onclick="renderOps(true)" style="margin-left:auto">↻ 重载</button>
+    <div style="display:flex;gap:16px 20px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-start">
+      <div><div class="ops-grp-lbl">基础数据</div><div class="ops-grp-btns">
+        <button class="ops-tab active" data-sec="sem" onclick="opsSwitch('sem')">学年学期</button>
+        <button class="ops-tab" data-sec="dept" onclick="opsSwitch('dept')">专业</button>
+        <button class="ops-tab" data-sec="coh" onclick="opsSwitch('coh')">届别</button>
+        <button class="ops-tab" data-sec="tch" onclick="opsSwitch('tch')">老师库</button>
+        <button class="ops-tab" data-sec="pos" onclick="opsSwitch('pos')">职位</button>
+      </div></div>
+      <div><div class="ops-grp-lbl">课程与学分</div><div class="ops-grp-btns">
+        <button class="ops-tab" data-sec="cat" onclick="opsSwitch('cat')">课程总库</button>
+        <button class="ops-tab" data-sec="grad" onclick="opsSwitch('grad')">毕业学分</button>
+        <button class="ops-tab" data-sec="school" onclick="opsSwitch('school')">登分学校</button>
+      </div></div>
+      <div><div class="ops-grp-lbl">内容</div><div class="ops-grp-btns">
+        <button class="ops-tab" data-sec="notice" onclick="opsSwitch('notice')">教务须知</button>
+      </div></div>
+      <div><div class="ops-grp-lbl">系统管理</div><div class="ops-grp-btns">
+        <button class="ops-tab sys" data-sec="arch" onclick="opsSwitch('arch')">📦 归档</button>
+        <button class="ops-tab sys" id="ops-tab-acct" data-sec="acct" onclick="opsSwitch('acct')" style="display:none">🔑 账号权限</button>
+        <button class="ops-tab sys" id="ops-tab-edits" data-sec="edits" onclick="opsSwitch('edits')" style="display:none">📋 编辑记录</button>
+      </div></div>
+      <button class="btn btn-sm" onclick="renderOps(true)" style="margin-left:auto;align-self:center">↻ 重载</button>
     </div>
     <div id="ops-body"><div style="color:#888;padding:20px">载入中…</div></div>
   </div>
@@ -1491,20 +1507,22 @@ async function opsAfter(r,msg){
 }
 // ── 学期 ──
 function opsSemView(){
-  const body=(opsD.semesters||[]).slice().sort().map(s=>'<tr><td style="font-family:ui-monospace,monospace">'+eh(s)+'</td><td style="text-align:right"><button class="ops-del" onclick="opsDelSem(\''+jsq(s)+'\')">删除</button></td></tr>').join('')||'<tr><td colspan="2" style="color:#aaa">无</td></tr>';
-  return '<div class="ops-add"><div class="fg"><label>新学期(可批量,空格/逗号分隔)</label><input id="ops-sem-in" style="width:280px" placeholder="2570-1 2570-2 2570-3 2571-1 2571-2"></div><button class="btn btn-p" onclick="opsAddSem()">+ 新增</button></div><table style="width:100%"><thead><tr><th>学年学期</th><th></th></tr></thead><tbody>'+body+'</tbody></table>';
+  const sems=(opsD.semesters||[]).slice().sort();
+  const chips=sems.length?('<div class="ops-chipwrap">'+sems.map(s=>'<span class="ops-chip">'+eh(s)+'<span class="x" title="删除" onclick="opsDelSem(\''+jsq(s)+'\')">×</span></span>').join('')+'</div>'):'<div style="color:#aaa;padding:4px">无</div>';
+  return '<div class="ops-add"><div class="fg"><label>新学期(可批量,空格/逗号分隔)</label><input id="ops-sem-in" style="width:280px" placeholder="2570-1 2570-2 2570-3 2571-1 2571-2"></div><button class="btn btn-p" onclick="opsAddSem()">+ 新增</button></div><div style="font-size:11px;color:#888;margin-bottom:6px">学年学期 · '+sems.length+' 个</div>'+chips;
 }
 async function opsAddSem(){const raw=document.getElementById('ops-sem-in').value.trim();if(!raw){alert('请输入学期');return;}const list=raw.split(/[\s,，\n]+/).map(x=>x.trim()).filter(Boolean);if(!list.length){alert('请输入学期');return;}let ok=0,fail=0;for(const sm of list){const r=await gasPost('adminAddSemester',{sem:sm});if(r&&r.success)ok++;else fail++;}opsAfter(ok>0?{success:true}:{success:false,error:'全部失败(可能非管理员)'},'已加 '+ok+' 个学期'+(fail?('、失败 '+fail):''));}
 async function opsDelSem(s){const n=opsUsedBySem(s);if(!confirm('删除学期「'+s+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 笔排课用到此学期,删后会变孤儿。仍要删?':'')))return;opsAfter(await gasPost('adminDelSemester',{sem:s}),'已删除学期 '+s);}
 // ── 专业 ──
 function opsDeptView(){
   const ed=opsIsEdit('dept');
-  const body=(opsD.depts||[]).slice().sort((a,b)=>a.code.localeCompare(b.code)).map(d=>'<tr><td style="font-family:ui-monospace,monospace">'+eh(d.code)+'</td><td>'+eh(d.name)+'</td><td style="text-align:right;white-space:nowrap"><button class="ops-edit" onclick="opsStartEdit(\'dept\',\''+jsq(d.code)+'\',{code:\''+jsq(d.code)+'\',name:\''+jsq(d.name)+'\'})">编辑</button> <button class="ops-del" onclick="opsDelDept(\''+jsq(d.code)+'\')">删除</button></td></tr>').join('')||'<tr><td colspan="3" style="color:#aaa">无</td></tr>';
+  const ds=(opsD.depts||[]).slice().sort((a,b)=>a.code.localeCompare(b.code));
+  const chips=ds.length?('<div class="ops-chipwrap">'+ds.map(d=>'<span class="ops-chip">'+eh(d.code)+'<span style="font-family:system-ui;color:#888;font-weight:400;font-size:12px">'+eh(d.name)+'</span><span class="x" title="编辑" style="color:#8A84C9" onclick="opsStartEdit(\'dept\',\''+jsq(d.code)+'\',{code:\''+jsq(d.code)+'\',name:\''+jsq(d.name)+'\'})">✎</span><span class="x" title="删除" onclick="opsDelDept(\''+jsq(d.code)+'\')">×</span></span>').join('')+'</div>'):'<div style="color:#aaa;padding:4px">无</div>';
   return '<div class="ops-add">'+(ed?'<div style="width:100%;font-size:12px;color:#534AB7;font-weight:600;margin-bottom:2px">✏️ 编辑专业(代码不可改)</div>':'')+
     '<div class="fg"><label>专业代码</label><input id="ops-dept-code" '+(ed?'readonly style="width:80px;background:#eee"':'style="width:80px"')+' value="'+eh(opsEV('dept','code'))+'" placeholder="TM"></div>'+
     '<div class="fg"><label>专业名称</label><input id="ops-dept-name" value="'+eh(opsEV('dept','name'))+'" placeholder="旅游管理"></div>'+
     '<button class="btn btn-p" onclick="opsAddDept()">'+(ed?'保存修改':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>'+
-    '<table style="width:100%"><thead><tr><th>代码</th><th>名称</th><th></th></tr></thead><tbody>'+body+'</tbody></table>';
+    '<div style="font-size:11px;color:#888;margin-bottom:6px">专业 · '+ds.length+' 个</div>'+chips;
 }
 async function opsAddDept(){const code=document.getElementById('ops-dept-code').value.trim();if(!code){alert('请输入专业代码');return;}opsAfter(await gasPost('adminAddDept',{code,name:document.getElementById('ops-dept-name').value.trim()}),'已新增/更新专业 '+code);}
 async function opsDelDept(code){const n=opsUsedByDept(code);if(!confirm('删除专业「'+code+'」?'+(n>0?'\n\n⚠️ 该专业下有 '+n+' 个届别,删专业不会删届别但会失去归属。仍要删?':'')))return;opsAfter(await gasPost('adminDelDept',{code}),'已删除专业 '+code);}
