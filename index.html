@@ -574,6 +574,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   <div onclick="event.stopPropagation()" style="background:#fff;border-radius:12px;max-width:780px;width:92%;max-height:88vh;overflow:auto;padding:18px 20px;box-shadow:0 12px 44px rgba(0,0,0,.25)">
     <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;color:#3C3489;font-size:15px">📥 课程库批量导入</span><span onclick="opsCatImportClose()" style="cursor:pointer;color:#999;font-size:16px">✕</span></div>
     <div style="font-size:12px;color:#666;margin:8px 0 6px;line-height:1.7">从 Excel/Google Sheet 复制整块(含表头)贴到下方(也支持 CSV)。<b>以「id」或「专业+代码+版本」为键</b>:对得上就更新、对不上就新增(＝加新课/新课纲);<b>只会改你表里有的栏位</b>,没填的不动。<br>表头可用中文:<code>id, 代码, 中文名, 英文名, 专业, 版本, 必选, 学分, 模块, 模块学分, 对接, 固定, 备注, 说明</code>(至少要有「代码」;新增需「专业」)。<b>建议先按「📤 导出 CSV」</b>拿到现有数据(带 id)改好再贴回,最稳。</div>
+    <div style="margin:2px 0 8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><label style="font-size:12px;color:#444;font-weight:600">① 选档案(CSV):</label><input type="file" id="catimp-file" accept=".csv,.tsv,.txt,text/csv" onchange="opsCatImportFile(event)" style="font-size:12px;padding:5px;border:1px dashed #aaa;border-radius:6px;background:#fafafa;cursor:pointer"><span style="font-size:11px;color:#999">选了档案会自动带入下方并解析 ·&nbsp; 或 ② 直接把 Excel/Sheet 整块贴到下方 ↓</span></div>
     <textarea id="catimp-ta" rows="8" style="width:100%;box-sizing:border-box;font-family:ui-monospace,monospace;font-size:12px;padding:8px;border:0.5px solid #cbd5e1;border-radius:8px" placeholder="代码&#9;专业&#9;版本&#9;中文名&#10;KL305&#9;TM&#9;2568&#9;课程名…"></textarea>
     <div style="margin-top:8px;display:flex;align-items:center;gap:10px"><button class="btn btn-sm" onclick="opsCatImportParse()">🔍 解析预览</button> <span id="catimp-progress" style="font-size:12px;color:#888"></span></div>
     <div id="catimp-preview" style="margin-top:10px"></div>
@@ -1716,8 +1717,9 @@ function opsCatTemplate(){
   document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},100);
   if(typeof showToast==='function')showToast('已下载导入模版(含 2 行示例,填完请删示例行)',{kind:'success',duration:2600});
 }
-function opsCatImportOpen(){_catImpParsed=null;var m=document.getElementById('catimp-modal');if(!m)return;document.getElementById('catimp-ta').value='';document.getElementById('catimp-preview').innerHTML='';document.getElementById('catimp-progress').textContent='';m.style.display='flex';}
+function opsCatImportOpen(){_catImpParsed=null;var m=document.getElementById('catimp-modal');if(!m)return;document.getElementById('catimp-ta').value='';var fi=document.getElementById('catimp-file');if(fi)fi.value='';document.getElementById('catimp-preview').innerHTML='';document.getElementById('catimp-progress').textContent='';m.style.display='flex';}
 function opsCatImportClose(){var m=document.getElementById('catimp-modal');if(m)m.style.display='none';}
+function opsCatImportFile(ev){var f=ev.target.files&&ev.target.files[0];if(!f)return;var rd=new FileReader();rd.onload=function(){var t=String(rd.result||'').replace(/^﻿/,'');document.getElementById('catimp-ta').value=t;opsCatImportParse();};rd.onerror=function(){alert('读取档案失败');};rd.readAsText(f,'UTF-8');}
 function opsCatImportParse(){
   var raw=document.getElementById('catimp-ta').value||'';
   if(!raw.trim()){alert('请先贴上数据');return;}
