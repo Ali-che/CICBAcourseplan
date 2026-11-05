@@ -3146,9 +3146,12 @@ async function heartbeatTick(){
 function updateOnlineBadge(){
   const b=document.getElementById('online-badge');if(!b)return;
   const n=_onlineList.length;
+  // 仅管理员可见,且只在有其他人在线时现身
+  const canSee=(typeof currentRole!=='undefined'&&currentRole==='admin');
+  if(!canSee||!n){b.style.display='none';return;}
+  b.style.display='';
   b.textContent='👥 在线 '+n;
-  // 把名单放到 title 让 hover 看到
-  b.title=n?'在线: '+_onlineList.map(u=>u.editor).join('、'):'目前只有你在线';
+  b.title='在线: '+_onlineList.map(u=>u.editor).join('、'); // hover 看名单
 }
 
 function showOnlineList(){
