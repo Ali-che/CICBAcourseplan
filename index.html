@@ -1467,9 +1467,22 @@ function opsUsedByCohort(c){return schD.filter(r=>(r.cc||[]).some(x=>x.cohort===
 function opsUsedByTeacher(n){return schD.filter(r=>r.tc===n).length+spD.filter(r=>r.tc===n).length;}
 function opsUsedByDept(code){return (opsD.cohorts||[]).filter(c=>c.dept===code).length;}
 function opsUsedByCourse(code){return schD.filter(r=>r.course===code).length;}
+// 从任意回应里抽出可读报错(app 自定义 error / PostgREST 原生 message·details·hint·code)
+function _errText(r){
+  if(r==null)return '空回应(无返回,可能网络或 PIN 失效)';
+  if(typeof r==='string')return r;
+  var parts=[];
+  if(r.error)parts.push(r.error);
+  if(r.message&&r.message!==r.error)parts.push(r.message);
+  if(r.details)parts.push('细节:'+r.details);
+  if(r.hint)parts.push('提示:'+r.hint);
+  if(r.code)parts.push('码:'+r.code);
+  if(!parts.length){try{return JSON.stringify(r).slice(0,300);}catch(e){return String(r);}}
+  return parts.join(' · ');
+}
 // 增删后:重拉后台数据 + 重载全局参考数据 + 重建下拉 + 重渲染
 async function opsAfter(r,msg){
-  if(!r||!r.success){alert('操作失败:'+((r&&r.error)||'unknown（可能不是管理员权限）'));return;}
+  if(!r||!r.success){alert('操作失败:'+_errText(r));return;}
   opsEdit=null; opsD=null;
   try{await loadRefFromSheets();rebuildUI();}catch(e){}
   await renderOps(true);
@@ -1554,7 +1567,7 @@ async function addCohSubmit(){
   var exists=Object.keys(CBD).some(function(d){return (CBD[d]||[]).some(function(c){return String(c).toLowerCase()===code.toLowerCase();});});
   if(exists){setMsg('「'+code+'」已存在,不重复新增',false);return;}
   var r=await gasPost('adminAddCohort',{dept:dept,cohort:code});
-  if(!(r&&r.success)){setMsg('新增失败:'+((r&&r.error)||'?(需管理员/主任权限)'),false);return;}
+  if(!(r&&r.success)){setMsg('新增失败:'+_errText(r),false);return;}
   await gasPost('adminSetCohortYears',{cohort:code,years:years});
   setMsg('✅ 已新增 '+code+'（'+years+' 年·毕业年 '+(2500+parseInt((code.match(/(\d{2})/)||[0,0])[1],10)+years)+'）',true);
   document.getElementById('addcoh-code').value='';
