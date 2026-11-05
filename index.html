@@ -1358,7 +1358,7 @@ function opsCatFiltered(){
   const q=opsCatQ.trim().toLowerCase(), f=opsCatColF;
   let list=(opsD.catalog||[]).filter(function(c){
     if(q && !((c.code||'')+(c.zh||'')+(c.en||'')+(c.dept||'')+(c.mapping||'')+(c.block||'')+(c.version||'')+(c.note||'')+(c.description||'')).toLowerCase().includes(q))return false;
-    if(f.code && !(c.code||'').toLowerCase().includes(f.code.toLowerCase()))return false;
+    if(f.code){const _kw=f.code.toLowerCase();if(!((c.code||'').toLowerCase().includes(_kw)||(c.mapping||'').toLowerCase().includes(_kw)))return false;}  // 代码筛选框同时匹配「对接」列(单框双向找)
     if(f.zh && !(c.zh||'').toLowerCase().includes(f.zh.toLowerCase()))return false;
     if(f.en && !(c.en||'').toLowerCase().includes(f.en.toLowerCase()))return false;
     if(f.dept && c.dept!==f.dept)return false;
@@ -1633,7 +1633,7 @@ function opsCatView(){
   const verOptsF='<option value="">全部</option>'+Object.keys(_vset).sort().map(v=>'<option value="'+eh(v)+'"'+(opsCatColF.version===v?' selected':'')+'>'+eh(v)+'</option>').join('');
   const reqOptsF='<option value="">全部</option>'+Object.keys(_rset).sort().map(v=>'<option value="'+eh(v)+'"'+(opsCatColF.req===v?' selected':'')+'>'+eh(v)+'</option>').join('');
   const fixedOptsF='<option value=""'+(opsCatColF.fixed?'':' selected')+'>全部</option><option value="Y"'+(opsCatColF.fixed==='Y'?' selected':'')+'>常</option><option value="N"'+(opsCatColF.fixed==='N'?' selected':'')+'>否</option>';
-  const ti=function(col){return '<input value="'+eh(opsCatColF[col])+'" oninput="opsCatColF.'+col+'=this.value;opsCatApply()" placeholder="筛" style="'+_cf+'">';};
+  const ti=function(col){var _ph=col==='code'?'筛·含对接':'筛',_tt=col==='code'?' title="在此输入代码会同时搜『对接』列,对接到该代码的课也会列出"':'';return '<input value="'+eh(opsCatColF[col])+'" oninput="opsCatColF.'+col+'=this.value;opsCatApply()" placeholder="'+_ph+'"'+_tt+' style="'+_cf+'">';};
   const sel=function(col,opts){return '<select onchange="opsCatColF.'+col+'=this.value;opsCatApply()" style="'+_cf+'">'+opts+'</select>';};
   const hd=function(k,label,filter){const on=opsCatSort.key===k;return '<th style="background:#534AB7;vertical-align:top;padding:4px 5px"><div onclick="opsCatSetSort(\''+k+'\')" style="cursor:pointer;user-select:none;margin-bottom:2px;white-space:nowrap;font-size:11px">'+label+' '+(on?(opsCatSort.dir>0?'▲':'▼'):'⇅')+'</div>'+(filter||'')+'</th>';};
   const rows=opsCatFiltered();
