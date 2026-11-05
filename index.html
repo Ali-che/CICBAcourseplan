@@ -4333,6 +4333,13 @@ function mpHint(code){
 // 搜索是否命中该课程的「对接」课程代码(小写 q)
 function _mapMatch(code,q){const cf=C.find(x=>x.c===code);return !!(cf&&cf.mapping&&String(cf.mapping).toLowerCase().includes(q));}
 // ═══════ §SCHEDULE 排课表 ═══════
+// A方案:行内显示「最后修改人·时间」(淡灰小字,完整时间放 title)
+function _editLineHtml(r){
+  if(!r||(!r.editor&&!r.updated))return '';
+  var who=r.editor?eh(r.editor):'—',full=who,short=who;
+  if(r.updated){var d=new Date(r.updated);if(!isNaN(d)){var p=function(n){return String(n).padStart(2,'0');};full=who+' · '+d.toLocaleString();short=who+' · '+(d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes());}}
+  return '<div style="font-size:9.5px;color:#aaa;margin-top:2px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="最后修改:'+full+'">✎ '+short+'</div>';
+}
 function renderSch(){
   if(!_panelActive('sch')){_tabDirty.sch=true;return;}
   _tabDirty.sch=false;
@@ -4400,7 +4407,7 @@ function renderSch(){
       '<td>'+semBadge(r.sem)+'</td><td>'+halfBadge(r.half)+'</td>'+
       '<td>'+r.cls+'</td><td style="white-space:nowrap">'+teacherTag(r.tc)+'</td>'+
       '<td style="white-space:normal;min-width:340px;line-height:1.7">'+tags+'</td><td><strong>'+tot+'</strong></td>'+
-      '<td class="note-cell" style="font-size:11px;color:#888;max-width:130px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(r.nt?eh(r.nt):'')+'</div>'+(r.nt?'<div class="note-tip">'+eh(r.nt)+'</div>':'')+'</td>'+
+      '<td class="note-cell" style="font-size:11px;color:#888;max-width:130px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(r.nt?eh(r.nt):'')+'</div>'+(r.nt?'<div class="note-tip">'+eh(r.nt)+'</div>':'')+_editLineHtml(r)+'</td>'+
       '<td style="white-space:nowrap"><button class="btn-ic btn-ic-edit" onclick="startES('+r.id+')" title="更动"><svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zm.708 1.06L11.5 2.5l2 2L14.5 3.5 12.854 1.207zM10.5 3.5l-9 9 1.5 1.5 9-9-1.5-1.5z"/></svg></button><button class="btn-ic btn-ic-del" onclick="delSch('+r.id+')" title="删除"><svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H3.5V0a1 1 0 0 1 1-1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg></button></td></tr>';
   }).join('');
   if(typeof syncTblHeight==='function')syncTblHeight();
@@ -4678,7 +4685,7 @@ function renderTchr(){
       '<td style="font-size:11px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="background:#FEE2E2;color:#B91C1C;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;display:inline-block">⏳ 待定</span>')+'</td>'+
       '<td>'+r.cls+'</td><td>'+semBadge(r.sem)+'</td>'+
       '<td>'+halfBadge(r.half)+'</td><td>'+(tot||'—')+'</td>'+
-      '<td class="note-cell" style="font-size:11px;color:#888;max-width:130px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(r.nt?eh(r.nt):'')+'</div>'+(r.nt?'<div class="note-tip">'+eh(r.nt)+'</div>':'')+'</td></tr>';}).join('');
+      '<td class="note-cell" style="font-size:11px;color:#888;max-width:130px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(r.nt?eh(r.nt):'')+'</div>'+(r.nt?'<div class="note-tip">'+eh(r.nt)+'</div>':'')+_editLineHtml(r)+'</td></tr>';}).join('');
   const sgRows=spRows.map((r,i)=>
     '<tr style="background:#FFF8F0"><td>'+(data.length+i+1)+'</td>'+
     '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.co+'</span><span class="badge b3" style="font-size:9.5px;padding:1px 6px;opacity:.85">SG/IS</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+mpHint(r.co)+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
