@@ -5819,6 +5819,8 @@ async function syncAll(){
     staleWarningShown=false;
     const b=document.getElementById('stale-banner');if(b)b.style.display='none';
     renderSch();renderSp();renderAllSum();renderSta();updateFreshness();
+    // 顺带把「课程结构」iframe 重载到最新(仅当它已载入过,保持懒加载)
+    var _csf=document.getElementById('cs-frame');if(_csf&&_csf.src)_csf.src=_csf.dataset.src+'?cb='+Date.now();
     const t=new Date().toLocaleTimeString();
     setSyncStatus('✅ 已刷新 '+t+'（'+schD.length+' 排课 / '+spD.length+' IS-SG）',true);
     showToast('已刷新 · ' + schD.length + ' 排课 / ' + spD.length + ' IS-SG', {kind:'success', duration:2500});
