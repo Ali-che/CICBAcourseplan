@@ -1455,6 +1455,7 @@ function opsRenderSec(){
   b.innerHTML= opsSec==='sem'?opsSemView(): opsSec==='dept'?opsDeptView(): opsSec==='coh'?opsCohView(): opsSec==='tch'?opsTchView(): opsSec==='pos'?opsPosView(): opsSec==='cat'?opsCatView(): opsSec==='grad'?opsGradView(): opsSec==='school'?opsSchoolView(): opsSec==='notice'?opsNoticeView(): opsSec==='arch'?opsArchView(): opsSec==='acct'?opsAcctView(): opsSec==='edits'?opsEditsView(): '';
   if(opsSec==='school'&&!_examLoaded){_examLoaded=true;loadExam().then(function(){if(opsSec==='school')opsRenderSec();});}
   if(opsSec==='arch'&&!_examLoaded){_examLoaded=true;loadExam().then(function(){if(opsSec==='arch')opsRenderSec();});}  // 归档面板也需期末考数据,否则「期末考」数恒 0
+  if(opsSec==='edits'&&!_acct.loaded&&!_acct.loading)acctLoad();  // 编辑记录「修改人」下拉需账号名单
   if(opsSec==='notice'&&!_noticesLoadedOps){_noticesLoadedOps=true;loadNotices().then(function(){if(opsSec==='notice')opsRenderSec();});}
 }
 // 使用中检查(用已加载的 schD/spD)
@@ -2208,7 +2209,7 @@ const ACCT_ROLE_DESC={teacher:'只读:登录+看排课/课表/BTEC/课程结构'
 async function acctLoad(){
   if(_acct.loading)return;_acct.loading=true;_acct.err='';
   try{const r=await gasPost('adminListPins',{});if(r&&r.success){_acct.rows=r.rows||[];_acct.me=r.me||'';}else{_acct.rows=[];_acct.err=(r&&r.error)||'读取失败';}}catch(e){_acct.rows=[];_acct.err='读取失败';}
-  _acct.loaded=true;_acct.loading=false;if(typeof opsSec!=='undefined'&&opsSec==='acct')opsRenderSec();
+  _acct.loaded=true;_acct.loading=false;if(typeof opsSec!=='undefined'&&(opsSec==='acct'||opsSec==='edits'))opsRenderSec();
 }
 function opsAcctReload(){_acct.loaded=false;_acct.rows=[];acctLoad();}
 function _acctRoleOpts(cur){var list=ACCT_ROLES.slice();if(cur&&list.indexOf(cur)<0)list=[cur].concat(list);return list.map(function(r){var legacy=(ACCT_ROLES.indexOf(r)<0);var lbl=ROLE_LABEL[r]||r;return '<option value="'+eh(r)+'"'+(r===cur?' selected':'')+'>'+eh(lbl)+(ACCT_ROLE_DESC[r]?(' — '+ACCT_ROLE_DESC[r]):'')+(legacy?'（旧）':'')+'</option>';}).join('');}
@@ -2316,8 +2317,11 @@ function opsEditsView(){
   if(currentRole!=='admin')return '<div style="color:#aaa;padding:12px">仅管理员可见</div>';
   var f=_auditFilter,o=function(v,l,c){return '<option value="'+v+'"'+(c===v?' selected':'')+'>'+l+'</option>';};
   var ib='font-size:12px;padding:5px 8px;border:0.5px solid #cbd5e1;border-radius:6px;box-sizing:border-box';
+  var names=((_acct&&_acct.rows)||[]).map(function(x){return x.name;}).filter(Boolean);names=names.filter(function(v,i){return names.indexOf(v)===i;}).sort();
+  if(f.editor&&names.indexOf(f.editor)<0)names.push(f.editor);
+  var edSel='<select id="aud-editor" style="'+ib+';width:150px"><option value="">全部修改人</option>'+names.map(function(nm){return '<option value="'+eh(nm)+'"'+(f.editor===nm?' selected':'')+'>'+eh(nm)+'</option>';}).join('')+(!_acct.loaded?'<option value="" disabled>(账号载入中…)</option>':'')+'</select>';
   var h='<div style="display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 10px;background:#F7F6FD;border-radius:8px">'+
-     '<input id="aud-editor" value="'+eh(f.editor)+'" placeholder="修改人" style="'+ib+';width:120px">'+
+     edSel+
      '<select id="aud-tbl" style="'+ib+';width:100px">'+o('','全部类型',f.tbl)+o('schedule','排课',f.tbl)+o('special','IS/SG',f.tbl)+o('exam_special','期末考',f.tbl)+'</select>'+
      '<select id="aud-op" style="'+ib+';width:96px">'+o('','全部动作',f.op)+o('INSERT','新增',f.op)+o('UPDATE','修改',f.op)+o('DELETE','删除',f.op)+o('BASELINE','基线',f.op)+'</select>'+
      '<span style="font-size:11px;color:#888">时间</span>'+
