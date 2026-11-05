@@ -4534,6 +4534,8 @@ function renderSch(){
   // v7.9: 批量删除按钮 —— 只在「有筛选 + 结果不是全部 + N > 0」时显示
   _schFilteredIds=disp.map(r=>r.id);
   updateBatchDelButton('sch',disp.length,schD.length);
+  // 表头计数:有筛选/归档隐藏时,诚实显示「显示 X / 共 Y」,避免和实际行数(及批量删除)对不上
+  {var _schN=document.getElementById('sch-n');if(_schN)_schN.textContent=(disp.length<schD.length)?('(显示 '+disp.length+' / 共 '+schD.length+' 条)'):('('+schD.length+' 条)');}
   // v7.9.13: 表头 BTEC 数（届别/总人数 不显示统计）
   let _btecN=0;
   disp.forEach(r=>{if(r.btec===true||r.btec==='TRUE'||r.btec==='true')_btecN++;});
@@ -4764,6 +4766,7 @@ function renderSp(){
   // v7.9: 批量删除按钮
   _spFilteredIds=disp.map(r=>r.id);
   updateBatchDelButton('sp',disp.length,spD.length);
+  {var _spN=document.getElementById('sp-n');if(_spN)_spN.textContent=(disp.length<spD.length)?('(显示 '+disp.length+' / 共 '+spD.length+' 条)'):('('+spD.length+' 条)');}
   if(spSK==='sid')disp.sort((a,b)=>spSD*a.sid.localeCompare(b.sid));
   if(spSK==='tc')disp.sort((a,b)=>{const ta=T.find(x=>x.n===a.tc),tb2=T.find(x=>x.n===b.tc);return spSD*((ta?ta.d:'ZZ').localeCompare(tb2?tb2.d:'ZZ')||a.tc.localeCompare(b.tc));});
   tb.innerHTML=disp.map((r,i)=>{
@@ -7077,7 +7080,7 @@ function _noticePdfHtml(url){
 // 课程结构 iframe 要求认证时,把当前角色+PIN 传给它(同源;iframe 的 localStorage 可能被分区隔离故用 postMessage)
 window.addEventListener('message',function(e){try{if(e.origin!==location.origin)return;if(e.data&&e.data.t==='cs-need-auth'){var f=document.getElementById('cs-frame');if(f&&f.contentWindow)f.contentWindow.postMessage({t:'cs-auth',role:(typeof currentRole!=='undefined'?currentRole:''),pin:(localStorage.getItem('cic_pin')||'')},location.origin);}}catch(_){}});
 function switchTab(id){
-  ['sch','exam','sp','sum','btec','cs','sta','notice','ops'].forEach((x,i)=>{const tb=document.querySelectorAll('.tab')[i];if(tb)tb.classList.toggle('active',x===id);});
+  ['sch','exam','sp','sum','btec','cs','notice','sta','ops'].forEach((x,i)=>{const tb=document.querySelectorAll('.tab')[i];if(tb)tb.classList.toggle('active',x===id);});
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+id).classList.add('active');
   if(typeof _syncShowArchBoxes==='function')_syncShowArchBoxes();  // 各视图「显示已归档」勾状态跟上全局
