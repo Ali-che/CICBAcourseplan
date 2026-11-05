@@ -1963,10 +1963,10 @@ function reloadBtec(){loadBtec();}
 // ═══════ §EXAM 期末考特例 ═══════
 let _exam={rows:[],schools:[]}, _examEdit=null, _examLoaded=false, _examSK='', _examSD=1, _examModalMode=false;
 // ═══════ §ARCHIVE 学期归档(排课/IS·SG/期末考/学期总表 默认隐藏已归档学期;教学统计照常计入) ═══════
-let _archT={}, _showArch=false;   // _archT[sem]=true 表示该学期已归档
-function _isArch(sem){return !!sem && _archT[sem]===true;}
-function _filtArch(list){return (list||[]).filter(function(r){return _showArch || !(r && _isArch(r.sem));});}
-async function loadArchTerms(){try{const r=await gasGet({action:'archData'});if(r&&r.success){_archT={};(r.terms||[]).forEach(function(s){if(s)_archT[s]=true;});}}catch(e){}}
+let _archT={}, _showArch=false;   // _archT[sem]={sch:true,exam:true} 哪几类已归档;sch=排课+IS/SG+学期总表,exam=期末考
+function _isArch(sem,type){type=type||'sch';return !!(sem && _archT[sem] && _archT[sem][type]);}
+function _filtArch(list,type){type=type||'sch';return (list||[]).filter(function(r){return _showArch || !(r && _isArch(r.sem,type));});}
+async function loadArchTerms(){try{const r=await gasGet({action:'archData'});if(r&&r.success){_archT={};(r.rows||[]).forEach(function(x){if(x&&x.sem){_archT[x.sem]=_archT[x.sem]||{};_archT[x.sem][x.type||'sch']=true;}});}}catch(e){}}
 function toggleShowArch(v){_showArch=!!v;try{var c=document.getElementById('sch-showarch');if(c)c.checked=_showArch;}catch(e){}if(typeof renderSch==='function')renderSch();if(typeof renderSp==='function')renderSp();if(typeof renderExam==='function')renderExam();if(typeof renderAllSum==='function')renderAllSum();}
 function examSort(k){if(_examSK===k)_examSD=-_examSD;else{_examSK=k;_examSD=1;}renderExam();}
 async function loadExam(){
@@ -2290,19 +2290,22 @@ function opsArchView(){
   let h='<div style="color:#666;font-size:12px;margin-bottom:8px;line-height:1.7">把某学期/学年「归档」后,它的记录从<b>排课表、IS/SG 排课、期末考特例、学期总表</b>默认收走(数据保留在库、随时「恢复」);<b style="color:#2e7d32">教学统计照常计入,不归零</b>。各视图勾「显示已归档」可临时查看。</div>';
   Object.keys(byYr).sort().forEach(function(y){
     const list=byYr[y];
-    const allArch=list.every(function(s){return _isArch(s);});
-    const anyArch=list.some(function(s){return _isArch(s);});
+    const allArch=list.every(function(s){return _isArch(s,'sch')&&_isArch(s,'exam');});
+    const anyArch=list.some(function(s){return _isArch(s,'sch')||_isArch(s,'exam');});
     h+='<div style="margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b style="color:#3C3489;font-size:13px">'+eh(y)+' 学年</b>'
       +'<button class="btn btn-sm" onclick="opsArchYear(\''+eh(y)+'\',true)"'+(allArch?' disabled style="opacity:.4"':'')+'>归档整学年</button>'
       +'<button class="btn btn-sm" onclick="opsArchYear(\''+eh(y)+'\',false)"'+(!anyArch?' disabled style="opacity:.4"':'')+'>恢复整学年</button></div>';
-    h+='<table style="width:100%;margin-top:4px"><tbody>';
+    h+='<table style="width:100%;margin-top:4px;border-collapse:collapse"><tbody>';
     list.forEach(function(s){
-      const c=cnt(s);const a=_isArch(s);
-      h+='<tr>'
-        +'<td style="padding:3px 10px;font-family:ui-monospace;font-weight:600">'+eh(s)+'</td>'
-        +'<td style="padding:3px 10px;font-size:12px;color:#666">排课 '+c.sch+' · IS/SG '+c.sp+' · 期末考 '+c.ex+'</td>'
-        +'<td style="padding:3px 10px">'+(a?'<span style="background:#FFF3E0;color:#8a5a00;font-size:10px;font-weight:700;border-radius:4px;padding:1px 7px">已归档</span>':'<span style="color:#bbb;font-size:11px">—</span>')+'</td>'
-        +'<td style="padding:3px 10px;text-align:right">'+(a?'<button class="btn btn-sm" onclick="opsArchSet(\''+jsq(s)+'\',false)">恢复</button>':'<button class="ops-del" onclick="opsArchSet(\''+jsq(s)+'\',true)">归档</button>')+'</td>'
+      const c=cnt(s);const aSch=_isArch(s,'sch'),aEx=_isArch(s,'exam');
+      const chip=function(on){return on?'<span style="background:#FFF3E0;color:#8a5a00;font-size:10px;font-weight:700;border-radius:4px;padding:1px 6px">已归档</span>':'<span style="color:#bbb;font-size:11px">—</span>';};
+      const tgl=function(tp,on){return on?'<button class="btn btn-sm" onclick="opsArchSet(\''+jsq(s)+'\',\''+tp+'\',false)">恢复</button>':'<button class="ops-del" onclick="opsArchSet(\''+jsq(s)+'\',\''+tp+'\',true)">归档</button>';};
+      h+='<tr style="border-bottom:1px solid #f0f0f0">'
+        +'<td style="padding:4px 10px;font-family:ui-monospace;font-weight:600">'+eh(s)+'</td>'
+        +'<td style="padding:4px 10px;font-size:11px;color:#888">排课 '+c.sch+' · IS/SG '+c.sp+' · 期末考 '+c.ex+'</td>'
+        +'<td style="padding:4px 10px;font-size:11px;white-space:nowrap"><b style="color:#555">排课+IS/SG</b> '+chip(aSch)+' '+tgl('sch',aSch)+'</td>'
+        +'<td style="padding:4px 10px;font-size:11px;white-space:nowrap"><b style="color:#555">期末考</b> '+chip(aEx)+' '+tgl('exam',aEx)+'</td>'
+        +'<td style="padding:4px 10px;text-align:right;white-space:nowrap">'+((aSch&&aEx)?'<button class="btn btn-sm" onclick="opsArchSem(\''+jsq(s)+'\',false)">恢复整学期</button>':'<button class="ops-del" onclick="opsArchSem(\''+jsq(s)+'\',true)">归档整学期</button>')+'</td>'
         +'</tr>';
     });
     h+='</tbody></table>';
@@ -2405,10 +2408,15 @@ function _auditRender(){
   });
   box.innerHTML=h+'</tbody></table></div>';
 }
-async function opsArchSet(sem,archived){
-  const r=await gasPost('adminSetTermArchived',{sem:sem,archived:archived});
-  if(r&&r.success){await loadArchTerms();opsRenderSec();_archRerender();if(typeof showToast==='function')showToast(archived?('已归档 '+sem):('已恢复 '+sem),{kind:'success',duration:1800});}
+async function opsArchSet(sem,type,archived){
+  const r=await gasPost('adminSetTermArchived',{sem:sem,type:type,archived:archived});
+  if(r&&r.success){await loadArchTerms();opsRenderSec();_archRerender();if(typeof showToast==='function')showToast((archived?'已归档':'已恢复')+' '+sem+' ('+(type==='exam'?'期末考':'排课+IS/SG')+')',{kind:'success',duration:1600});}
   else alert('操作失败:'+((r&&r.error)||'?（需管理员）'));
+}
+async function opsArchSem(sem,archived){  // 整学期 = 两类一起
+  for(const t of ['sch','exam']){await gasPost('adminSetTermArchived',{sem:sem,type:t,archived:archived});}
+  await loadArchTerms();opsRenderSec();_archRerender();
+  if(typeof showToast==='function')showToast((archived?'已归档':'已恢复')+' '+sem+' (整学期)',{kind:'success',duration:1600});
 }
 async function opsArchYear(year,archived){
   const ss={};
@@ -2419,13 +2427,13 @@ async function opsArchYear(year,archived){
   Object.keys(_archT).forEach(function(s){if(String(s).substring(0,4)===year)ss[s]=1;});
   const sems=Object.keys(ss);
   if(!sems.length)return;
-  if(!confirm((archived?'归档':'恢复')+' '+year+' 学年全部 '+sems.length+' 个学期?'))return;
-  let ok=0;for(const s of sems){const r=await gasPost('adminSetTermArchived',{sem:s,archived:archived});if(r&&r.success)ok++;}
+  if(!confirm((archived?'归档':'恢复')+' '+year+' 学年全部 '+sems.length+' 个学期(排课+IS/SG 与 期末考 都'+(archived?'归档':'恢复')+')?'))return;
+  let ok=0;for(const s of sems){for(const t of ['sch','exam']){await gasPost('adminSetTermArchived',{sem:s,type:t,archived:archived});}ok++;}
   await loadArchTerms();opsRenderSec();_archRerender();
   if(typeof showToast==='function')showToast((archived?'已归档':'已恢复')+' '+ok+' 个学期',{kind:'success',duration:2000});
 }
 function _examRows(){
-  let list=_filtArch([...(_exam.rows||[])]);
+  let list=_filtArch([...(_exam.rows||[])],'exam');
   const sm=(document.getElementById('exam-sem-f')||{}).value||'';
   const df=(document.getElementById('exam-dept-f')||{}).value||'';
   const kf=(document.getElementById('exam-kind-f')||{}).value||'';
@@ -7298,7 +7306,7 @@ function syncTblHeight(){
     }
     if(a==='teachBtec'){const d=await sget('teach_btec?select=teacher,val').catch(function(){return [];});const m={};(d||[]).forEach(function(x){m[x.teacher]=+x.val;});return{success:true,map:m};}
     if(a==='examData'){const r=await srpc('exam_special_list',{p_pin:_pin}).catch(function(){return null;});const sc=await sget('exam_school?select=id,name&order=name').catch(function(){return [];});if(r&&!r.error)return{success:true,rows:r.rows||[],schools:sc||[]};return{success:false,rows:[],schools:sc||[],error:(r&&r.error)||'需要登入'};}
-    if(a==='archData'){const d=await sget('archived_terms?select=sem').catch(function(){return [];});return{success:true,terms:(d||[]).map(function(x){return x.sem;})};}
+    if(a==='archData'){const d=await sget('archived_terms?select=sem,type').catch(function(){return [];});return{success:true,rows:d||[]};}
     if(a==='cohortYears'){const d=await sget('cohort_years?select=cohort,years').catch(function(){return [];});return{success:true,rows:(d||[]).map(function(x){return {cohort:x.cohort,years:x.years};})};}
     if(a==='cohortOverrides'){const d=await sget('cohorts?select=cohort,grad_override').catch(function(){return [];});return{success:true,rows:(d||[]).map(function(x){return {cohort:x.cohort,ov:x.grad_override||''};})};}
     if(a==='noticeData'){const r=await sget('notice?select=*&order=sort,id').catch(function(){return [];});return{success:true,rows:r||[]};}
@@ -7375,7 +7383,7 @@ function syncTblHeight(){
     if(action==='adminDelPin')return srpc('admin_del_pin',{p_pin:_pin,p_target_pin:body.target});
     if(action==='adminSetExamSpecial')return srpc('admin_set_exam_special',{p_pin:_pin,p_id:body.id,p_sem:body.sem,p_teacher:body.teacher,p_course:body.course,p_cls:body.cls,p_school:body.school,p_dept:body.dept,p_sid:body.sid,p_name_py:body.name_py,p_name_zh:body.name_zh,p_note:body.note,p_salut:body.salut,p_half:body.half,p_kind:body.kind,p_conflict:body.conflict});
     if(action==='adminDelExamSpecial')return srpc('admin_del_exam_special',{p_pin:_pin,p_id:body.id});
-    if(action==='adminSetTermArchived')return srpc('admin_set_term_archived',{p_pin:_pin,p_sem:body.sem,p_archived:!!body.archived});
+    if(action==='adminSetTermArchived')return srpc('admin_set_term_archived',{p_pin:_pin,p_sem:body.sem,p_archived:!!body.archived,p_type:body.type||'sch'});
     if(action==='adminDelBtecStudent')return srpc('admin_del_btec_student',{p_pin:_pin,p_id:body.id});
     if(action==='adminSetBtecPlan')return srpc('admin_set_btec_plan',{p_pin:_pin,p_student_id:body.student_id,p_code:body.code,p_sem:body.sem});
     if(action==='adminUpsertBtecUnit')return srpc('admin_upsert_btec_unit',{p_pin:_pin,p_row:body.row});
