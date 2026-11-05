@@ -1455,7 +1455,6 @@ function opsRenderSec(){
   b.innerHTML= opsSec==='sem'?opsSemView(): opsSec==='dept'?opsDeptView(): opsSec==='coh'?opsCohView(): opsSec==='tch'?opsTchView(): opsSec==='pos'?opsPosView(): opsSec==='cat'?opsCatView(): opsSec==='grad'?opsGradView(): opsSec==='school'?opsSchoolView(): opsSec==='notice'?opsNoticeView(): opsSec==='arch'?opsArchView(): opsSec==='acct'?opsAcctView(): opsSec==='edits'?opsEditsView(): '';
   if(opsSec==='school'&&!_examLoaded){_examLoaded=true;loadExam().then(function(){if(opsSec==='school')opsRenderSec();});}
   if(opsSec==='arch'&&!_examLoaded){_examLoaded=true;loadExam().then(function(){if(opsSec==='arch')opsRenderSec();});}  // 归档面板也需期末考数据,否则「期末考」数恒 0
-  if(opsSec==='edits'&&!_examLoaded){_examLoaded=true;loadExam().then(function(){if(opsSec==='edits')opsRenderSec();});}  // 编辑记录面板也汇总期末考
   if(opsSec==='notice'&&!_noticesLoadedOps){_noticesLoadedOps=true;loadNotices().then(function(){if(opsSec==='notice')opsRenderSec();});}
 }
 // 使用中检查(用已加载的 schD/spD)
@@ -2310,30 +2309,57 @@ function opsArchView(){
   return h;
 }
 function _archRerender(){if(typeof renderSch==='function')renderSch();if(typeof renderSp==='function')renderSp();if(typeof renderExam==='function')renderExam();if(typeof renderAllSum==='function')renderAllSum();}
-// ── 后台:编辑记录(各记录「最后一次修改」快照,仅 admin)──
+// ── 后台:编辑记录(B方案·完整变更历史,读 audit_log,仅 admin)──
+var _auditFilter={editor:'',tbl:'',op:''};
+function _short(v){if(v==null)return '';if(typeof v==='object')return JSON.stringify(v);var s=String(v);return s.length>48?s.slice(0,48)+'…':s;}
 function opsEditsView(){
   if(currentRole!=='admin')return '<div style="color:#aaa;padding:12px">仅管理员可见</div>';
-  var items=[];
-  (schD||[]).forEach(function(r){if(r&&(r.editor||r.updated))items.push({t:r.updated||'',who:r.editor||'',kind:'排课',kc:'b0',obj:(r.course||'')+(r.sem?(' · '+r.sem):'')+(r.cls?(' · '+r.cls):''),tc:r.tc||''});});
-  (spD||[]).forEach(function(r){if(r&&(r.editor||r.updated))items.push({t:r.updated||'',who:r.editor||'',kind:'IS/SG',kc:'b5',obj:(r.co||'')+(r.sem?(' · '+r.sem):'')+(r.cls?(' · '+r.cls):''),tc:r.tc||''});});
-  (_exam.rows||[]).forEach(function(r){if(!r)return;var tt=r.updated_at||r.updated||'',ed=r.editor||'';if(ed||tt)items.push({t:tt,who:ed,kind:'期末考',kc:'b4',obj:(r.course||'')+(r.sem?(' · '+r.sem):'')+(r.cls?(' · '+r.cls):''),tc:r.teacher||''});});
-  items.sort(function(a,b){return String(b.t||'').localeCompare(String(a.t||''));});
-  var total=items.length,CAP=400,shown=items.slice(0,CAP);
+  var f=_auditFilter,o=function(v,l,c){return '<option value="'+v+'"'+(c===v?' selected':'')+'>'+l+'</option>';};
+  var h='<div style="color:#666;font-size:12px;margin-bottom:8px;line-height:1.7">完整变更历史:排课 / IS·SG / 期末考特例 的<b>每一次</b>增·改·删(含改动前后),按时间新→旧。</div>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">'+
+     '<input id="aud-editor" value="'+eh(f.editor)+'" placeholder="修改人(可空)" style="font-size:12px;padding:5px 8px;border:0.5px solid #cbd5e1;border-radius:6px;width:150px">'+
+     '<select id="aud-tbl" style="font-size:12px;padding:5px;border:0.5px solid #cbd5e1;border-radius:6px">'+o('','全部类型',f.tbl)+o('schedule','排课',f.tbl)+o('special','IS/SG',f.tbl)+o('exam_special','期末考',f.tbl)+'</select>'+
+     '<select id="aud-op" style="font-size:12px;padding:5px;border:0.5px solid #cbd5e1;border-radius:6px">'+o('','全部动作',f.op)+o('INSERT','新增',f.op)+o('UPDATE','修改',f.op)+o('DELETE','删除',f.op)+'</select>'+
+     '<button class="btn btn-sm" onclick="opsAuditApply()">🔍 查询</button></div>';
+  h+='<div id="ops-edits-body"><div style="color:#888;padding:12px">加载中…</div></div>';
+  setTimeout(opsAuditLoad,0);
+  return h;
+}
+function opsAuditApply(){
+  var g=function(id){var e=document.getElementById(id);return e?e.value:'';};
+  _auditFilter={editor:g('aud-editor').trim(),tbl:g('aud-tbl'),op:g('aud-op')};
+  opsAuditLoad();
+}
+async function opsAuditLoad(){
+  var box=document.getElementById('ops-edits-body');if(!box)return;
+  box.innerHTML='<div style="color:#888;padding:12px">加载中…</div>';
+  var f=_auditFilter;
+  var r=await gasGet({action:'auditList',editor:f.editor||null,tbl:f.tbl||null,op:f.op||null,limit:300,offset:0});
+  if(!r||!r.success){box.innerHTML='<div style="color:#c62222;padding:12px">读取失败:'+eh((r&&r.error)||'?')+'</div>';return;}
+  var rows=r.rows||[];
+  if(!rows.length){box.innerHTML='<div style="color:#aaa;padding:12px">没有符合的记录</div>';return;}
+  var TBL={schedule:'排课',special:'IS/SG',exam_special:'期末考'},TBLC={schedule:'b0',special:'b5',exam_special:'b4'};
+  var OP={INSERT:'新增',UPDATE:'修改',DELETE:'删除'},OPC={INSERT:'#1b7a5a',UPDATE:'#8a5a00',DELETE:'#a32d2d'};
+  var FN={course_code:'代码',course_en:'英文名',sem:'学期',half:'上下半',type:'类型',class_code:'班级',teacher:'老师',cohorts:'届别',total:'人数',note:'备注',btec:'BTEC',student_id:'学号',name:'姓名',major:'专业',title:'题目',course:'课程',dept:'系别',kind:'种类',school:'登分学校',conflict_course:'冲突课'};
   var fmt=function(t){if(!t)return '—';var d=new Date(t);if(isNaN(d))return eh(String(t));var p=function(n){return String(n).padStart(2,'0');};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());};
-  var h='<div style="color:#666;font-size:12px;margin-bottom:8px;line-height:1.7">各记录的<b>最后一次修改</b>(谁·何时),按时间新→旧,涵盖排课 / IS·SG / 期末考特例。<span style="color:#999">注:这是「最后修改」快照,非逐次历史。</span></div>';
-  h+='<div style="font-size:11px;color:#888;margin-bottom:6px">共 '+total+' 笔'+(total>CAP?(' · 只显示最近 '+CAP+' 笔'):'')+'</div>';
-  if(!total)return h+'<div style="color:#aaa;padding:12px">暂无编辑记录</div>';
+  var objOf=function(j){if(!j)return '';var c=j.course_code||j.course||'',s=j.sem||'',cl=j.class_code||'';return eh(c+(s?(' · '+s):'')+(cl?(' · '+cl):''));};
+  var diffOf=function(b,a){var keys={},out=[];if(b)Object.keys(b).forEach(function(k){keys[k]=1;});if(a)Object.keys(a).forEach(function(k){keys[k]=1;});
+    Object.keys(keys).forEach(function(k){if(k==='updated_at'||k==='editor'||k==='id')return;var bv=JSON.stringify((b||{})[k]==null?'':b[k]),av=JSON.stringify((a||{})[k]==null?'':a[k]);if(bv!==av)out.push('<div style="line-height:1.5"><b style="color:#555">'+eh(FN[k]||k)+'</b>: <span style="color:#a32d2d">'+eh(_short((b||{})[k]))+'</span> → <span style="color:#1b7a5a">'+eh(_short((a||{})[k]))+'</span></div>');});
+    return out.length?out.join(''):'<span style="color:#bbb">(无字段变化)</span>';};
+  var detailOf=function(x){if(x.op==='UPDATE')return diffOf(x.before,x.after);if(x.op==='INSERT')return '<span style="color:#1b7a5a">＋ 新建</span>';if(x.op==='DELETE')return '<span style="color:#a32d2d">－ 删除整笔</span>';return '';};
   var th=function(t){return '<th style="background:#534AB7;color:#fff;text-align:left;padding:6px 9px;position:sticky;top:0">'+t+'</th>';};
-  h+='<div class="tbl-wrap" style="max-height:calc(100vh - 320px);overflow:auto"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr>'+th('修改时间')+th('修改人')+th('类型')+th('对象(课程·学期·班级)')+th('老师')+'</tr></thead><tbody>';
-  shown.forEach(function(x){
-    h+='<tr>'+
-      '<td style="padding:4px 9px;white-space:nowrap;color:#666;border-bottom:1px solid #eee">'+fmt(x.t)+'</td>'+
-      '<td style="padding:4px 9px;white-space:nowrap;border-bottom:1px solid #eee">'+(x.who?eh(x.who):'<span style="color:#bbb">—</span>')+'</td>'+
-      '<td style="padding:4px 9px;border-bottom:1px solid #eee"><span class="badge '+x.kc+'" style="font-size:10px">'+x.kind+'</span></td>'+
-      '<td style="padding:4px 9px;border-bottom:1px solid #eee">'+eh(x.obj)+'</td>'+
-      '<td style="padding:4px 9px;white-space:nowrap;color:#555;border-bottom:1px solid #eee">'+eh(x.tc)+'</td></tr>';
+  var h='<div style="font-size:11px;color:#888;margin-bottom:6px">显示 '+rows.length+' 笔'+(rows.length>=300?' · 已达单页上限,请用上方筛选缩小':'')+'</div>';
+  h+='<div class="tbl-wrap" style="max-height:calc(100vh - 360px);overflow:auto"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr>'+th('时间')+th('修改人')+th('类型')+th('动作')+th('对象')+th('改动')+'</tr></thead><tbody>';
+  rows.forEach(function(x){
+    h+='<tr style="vertical-align:top">'+
+      '<td style="padding:4px 9px;white-space:nowrap;color:#666;border-bottom:1px solid #eee">'+fmt(x.at)+'</td>'+
+      '<td style="padding:4px 9px;white-space:nowrap;border-bottom:1px solid #eee">'+(x.editor?eh(x.editor):'<span style="color:#bbb">—</span>')+'</td>'+
+      '<td style="padding:4px 9px;border-bottom:1px solid #eee"><span class="badge '+(TBLC[x.tbl]||'b4')+'" style="font-size:10px">'+(TBL[x.tbl]||eh(x.tbl))+'</span></td>'+
+      '<td style="padding:4px 9px;white-space:nowrap;border-bottom:1px solid #eee;color:'+(OPC[x.op]||'#555')+';font-weight:600">'+(OP[x.op]||eh(x.op))+'</td>'+
+      '<td style="padding:4px 9px;border-bottom:1px solid #eee;white-space:nowrap">'+objOf(x.after||x.before)+'</td>'+
+      '<td style="padding:4px 9px;border-bottom:1px solid #eee;font-size:11px">'+detailOf(x)+'</td></tr>';
   });
-  return h+'</tbody></table></div>';
+  box.innerHTML=h+'</tbody></table></div>';
 }
 async function opsArchSet(sem,archived){
   const r=await gasPost('adminSetTermArchived',{sem:sem,archived:archived});
@@ -7212,6 +7238,7 @@ function syncTblHeight(){
       const d=await sget('schedule?select=*&order=id.asc');return{success:true,data:(d||[]).map(mSch)};
     }
     if(a==='whoOnline'){var rw=await srpc('presence_list',{p_pin:_pin,p_me:(typeof currentEditor!=='undefined'?currentEditor:null)}).catch(function(){return null;});return (rw&&rw.success)?{success:true,users:rw.users||[]}:{success:true,users:[]};}
+    if(a==='auditList'){var ra=await srpc('audit_list',{p_pin:_pin,p_editor:params.editor||null,p_tbl:params.tbl||null,p_op:params.op||null,p_limit:params.limit||300,p_offset:params.offset||0}).catch(function(){return null;});return (ra&&ra.success)?{success:true,rows:ra.rows||[]}:{success:false,rows:[],error:(ra&&ra.error)||'读取失败'};}
     if(a==='listBackups')return{success:true,snapshots:[]};
     if(a==='btecData'){
       // 学生个资不再匿名直读:改走验 PIN 的 security-definer RPC btec_data(p_pin)
