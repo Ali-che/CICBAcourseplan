@@ -2343,10 +2343,25 @@ async function opsAuditLoad(){
   var FN={course_code:'代码',course_en:'英文名',sem:'学期',half:'上下半',type:'类型',class_code:'班级',teacher:'老师',cohorts:'届别',total:'人数',note:'备注',btec:'BTEC',student_id:'学号',name:'姓名',major:'专业',title:'题目',course:'课程',dept:'系别',kind:'种类',school:'登分学校',conflict_course:'冲突课'};
   var fmt=function(t){if(!t)return '—';var d=new Date(t);if(isNaN(d))return eh(String(t));var p=function(n){return String(n).padStart(2,'0');};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());};
   var objOf=function(j){if(!j)return '';var c=j.course_code||j.course||'',s=j.sem||'',cl=j.class_code||'';return eh(c+(s?(' · '+s):'')+(cl?(' · '+cl):''));};
+  var cohMap=function(arr){var m={};(arr||[]).forEach(function(x){if(x&&x.cohort)m[x.cohort]=(x.count==null?'':x.count);});return m;};
+  var cohDiffStr=function(b,a){var mb=cohMap(b),ma=cohMap(a),keys={},out=[];Object.keys(mb).forEach(function(k){keys[k]=1;});Object.keys(ma).forEach(function(k){keys[k]=1;});
+    Object.keys(keys).sort().forEach(function(k){var x=mb[k],y=ma[k];
+      if(x===undefined)out.push('<span style="color:#1b7a5a">＋'+eh(k)+' ×'+y+'</span>');
+      else if(y===undefined)out.push('<span style="color:#a32d2d">－'+eh(k)+' ×'+x+'</span>');
+      else if(String(x)!==String(y))out.push('<span style="color:#8a5a00">'+eh(k)+' ×'+x+'→×'+y+'</span>');});
+    return out.length?out.join('、'):'<span style="color:#bbb">(届别无变化)</span>';};
+  var cohList=function(arr){var m=cohMap(arr),out=[];Object.keys(m).sort().forEach(function(k){out.push(eh(k)+' ×'+m[k]);});return out.join('、')||'—';};
   var diffOf=function(b,a){var keys={},out=[];if(b)Object.keys(b).forEach(function(k){keys[k]=1;});if(a)Object.keys(a).forEach(function(k){keys[k]=1;});
-    Object.keys(keys).forEach(function(k){if(k==='updated_at'||k==='editor'||k==='id')return;var bv=JSON.stringify((b||{})[k]==null?'':b[k]),av=JSON.stringify((a||{})[k]==null?'':a[k]);if(bv!==av)out.push('<div style="line-height:1.5"><b style="color:#555">'+eh(FN[k]||k)+'</b>: <span style="color:#a32d2d">'+eh(_short((b||{})[k]))+'</span> → <span style="color:#1b7a5a">'+eh(_short((a||{})[k]))+'</span></div>');});
+    Object.keys(keys).forEach(function(k){if(k==='updated_at'||k==='editor'||k==='id')return;
+      var bv=JSON.stringify((b||{})[k]==null?'':b[k]),av=JSON.stringify((a||{})[k]==null?'':a[k]);if(bv===av)return;
+      if(k==='cohorts'){out.push('<div style="line-height:1.6"><b style="color:#555">届别</b>: '+cohDiffStr((b||{}).cohorts,(a||{}).cohorts)+'</div>');return;}
+      out.push('<div style="line-height:1.6"><b style="color:#555">'+eh(FN[k]||k)+'</b>: <span style="color:#a32d2d">'+eh(_short((b||{})[k]))+'</span> → <span style="color:#1b7a5a">'+eh(_short((a||{})[k]))+'</span></div>');});
     return out.length?out.join(''):'<span style="color:#bbb">(无字段变化)</span>';};
-  var detailOf=function(x){if(x.op==='UPDATE')return diffOf(x.before,x.after);if(x.op==='INSERT')return '<span style="color:#1b7a5a">＋ 新建</span>';if(x.op==='DELETE')return '<span style="color:#a32d2d">－ 删除整笔</span>';return '';};
+  var detailOf=function(x){
+    if(x.op==='UPDATE')return diffOf(x.before,x.after);
+    if(x.op==='INSERT'){var a=x.after||{};return '<span style="color:#1b7a5a">＋ 新建</span>'+(a.teacher?' · 老师 '+eh(a.teacher):'')+(a.cohorts?' · 届别 '+cohList(a.cohorts):'');}
+    if(x.op==='DELETE'){var b=x.before||{};return '<span style="color:#a32d2d">－ 删除整笔</span>'+(b.teacher?' · 老师 '+eh(b.teacher):'')+(b.cohorts?' · 届别 '+cohList(b.cohorts):'');}
+    return '';};
   var th=function(t){return '<th style="background:#534AB7;color:#fff;text-align:left;padding:6px 9px;position:sticky;top:0">'+t+'</th>';};
   var h='<div style="font-size:11px;color:#888;margin-bottom:6px">显示 '+rows.length+' 笔'+(rows.length>=300?' · 已达单页上限,请用上方筛选缩小':'')+'</div>';
   h+='<div class="tbl-wrap" style="max-height:calc(100vh - 360px);overflow:auto"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr>'+th('时间')+th('修改人')+th('类型')+th('动作')+th('对象')+th('改动')+'</tr></thead><tbody>';
