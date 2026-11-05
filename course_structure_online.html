@@ -52,8 +52,8 @@
 .srtb .sp{font-weight:700;color:#534AB7;white-space:nowrap}
 .srtb .code{font-family:ui-monospace,monospace;color:#1F4E79;font-weight:700;white-space:nowrap}
 .srtb .blk2{color:#666;font-size:11.5px;white-space:nowrap}
-.srtb .crc{text-align:center;font-weight:700;white-space:nowrap}
-.srtb .crc .lk{margin-left:10px;font-weight:600}
+.srtb .crc{text-align:left;font-weight:700;white-space:nowrap}
+.srtb .mapc{white-space:nowrap}
 .srtb .en2{color:#999;font-size:10.5px}
 .srtb .dz2cell{padding:0 9px 8px}
 .srtb .dz2{font-size:11.5px;color:#555;background:rgba(83,74,183,.06);border-left:3px solid #cfc9ee;border-radius:0 6px 6px 0;padding:8px 12px;line-height:1.6}
@@ -253,9 +253,9 @@ function searchAll(q){
   })})});
   if(!hits.length)return '<div class="note">没有符合「'+q+'」的科目</div>';
   let rows=hits.map((h,i)=>{const id='q'+i;const lk=h.c.link?` <span class=lk>←${h.c.link}</span>`:'';const fx=h.c.fixed?'<span class=fx>常</span>':'';const memo=h.c.memo?`<span class=memo>📝${h.c.memo}</span>`:'';const dot=h.c.desc?' <span class=dot>ⓘ</span>':'';
-    let r=`<tr onclick="tg('${id}')"><td class=sp>${h.pl}</td><td class=code>${fx}${h.c.code}</td><td><b>${h.c.zh||'—'}</b>${dot}${memo}<div class=en2>${h.c.en||''}</div></td><td class=blk2>${h.cat}</td><td class=crc>${h.c.cr}${lk}</td></tr>`;
-    if(h.c.desc)r+=`<tr id="${id}" style="display:none"><td colspan=5 class=dz2cell><div class=dz2>${h.c.desc}</div></td></tr>`;return r;}).join('');
-  return `<div class="srhd">🔍 搜索「${q}」· 共 ${hits.length} 门</div><table class="srtb"><thead><tr><th>专业</th><th>代码</th><th>课程</th><th>版块</th><th>学分</th></tr></thead><tbody>${rows}</tbody></table>`;
+    let r=`<tr onclick="tg('${id}')"><td class=sp>${h.pl}</td><td class=code>${fx}${h.c.code}</td><td><b>${h.c.zh||'—'}</b>${dot}${memo}<div class=en2>${h.c.en||''}</div></td><td class=blk2>${h.cat}</td><td class=crc>${h.c.cr}</td><td class=mapc>${lk}</td></tr>`;
+    if(h.c.desc)r+=`<tr id="${id}" style="display:none"><td colspan=6 class=dz2cell><div class=dz2>${h.c.desc}</div></td></tr>`;return r;}).join('');
+  return `<div class="srhd">🔍 搜索「${q}」· 共 ${hits.length} 门</div><table class="srtb"><thead><tr><th>专业</th><th>代码</th><th>课程</th><th>版块</th><th>学分</th><th>对接</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 function render(){
   const q=(document.getElementById('fq').value||'').toLowerCase().trim();
