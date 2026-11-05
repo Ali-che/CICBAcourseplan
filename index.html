@@ -3086,7 +3086,9 @@ async function reloadRef(){
   }else alert('⚠ 未配置 SHEETS_URL 或连线失败，目前使用内建预设数据。');
 }
 function updateRefBar(){
-  const totalCoh=Object.values(CBD).flat().length,depts=[...new Set(T.map(t=>t.d))].length;
+  const totalCoh=Object.values(CBD).flat().length;
+  // 专业库 = 专业(depts)表的专业数,与后台「专业」一致;旧写法误数「有老师的部门」(含 CIC/DPU/GE、漏无老师专业)
+  const depts=(typeof DEPTS!=='undefined'&&DEPTS.length)?DEPTS.length:[...new Set(T.map(t=>t.d))].length;
   document.getElementById('ref-courses').textContent='课程库 '+C.length+' 条';
   document.getElementById('ref-teachers').textContent='老师库 '+T.length+' 位';
   document.getElementById('ref-cohorts').textContent='届别库 '+totalCoh+' 条';
