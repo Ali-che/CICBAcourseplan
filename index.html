@@ -2343,7 +2343,7 @@ function opsEditsView(){
   var edSel='<select id="aud-editor" style="'+ib+';width:150px"><option value="">全部修改人</option>'+names.map(function(nm){return '<option value="'+eh(nm)+'"'+(f.editor===nm?' selected':'')+'>'+eh(nm)+'</option>';}).join('')+(!_acct.loaded?'<option value="" disabled>(账号载入中…)</option>':'')+'</select>';
   var h='<div style="display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 10px;background:#F7F6FD;border-radius:8px">'+
      edSel+
-     '<select id="aud-tbl" style="'+ib+';width:100px">'+o('','全部类型',f.tbl)+o('schedule','排课',f.tbl)+o('special','IS/SG',f.tbl)+o('exam_special','期末考',f.tbl)+'</select>'+
+     '<select id="aud-tbl" style="'+ib+';width:100px">'+o('','全部类型',f.tbl)+o('schedule','排课',f.tbl)+o('special','IS/SG',f.tbl)+o('exam_special','期末考',f.tbl)+o('cohorts','届别',f.tbl)+'</select>'+
      '<select id="aud-op" style="'+ib+';width:96px">'+o('','全部动作',f.op)+o('INSERT','新增',f.op)+o('UPDATE','修改',f.op)+o('DELETE','删除',f.op)+o('BASELINE','起始',f.op)+'</select>'+
      '<span style="font-size:11px;color:#888">时间</span>'+
      '<input id="aud-from" type="date" value="'+eh(f.from)+'" style="'+ib+';width:140px">'+
@@ -2351,7 +2351,7 @@ function opsEditsView(){
      '<input id="aud-to" type="date" value="'+eh(f.to)+'" style="'+ib+';width:140px">'+
      '<button class="btn btn-sm" onclick="opsAuditApply()">🔍 查询</button>'+
      '<button class="btn btn-sm" onclick="opsAuditReset()">清除</button>'+
-     '<span style="flex:1"></span><span style="font-size:11px;color:#999">排课 / IS·SG / 期末考 的每一次增·改·删</span></div>';
+     '<span style="flex:1"></span><span style="font-size:11px;color:#999">排课 / IS·SG / 期末考 / 届别 的每一次增·改·删</span></div>';
   h+='<div id="ops-edits-body"><div style="color:#888;padding:12px">加载中…</div></div>';
   setTimeout(opsAuditLoad,0);
   return h;
@@ -2376,11 +2376,11 @@ async function opsAuditLoad(){
 function _auditRender(){
   var box=document.getElementById('ops-edits-body');if(!box)return;
   if(!_auditRows.length){box.innerHTML='<div style="color:#aaa;padding:12px">没有符合的记录</div>';return;}
-  var TBL={schedule:'排课',special:'IS/SG',exam_special:'期末考'},TBLC={schedule:'b0',special:'b5',exam_special:'b4'};
+  var TBL={schedule:'排课',special:'IS/SG',exam_special:'期末考',cohorts:'届别'},TBLC={schedule:'b0',special:'b5',exam_special:'b4',cohorts:'b2'};
   var OP={INSERT:'新增',UPDATE:'修改',DELETE:'删除',BASELINE:'起始'},OPC={INSERT:'#1b7a5a',UPDATE:'#8a5a00',DELETE:'#a32d2d',BASELINE:'#6b7280'};
   var FN={course_code:'代码',course_en:'英文名',sem:'学期',half:'上下半',type:'类型',class_code:'班级',teacher:'老师',cohorts:'届别',total:'人数',note:'备注',btec:'BTEC',student_id:'学号',name:'姓名',major:'专业',title:'题目',course:'课程',dept:'系别',kind:'种类',school:'登分学校',conflict_course:'冲突课'};
   var fmt=function(t){if(!t)return '—';var d=new Date(t);if(isNaN(d))return eh(String(t));var p=function(n){return String(n).padStart(2,'0');};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());};
-  var objOf=function(j){if(!j)return '';var c=j.course_code||j.course||'',s=j.sem||'',cl=j.class_code||'';return eh([s,c,cl].filter(Boolean).join(' · '));};  // 顺序:学年学期·课程·班级
+  var objOf=function(j){if(!j)return '';if(j.cohort&&!Array.isArray(j.cohorts))return eh(String(j.cohort)+(j.dept?(' · '+j.dept):''));var c=j.course_code||j.course||'',s=j.sem||'',cl=j.class_code||'';return eh([s,c,cl].filter(Boolean).join(' · '));};  // 顺序:学年学期·课程·班级;届别:代码·专业
   var cohMap=function(arr){var m={};(arr||[]).forEach(function(x){if(x&&x.cohort)m[x.cohort]=(x.count==null?'':x.count);});return m;};
   var cohDiffStr=function(b,a){var mb=cohMap(b),ma=cohMap(a),keys={},out=[];Object.keys(mb).forEach(function(k){keys[k]=1;});Object.keys(ma).forEach(function(k){keys[k]=1;});
     Object.keys(keys).sort().forEach(function(k){var x=mb[k],y=ma[k];
@@ -2397,13 +2397,13 @@ function _auditRender(){
     return out.length?out.join(''):'<span style="color:#bbb">(无字段变化)</span>';};
   var detailOf=function(x){
     if(x.op==='UPDATE')return diffOf(x.before,x.after);
-    if(x.op==='INSERT'){var a=x.after||{};return '<span style="color:#1b7a5a">＋ 新建</span>'+(a.teacher?' · 老师 '+eh(a.teacher):'')+(a.cohorts?' · 届别 '+cohList(a.cohorts):'');}
-    if(x.op==='DELETE'){var b=x.before||{};return '<span style="color:#a32d2d">－ 删除整笔</span>'+(b.teacher?' · 老师 '+eh(b.teacher):'')+(b.cohorts?' · 届别 '+cohList(b.cohorts):'');}
+    if(x.op==='INSERT'){var a=x.after||{};if(a.cohort&&!Array.isArray(a.cohorts))return '<span style="color:#1b7a5a">＋ 新增届别</span> '+eh(String(a.cohort))+(a.dept?' · 专业 '+eh(a.dept):'');return '<span style="color:#1b7a5a">＋ 新建</span>'+(a.teacher?' · 老师 '+eh(a.teacher):'')+(a.cohorts?' · 届别 '+cohList(a.cohorts):'');}
+    if(x.op==='DELETE'){var b=x.before||{};if(b.cohort&&!Array.isArray(b.cohorts))return '<span style="color:#a32d2d">－ 删除届别</span> '+eh(String(b.cohort))+(b.dept?' · 专业 '+eh(b.dept):'');return '<span style="color:#a32d2d">－ 删除整笔</span>'+(b.teacher?' · 老师 '+eh(b.teacher):'')+(b.cohorts?' · 届别 '+cohList(b.cohorts):'');}
     if(x.op==='BASELINE'){var c=x.after||{};return '<span style="color:#6b7280">迁移前最后状态</span>'+(c.teacher?' · 老师 '+eh(c.teacher):'')+(c.cohorts?' · 届别 '+cohList(c.cohorts):'');}
     return '';};
   // 排序(点表头)
   var rows=_auditRows.slice(),k=_auditSort.key,d=_auditSort.dir;
-  var tblOrd={schedule:0,special:1,exam_special:2},opOrd={INSERT:0,UPDATE:1,DELETE:2,BASELINE:3};
+  var tblOrd={schedule:0,special:1,exam_special:2,cohorts:3},opOrd={INSERT:0,UPDATE:1,DELETE:2,BASELINE:3};
   rows.sort(function(a,b){
     if(k==='tbl'){var at=(tblOrd[a.tbl]==null?9:tblOrd[a.tbl]),bt=(tblOrd[b.tbl]==null?9:tblOrd[b.tbl]);return d*(at-bt)||(String(b.at||'').localeCompare(String(a.at||'')));}
     if(k==='op'){var ao=(opOrd[a.op]==null?9:opOrd[a.op]),bo=(opOrd[b.op]==null?9:opOrd[b.op]);return d*(ao-bo)||(String(b.at||'').localeCompare(String(a.at||'')));}
