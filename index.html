@@ -2323,7 +2323,7 @@ function opsEditsView(){
   var h='<div style="display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 10px;background:#F7F6FD;border-radius:8px">'+
      edSel+
      '<select id="aud-tbl" style="'+ib+';width:100px">'+o('','全部类型',f.tbl)+o('schedule','排课',f.tbl)+o('special','IS/SG',f.tbl)+o('exam_special','期末考',f.tbl)+'</select>'+
-     '<select id="aud-op" style="'+ib+';width:96px">'+o('','全部动作',f.op)+o('INSERT','新增',f.op)+o('UPDATE','修改',f.op)+o('DELETE','删除',f.op)+o('BASELINE','基线',f.op)+'</select>'+
+     '<select id="aud-op" style="'+ib+';width:96px">'+o('','全部动作',f.op)+o('INSERT','新增',f.op)+o('UPDATE','修改',f.op)+o('DELETE','删除',f.op)+o('BASELINE','起始',f.op)+'</select>'+
      '<span style="font-size:11px;color:#888">时间</span>'+
      '<input id="aud-from" type="date" value="'+eh(f.from)+'" style="'+ib+';width:140px">'+
      '<span style="color:#aaa">–</span>'+
@@ -2356,7 +2356,7 @@ function _auditRender(){
   var box=document.getElementById('ops-edits-body');if(!box)return;
   if(!_auditRows.length){box.innerHTML='<div style="color:#aaa;padding:12px">没有符合的记录</div>';return;}
   var TBL={schedule:'排课',special:'IS/SG',exam_special:'期末考'},TBLC={schedule:'b0',special:'b5',exam_special:'b4'};
-  var OP={INSERT:'新增',UPDATE:'修改',DELETE:'删除',BASELINE:'基线'},OPC={INSERT:'#1b7a5a',UPDATE:'#8a5a00',DELETE:'#a32d2d',BASELINE:'#6b7280'};
+  var OP={INSERT:'新增',UPDATE:'修改',DELETE:'删除',BASELINE:'起始'},OPC={INSERT:'#1b7a5a',UPDATE:'#8a5a00',DELETE:'#a32d2d',BASELINE:'#6b7280'};
   var FN={course_code:'代码',course_en:'英文名',sem:'学期',half:'上下半',type:'类型',class_code:'班级',teacher:'老师',cohorts:'届别',total:'人数',note:'备注',btec:'BTEC',student_id:'学号',name:'姓名',major:'专业',title:'题目',course:'课程',dept:'系别',kind:'种类',school:'登分学校',conflict_course:'冲突课'};
   var fmt=function(t){if(!t)return '—';var d=new Date(t);if(isNaN(d))return eh(String(t));var p=function(n){return String(n).padStart(2,'0');};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());};
   var objOf=function(j){if(!j)return '';var c=j.course_code||j.course||'',s=j.sem||'',cl=j.class_code||'';return eh(c+(s?(' · '+s):'')+(cl?(' · '+cl):''));};
