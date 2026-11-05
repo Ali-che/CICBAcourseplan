@@ -2362,7 +2362,7 @@ function _auditRender(){
   var OP={INSERT:'新增',UPDATE:'修改',DELETE:'删除',BASELINE:'起始'},OPC={INSERT:'#1b7a5a',UPDATE:'#8a5a00',DELETE:'#a32d2d',BASELINE:'#6b7280'};
   var FN={course_code:'代码',course_en:'英文名',sem:'学期',half:'上下半',type:'类型',class_code:'班级',teacher:'老师',cohorts:'届别',total:'人数',note:'备注',btec:'BTEC',student_id:'学号',name:'姓名',major:'专业',title:'题目',course:'课程',dept:'系别',kind:'种类',school:'登分学校',conflict_course:'冲突课'};
   var fmt=function(t){if(!t)return '—';var d=new Date(t);if(isNaN(d))return eh(String(t));var p=function(n){return String(n).padStart(2,'0');};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());};
-  var objOf=function(j){if(!j)return '';var c=j.course_code||j.course||'',s=j.sem||'',cl=j.class_code||'';return eh(c+(s?(' · '+s):'')+(cl?(' · '+cl):''));};
+  var objOf=function(j){if(!j)return '';var c=j.course_code||j.course||'',s=j.sem||'',cl=j.class_code||'';return eh([s,c,cl].filter(Boolean).join(' · '));};  // 顺序:学年学期·课程·班级
   var cohMap=function(arr){var m={};(arr||[]).forEach(function(x){if(x&&x.cohort)m[x.cohort]=(x.count==null?'':x.count);});return m;};
   var cohDiffStr=function(b,a){var mb=cohMap(b),ma=cohMap(a),keys={},out=[];Object.keys(mb).forEach(function(k){keys[k]=1;});Object.keys(ma).forEach(function(k){keys[k]=1;});
     Object.keys(keys).sort().forEach(function(k){var x=mb[k],y=ma[k];
