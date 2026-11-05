@@ -2370,7 +2370,8 @@ async function opsAuditLoad(){
   var f=_auditFilter;
   var r=await gasGet({action:'auditList',editor:f.editor||null,tbl:f.tbl||null,op:f.op||null,from:f.from||null,to:f.to||null,limit:300,offset:0});
   if(!r||!r.success){box.innerHTML='<div style="color:#c62222;padding:12px">读取失败:'+eh((r&&r.error)||'?')+'</div>';return;}
-  _auditRows=r.rows||[];
+  // 只显示新列记录(有 tbl);旧列手写审计(action/target/detail,无 tbl)是冗余空行,隐藏
+  _auditRows=(r.rows||[]).filter(function(x){return x&&x.tbl;});
   _auditRender();
 }
 function _auditRender(){
