@@ -6028,6 +6028,7 @@ async function syncAll(){
     deletedIds.schedule.clear();deletedIds.special.clear();
     staleWarningShown=false;
     const b=document.getElementById('stale-banner');if(b)b.style.display='none';
+    rebuildUI();   // 刷新后重建下拉:班级总表「专业/届别」来源含排课数据,别人新增的届别也随刷新出现
     renderSch();renderSp();renderAllSum();renderSta();updateFreshness();
     // 顺带把「课程结构」iframe 重载到最新(仅当它已载入过,保持懒加载)
     var _csf=document.getElementById('cs-frame');if(_csf&&_csf.src)_csf.src=_csf.dataset.src+'?cb='+Date.now();
@@ -7259,6 +7260,8 @@ async function init(){
   updateRefBar();
   await loadDataFromSheets();
   migrateKHType();   // ← 在 render 前跑，這樣畫面顯示的就是修正後的值
+  rebuildUI();       // 排课数据到齐后再重建一次:班级总表「专业/届别」下拉来源含排课数据,
+                     // 否则 init 里第一次 rebuildUI 跑在 loadDataFromSheets 之前,排课为空→下拉建不出
   renderSch();renderSp();renderSta();
   startRemotePoll();  // FIX 多人协作：启动 30 秒轮询，发现别人改了东西就弹警告条
   updateFreshness();  // 立即显示一次时效
