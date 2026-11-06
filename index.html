@@ -1461,9 +1461,9 @@ function opsPosOpts(sel){
   return '<option value="">— 选职位 —</option>'+opts;
 }
 function opsPosQuota(pos){const p=(opsD.positions||[]).find(x=>x.position===pos);return p?p.quota:'';}
-function opsFillQuota(){const pos=document.getElementById('ops-tch-pos').value;const q=opsPosQuota(pos);if(q!==''){const el=document.getElementById('ops-tch-quota');if(el)el.value=q;}}
+function opsFillQuota(){const pos=_opsF('ops-tch-pos').value;const q=opsPosQuota(pos);if(q!==''){const el=_opsF('ops-tch-quota');if(el)el.value=q;}}
 // 选/填模块 → 自动带出该模块的模块学分(该模块任一课的 block_credit)
-function opsFillBlockCredit(){const b=document.getElementById('ops-cat-block').value;const row=(opsD.catalog||[]).find(c=>c.block===b&&c.block_credit);if(row){const el=document.getElementById('ops-cat-bc');if(el)el.value=row.block_credit;}}
+function opsFillBlockCredit(){const b=_opsF('ops-cat-block').value;const row=(opsD.catalog||[]).find(c=>c.block===b&&c.block_credit);if(row){const el=_opsF('ops-cat-bc');if(el)el.value=row.block_credit;}}
 async function renderOps(force){
   if(force)opsD=null;
   const b=document.getElementById('ops-body');
@@ -1608,20 +1608,22 @@ async function addCohSubmit(){
 // ── 老师库 ──
 function opsTchView(){
   const ed=opsIsEdit('tch');
-  const defPos=opsEV('tch','position')||(((opsD.positions||[])[0]||{}).position||'');
-  const defQuota=ed?(opsEV('tch','quota')||''):opsPosQuota(defPos);
   const _fi='width:100%;box-sizing:border-box;font-size:10.5px;padding:2px 5px;border:0;border-radius:4px;font-weight:400;color:#333;background:#fff';
   const deptF='<select onchange="opsTchF.dept=this.value;opsTchApply()" style="'+_fi+'"><option value="">全部</option>'+_opsTeacherDepts().map(function(c){return '<option value="'+eh(c)+'"'+(opsTchF.dept===c?' selected':'')+'>'+eh(c)+'</option>';}).join('')+'</select>';
   const _pset={}; (opsD.teachers||[]).forEach(t=>{if(t.position)_pset[t.position]=1;});
   const posF='<select onchange="opsTchF.pos=this.value;opsTchApply()" style="'+_fi+'"><option value="">全部</option>'+Object.keys(_pset).sort().map(p=>'<option value="'+eh(p)+'"'+(opsTchF.pos===p?' selected':'')+'>'+eh(p)+'</option>').join('')+'</select>';
   const hd=function(k,label,filter){const on=opsTchSort.key===k;return '<th style="background:#534AB7;vertical-align:top;padding:5px 6px"><div onclick="opsTchSetSort(\''+k+'\')" style="cursor:pointer;user-select:none;margin-bottom:3px;white-space:nowrap">'+label+' '+(on?(opsTchSort.dir>0?'▲':'▼'):'⇅')+'</div>'+filter+'</th>';};
-  return '<div class="ops-add">'+(ed?'<div style="width:100%;font-size:12px;color:#534AB7;font-weight:600;margin-bottom:2px">✏️ 编辑老师(姓名不可改;要改名请删除后重加)</div>':'')+
-    '<div class="fg"><label>姓名*</label><input id="ops-tch-name" '+(ed?'readonly style="width:150px;background:#eee"':'style="width:150px"')+' value="'+eh(opsEV('tch','name'))+'" placeholder="Aj. Xxx, Yyy"></div>'+
-    '<div class="fg"><label>所属部门</label><select id="ops-tch-dept">'+opsTchDeptOpts(opsEV('tch','dept'))+'</select></div>'+
-    '<div class="fg"><label>职位</label><select id="ops-tch-pos" onchange="opsFillQuota()" style="min-width:130px">'+opsPosOpts(defPos)+'</select></div>'+
-    '<div class="fg"><label>限额</label><input id="ops-tch-quota" type="number" step="0.5" style="width:65px" value="'+eh(String(defQuota||''))+'" placeholder="10"></div>'+
-    '<div class="fg"><label>员工号</label><input id="ops-tch-eid" style="width:90px" value="'+eh(opsEV('tch','employee_id'))+'"></div>'+
-    '<button class="btn btn-p" onclick="opsAddTch()">'+(ed?'保存修改':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>'+
+  const form=function(E){
+    const dPos=E?(opsEV('tch','position')||(((opsD.positions||[])[0]||{}).position||'')):(((opsD.positions||[])[0]||{}).position||'');
+    const dQuota=E?(opsEV('tch','quota')||''):opsPosQuota(dPos);
+    return '<div class="ops-add">'+(E?'<div style="width:100%;font-size:12px;color:#534AB7;font-weight:600;margin-bottom:2px">✏️ 编辑老师(姓名不可改;要改名请删除后重加)</div>':'')+
+    '<div class="fg"><label>姓名*</label><input id="ops-tch-name" '+(E?'readonly style="width:150px;background:#eee"':'style="width:150px"')+' value="'+(E?eh(opsEV('tch','name')):'')+'" placeholder="Aj. Xxx, Yyy"></div>'+
+    '<div class="fg"><label>所属部门</label><select id="ops-tch-dept">'+opsTchDeptOpts(E?opsEV('tch','dept'):'')+'</select></div>'+
+    '<div class="fg"><label>职位</label><select id="ops-tch-pos" onchange="opsFillQuota()" style="min-width:130px">'+opsPosOpts(dPos)+'</select></div>'+
+    '<div class="fg"><label>限额</label><input id="ops-tch-quota" type="number" step="0.5" style="width:65px" value="'+eh(String(dQuota||''))+'" placeholder="10"></div>'+
+    '<div class="fg"><label>员工号</label><input id="ops-tch-eid" style="width:90px" value="'+(E?eh(opsEV('tch','employee_id')):'')+'"></div>'+
+    '<button class="btn btn-p" onclick="opsAddTch()">'+(E?'保存修改':'+ 新增')+'</button>'+(E?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>';};
+  return form(false)+
     '<div style="margin:2px 0 6px"><label style="font-size:12px;color:#555;cursor:pointer;user-select:none"><input type="checkbox" '+(opsTchF.showResigned?'checked':'')+' onchange="opsTchF.showResigned=this.checked;opsTchApply()"> 显示离职老师</label></div>'+
     '<div class="tbl-wrap" style="max-height:calc(100vh - 460px)"><table><thead><tr>'+
       hd('name','姓名','<input value="'+eh(opsTchF.name)+'" oninput="opsTchF.name=this.value;opsTchApply()" placeholder="筛" style="'+_fi+'">')+
@@ -1630,23 +1632,26 @@ function opsTchView(){
       hd('quota','限额','<input value="'+eh(opsTchF.quota)+'" oninput="opsTchF.quota=this.value;opsTchApply()" placeholder="筛" style="'+_fi+'">')+
       hd('employee_id','员工号','<input value="'+eh(opsTchF.eid)+'" oninput="opsTchF.eid=this.value;opsTchApply()" placeholder="筛" style="'+_fi+'">')+
       '<th style="background:#534AB7"></th>'+
-    '</tr></thead><tbody id="ops-tch-tb">'+opsTchRows()+'</tbody></table></div>';
+    '</tr></thead><tbody id="ops-tch-tb">'+opsTchRows()+'</tbody></table></div>'+
+    (ed?_opsModal(form(true)):'');
 }
-async function opsAddTch(){const name=document.getElementById('ops-tch-name').value.trim();if(!name){alert('请输入姓名');return;}opsAfter(await gasPost('adminAddTeacher',{name,dept:document.getElementById('ops-tch-dept').value,position:document.getElementById('ops-tch-pos').value.trim(),quota:document.getElementById('ops-tch-quota').value,employee_id:document.getElementById('ops-tch-eid').value.trim()}),'已新增/更新老师 '+name);}
+async function opsAddTch(){const name=_opsF('ops-tch-name').value.trim();if(!name){alert('请输入姓名');return;}opsAfter(await gasPost('adminAddTeacher',{name,dept:_opsF('ops-tch-dept').value,position:_opsF('ops-tch-pos').value.trim(),quota:_opsF('ops-tch-quota').value,employee_id:_opsF('ops-tch-eid').value.trim()}),'已新增/更新老师 '+name);}
 async function opsDelTch(name){const n=opsUsedByTeacher(name);if(!confirm('删除老师「'+name+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 笔排课/特别排课是此老师。仍要删?':'')))return;opsAfter(await gasPost('adminDelTeacher',{name}),'已删除老师 '+name);}
 async function opsSetTchResigned(name,resigned){if(!confirm((resigned?'将「'+name+'」标记为离职(存档)?':'让「'+name+'」复职?')+'\n\n'+(resigned?'离职后:不出现在新增排课的老师选单、名单默认隐藏;历史排课与统计不受影响,随时可复职。':'复职后:恢复出现在选单与在职名单。')))return;opsAfter(await gasPost('adminSetTeacherResigned',{name:name,resigned:resigned}),(resigned?'已将 '+name+' 标记离职':'已让 '+name+' 复职'));}
 // ── 职位(默认限额)──
 function opsPosView(){
   const ed=opsIsEdit('pos');
   const body=(opsD.positions||[]).slice().sort((a,b)=>b.quota-a.quota).map(p=>'<tr><td>'+eh(p.position)+'</td><td style="text-align:center">'+p.quota+'</td><td style="text-align:right;white-space:nowrap"><button class="ops-edit" onclick="opsStartEdit(\'pos\',\''+jsq(p.position)+'\',{position:\''+jsq(p.position)+'\',quota:'+(p.quota||0)+'})">编辑</button> <button class="ops-del" onclick="opsDelPos(\''+jsq(p.position)+'\')">删除</button></td></tr>').join('')||'<tr><td colspan="3" style="color:#aaa">无</td></tr>';
-  return '<div class="ops-add">'+(ed?'<div style="width:100%;font-size:12px;color:#534AB7;font-weight:600;margin-bottom:2px">✏️ 编辑职位(名称不可改;改名请删除后重加)</div>':'')+
-    '<div class="fg"><label>职位名称</label><input id="ops-pos-name" '+(ed?'readonly style="width:150px;background:#eee"':'style="width:150px"')+' value="'+eh(opsEV('pos','position'))+'" placeholder="一般老师"></div>'+
-    '<div class="fg"><label>默认限额</label><input id="ops-pos-quota" type="number" step="0.5" style="width:70px" value="'+eh(String(opsEV('pos','quota')||''))+'" placeholder="10"></div>'+
-    '<button class="btn btn-p" onclick="opsAddPos()">'+(ed?'保存修改':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>'+
+  const form=function(E){return '<div class="ops-add">'+(E?'<div style="width:100%;font-size:12px;color:#534AB7;font-weight:600;margin-bottom:2px">✏️ 编辑职位(名称不可改;改名请删除后重加)</div>':'')+
+    '<div class="fg"><label>职位名称</label><input id="ops-pos-name" '+(E?'readonly style="width:150px;background:#eee"':'style="width:150px"')+' value="'+(E?eh(opsEV('pos','position')):'')+'" placeholder="一般老师"></div>'+
+    '<div class="fg"><label>默认限额</label><input id="ops-pos-quota" type="number" step="0.5" style="width:70px" value="'+(E?eh(String(opsEV('pos','quota')||'')):'')+'" placeholder="10"></div>'+
+    '<button class="btn btn-p" onclick="opsAddPos()">'+(E?'保存修改':'+ 新增')+'</button>'+(E?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>';};
+  return form(false)+
     '<div style="font-size:11px;color:#888;margin-bottom:8px">在老师库选此职位会自动带出这个限额(仍可手动改)。</div>'+
-    '<table style="width:100%"><thead><tr><th>职位</th><th>默认限额</th><th></th></tr></thead><tbody>'+body+'</tbody></table>';
+    '<table style="width:100%"><thead><tr><th>职位</th><th>默认限额</th><th></th></tr></thead><tbody>'+body+'</tbody></table>'+
+    (ed?_opsModal(form(true)):'');
 }
-async function opsAddPos(){const pos=document.getElementById('ops-pos-name').value.trim();if(!pos){alert('请输入职位名称');return;}opsAfter(await gasPost('adminAddPosition',{position:pos,quota:document.getElementById('ops-pos-quota').value}),'已保存职位 '+pos);}
+async function opsAddPos(){const pos=_opsF('ops-pos-name').value.trim();if(!pos){alert('请输入职位名称');return;}opsAfter(await gasPost('adminAddPosition',{position:pos,quota:_opsF('ops-pos-quota').value}),'已保存职位 '+pos);}
 async function opsDelPos(pos){const n=(opsD.teachers||[]).filter(t=>t.position===pos).length;if(!confirm('删除职位「'+pos+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 位老师是此职位(删了不影响老师现有职位文字,但下拉里会没这项)。仍要删?':'')))return;opsAfter(await gasPost('adminDelPosition',{position:pos}),'已删除职位 '+pos);}
 // ── 毕业学分(各专业毕业总学分)──
 function opsGradView(){
@@ -1665,25 +1670,26 @@ function opsGradView(){
       '<td style="text-align:center;color:#534AB7;font-weight:600">'+(tot==null?dash:tot)+'</td>'+
       '<td style="text-align:right;white-space:nowrap"><button class="ops-edit" onclick="opsStartEdit(\'grad\',\''+jsq(g.pid)+'\',{pid:\''+jsq(g.pid)+'\',total:'+(g.total||0)+',courseN:'+(g.courseN==null?'\'\'':g.courseN)+',courseCr:'+(g.courseCr==null?'\'\'':g.courseCr)+',internN:'+(g.internN==null?'\'\'':g.internN)+',internCr:'+(g.internCr==null?'\'\'':g.internCr)+',internSub:'+(g.internSub?'true':'false')+'})">编辑</button> <button class="ops-del" onclick="opsDelGrad(\''+jsq(g.pid)+'\')">删除</button></td></tr>';
   }).join('')||'<tr><td colspan="9" style="color:#aaa">无</td></tr>';
-  return '<div class="ops-add">'+(ed?'<div style="width:100%;font-size:12px;color:#534AB7;font-weight:600;margin-bottom:2px">✏️ 编辑(专业-版本不可改)</div>':'')+
-    '<div class="fg"><label>专业-版本 (pid)</label><input id="ops-grad-pid" '+(ed?'readonly style="width:110px;background:#eee"':'style="width:110px"')+' value="'+eh(opsEV('grad','pid'))+'" placeholder="TM-2565"></div>'+
-    '<div class="fg"><label>毕业总学分</label><input id="ops-grad-total" type="number" style="width:70px" value="'+eh(String(opsEV('grad','total')||''))+'" placeholder="123"></div>'+
-    '<div class="fg"><label>课程数(门)</label><input id="ops-grad-cn" type="number" style="width:70px" value="'+eh(String(opsEV('grad','courseN')||''))+'"></div>'+
-    '<div class="fg"><label>课程学分</label><input id="ops-grad-ccr" type="number" style="width:70px" value="'+eh(String(opsEV('grad','courseCr')||''))+'"></div>'+
-    '<div class="fg"><label>实习数(门)</label><input id="ops-grad-in" type="number" style="width:70px" value="'+eh(String(opsEV('grad','internN')||''))+'"></div>'+
-    '<div class="fg"><label>实习学分</label><input id="ops-grad-icr" type="number" style="width:70px" value="'+eh(String(opsEV('grad','internCr')||''))+'"></div>'+
-    '<div class="fg"><label>课程可抵实习</label><label style="display:inline-flex;align-items:center;height:30px;cursor:pointer"><input type="checkbox" id="ops-grad-isub" '+(opsEV('grad','internSub')?'checked':'')+' style="width:auto"></label></div>'+
-    '<button class="btn btn-p" onclick="opsAddGrad()">'+(ed?'保存修改':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>'+
+  const form=function(E){return '<div class="ops-add">'+(E?'<div style="width:100%;font-size:12px;color:#534AB7;font-weight:600;margin-bottom:2px">✏️ 编辑(专业-版本不可改)</div>':'')+
+    '<div class="fg"><label>专业-版本 (pid)</label><input id="ops-grad-pid" '+(E?'readonly style="width:110px;background:#eee"':'style="width:110px"')+' value="'+(E?eh(opsEV('grad','pid')):'')+'" placeholder="TM-2565"></div>'+
+    '<div class="fg"><label>毕业总学分</label><input id="ops-grad-total" type="number" style="width:70px" value="'+(E?eh(String(opsEV('grad','total')||'')):'')+'" placeholder="123"></div>'+
+    '<div class="fg"><label>课程数(门)</label><input id="ops-grad-cn" type="number" style="width:70px" value="'+(E?eh(String(opsEV('grad','courseN')||'')):'')+'"></div>'+
+    '<div class="fg"><label>课程学分</label><input id="ops-grad-ccr" type="number" style="width:70px" value="'+(E?eh(String(opsEV('grad','courseCr')||'')):'')+'"></div>'+
+    '<div class="fg"><label>实习数(门)</label><input id="ops-grad-in" type="number" style="width:70px" value="'+(E?eh(String(opsEV('grad','internN')||'')):'')+'"></div>'+
+    '<div class="fg"><label>实习学分</label><input id="ops-grad-icr" type="number" style="width:70px" value="'+(E?eh(String(opsEV('grad','internCr')||'')):'')+'"></div>'+
+    '<div class="fg"><label>课程可抵实习</label><label style="display:inline-flex;align-items:center;height:30px;cursor:pointer"><input type="checkbox" id="ops-grad-isub" '+(E&&opsEV('grad','internSub')?'checked':'')+' style="width:auto"></label></div>'+
+    '<button class="btn btn-p" onclick="opsAddGrad()">'+(E?'保存修改':'+ 新增')+'</button>'+(E?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>';};
+  return form(false)+
     '<div style="font-size:11px;color:#888;margin-bottom:8px">课程架构页各专业顶部「X credits · Y 门课」:credits=毕业总学分,门课=总课数(自动 = 课程数 + 实习数)。勾选「课程可抵实习」后课程架构页会标注。pid 格式:专业-版本(如 TM-2565)。</div>'+
-    '<table style="width:100%"><thead><tr><th>专业-版本</th><th>毕业总学分</th><th>课程数</th><th>课程学分</th><th>实习数</th><th>实习学分</th><th>课程可抵实习</th><th>总课数</th><th></th></tr></thead><tbody>'+body+'</tbody></table>';
+    '<table style="width:100%"><thead><tr><th>专业-版本</th><th>毕业总学分</th><th>课程数</th><th>课程学分</th><th>实习数</th><th>实习学分</th><th>课程可抵实习</th><th>总课数</th><th></th></tr></thead><tbody>'+body+'</tbody></table>'+
+    (ed?_opsModal(form(true)):'');
 }
-async function opsAddGrad(){const pid=document.getElementById('ops-grad-pid').value.trim();if(!pid){alert('请输入 pid(专业-版本)');return;}const gv=id=>{const v=document.getElementById(id).value.trim();return v===''?null:v;};opsAfter(await gasPost('adminUpsertGrad',{pid,total:document.getElementById('ops-grad-total').value,courseN:gv('ops-grad-cn'),courseCr:gv('ops-grad-ccr'),internN:gv('ops-grad-in'),internCr:gv('ops-grad-icr'),internSub:document.getElementById('ops-grad-isub').checked}),'已保存毕业学分 '+pid);}
+async function opsAddGrad(){const pid=_opsF('ops-grad-pid').value.trim();if(!pid){alert('请输入 pid(专业-版本)');return;}const gv=id=>{const v=_opsF(id).value.trim();return v===''?null:v;};opsAfter(await gasPost('adminUpsertGrad',{pid,total:_opsF('ops-grad-total').value,courseN:gv('ops-grad-cn'),courseCr:gv('ops-grad-ccr'),internN:gv('ops-grad-in'),internCr:gv('ops-grad-icr'),internSub:_opsF('ops-grad-isub').checked}),'已保存毕业学分 '+pid);}
 async function opsDelGrad(pid){if(!confirm('删除「'+pid+'」的毕业学分设定?'))return;opsAfter(await gasPost('adminDelGrad',{pid}),'已删除 '+pid);}
 // ── Catalog ──
 function opsCatView(){
   const ed=opsIsEdit('cat');
   const all=opsD.catalog||[];
-  const curDesc=ed?(((opsD.catalog||[]).find(c=>String(c.id)===String(opsEdit.key))||{}).description||''):'';
   const _bset={}; all.forEach(c=>{if(c.block&&!(c.block in _bset))_bset[c.block]=c.block_credit;});
   const blockDL=Object.keys(_bset).sort().map(b=>'<option value="'+eh(b)+'">').join('');
   const _cf='width:100%;box-sizing:border-box;font-size:10px;padding:2px 4px;border:0;border-radius:4px;font-weight:400;color:#333;background:#fff';
@@ -1696,21 +1702,25 @@ function opsCatView(){
   const sel=function(col,opts){return '<select onchange="opsCatColF.'+col+'=this.value;opsCatApply()" style="'+_cf+'">'+opts+'</select>';};
   const hd=function(k,label,filter){const on=opsCatSort.key===k;return '<th style="background:#534AB7;vertical-align:top;padding:4px 5px"><div onclick="opsCatSetSort(\''+k+'\')" style="cursor:pointer;user-select:none;margin-bottom:2px;white-space:nowrap;font-size:11px">'+label+' '+(on?(opsCatSort.dir>0?'▲':'▼'):'⇅')+'</div>'+(filter||'')+'</th>';};
   const rows=opsCatFiltered();
-  return '<div class="ops-add">'+(ed?'<div style="width:100%;font-size:12px;color:#534AB7;font-weight:600;margin-bottom:2px">✏️ 编辑课程(代码不可改;要改代码请删除后重加)</div>':'')+
-    '<div class="fg"><label>课程代码*</label><input id="ops-cat-code" '+(ed?'readonly style="width:90px;background:#eee"':'style="width:90px"')+' value="'+eh(opsEV('cat','code'))+'"></div>'+
-    '<div class="fg"><label>中文名</label><input id="ops-cat-zh" style="width:140px" value="'+eh(opsEV('cat','zh'))+'"></div>'+
-    '<div class="fg"><label>英文名</label><input id="ops-cat-en" style="width:160px" value="'+eh(opsEV('cat','en'))+'"></div>'+
-    '<div class="fg"><label>专业</label><select id="ops-cat-dept">'+opsDeptOpts(opsEV('cat','dept'))+'</select></div>'+
-    '<div class="fg"><label>版本</label><input id="ops-cat-ver" style="width:60px" value="'+eh(opsEV('cat','version'))+'" placeholder="2568"></div>'+
-    '<div class="fg"><label>必/选修</label><input id="ops-cat-req" style="width:60px" value="'+eh(opsEV('cat','req'))+'"></div>'+
-    '<div class="fg"><label>学分</label><input id="ops-cat-credit" style="width:46px" value="'+eh(opsEV('cat','credit'))+'"></div>'+
-    '<div class="fg"><label>模块学分</label><input id="ops-cat-bc" style="width:56px" value="'+eh(opsEV('cat','block_credit'))+'"></div>'+
-    '<div class="fg"><label>对接</label><input id="ops-cat-map" style="width:80px" value="'+eh(opsEV('cat','mapping'))+'"></div>'+
-    '<div class="fg"><label>固定开课</label><select id="ops-cat-fixed"><option value=""'+(opsEV('cat','fixed')?'':' selected')+'>否</option><option value="Y"'+(opsEV('cat','fixed')?' selected':'')+'>固定(常)</option></select></div>'+
-    '<div class="fg"><label>模块 block(可选可填)</label><input id="ops-cat-block" list="ops-block-dl" onchange="opsFillBlockCredit()" style="width:170px" value="'+eh(opsEV('cat','block'))+'"><datalist id="ops-block-dl">'+blockDL+'</datalist></div>'+
-    '<div class="fg"><label>备注</label><input id="ops-cat-note" style="width:120px" value="'+eh(opsEV('cat','note'))+'"></div>'+
+  const form=function(E){
+    const curDesc=E?(((opsD.catalog||[]).find(c=>String(c.id)===String(opsEdit.key))||{}).description||''):'';
+    const V=f=>E?eh(opsEV('cat',f)):'';
+    return '<div class="ops-add">'+(E?'<div style="width:100%;font-size:12px;color:#534AB7;font-weight:600;margin-bottom:2px">✏️ 编辑课程(代码不可改;要改代码请删除后重加)</div>':'')+
+    '<div class="fg"><label>课程代码*</label><input id="ops-cat-code" '+(E?'readonly style="width:90px;background:#eee"':'style="width:90px"')+' value="'+V('code')+'"></div>'+
+    '<div class="fg"><label>中文名</label><input id="ops-cat-zh" style="width:140px" value="'+V('zh')+'"></div>'+
+    '<div class="fg"><label>英文名</label><input id="ops-cat-en" style="width:160px" value="'+V('en')+'"></div>'+
+    '<div class="fg"><label>专业</label><select id="ops-cat-dept">'+opsDeptOpts(E?opsEV('cat','dept'):'')+'</select></div>'+
+    '<div class="fg"><label>版本</label><input id="ops-cat-ver" style="width:60px" value="'+V('version')+'" placeholder="2568"></div>'+
+    '<div class="fg"><label>必/选修</label><input id="ops-cat-req" style="width:60px" value="'+V('req')+'"></div>'+
+    '<div class="fg"><label>学分</label><input id="ops-cat-credit" style="width:46px" value="'+V('credit')+'"></div>'+
+    '<div class="fg"><label>模块学分</label><input id="ops-cat-bc" style="width:56px" value="'+V('block_credit')+'"></div>'+
+    '<div class="fg"><label>对接</label><input id="ops-cat-map" style="width:80px" value="'+V('mapping')+'"></div>'+
+    '<div class="fg"><label>固定开课</label><select id="ops-cat-fixed"><option value=""'+(E&&opsEV('cat','fixed')?'':' selected')+'>否</option><option value="Y"'+(E&&opsEV('cat','fixed')?' selected':'')+'>固定(常)</option></select></div>'+
+    '<div class="fg"><label>模块 block(可选可填)</label><input id="ops-cat-block" list="ops-block-dl" onchange="opsFillBlockCredit()" style="width:170px" value="'+V('block')+'"><datalist id="ops-block-dl">'+blockDL+'</datalist></div>'+
+    '<div class="fg"><label>备注</label><input id="ops-cat-note" style="width:120px" value="'+V('note')+'"></div>'+
     '<div class="fg" style="flex:1 1 280px;min-width:240px"><label>说明(课程结构页 ⓘ 展开的介绍)</label><textarea id="ops-cat-desc" rows="2" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:12px;padding:5px 8px;border:0.5px solid #cbd5e1;border-radius:6px;resize:vertical" placeholder="课程简介…">'+eh(curDesc)+'</textarea></div>'+
-    '<button class="btn btn-p" onclick="opsAddCat()">'+(ed?'保存修改':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>'+
+    '<button class="btn btn-p" onclick="opsAddCat()">'+(E?'保存修改':'+ 新增')+'</button>'+(E?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>';};
+  return form(false)+
     '<div style="margin-bottom:8px"><input id="ops-cat-q" value="'+eh(opsCatQ)+'" oninput="opsCatQ=this.value;opsCatApply()" placeholder="🔍 全局搜(代码/中英文/对接/模块/版本/备注/说明)" style="width:320px;padding:6px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:12px"> <span id="ops-cat-count" style="font-size:11px;color:#888">共 '+all.length+' 条，筛出 '+rows.length+' 条</span> <button class="btn btn-sm" id="ops-cat-batch" onclick="opsCatBatchDel()" style="display:none;color:#a32d2d;border-color:#f7c1c1;vertical-align:middle">🗑 删除选中 <span id="ops-cat-batch-n">0</span></button> <button class="btn btn-sm" onclick="opsCatExport()" title="导出当前课程库为 CSV(带 id,可在 Excel 改好再导入)" style="vertical-align:middle">📤 导出 CSV</button> <button class="btn btn-sm" onclick="opsCatTemplate()" title="下载空白导入模版(CSV,含表头与示例行)" style="vertical-align:middle">📄 下载模版</button> <button class="btn btn-sm" onclick="opsCatImportOpen()" title="从 Excel/CSV 批量导入·以(专业+代码+版本)或 id 为键 upsert" style="vertical-align:middle;color:#185FA5;border-color:#AFcbE8">📥 批量导入</button></div>'+
     '<div class="tbl-wrap" style="max-height:calc(100vh - 490px)"><table><thead><tr>'+
       '<th style="background:#534AB7;text-align:center;vertical-align:top;padding:4px 5px"><input type="checkbox" id="ops-cat-master" onclick="opsCatToggleAll(this.checked)" title="全选/全不选(当前筛选)"></th>'+
@@ -1721,11 +1731,12 @@ function opsCatView(){
       hd('fixed','固定',sel('fixed',fixedOptsF))+hd('note','备注',ti('note'))+hd('block','模块',ti('block'))+
       '<th style="background:#534AB7;white-space:nowrap">说明</th>'+
       '<th style="background:#534AB7"></th>'+
-    '</tr></thead><tbody id="ops-cat-tb">'+rows.map(opsCatRowHtml).join('')+'</tbody></table></div>';
+    '</tr></thead><tbody id="ops-cat-tb">'+rows.map(opsCatRowHtml).join('')+'</tbody></table></div>'+
+    (ed?_opsModal(form(true)):'');
 }
 async function opsAddCat(){
-  const code=document.getElementById('ops-cat-code').value.trim().toUpperCase();if(!code){alert('请输入课程代码');return;}
-  const fields={code,zh:document.getElementById('ops-cat-zh').value.trim(),en:document.getElementById('ops-cat-en').value.trim(),dept:document.getElementById('ops-cat-dept').value,version:document.getElementById('ops-cat-ver').value.trim(),credit:document.getElementById('ops-cat-credit').value.trim(),block_credit:document.getElementById('ops-cat-bc').value.trim(),mapping:document.getElementById('ops-cat-map').value.trim(),req:document.getElementById('ops-cat-req').value.trim(),fixed:document.getElementById('ops-cat-fixed').value,note:document.getElementById('ops-cat-note').value.trim(),block:document.getElementById('ops-cat-block').value.trim(),description:document.getElementById('ops-cat-desc').value};
+  const code=_opsF('ops-cat-code').value.trim().toUpperCase();if(!code){alert('请输入课程代码');return;}
+  const fields={code,zh:_opsF('ops-cat-zh').value.trim(),en:_opsF('ops-cat-en').value.trim(),dept:_opsF('ops-cat-dept').value,version:_opsF('ops-cat-ver').value.trim(),credit:_opsF('ops-cat-credit').value.trim(),block_credit:_opsF('ops-cat-bc').value.trim(),mapping:_opsF('ops-cat-map').value.trim(),req:_opsF('ops-cat-req').value.trim(),fixed:_opsF('ops-cat-fixed').value,note:_opsF('ops-cat-note').value.trim(),block:_opsF('ops-cat-block').value.trim(),description:_opsF('ops-cat-desc').value};
   if(opsIsEdit('cat'))opsAfter(await gasPost('adminUpdateCatalog',{id:opsEdit.key,fields}),'已保存 课程 '+code);
   else opsAfter(await gasPost('adminAddCatalog',{row:fields}),'已新增 课程 '+code);
 }
