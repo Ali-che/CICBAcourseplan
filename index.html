@@ -1567,7 +1567,7 @@ async function opsUpdateCoh(){
   if(code!==old){const n=opsUsedByCohort(old);if(!confirm('把届别「'+old+'」改名为「'+code+'」?'+(n>0?('\n\n有 '+n+' 笔排课引用此届别,将一并改为新代码(级联)。'):'')+'\n\n确定?'))return;}
   opsAfter(await gasPost('adminUpdateCohort',{id:v.id,dept:dept,cohort:code,grad_override:ov}),'已更新届别 '+code);
 }
-async function opsSetCohYears(cohort,val){const y=parseFloat(val);if(!(y>=0.5&&y<=8)){alert('修业年限请填 0.5–8 年(可小数)');return;}const r=await gasPost('adminSetCohortYears',{cohort:cohort,years:y});if(r&&r.success){COHORT_YEARS[cohort]=y;if(typeof renderOps==='function')renderOps(true);if(typeof showToast==='function')showToast('已设 '+cohort+' = '+y+' 年',{kind:'success',duration:1500});}else alert('保存失败:'+((r&&r.error)||'?')+'\n(需先在 Supabase 建好 cohort_years 表那段 SQL)');}
+async function opsSetCohYears(cohort,val){const y=parseFloat(val);if(!(y>=0.5&&y<=8)){alert('修业年限请填 0.5–8 年(可小数)');return;}const r=await gasPost('adminSetCohortYears',{cohort:cohort,years:y});if(r&&r.success){COHORT_YEARS[cohort]=y;if(typeof renderOps==='function')renderOps(true);if(typeof showToast==='function')showToast('已设 '+cohort+' = '+y+' 年',{kind:'success',duration:1500});}else alert('保存失败:'+_errText(r)+'\n(需先在 Supabase 建好 cohort_years 表那段 SQL)');}
 // 排课表底部「新增班级」(admin + Director 可用;后端 _admin 允许 director)
 function toggleAddCoh(){var b=document.getElementById('addcoh-body'),a=document.getElementById('addcoh-arrow');if(!b)return;var open=(b.style.display==='none');b.style.display=open?'':'none';if(a)a.textContent=open?'▾':'▸';if(open)addCohFillDept();}
 function openAddCoh(){var m=document.getElementById('addcoh-modal');if(!m)return;addCohFillDept();var msg=document.getElementById('addcoh-msg');if(msg)msg.textContent='';m.style.display='flex';try{setTimeout(function(){var c=document.getElementById('addcoh-code');if(c)c.focus();},50);}catch(e){}}
@@ -1817,7 +1817,7 @@ async function opsCatImportRun(){
     var clean={};for(var kk in t.f){if(kk!=='id')clean[kk]=t.f[kk];}  // 不送 id;code 在更新时也剔除(代码不可改)
     try{ if(t.action==='update'){var upd={};for(var k2 in clean){if(k2!=='code')upd[k2]=clean[k2];}r=await gasPost('adminUpdateCatalog',{id:t.id,fields:upd});} else r=await gasPost('adminAddCatalog',{row:clean}); }
     catch(e){r={success:false,error:String(e&&e.message||e)};}
-    if(r&&r.success)ok++;else{fail++;if(failMsg.length<6)failMsg.push((t.f.code||'?')+':'+((r&&r.error)||'?'));}
+    if(r&&r.success)ok++;else{fail++;if(failMsg.length<6)failMsg.push((t.f.code||'?')+':'+_errText(r));}
     if(pe)pe.textContent='进度 '+(i+1)+'/'+todo.length+'(成功 '+ok+'、失败 '+fail+')';
   }
   opsCatImportClose();
@@ -1857,7 +1857,7 @@ async function changeMyPin(){
     setMsg('✅ 已更改,下次登录请用新密码',true);
     if(typeof showToast==='function')showToast('密码已更改',{kind:'success',duration:2000});
     setTimeout(closeChangePin,900);
-  }else setMsg('更改失败:'+((r&&r.error)||'?'),false);
+  }else setMsg('更改失败:'+_errText(r),false);
 }
 function logout(){
   if(!confirm('确认登出？'))return;
@@ -1910,10 +1910,10 @@ function _msgPeers(){const me=_msgData.me;const dms=(_msgData.items||[]).filter(
 function _msgRecipients(){const me=_msgData.me;return (_msgUsers||[]).filter(n=>n&&n!==me);}  // 只列有 PIN 的人
 async function _msgMarkAnnRead(){const ids=(_msgData.items||[]).filter(m=>m.kind==='announce'&&!m.read&&m.from_name!==_msgData.me).map(m=>m.id);if(ids.length){await gasPost('msgMarkRead',{ids});refreshMsg();}}
 async function msgOpenThread(peer){_msgPeer=peer;_msgScrollPending=true;msgRenderPanel();const me=_msgData.me;const ids=(_msgData.items||[]).filter(m=>m.kind==='dm'&&m.from_name===peer&&m.to_name===me&&!m.read).map(m=>m.id);if(ids.length){await gasPost('msgMarkRead',{ids});refreshMsg();}}
-async function msgDeleteMsg(id){if(!confirm('删除这条消息?不可恢复。'))return;const r=await gasPost('msgDelete',{id});if(r&&r.success){await refreshMsg();}else alert('删除失败:'+((r&&r.error)||'?'));}
-async function msgSendDM(){const to=document.getElementById('msg-to').value;const b=document.getElementById('msg-body').value.trim();if(!to){alert('请选择收件人');return;}if(!b){alert('请输入内容');return;}const r=await gasPost('msgSend',{to,body:b});if(r&&r.success){_msgPeer=to;await refreshMsg();}else alert('发送失败:'+((r&&r.error)||'?'));}
-async function msgReplyThread(){const el=document.getElementById('msg-reply');const b=(el?el.value:'').trim();if(!b||!_msgPeer)return;const r=await gasPost('msgSend',{to:_msgPeer,body:b});if(r&&r.success){if(el)el.value='';_msgScrollPending=true;await refreshMsg();}else alert('发送失败:'+((r&&r.error)||'?'));}
-async function msgSendAnnounce(){const el=document.getElementById('msg-ann-body');const b=(el?el.value:'').trim();if(!b)return;const r=await gasPost('msgAnnounce',{body:b});if(r&&r.success){if(el)el.value='';await refreshMsg();}else alert('发送失败:'+((r&&r.error)||'?'));}
+async function msgDeleteMsg(id){if(!confirm('删除这条消息?不可恢复。'))return;const r=await gasPost('msgDelete',{id});if(r&&r.success){await refreshMsg();}else alert('删除失败:'+_errText(r));}
+async function msgSendDM(){const to=document.getElementById('msg-to').value;const b=document.getElementById('msg-body').value.trim();if(!to){alert('请选择收件人');return;}if(!b){alert('请输入内容');return;}const r=await gasPost('msgSend',{to,body:b});if(r&&r.success){_msgPeer=to;await refreshMsg();}else alert('发送失败:'+_errText(r));}
+async function msgReplyThread(){const el=document.getElementById('msg-reply');const b=(el?el.value:'').trim();if(!b||!_msgPeer)return;const r=await gasPost('msgSend',{to:_msgPeer,body:b});if(r&&r.success){if(el)el.value='';_msgScrollPending=true;await refreshMsg();}else alert('发送失败:'+_errText(r));}
+async function msgSendAnnounce(){const el=document.getElementById('msg-ann-body');const b=(el?el.value:'').trim();if(!b)return;const r=await gasPost('msgAnnounce',{body:b});if(r&&r.success){if(el)el.value='';await refreshMsg();}else alert('发送失败:'+_errText(r));}
 function msgRenderPanel(){
   const modal=document.getElementById('msg-modal');if(!modal)return;
   const me=_msgData.me||currentEditor;
@@ -1986,7 +1986,7 @@ function renderBtecIV(units,isAdmin){
   const w=document.getElementById('btec-iv-wrap');if(w)w.innerHTML='';  // IV 已改由点格子编辑,底部表移除
 }
 function btecEditIV(code,sem,td){if(!td)return;const cur=_btecIV(code,sem)||'';const names=[...new Set((typeof T!=='undefined'?T:[]).map(t=>t.n).filter(Boolean))].sort();const opts=['<option value="">(清除)</option>'].concat(names.map(n=>'<option'+(n===cur?' selected':'')+'>'+eh(n)+'</option>')).join('');td.innerHTML='<select onclick="event.stopPropagation()" onchange="btecSaveIV(\''+jsq(code)+'\',\''+sem+'\',this.value)" onblur="renderBtec()" style="font-size:10px;width:100%;padding:1px">'+opts+'</select>';const sel=td.querySelector('select');if(sel)sel.focus();}
-async function btecSaveIV(code,sem,iv){const r=await gasPost('adminSetBtecIv',{code:code,sem:sem,iv:iv});if(r&&r.success)await loadBtec();else{alert('设定失败:'+((r&&r.error)||'?'));renderBtec();}}
+async function btecSaveIV(code,sem,iv){const r=await gasPost('adminSetBtecIv',{code:code,sem:sem,iv:iv});if(r&&r.success)await loadBtec();else{alert('设定失败:'+_errText(r));renderBtec();}}
 const _BTEC_SEMC={'2568-1':['#DBE7FF','#1d4ed8'],'2568-2':['#FCE4EC','#c2185b'],'2569-1':['#E8F5E9','#2e7d32'],'2569-2':['#FFF3E0','#b5651d'],'2570-1':['#E1F5FE','#0277bd'],'2570-2':['#E0F2F1','#00695c'],'2570-3':['#F3E5F5','#6a1b9a'],'2571-1':['#FFF8E1','#a87800'],'2571-2':['#EFEBE9','#5d4037']};
 function _btecSemC(s){return _BTEC_SEMC[s]||['#F0F0F0','#666'];}
 async function loadBtec(){
@@ -2188,7 +2188,7 @@ async function opsDelSchool(id,name){
   if(!confirm('删除登分学校「'+name+'」?（已填过此校的旧记录不受影响）'))return;
   const r=await gasPost('adminDelExamSchool',{id:id});
   if(r&&r.success){await loadExam();opsRenderSec();if(typeof showToast==='function')showToast('已删除 '+name,{kind:'success',duration:2000});}
-  else alert('删除失败:'+((r&&r.error)||'?（可能非管理员权限）'));
+  else alert('删除失败:'+_errText(r));
 }
 // ── 后台：教务须知（DB 通知）管理 ──
 let _noticesLoadedOps=false, _opsNoticeEdit=null;
@@ -2232,13 +2232,13 @@ async function opsNoticeSave(){
   const body={id:(_opsNoticeEdit&&_opsNoticeEdit.id)||null,title:title,body:v('ops-nt-body'),accent:v('ops-nt-accent'),sort:parseInt(v('ops-nt-sort'),10)||0,open:!!(document.getElementById('ops-nt-open')||{}).checked,pdf:v('ops-nt-pdf').trim()};
   const r=await gasPost('adminSetNotice',body);
   if(r&&r.success){_opsNoticeEdit=null;await loadNotices();opsRenderSec();if(typeof showToast==='function')showToast('已保存通知',{kind:'success',duration:2000});}
-  else alert('保存失败:'+((r&&r.error)||'?（可能非管理员权限）'));
+  else alert('保存失败:'+_errText(r));
 }
 async function opsNoticeDel(id,title){
   if(!confirm('删除通知「'+title+'」?'))return;
   const r=await gasPost('adminDelNotice',{id:id});
   if(r&&r.success){await loadNotices();opsRenderSec();if(typeof showToast==='function')showToast('已删除',{kind:'success',duration:1800});}
-  else alert('删除失败:'+((r&&r.error)||'?（可能非管理员权限）'));
+  else alert('删除失败:'+_errText(r));
 }
 // ── 后台:账号与权限管理(仅 admin) ──
 let _acct={rows:[],me:'',loaded:false,loading:false,err:''}, _acctEdit=null, _acctReveal={};
@@ -2306,13 +2306,13 @@ async function opsAcctSave(){
   if(ACCT_ROLES.indexOf(role)<0){alert('角色无效');return;}
   const r=await gasPost('adminUpsertPin',{old:old,pin:pin,name:name,role:role,note:note});
   if(r&&r.success){_acctEdit=null;opsAcctReload();if(typeof showToast==='function')showToast(old?'已保存':'已新增账号',{kind:'success',duration:1800});}
-  else alert('保存失败:'+((r&&r.error)||'?'));
+  else alert('保存失败:'+_errText(r));
 }
 async function opsAcctDel(pin,name){
   if(!confirm('删除账号「'+name+'」(PIN '+pin+')?删除后此 PIN 无法再登录。'))return;
   const r=await gasPost('adminDelPin',{target:pin});
   if(r&&r.success){opsAcctReload();if(typeof showToast==='function')showToast('已删除',{kind:'success',duration:1800});}
-  else alert('删除失败:'+((r&&r.error)||'?'));
+  else alert('删除失败:'+_errText(r));
 }
 // ── 后台:学期归档 ──
 function opsArchView(){
@@ -2390,7 +2390,7 @@ async function opsAuditLoad(){
   box.innerHTML='<div style="color:#888;padding:12px">加载中…</div>';
   var f=_auditFilter;
   var r=await gasGet({action:'auditList',editor:f.editor||null,tbl:f.tbl||null,op:f.op||null,from:f.from||null,to:f.to||null,limit:300,offset:0});
-  if(!r||!r.success){box.innerHTML='<div style="color:#c62222;padding:12px">读取失败:'+eh((r&&r.error)||'?')+'</div>';return;}
+  if(!r||!r.success){box.innerHTML='<div style="color:#c62222;padding:12px">读取失败:'+eh_errText(r)+'</div>';return;}
   // 只显示新列记录(有 tbl);旧列手写审计(action/target/detail,无 tbl)是冗余空行,隐藏
   _auditRows=(r.rows||[]).filter(function(x){return x&&x.tbl;});
   _auditRender();
@@ -2452,7 +2452,7 @@ function _auditRender(){
 async function opsArchSet(sem,type,archived){
   const r=await gasPost('adminSetTermArchived',{sem:sem,type:type,archived:archived});
   if(r&&r.success){await loadArchTerms();opsRenderSec();_archRerender();if(typeof showToast==='function')showToast((archived?'已归档':'已恢复')+' '+sem+' ('+(type==='exam'?'期末考':'排课+IS/SG')+')',{kind:'success',duration:1600});}
-  else alert('操作失败:'+((r&&r.error)||'?（需管理员）'));
+  else alert('操作失败:'+_errText(r));
 }
 async function opsArchSem(sem,archived){  // 整学期 = 两类一起
   for(const t of ['sch','exam']){await gasPost('adminSetTermArchived',{sem:sem,type:t,archived:archived});}
@@ -2613,16 +2613,16 @@ function examUseTeacher(name){const el=document.getElementById('exam-teacher');i
 async function examAddSchool(){
   const name=prompt('新增登分学校名称:');if(name===null)return;const nm=name.trim();if(!nm)return;
   const r=await gasPost('adminAddExamSchool',{name:nm});
-  if(r&&r.success){await loadExam();_examShowForm();const sc=document.getElementById('exam-school');if(sc)sc.value=nm;}else alert('新增失败:'+((r&&r.error)||'?'));
+  if(r&&r.success){await loadExam();_examShowForm();const sc=document.getElementById('exam-school');if(sc)sc.value=nm;}else alert('新增失败:'+_errText(r));
 }
 async function examSaveForm(){
   const v=id=>(document.getElementById(id)||{}).value||'';
   const body={id:(_examEdit&&_examEdit.id)||null,sem:v('exam-sem'),teacher:v('exam-teacher'),course:v('exam-course').trim().toUpperCase(),cls:v('exam-cls').trim(),school:v('exam-school'),dept:v('exam-dept'),sid:v('exam-sid').trim(),name_py:v('exam-py').trim(),name_zh:v('exam-zh').trim(),note:v('exam-note').trim(),salut:v('exam-salut'),half:v('exam-half'),kind:v('exam-kind'),conflict:(v('exam-kind')==='考试冲突'?v('exam-conflict').trim().toUpperCase():'')};
   if(!body.sid&&!body.name_zh&&!body.name_py){alert('至少填学号或姓名');return;}
   const r=await gasPost('adminSetExamSpecial',body);
-  if(r&&r.success){if(_examModalMode)examModalClose();else examToggleAdd(false);await loadExam();}else alert('保存失败:'+((r&&r.error)||'?'));
+  if(r&&r.success){if(_examModalMode)examModalClose();else examToggleAdd(false);await loadExam();}else alert('保存失败:'+_errText(r));
 }
-async function examDel(id,name){if(!confirm('删除「'+name+'」这笔期末考特例?'))return;const r=await gasPost('adminDelExamSpecial',{id});if(r&&r.success)await loadExam();else alert('删除失败:'+((r&&r.error)||'?'));}
+async function examDel(id,name){if(!confirm('删除「'+name+'」这笔期末考特例?'))return;const r=await gasPost('adminDelExamSpecial',{id});if(r&&r.success)await loadExam();else alert('删除失败:'+_errText(r));}
 function examExportExcel(){
   const rows=_examRows();if(!rows.length){alert('无记录可导出');return;}
   const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -2786,9 +2786,9 @@ async function btecSaveStu(){
   let r;
   if(_btecEdit){r=await gasPost('adminUpdateBtecStudent',{id:_btecEdit.id,fields:row});if(r&&r.success){await gasPost('adminSetBtecYear',{student_id:_btecEdit.id,year:year});await gasPost('adminSetBtecNote',{student_id:_btecEdit.id,note:note});}}
   else{r=await gasPost('adminAddBtecStudent',{row});if(r&&r.success){await loadBtec();const ns=(_btec.students||[]).find(x=>String(x.sid)===String(row.sid));if(ns){if(year)await gasPost('adminSetBtecYear',{student_id:ns.id,year:year});if(note)await gasPost('adminSetBtecNote',{student_id:ns.id,note:note});}}}
-  if(r&&r.success){_btecEdit=null;await loadBtec();}else alert('保存失败:'+((r&&r.error)||'?'));
+  if(r&&r.success){_btecEdit=null;await loadBtec();}else alert('保存失败:'+_errText(r));
 }
-async function btecDelStu(id,name){if(!confirm('删除学生「'+name+'」及其手动格子?'))return;const r=await gasPost('adminDelBtecStudent',{id});if(r&&r.success)await loadBtec();else alert('删除失败:'+((r&&r.error)||'?'));}
+async function btecDelStu(id,name){if(!confirm('删除学生「'+name+'」及其手动格子?'))return;const r=await gasPost('adminDelBtecStudent',{id});if(r&&r.success)await loadBtec();else alert('删除失败:'+_errText(r));}
 let _btecCellOrig={tc:'',iv:''};
 function btecEditCell(sid,code){
   if(currentRole!=='admin')return;
@@ -2842,7 +2842,7 @@ async function btecCellSave(sid,code){
   btecCellClose();
   if(r&&r.success&&r2&&r2.success)await loadBtec();else alert('保存失败:'+(((r&&r.error)||(r2&&r2.error))||'?'));
 }
-async function btecSaveCell(sid,code,sem){const r=await gasPost('adminSetBtecPlan',{student_id:sid,code:code,sem:sem});if(r&&r.success)await loadBtec();else{alert('设定失败:'+((r&&r.error)||'?'));renderBtec();}}
+async function btecSaveCell(sid,code,sem){const r=await gasPost('adminSetBtecPlan',{student_id:sid,code:code,sem:sem});if(r&&r.success)await loadBtec();else{alert('设定失败:'+_errText(r));renderBtec();}}
 async function btecBatchRow(code){const studs=_btecStudents();if(!studs.length){alert('当前无学生');return;}const v=prompt('把「'+code+'」对当前显示的 '+studs.length+' 位学生批量设为哪个学期?\n填如 2569-1;留空 = 清除这些学生此单元的手动值(回退自动排课):','');if(v===null)return;const sem=v.trim();let ok=0;for(const s of studs){const r=await gasPost('adminSetBtecPlan',{student_id:s.id,code:code,sem:sem});if(r&&r.success)ok++;}await loadBtec();if(typeof showToast==='function')showToast('已批量设 '+ok+' 位学生的「'+code+'」',{kind:'success'});}
 
 window.addEventListener('DOMContentLoaded', checkAuth);
@@ -4225,7 +4225,7 @@ async function showErrorLog(){
   if(!SHEETS_URL){alert('未配置 SHEETS_URL');return;}
   setSyncStatus('⏳ 抓取错误日志…','');
   const r=await gasGet({action:'readErrors',limit:50});
-  if(!r||!r.success){alert('❌ 抓取失败：'+(r&&r.error||'unknown'));return;}
+  if(!r||!r.success){alert('❌ 抓取失败：'+_errText(r));return;}
   setSyncStatus('',null);
   const errs=r.errors||[];
   if(!errs.length){alert('🎉 没有任何错误纪录！');return;}
@@ -5768,7 +5768,7 @@ async function saveTeachBtec(name,val){
   const v=String(val||'').trim();
   if(v!==''&&!/^\d+(\.\d+)?$/.test(v)){alert('请填数字(可小数),或留空清除');renderSta();return;}
   const r=await gasPost('adminSetTeachBtec',{teacher:name,val:v});
-  if(r&&r.success){_teachBtec=null;renderSta();}else alert('保存失败:'+((r&&r.error)||'?'));
+  if(r&&r.success){_teachBtec=null;renderSta();}else alert('保存失败:'+_errText(r));
 }
 function renderSta(){
   if(!_panelActive('sta')){_tabDirty.sta=true;return;}
