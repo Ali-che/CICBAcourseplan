@@ -28,6 +28,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .ops-chip .x{font-size:14px;line-height:1;color:#c7c3dc;cursor:pointer;font-family:system-ui;padding:0 1px}
 .ops-chip .x:hover{color:#c0392b}
 .ops-chipwrap{display:flex;flex-wrap:wrap;gap:8px}
+.ops-modal-ov{position:fixed;inset:0;background:rgba(40,36,80,.30);display:flex;align-items:flex-start;justify-content:center;z-index:9999;padding:56px 16px 16px;overflow:auto}
+.ops-modal{background:#fff;border-radius:14px;box-shadow:0 14px 48px rgba(30,24,70,.30);padding:16px 18px;max-width:620px;width:100%}
+.ops-modal .ops-add{margin-bottom:0;background:transparent;padding:0;border:0}
 .ops-add{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;background:#F7F6FE;border:0.5px solid #E4E1F3;border-radius:8px;padding:10px 12px;margin-bottom:12px}
 .ops-add .fg{display:flex;flex-direction:column;gap:3px}
 .ops-add label{font-size:10.5px;color:#888}
@@ -1441,8 +1444,12 @@ function opsCatApply(){const rows=opsCatFiltered();const tb=document.getElementB
 function jsq(s){return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
 function opsIsEdit(sec){return !!(opsEdit&&opsEdit.sec===sec);}
 function opsEV(sec,f){return (opsEdit&&opsEdit.sec===sec&&opsEdit.vals&&opsEdit.vals[f]!=null)?opsEdit.vals[f]:'';}
-function opsStartEdit(sec,key,vals){opsEdit={sec:sec,key:key,vals:vals};opsRenderSec();try{document.getElementById('panel-ops').scrollIntoView({block:'start'});}catch(e){}}
+function opsStartEdit(sec,key,vals){opsEdit={sec:sec,key:key,vals:vals};opsRenderSec();}
 function opsCancelEdit(){opsEdit=null;opsRenderSec();}
+// 编辑弹窗:把编辑表单包成居中小窗;点背景或取消关闭
+function _opsModal(inner){return '<div class="ops-modal-ov" onclick="if(event.target===this)opsCancelEdit()"><div class="ops-modal">'+inner+'</div></div>';}
+// 作用域取值:优先读弹窗内的输入框(编辑),否则读顶部(新增)——避免新增/编辑同 id 冲突
+function _opsF(id){var m=document.querySelector('.ops-modal');var e=m?m.querySelector('#'+id):null;return e||document.getElementById(id);}
 function opsDeptOpts(sel){return (opsD.depts||[]).map(d=>'<option value="'+eh(d.code)+'"'+(d.code===sel?' selected':'')+'>'+eh(d.code)+'</option>').join('');}
 // 老师「属所部门」= 学生专业库 ∪ 现有老师部门(含 GE 等无学生的教学部门)
 function _opsTeacherDepts(){const s=new Set();(opsD.depts||[]).forEach(function(d){if(d&&d.code)s.add(d.code);});(typeof T!=='undefined'?T:[]).forEach(function(t){if(t&&t.d)s.add(t.d);});return Array.from(s).filter(Boolean).sort();}
@@ -1519,13 +1526,13 @@ function opsDeptView(){
   const ed=opsIsEdit('dept');
   const ds=(opsD.depts||[]).slice().sort((a,b)=>a.code.localeCompare(b.code));
   const chips=ds.length?('<div class="ops-chipwrap">'+ds.map(d=>'<span class="ops-chip">'+eh(d.code)+'<span style="font-family:system-ui;color:#888;font-weight:400;font-size:12px">'+eh(d.name)+'</span><span class="x" title="编辑" style="color:#8A84C9" onclick="opsStartEdit(\'dept\',\''+jsq(d.code)+'\',{code:\''+jsq(d.code)+'\',name:\''+jsq(d.name)+'\'})">✎</span><span class="x" title="删除" onclick="opsDelDept(\''+jsq(d.code)+'\')">×</span></span>').join('')+'</div>'):'<div style="color:#aaa;padding:4px">无</div>';
-  return '<div class="ops-add">'+(ed?'<div style="width:100%;font-size:12px;color:#534AB7;font-weight:600;margin-bottom:2px">✏️ 编辑专业(代码不可改)</div>':'')+
-    '<div class="fg"><label>专业代码</label><input id="ops-dept-code" '+(ed?'readonly style="width:80px;background:#eee"':'style="width:80px"')+' value="'+eh(opsEV('dept','code'))+'" placeholder="TM"></div>'+
-    '<div class="fg"><label>专业名称</label><input id="ops-dept-name" value="'+eh(opsEV('dept','name'))+'" placeholder="旅游管理"></div>'+
-    '<button class="btn btn-p" onclick="opsAddDept()">'+(ed?'保存修改':'+ 新增')+'</button>'+(ed?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>'+
-    '<div style="font-size:11px;color:#888;margin-bottom:6px">专业 · '+ds.length+' 个</div>'+chips;
+  const form=function(E){return '<div class="ops-add">'+(E?'<div style="width:100%;font-size:13px;color:#534AB7;font-weight:600;margin-bottom:6px">✏️ 编辑专业(代码不可改)</div>':'')+
+    '<div class="fg"><label>专业代码</label><input id="ops-dept-code" '+(E?'readonly style="width:80px;background:#eee"':'style="width:80px"')+' value="'+(E?eh(opsEV('dept','code')):'')+'" placeholder="TM"></div>'+
+    '<div class="fg"><label>专业名称</label><input id="ops-dept-name" value="'+(E?eh(opsEV('dept','name')):'')+'" placeholder="旅游管理"></div>'+
+    '<button class="btn btn-p" onclick="opsAddDept()">'+(E?'保存修改':'+ 新增')+'</button>'+(E?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>';};
+  return form(false)+'<div style="font-size:11px;color:#888;margin-bottom:6px">专业 · '+ds.length+' 个</div>'+chips+(ed?_opsModal(form(true)):'');
 }
-async function opsAddDept(){const code=document.getElementById('ops-dept-code').value.trim();if(!code){alert('请输入专业代码');return;}opsAfter(await gasPost('adminAddDept',{code,name:document.getElementById('ops-dept-name').value.trim()}),'已新增/更新专业 '+code);}
+async function opsAddDept(){const code=_opsF('ops-dept-code').value.trim();if(!code){alert('请输入专业代码');return;}opsAfter(await gasPost('adminAddDept',{code,name:_opsF('ops-dept-name').value.trim()}),'已新增/更新专业 '+code);}
 async function opsDelDept(code){const n=opsUsedByDept(code);if(!confirm('删除专业「'+code+'」?'+(n>0?'\n\n⚠️ 该专业下有 '+n+' 个届别,删专业不会删届别但会失去归属。仍要删?':'')))return;opsAfter(await gasPost('adminDelDept',{code}),'已删除专业 '+code);}
 // ── 届别 ──
 var _cohDeptF='',_cohHideGrad=true,_cohYrF='';
@@ -1546,19 +1553,19 @@ function opsCohView(){
     if(ov)sb+=' <span style="background:#FEF3C7;color:#92400E;font-size:8.5px;border-radius:4px;padding:0 4px;font-family:system-ui" title="状态为手动设定,未按年限自动判定">手动</span>';
     return '<span class="ops-chip" style="gap:6px;'+(grad?'opacity:.55;':'')+'"><b style="color:'+cfg+'">'+eh(c.cohort)+'</b><input type="number" min="0.5" max="8" step="0.5" value="'+yrs+'" onchange="opsSetCohYears(\''+jsq(c.cohort)+'\',this.value)" style="width:40px;text-align:center;font-size:11px;padding:1px;border:0.5px solid #cbd5e1;border-radius:4px;font-family:system-ui" title="修业年限(改了即存)"><span style="font-size:10px;color:#999;font-family:system-ui">年'+(COHORT_YEARS[c.cohort]==null?'*':'')+'</span>'+sb+'<span class="x" title="编辑" style="color:#8A84C9;font-family:system-ui" onclick="opsStartEdit(\'coh\','+c.id+',{id:'+c.id+',dept:\''+jsq(c.dept)+'\',cohort:\''+jsq(c.cohort)+'\',ov:\''+ov+'\'})">✎</span><span class="x" title="删除" onclick="opsDelCoh('+c.id+',\''+jsq(c.cohort)+'\')">×</span></span>';};
   const groupsHtml=Object.keys(byDept).sort().map(function(d){var cc=(typeof COHORT_COLOR!=='undefined'?COHORT_COLOR[d]:null),bg=cc?cc.bg:'#EEE',fg=cc?cc.fg:'#555';return '<div style="margin-bottom:12px"><div style="margin-bottom:6px"><span style="background:'+bg+';color:'+fg+';border-radius:6px;padding:1px 9px;font-size:11px;font-weight:700;font-family:ui-monospace,monospace">'+eh(d)+'</span> <span style="color:#b0aad6;font-size:11px">· '+byDept[d].length+' 届</span></div><div class="ops-chipwrap">'+byDept[d].map(cohCard).join('')+'</div></div>';}).join('')||'<div style="color:#aaa;padding:8px">无</div>';
-  const addOrEdit = ed
-    ? '<div class="ops-add"><div style="width:100%;font-size:12px;color:#534AB7;font-weight:600;margin-bottom:2px">✏️ 编辑届别 '+eh(opsEV('coh','cohort'))+'(改代码会同步更新已引用它的排课)</div>'
+  const addForm='<div class="ops-add"><div class="fg"><label>专业</label><select id="ops-coh-dept">'+deptOpts+'</select></div><div class="fg"><label>届别代码</label><input id="ops-coh-code" placeholder="TM70"></div><button class="btn btn-p" onclick="opsAddCoh()">+ 新增</button> <span style="font-size:11px;color:#888">年限在「排课表→新增届别」里设;此处新增暂用默认(ZSB=2/否则3)</span></div>';
+  const editForm=ed?('<div class="ops-add"><div style="width:100%;font-size:13px;color:#534AB7;font-weight:600;margin-bottom:6px">✏️ 编辑届别 '+eh(opsEV('coh','cohort'))+'(改代码会同步更新已引用它的排课)</div>'
       +'<div class="fg"><label>专业</label><select id="ops-coh-edept">'+(opsD.depts||[]).map(d=>'<option value="'+eh(d.code)+'"'+(d.code===opsEV('coh','dept')?' selected':'')+'>'+eh(d.code)+'</option>').join('')+'</select></div>'
       +'<div class="fg"><label>届别代码</label><input id="ops-coh-ecode" value="'+eh(opsEV('coh','cohort'))+'" placeholder="TM70"></div>'
       +'<div class="fg"><label>状态</label><select id="ops-coh-eov"><option value="">自动(按年限)</option><option value="active"'+(opsEV('coh','ov')==='active'?' selected':'')+'>强制在读</option><option value="grad"'+(opsEV('coh','ov')==='grad'?' selected':'')+'>强制已毕业</option></select></div>'
-      +'<button class="btn btn-p" onclick="opsUpdateCoh()">保存修改</button> <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button></div>'
-    : '<div class="ops-add"><div class="fg"><label>专业</label><select id="ops-coh-dept">'+deptOpts+'</select></div><div class="fg"><label>届别代码</label><input id="ops-coh-code" placeholder="TM70"></div><button class="btn btn-p" onclick="opsAddCoh()">+ 新增</button> <span style="font-size:11px;color:#888">年限在「排课表→新增届别」里设;此处新增暂用默认(ZSB=2/否则3)</span></div>';
-  return addOrEdit
+      +'<button class="btn btn-p" onclick="opsUpdateCoh()">保存修改</button> <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button></div>'):'';
+  return addForm
     +'<div class="fbar" style="margin:4px 0 8px;align-items:center">筛选 <select onchange="_cohDeptF=this.value;opsRenderSec()" style="font-size:12px;padding:4px 8px"><option value="">全部专业</option>'+filtOpts+'</select>'
     +'<select onchange="_cohYrF=this.value;opsRenderSec()" style="font-size:12px;padding:4px 8px;margin-left:6px"><option value="">全部入学年</option>'+yrOpts.map(function(y){return '<option value="'+y+'"'+(_cohYrF===y?' selected':'')+'>'+y+' 级</option>';}).join('')+'</select>'
     +'<label style="font-size:12px;color:#555;cursor:pointer;margin-left:10px"><input type="checkbox"'+(_cohHideGrad?'':' checked')+' onchange="_cohHideGrad=!this.checked;opsRenderSec()" style="width:auto;vertical-align:middle"> 显示已毕业</label>'
     +'<span style="font-size:11px;color:#888;margin-left:10px">显示 '+list.length+' / 共 '+total+' 届</span></div>'
-    +'<div class="tbl-wrap" style="max-height:calc(100vh - 470px);overflow:auto">'+groupsHtml+'</div>';
+    +'<div class="tbl-wrap" style="max-height:calc(100vh - 470px);overflow:auto">'+groupsHtml+'</div>'
+    +(ed?_opsModal(editForm):'');
 }
 async function opsAddCoh(){const coh=document.getElementById('ops-coh-code').value.trim();if(!coh){alert('请输入届别代码');return;}opsAfter(await gasPost('adminAddCohort',{dept:document.getElementById('ops-coh-dept').value,cohort:coh}),'已新增届别 '+coh);}
 async function opsDelCoh(id,coh){const n=opsUsedByCohort(coh);if(!confirm('删除届别「'+coh+'」?'+(n>0?'\n\n⚠️ 有 '+n+' 笔排课用到此届别。仍要删?':'')))return;opsAfter(await gasPost('adminDelCohort',{id}),'已删除届别 '+coh);}
