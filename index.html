@@ -4883,12 +4883,13 @@ function renderTchr(){
     '<td style="font-size:11px;color:#888;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+eh(r.stus.join('、'))+'">'+r.stus.map(s=>eh(s)).join('、')+'</td></tr>').join('');
   tb.innerHTML=schRows+sgRows;
 }
-// 班级总表的「专业→届别」来源:届别库(CBD) ∪ 排课数据里实际出现的届别(含尚未建档的),
-// 这样批量导入后(即使届别库没补上)班级总表的届别下拉也会自动出现。
+// 班级总表的「专业→届别」来源:只列排课表里实际出现过的届别(按 cohortDept 归专业),
+// 选了就一定有排课;库里登记过但排课表没出现的届别不列,避免选到「暂无」。
+// (尊重「显示已归档」:未开时不含已归档学期的届别。)
 function _cohByDeptMerged(){
   const m={},seen={};
-  Object.keys(CBD||{}).forEach(d=>{(CBD[d]||[]).forEach(c=>{if(!m[d])m[d]=[];if(!seen[c]){seen[c]=1;m[d].push(c);}});});
-  (typeof schD!=='undefined'?schD:[]).forEach(r=>(r.cc||[]).forEach(x=>{const c=x&&String(x.cohort||'').trim();if(!c||seen[c])return;const d=cohortDept(c)||'(未分类)';if(!m[d])m[d]=[];seen[c]=1;m[d].push(c);}));
+  const data=(typeof _filtArch==='function')?_filtArch([...(typeof schD!=='undefined'?schD:[])]):(typeof schD!=='undefined'?schD:[]);
+  data.forEach(r=>(r.cc||[]).forEach(x=>{const c=x&&String(x.cohort||'').trim();if(!c||seen[c])return;const d=cohortDept(c)||'(未分类)';if(!m[d])m[d]=[];seen[c]=1;m[d].push(c);}));
   Object.keys(m).forEach(d=>m[d].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'})));
   return m;
 }
