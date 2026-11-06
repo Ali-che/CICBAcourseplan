@@ -724,6 +724,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <select id="f-co-d" onchange="filterCohByDept()"><option value="">全部</option></select>
       <label>届别</label><select id="f-co" onchange="renderCoh()"><option value="">请选择</option></select>
       <input id="f-co-q" oninput="renderCoh()" placeholder="🔍 课程代码 / 英文名 / 班级" style="width:200px">
+      <label style="font-size:12px;color:#555;cursor:pointer;white-space:nowrap" title="届别下拉只列排课表里出现过的;已毕业届别默认隐藏,勾此显示"><input type="checkbox" id="f-co-grad" onchange="toggleCoShowGrad(this.checked)" style="width:auto;vertical-align:middle"> 显示已毕业</label>
     </div>
     <div class="card">
       <div class="ct" id="co-ttl">班级课程总表</div>
@@ -4886,13 +4887,16 @@ function renderTchr(){
 // 班级总表的「专业→届别」来源:只列排课表里实际出现过的届别(按 cohortDept 归专业),
 // 选了就一定有排课;库里登记过但排课表没出现的届别不列,避免选到「暂无」。
 // (尊重「显示已归档」:未开时不含已归档学期的届别。)
+// 已毕业届别默认隐藏(与排课表一致);勾「显示已毕业」(_coShowGrad)后才并入。
+var _coShowGrad=false;
 function _cohByDeptMerged(){
   const m={},seen={};
   const data=(typeof _filtArch==='function')?_filtArch([...(typeof schD!=='undefined'?schD:[])]):(typeof schD!=='undefined'?schD:[]);
-  data.forEach(r=>(r.cc||[]).forEach(x=>{const c=x&&String(x.cohort||'').trim();if(!c||seen[c])return;const d=cohortDept(c)||'(未分类)';if(!m[d])m[d]=[];seen[c]=1;m[d].push(c);}));
+  data.forEach(r=>(r.cc||[]).forEach(x=>{const c=x&&String(x.cohort||'').trim();if(!c||seen[c])return;if(!_coShowGrad&&typeof _cohGraduated==='function'&&_cohGraduated(c))return;const d=cohortDept(c)||'(未分类)';if(!m[d])m[d]=[];seen[c]=1;m[d].push(c);}));
   Object.keys(m).forEach(d=>m[d].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'})));
   return m;
 }
+function toggleCoShowGrad(v){_coShowGrad=!!v;if(typeof filterCohByDept==='function')filterCohByDept();}
 function filterCohByDept(){
   const dept=document.getElementById('f-co-d').value;const fc=document.getElementById('f-co');const cur=fc.value;
   fc.innerHTML='<option value="">请选择</option>';
