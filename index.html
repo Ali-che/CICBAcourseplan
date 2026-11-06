@@ -4338,6 +4338,16 @@ function cohortPrefix(cohort){
 }
 // 届别的真正专业:优先查 cohorts 表(COH_DEPT),查不到才退回「代码前两字母」
 function cohortDept(cohort){var d=COH_DEPT[cohort];return d||cohortPrefix(cohort);}
+// 为「新届别」推断所属专业:取代码的完整字母前缀(不截断,4字母专业如 IBCE 也对),
+// 先找完全相同的专业码,否则找「前缀能对上的最长专业码」,都没有就用该字母前缀当新专业码。
+function _cohGuessDept(cohort){
+  var pre=(String(cohort||'').match(/^[A-Za-z]+/)||[''])[0].toUpperCase();
+  if(!pre)return '';
+  var depts=(typeof opsD!=='undefined'&&opsD.depts&&opsD.depts.length)?opsD.depts.map(function(d){return String(d.code).toUpperCase();}):Object.keys(typeof CBD!=='undefined'?CBD:{}).map(function(d){return String(d).toUpperCase();});
+  if(depts.indexOf(pre)>=0)return pre;
+  var cand=depts.filter(function(d){return d&&pre.indexOf(d)===0;}).sort(function(a,b){return b.length-a.length;});
+  return cand[0]||pre;
+}
 // ═══════ §COHORT-GRAD 届别修业年限 + 自动毕业判定 ═══════
 // 年限:新增班级时选(全新生3/专升本2/其他N),存 cohort_years;未设则 fallback(含ZSB=2,否则3)。
 // 入学年=代码第一个两位数+2500;末学年=入学年+年限-1;当前学年<末学年→已毕业。
@@ -6466,7 +6476,7 @@ function parseAndValidateRow(row,colIdx,lineNum){
   if(tc&&!T.find(x=>x.n===tc))warnings.push('老师「'+tc+'」不在老师库（可能拼错）');
   cc.forEach((x)=>{
     const allCoh=Object.values(CBD).flat();
-    if(!allCoh.includes(x.cohort))warnings.push('届别「'+x.cohort+'」不在届别库');
+    if(!allCoh.includes(x.cohort))warnings.push('届别「'+x.cohort+'」库中暂无 → 导入时自动建档(专业 '+(_cohGuessDept(x.cohort)||'?')+')');
   });
 
   let en='',type='正常';
@@ -6640,15 +6650,35 @@ async function confirmCsvImport(){
   const totalOps=mergeGroupCount+appendList.length;
   if(!totalOps){alert('全部都被跳过，没有写入操作');return;}
 
+  // ── 收集「排课引用到、但届别库里还没有」的新届别 ──
+  const _inCBD={}; Object.keys(CBD||{}).forEach(d=>(CBD[d]||[]).forEach(c=>{_inCBD[String(c).trim()]=true;}));
+  const _toProcess=appendList.concat(Object.keys(mergeByKey).map(k=>mergeByKey[k][0]));
+  const _newCohMap={}; // cohort -> 推断专业
+  _toProcess.forEach(p=>{(p.record.cc||[]).forEach(x=>{const nm=String((x&&x.cohort)||'').trim();if(nm&&!_inCBD[nm]&&!(nm in _newCohMap))_newCohMap[nm]=_cohGuessDept(nm);});});
+  const _newCohs=Object.keys(_newCohMap);
+
   let confirmMsg='确认执行：\n';
   if(appendList.length) confirmMsg+='  新增 '+appendList.length+' 笔\n';
   if(mergeGroupCount) confirmMsg+='  合并 '+mergeGroupCount+' 个分组\n';
   if(skipCount) confirmMsg+='  跳过 '+skipCount+' 笔\n';
+  if(_newCohs.length) confirmMsg+='  ★ 自动建档新届别 '+_newCohs.length+' 个：'+_newCohs.map(c=>c+'→'+(_newCohMap[c]||'?')).join('、')+'\n';
   if(!confirm(confirmMsg))return;
 
   const btn=document.getElementById('csv-import-btn');
   btn.disabled=true;
   let success=0,fail=0,opDone=0;
+
+  // ── Step 0：自动建档新届别(先建好,下面写排课才有归属) ──
+  let cohNew=0,cohFail=0;const cohFailList=[];
+  for(let ci=0;ci<_newCohs.length;ci++){
+    const coh=_newCohs[ci],dep=_newCohMap[coh];
+    btn.textContent='⏳ 建档届别 '+(ci+1)+'/'+_newCohs.length+'…';
+    try{
+      const r=await gasPost('adminAddCohort',{dept:dep,cohort:coh});
+      if(r&&r.success){cohNew++;if(!CBD[dep])CBD[dep]=[];if(CBD[dep].indexOf(coh)<0)CBD[dep].push(coh);COH_DEPT[coh]=dep;}
+      else{cohFail++;cohFailList.push(coh+'('+_errText(r)+')');}
+    }catch(e){cohFail++;cohFailList.push(coh+'('+(e&&e.message||'错误')+')');}
+  }
 
   // ── Step 1：处理合并组 ──
   for(const key in mergeByKey){
@@ -6705,10 +6735,14 @@ async function confirmCsvImport(){
     }catch(e){schD=schD.filter(x=>x!==rec);fail++;}
   }
 
+  // 新建了届别 → 重新拉届别库,让分区/状态/年限等归位
+  if(cohNew){try{await loadRefFromSheets();rebuildUI();}catch(e){}}
   renderSch();renderAllSum();renderSta();
   let msg='✅ 完成！\n\n成功：'+success+' 笔';
   if(fail)msg+='\n失败：'+fail+' 笔（失败的已自本地回滚）';
   if(skipCount)msg+='\n跳过：'+skipCount+' 笔';
+  if(cohNew)msg+='\n★ 新建届别：'+cohNew+' 个';
+  if(cohFail)msg+='\n⚠️ 届别建档失败：'+cohFail+' 个（排课仍已写入，可到「后台操作→届别」手动补建）\n  '+cohFailList.join('\n  ');
   alert(msg);
   closeCsvImport();
 }
