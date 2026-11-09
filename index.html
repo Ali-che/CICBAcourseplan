@@ -4353,7 +4353,10 @@ function cohortPrefix(cohort){
   return m?m[0].substring(0,2).toUpperCase():'';
 }
 // 届别的真正专业:优先查 cohorts 表(COH_DEPT),查不到才退回「代码前两字母」
-function cohortDept(cohort){var d=COH_DEPT[cohort];return d||cohortPrefix(cohort);}
+function cohortDept(cohort){var d=COH_DEPT[cohort];if(d)return d;
+  // 不在届别库(如 IBCE69-Jiang/WangW/WangC 这种自订名):先用完整字母前缀对专业码(IBCE 不会被截成 IB),对不上才退回旧的 2 字母
+  var g=_cohGuessDept(cohort);if(g&&(COHORT_COLOR[g]||(typeof CBD!=='undefined'&&CBD[g])))return g;
+  return cohortPrefix(cohort);}
 // 为「新届别」推断所属专业:取代码的完整字母前缀(不截断,4字母专业如 IBCE 也对),
 // 先找完全相同的专业码,否则找「前缀能对上的最长专业码」,都没有就用该字母前缀当新专业码。
 function _cohGuessDept(cohort){
