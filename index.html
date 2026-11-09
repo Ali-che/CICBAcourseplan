@@ -2044,6 +2044,8 @@ function _isArch(sem,type){type=type||'sch';return !!(sem && _archT[sem] && _arc
 function _filtArch(list,type){type=type||'sch';return (list||[]).filter(function(r){return _showArch || !(r && _isArch(r.sem,type));});}
 async function loadArchTerms(){try{const r=await gasGet({action:'archData'});if(r&&r.success){_archT={};(r.rows||[]).forEach(function(x){if(x&&x.sem){_archT[x.sem]=_archT[x.sem]||{};_archT[x.sem][x.type||'sch']=true;}});}}catch(e){}}
 function _syncShowArchBoxes(){try{['sch-showarch','sp-showarch','exam-showarch','sum-showarch'].forEach(function(id){var c=document.getElementById(id);if(c)c.checked=_showArch;});}catch(e){}}
+// 表头提示:有归档学期被隐藏时,在计数旁显示「🗄 已隐藏 N 笔归档(学期) · 点此显示」,避免同事以为数据不见
+function _archHint(list){if(_showArch)return '';var n=0,ss={};(list||[]).forEach(function(r){if(r&&_isArch(r.sem,'sch')){n++;ss[r.sem]=1;}});if(!n)return '';return ' <a href="javascript:void(0)" onclick="toggleShowArch(true)" title="这些学期已归档,默认隐藏;点此临时显示(全局)" style="font-size:11px;color:#b7791f;background:#fffaf0;border:0.5px solid #f6ad55;border-radius:10px;padding:1px 8px;margin-left:6px;text-decoration:none;white-space:nowrap">🗄 已隐藏 '+n+' 笔归档('+Object.keys(ss).sort().join('、')+') · 点此显示</a>';}
 function toggleShowArch(v){_showArch=!!v;_syncShowArchBoxes();if(typeof renderSch==='function')renderSch();if(typeof renderSp==='function')renderSp();if(typeof renderExam==='function')renderExam();if(typeof renderAllSum==='function')renderAllSum();}
 function examSort(k){if(_examSK===k)_examSD=-_examSD;else{_examSK=k;_examSD=1;}renderExam();}
 async function loadExam(){
@@ -4362,7 +4364,7 @@ function cohortDept(cohort){var d=COH_DEPT[cohort];if(d)return d;
 function _cohGuessDept(cohort){
   var pre=(String(cohort||'').match(/^[A-Za-z]+/)||[''])[0].toUpperCase();
   if(!pre)return '';
-  var depts=(typeof opsD!=='undefined'&&opsD.depts&&opsD.depts.length)?opsD.depts.map(function(d){return String(d.code).toUpperCase();}):Object.keys(typeof CBD!=='undefined'?CBD:{}).map(function(d){return String(d).toUpperCase();});
+  var depts=(typeof opsD!=='undefined'&&opsD&&opsD.depts&&opsD.depts.length)?opsD.depts.map(function(d){return String(d.code).toUpperCase();}):Object.keys(typeof CBD!=='undefined'?CBD:{}).map(function(d){return String(d).toUpperCase();});
   if(depts.indexOf(pre)>=0)return pre;
   var cand=depts.filter(function(d){return d&&pre.indexOf(d)===0;}).sort(function(a,b){return b.length-a.length;});
   return cand[0]||pre;
@@ -4589,7 +4591,7 @@ function renderSch(){
   _schFilteredIds=disp.map(r=>r.id);
   updateBatchDelButton('sch',disp.length,schD.length);
   // 表头计数:有筛选/归档隐藏时,诚实显示「显示 X / 共 Y」,避免和实际行数(及批量删除)对不上
-  {var _schN=document.getElementById('sch-n');if(_schN)_schN.textContent=(disp.length<schD.length)?('(显示 '+disp.length+' / 共 '+schD.length+' 条)'):('('+schD.length+' 条)');}
+  {var _schN=document.getElementById('sch-n');if(_schN)_schN.innerHTML=((disp.length<schD.length)?('(显示 '+disp.length+' / 共 '+schD.length+' 条)'):('('+schD.length+' 条)'))+_archHint(schD);}
   // v7.9.13: 表头 BTEC 数（届别/总人数 不显示统计）
   let _btecN=0;
   disp.forEach(r=>{if(r.btec===true||r.btec==='TRUE'||r.btec==='true')_btecN++;});
@@ -4820,7 +4822,7 @@ function renderSp(){
   // v7.9: 批量删除按钮
   _spFilteredIds=disp.map(r=>r.id);
   updateBatchDelButton('sp',disp.length,spD.length);
-  {var _spN=document.getElementById('sp-n');if(_spN)_spN.textContent=(disp.length<spD.length)?('(显示 '+disp.length+' / 共 '+spD.length+' 条)'):('('+spD.length+' 条)');}
+  {var _spN=document.getElementById('sp-n');if(_spN)_spN.innerHTML=((disp.length<spD.length)?('(显示 '+disp.length+' / 共 '+spD.length+' 条)'):('('+spD.length+' 条)'))+_archHint(spD);}
   if(spSK==='sid')disp.sort((a,b)=>spSD*a.sid.localeCompare(b.sid));
   if(spSK==='tc')disp.sort((a,b)=>{const ta=T.find(x=>x.n===a.tc),tb2=T.find(x=>x.n===b.tc);return spSD*((ta?ta.d:'ZZ').localeCompare(tb2?tb2.d:'ZZ')||a.tc.localeCompare(b.tc));});
   tb.innerHTML=disp.map((r,i)=>{
