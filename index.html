@@ -684,6 +684,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <button class="stab" onclick="switchSub('sss')">SG/IS·学生</button>
       <button class="stab" onclick="switchSub('sst')">SG/IS·老师</button>
       <button class="stab" onclick="switchSub('smx')">📋 专业班级课表</button>
+      <button class="stab" onclick="switchSub('smt')">👩‍🏫 专业老师课表</button>
     </div>
     <div class="no-print" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
       <span id="sum-print-hint" style="font-size:11px;color:#888;text-align:right;line-height:1.35;max-width:520px"></span>
@@ -774,6 +775,18 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <div class="ct" id="mx-ttl">专业班级课表矩阵</div>
       <div id="mx-wrap" style="overflow:auto"></div>
       <div class="empty" id="mx-em">请选择专业 + 学年学期</div>
+    </div>
+  </div>
+  <div id="sub-smt" class="spanel">
+    <div class="fbar">
+      <label>学年学期</label><select id="f-mt-s" onchange="renderDeptTchMatrix()"><option value="">请选择</option></select>
+      <label>专业</label><select id="f-mt-d" onchange="renderDeptTchMatrix()"><option value="">请选择</option></select>
+      <span style="font-size:11px;color:#888">行=该部门老师 · 列=该专业各届别 · 格=课码·人数(点课码可编辑)</span>
+    </div>
+    <div class="card">
+      <div class="ct" id="mt-ttl">专业老师课表矩阵</div>
+      <div id="mt-wrap" style="overflow:auto"></div>
+      <div class="empty" id="mt-em">请选择专业 + 学年学期</div>
     </div>
   </div>
   <div id="sco-print"></div>
@@ -4974,6 +4987,68 @@ function renderDeptMatrix(){
   h+='</tbody></table>';
   wrap.innerHTML=h;
 }
+// ── 专业老师课表矩阵(行=该部门老师 · 列=该专业各届别 · 格=课码·人数,点课码编辑) ──
+function _mtFillSelectors(){
+  const dd=document.getElementById('f-mt-d');
+  if(dd){const cur=dd.value;const ds=[...new Set(tchrDrop().filter(t=>t.l>0).map(t=>t.d).filter(Boolean))].sort();const want='<option value="">请选择</option>'+ds.map(d=>'<option'+(d===cur?' selected':'')+'>'+eh(d)+'</option>').join('');if(dd.innerHTML!==want)dd.innerHTML=want;}
+  const sd=document.getElementById('f-mt-s'),src=document.getElementById('f-mx-s');
+  if(sd&&src){const cur=sd.value;const want=src.innerHTML.replace(/ selected/g,'');if(sd.dataset.src!==want){sd.innerHTML=want;sd.dataset.src=want;sd.value=cur;}}
+}
+function renderDeptTchMatrix(){
+  _mxFillSelectors();_mtFillSelectors();
+  const dept=(document.getElementById('f-mt-d')||{}).value||'';
+  const sem=(document.getElementById('f-mt-s')||{}).value||'';
+  const wrap=document.getElementById('mt-wrap'),em=document.getElementById('mt-em'),ttl=document.getElementById('mt-ttl');
+  if(!wrap)return;
+  if(ttl)ttl.textContent='专业老师课表矩阵'+(dept?(' · '+dept):'')+(sem?(' · '+sem):'');
+  if(!dept||!sem){wrap.innerHTML='';if(em){em.textContent='请选择专业 + 学年学期';em.style.display='block';}return;}
+  const semRows=_filtArch([...schD]).filter(r=>r.sem===sem);
+  // 老师:该部门在职老师(有限额) + 该学期实际有排课的该部门老师
+  const tchs=tchrDrop().filter(t=>t.d===dept&&(t.l>0||semRows.some(r=>r.tc===t.n)));
+  const tset=new Set(tchs.map(t=>t.n));
+  const mine=semRows.filter(r=>tset.has(r.tc));
+  // 本专业待定老师的课
+  const pend=semRows.filter(r=>!r.tc&&(r.cc||[]).some(c=>cohortDept(c.cohort)===dept));
+  if(!tchs.length){wrap.innerHTML='';if(em){em.textContent=dept+' 部门没有老师';em.style.display='block';}return;}
+  if(em)em.style.display='none';
+  const cohSet={};[...mine,...pend].forEach(r=>(r.cc||[]).forEach(c=>{if(cohortDept(c.cohort)===dept)cohSet[c.cohort]=1;}));
+  const cohs=Object.keys(cohSet).sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'}));
+  const OTH='__oth';
+  const _HR={'上半学期':1,'上半':1,'下半学期':2,'下半':2,'全学期':3,'全':3};
+  const _HS={1:'上',2:'下',3:'全'};
+  const chip=(r,n)=>'<span onclick="event.stopPropagation();startES(\''+r.id+'\')" title="'+eh((r.en||'')+(r.half?' · '+r.half:'')+(r.type?' · '+r.type:''))+' — 点击编辑" style="display:inline-block;cursor:pointer;margin:1px 2px;padding:1px 6px;border-radius:10px;background:#F1F8F4;color:#1b7a5a;font-size:11px;font-weight:600;white-space:nowrap;font-family:ui-monospace" onmouseover="this.style.background=\'#D7EFE2\'" onmouseout="this.style.background=\'#F1F8F4\'">'+eh(r.course)+(n!=null?'<span style="color:#888;font-weight:400"> ·'+eh(String(n))+'</span>':'')+(_HS[_HR[r.half]]&&_HR[r.half]!==3?'<sup style="color:#999;font-weight:400">'+_HS[_HR[r.half]]+'</sup>':'')+(r.btec?'<sup style="color:#534AB7">B</sup>':'')+'</span>';
+  const cellsFor=rows=>{
+    const m={};cohs.forEach(c=>m[c]=[]);m[OTH]=[];
+    rows.sort((a,b)=>((_HR[a.half]||9)-(_HR[b.half]||9))||String(a.course||'').localeCompare(String(b.course||'')));
+    rows.forEach(r=>{let hit=false;(r.cc||[]).forEach(c=>{if(m[c.cohort]&&cohortDept(c.cohort)===dept){m[c.cohort].push(chip(r,c.count));hit=true;}});if(!hit)m[OTH].push(chip(r,null));});
+    return m;
+  };
+  const hasOth=mine.some(r=>!(r.cc||[]).some(c=>cohortDept(c.cohort)===dept));
+  const cols=hasOth?[...cohs,OTH]:cohs;
+  const td='border-top:0.5px solid #eee;padding:4px 4px;vertical-align:top;text-align:center';
+  let h='<table style="border-collapse:collapse;font-size:12px"><thead><tr>'
+    +'<th style="position:sticky;left:0;background:#3C3489;color:#fff;text-align:left;padding:6px 10px;z-index:2">老师</th>'
+    +cols.map(c=>'<th style="background:'+(c===OTH?'#8a83c9':'#534AB7')+';color:#fff;padding:6px 9px;white-space:nowrap">'+(c===OTH?'其他专业':eh(c))+'</th>').join('')
+    +'<th style="background:#EEEDFE;color:#3C3489;padding:6px 8px;white-space:nowrap">本学期课数</th>'
+    +'<th style="background:#EEEDFE;color:#3C3489;padding:6px 8px;white-space:nowrap" title="semDetail 计算的课时权重(不含 BTEC / LA500);年限额为全学年">课时 / 年限额</th></tr></thead><tbody>';
+  tchs.forEach(t=>{
+    const rows=mine.filter(r=>r.tc===t.n);
+    const m=cellsFor(rows);
+    const wt=rows.length?Math.round(semDetail(t.n,sem).wt*100)/100:0;
+    h+='<tr'+(rows.length?'':' style="opacity:.5"')+'><td style="position:sticky;left:0;background:#fff;padding:5px 10px;white-space:nowrap;border-top:0.5px solid #eee;font-weight:600">'+eh(t.n)+(t.r?' <span style="color:#999;font-size:10px;font-weight:400">'+eh(t.r)+'</span>':'')+'</td>'
+      +cols.map(c=>'<td style="'+td+'">'+(m[c].length?m[c].join('<br>'):'<span style="color:#dcdce4">·</span>')+'</td>').join('')
+      +'<td style="'+td+';background:#EEEDFE;font-weight:700;color:#3C3489">'+rows.length+'</td>'
+      +'<td style="'+td+';background:#EEEDFE;color:#3C3489;white-space:nowrap">'+wt+' / '+(t.l||'—')+'</td></tr>';
+  });
+  if(pend.length){
+    const m=cellsFor(pend);
+    h+='<tr><td style="position:sticky;left:0;background:#FEF2F2;padding:5px 10px;white-space:nowrap;border-top:0.5px solid #eee;color:#B91C1C;font-weight:600">⏳ 待定老师</td>'
+      +cols.map(c=>'<td style="'+td+';background:#FEF8F8">'+(m[c].length?m[c].join('<br>'):'<span style="color:#dcdce4">·</span>')+'</td>').join('')
+      +'<td style="'+td+';background:#FEF2F2;font-weight:700;color:#B91C1C">'+pend.length+'</td><td style="'+td+';background:#FEF2F2"></td></tr>';
+  }
+  h+='</tbody></table><div style="font-size:11px;color:#999;margin-top:6px">上标:上=上半学期 · 下=下半学期 · B=BTEC。「其他专业」= 该老师教的、不含本专业届别的课。「课时」为本学期权重,年限额是全学年,仅供参考。</div>';
+  wrap.innerHTML=h;
+}
 function renderSpStu(){
   const q=(document.getElementById('f-stu').value||'').toLowerCase();
   const mj=document.getElementById('f-sm').value;
@@ -5121,7 +5196,7 @@ function renderSpTchr(){
     '</div>';
   }).join('');
 }
-function renderAllSum(){if(!_panelActive('sum')){_tabDirty.sum=true;return;}_tabDirty.sum=false;renderTchr();renderCoh();renderSpStu();renderSpTchr();renderDeptMatrix();}
+function renderAllSum(){if(!_panelActive('sum')){_tabDirty.sum=true;return;}_tabDirty.sum=false;renderTchr();renderCoh();renderSpStu();renderSpTchr();renderDeptMatrix();renderDeptTchMatrix();}
 
 // ── 教学统计 ──────────────────────────────
 // v8.17: Capstone 课时 = 全学期 Capstone 学生数(届别去重加总) ÷ 授课老师数 → 查官方表
@@ -7199,6 +7274,7 @@ function switchSub(id){
   document.querySelectorAll('.spanel').forEach(p=>p.classList.remove('active'));
   document.getElementById('sub-'+id).classList.add('active');
   if(id==='smx')renderDeptMatrix();
+  if(id==='smt')renderDeptTchMatrix();
   updateSumPrintHint();
   setTimeout(syncTblHeight,50);
 }
