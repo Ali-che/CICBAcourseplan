@@ -20,3 +20,10 @@ jobs:
           python-version: '3.x'
       - name: Run smoke test
         run: python3 tools/smoke.py
+      # 画面测试:无头 Chrome 打开线上网页、模拟一般同事点各分页,有 JS 报错就失败(会 email)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run UI smoke test (live site)
+        if: always()
+        run: node tools/ui_smoke.mjs --url https://ali-che.github.io/CICBAcourseplan/index.html

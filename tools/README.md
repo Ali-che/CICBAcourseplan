@@ -12,6 +12,19 @@ python3 tools/smoke.py
 
 需要有效 PIN 才能测的(登入后 BTEC 能载入/能存格子、排课能改)属人工项,脚本不测。
 
+## ui_smoke.mjs — 画面冒烟测试(**每次推送前必跑**)
+
+```bash
+node tools/ui_smoke.mjs
+```
+
+用无头 Chrome 真的打开本地 `index.html`,模拟「刚打开、从没进过后台」的一般同事:进入系统 → 确认排课表有资料、心跳与轮询有启动 → 依序点开每个分页(学期总表含全部子页),**后台操作放最后**(进后台会载入 `opsD`,会掩盖只有没进后台才出现的错误)。任何 JS 报错、红色错误提示或 alert 都算失败。
+
+- 推送后测线上:`node tools/ui_smoke.mjs --url https://ali-che.github.io/CICBAcourseplan/index.html`
+- 需要 Node 22+ 与 Chrome;不装套件、不需要 PIN。所有写入(含在线心跳)在测试中被拦截,不会动到资料。
+- GitHub Actions 每 30 分钟也会对线上跑一次(`.github/workflows/smoke.yml`),失败会 email。
+- 由来:2026-11-09 `opsD` 为 null 的崩溃(排课空白、在线名单消失),`smoke.py` 只查文件与数据库、拦不住;这支会拦下(已用放回旧错误验证)。
+
 ## stage.sh — staging 预览环境
 
 在同一个 GitHub Pages repo 多发布一个 `/staging.html`,让你先预览新版、正式站 `/index.html` 的老师不受影响。
