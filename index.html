@@ -781,7 +781,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     <div class="fbar">
       <label>学年学期</label><select id="f-mt-s" onchange="renderDeptTchMatrix()"><option value="">请选择</option></select>
       <label>专业</label><select id="f-mt-d" onchange="renderDeptTchMatrix()"><option value="">请选择</option></select>
-      <span style="font-size:11px;color:#888">行=该部门老师 · 列=该专业各届别 · 格=课码·人数(点课码可编辑)</span>
+      <span style="font-size:11px;color:#888">每行一位老师 · 课程按上半/下半分行 · 点课码可编辑</span>
     </div>
     <div class="card">
       <div class="ct" id="mt-ttl">专业老师课表矩阵</div>
@@ -4994,13 +4994,22 @@ function _mtFillSelectors(){
   const sd=document.getElementById('f-mt-s'),src=document.getElementById('f-mx-s');
   if(sd&&src){const cur=sd.value;const want=src.innerHTML.replace(/ selected/g,'');if(sd.dataset.src!==want){sd.innerHTML=want;sd.dataset.src=want;sd.value=cur;}}
 }
+// 学年总课时 = 该学年 3 学期 semDetail 课时 + BTEC 每门 0.5 + 手填 BTEC 另值(与「教学统计」学年总数同算法)
+function _tchYearLoad(n,yr){
+  const sems=['1','2','3'].map(s=>yr+'-'+s);
+  const wt=sems.reduce((s,sem)=>s+semDetail(n,sem).wt,0);
+  const btec=sems.reduce((s,sem)=>s+schD.filter(r=>r.tc===n&&r.sem===sem&&r.btec).length,0)*0.5;
+  const mb=+((_teachBtec||{})[n])||0;
+  return Math.round((wt+btec+mb)*100)/100;
+}
 function renderDeptTchMatrix(){
   _mxFillSelectors();_mtFillSelectors();
+  if(_teachBtec===null){_teachBtec={};loadTeachBtec();}
   const dept=(document.getElementById('f-mt-d')||{}).value||'';
   const sem=(document.getElementById('f-mt-s')||{}).value||'';
   const wrap=document.getElementById('mt-wrap'),em=document.getElementById('mt-em'),ttl=document.getElementById('mt-ttl');
   if(!wrap)return;
-  if(ttl)ttl.textContent='专业老师课表矩阵'+(dept?(' · '+dept):'')+(sem?(' · '+sem):'');
+  if(ttl)ttl.textContent='专业老师课表'+(dept?(' · '+dept):'')+(sem?(' · '+sem):'');
   if(!dept||!sem){wrap.innerHTML='';if(em){em.textContent='请选择专业 + 学年学期';em.style.display='block';}return;}
   const semRows=_filtArch([...schD]).filter(r=>r.sem===sem);
   // 老师:该部门在职老师(有限额) + 该学期实际有排课的该部门老师
@@ -5011,42 +5020,44 @@ function renderDeptTchMatrix(){
   const pend=semRows.filter(r=>!r.tc&&(r.cc||[]).some(c=>cohortDept(c.cohort)===dept));
   if(!tchs.length){wrap.innerHTML='';if(em){em.textContent=dept+' 部门没有老师';em.style.display='block';}return;}
   if(em)em.style.display='none';
-  const cohSet={};[...mine,...pend].forEach(r=>(r.cc||[]).forEach(c=>{if(cohortDept(c.cohort)===dept)cohSet[c.cohort]=1;}));
-  const cohs=Object.keys(cohSet).sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'}));
-  const OTH='__oth';
+  // 每门课只出现一次:单一「任课课程」栏,按 上半/下半/全学期 分行;届别·人数放在 tooltip
   const _HR={'上半学期':1,'上半':1,'下半学期':2,'下半':2,'全学期':3,'全':3};
-  const _HS={1:'上',2:'下',3:'全'};
-  const chip=(r,n)=>'<span onclick="event.stopPropagation();startES(\''+r.id+'\')" title="'+eh((r.en||'')+(r.half?' · '+r.half:'')+(r.type?' · '+r.type:''))+' — 点击编辑" style="display:inline-block;cursor:pointer;margin:1px 2px;padding:1px 6px;border-radius:10px;background:#F1F8F4;color:#1b7a5a;font-size:11px;font-weight:600;white-space:nowrap;font-family:ui-monospace" onmouseover="this.style.background=\'#D7EFE2\'" onmouseout="this.style.background=\'#F1F8F4\'">'+eh(r.course)+(n!=null?'<span style="color:#888;font-weight:400"> ·'+eh(String(n))+'</span>':'')+(_HS[_HR[r.half]]&&_HR[r.half]!==3?'<sup style="color:#999;font-weight:400">'+_HS[_HR[r.half]]+'</sup>':'')+(r.btec?'<sup style="color:#534AB7">B</sup>':'')+'</span>';
-  const cellsFor=rows=>{
-    const m={};cohs.forEach(c=>m[c]=[]);m[OTH]=[];
-    rows.sort((a,b)=>((_HR[a.half]||9)-(_HR[b.half]||9))||String(a.course||'').localeCompare(String(b.course||'')));
-    rows.forEach(r=>{let hit=false;(r.cc||[]).forEach(c=>{if(m[c.cohort]&&cohortDept(c.cohort)===dept){m[c.cohort].push(chip(r,c.count));hit=true;}});if(!hit)m[OTH].push(chip(r,null));});
-    return m;
+  const _HL={1:'上半',2:'下半',3:'全学期',9:'未定'};
+  const chip=r=>{
+    const cc=r.cc||[];const n=cc.reduce((s,c)=>s+(+c.count||0),0);
+    const tip=(r.en||'')+(r.type?' · '+r.type:'')+(cc.length?'\n'+cc.map(c=>c.cohort+' '+(c.count||0)+'人').join(' · '):'')+'\n点击编辑';
+    return '<span onclick="event.stopPropagation();startES(\''+r.id+'\')" title="'+eh(tip)+'" style="display:inline-flex;align-items:baseline;gap:4px;cursor:pointer;padding:3px 9px;border-radius:12px;background:#F1F8F4;color:#1b7a5a;font-size:12px;font-weight:600;white-space:nowrap;font-family:ui-monospace" onmouseover="this.style.background=\'#D7EFE2\'" onmouseout="this.style.background=\'#F1F8F4\'">'
+      +eh(r.course)+(r.btec?'<sup style="color:#534AB7;margin-left:-3px">B</sup>':'')
+      +(n?'<span style="color:#8aa79a;font-weight:400;font-size:10.5px">'+n+'人</span>':'')+'</span>';
   };
-  const hasOth=mine.some(r=>!(r.cc||[]).some(c=>cohortDept(c.cohort)===dept));
-  const cols=hasOth?[...cohs,OTH]:cohs;
-  const td='border-top:0.5px solid #eee;padding:4px 4px;vertical-align:top;text-align:center';
-  let h='<table style="border-collapse:collapse;font-size:12px"><thead><tr>'
-    +'<th style="position:sticky;left:0;background:#3C3489;color:#fff;text-align:left;padding:6px 10px;z-index:2">老师</th>'
-    +cols.map(c=>'<th style="background:'+(c===OTH?'#8a83c9':'#534AB7')+';color:#fff;padding:6px 9px;white-space:nowrap">'+(c===OTH?'其他专业':eh(c))+'</th>').join('')
-    +'<th style="background:#EEEDFE;color:#3C3489;padding:6px 8px;white-space:nowrap">本学期课数</th>'
-    +'<th style="background:#EEEDFE;color:#3C3489;padding:6px 8px;white-space:nowrap" title="semDetail 计算的课时权重(不含 BTEC / LA500);年限额为全学年">课时 / 年限额</th></tr></thead><tbody>';
+  const cellHtml=rows=>{
+    if(!rows.length)return'<span style="color:#dcdce4">—</span>';
+    const g={};rows.forEach(r=>{const k=_HR[r.half]||9;(g[k]=g[k]||[]).push(r);});
+    const ks=Object.keys(g).sort();
+    return ks.map((k,i)=>'<div style="display:flex;align-items:center;gap:8px;padding:3px 0'+(i?';border-top:0.5px dashed #e6e4f5':'')+'">'
+      +'<span style="flex:0 0 40px;font-size:10.5px;color:#8a83c9;text-align:right">'+_HL[k]+'</span>'
+      +'<div style="flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:4px">'+g[k].sort((a,b)=>String(a.course||'').localeCompare(String(b.course||''))).map(chip).join('')+'</div></div>').join('');
+  };
+  const td='border-top:0.5px solid #eee;padding:5px 8px;vertical-align:middle';
+  let h='<table style="border-collapse:collapse;font-size:12px;width:100%;max-width:900px"><thead><tr>'
+    +'<th style="background:#3C3489;color:#fff;text-align:left;padding:7px 12px;width:210px">老师</th>'
+    +'<th style="background:#534AB7;color:#fff;text-align:left;padding:7px 12px">任课课程</th>'
+    +'<th style="background:#EEEDFE;color:#3C3489;padding:7px 10px;white-space:nowrap;width:80px">本学期课数</th>'
+    +'<th style="background:#EEEDFE;color:#3C3489;padding:7px 10px;white-space:nowrap;width:150px" title="该学年 3 学期课时 + BTEC + 手填 BTEC 另值,与「教学统计」学年总数一致">总课时 / 学年规定 ('+eh(sem.split('-')[0])+')</th></tr></thead><tbody>';
   tchs.forEach(t=>{
     const rows=mine.filter(r=>r.tc===t.n);
-    const m=cellsFor(rows);
-    const wt=rows.length?Math.round(semDetail(t.n,sem).wt*100)/100:0;
-    h+='<tr'+(rows.length?'':' style="opacity:.5"')+'><td style="position:sticky;left:0;background:#fff;padding:5px 10px;white-space:nowrap;border-top:0.5px solid #eee;font-weight:600">'+eh(t.n)+(t.r?' <span style="color:#999;font-size:10px;font-weight:400">'+eh(t.r)+'</span>':'')+'</td>'
-      +cols.map(c=>'<td style="'+td+'">'+(m[c].length?m[c].join('<br>'):'<span style="color:#dcdce4">·</span>')+'</td>').join('')
-      +'<td style="'+td+';background:#EEEDFE;font-weight:700;color:#3C3489">'+rows.length+'</td>'
-      +'<td style="'+td+';background:#EEEDFE;color:#3C3489;white-space:nowrap">'+wt+' / '+(t.l||'—')+'</td></tr>';
+    const yt=_tchYearLoad(t.n,sem.split('-')[0]);const over=t.l>0&&yt>t.l;
+    h+='<tr'+(rows.length?'':' style="opacity:.5"')+'><td style="'+td+';white-space:nowrap;font-weight:600;padding-left:12px">'+eh(t.n)+(t.r?' <span style="color:#999;font-size:10px;font-weight:400">'+eh(t.r)+'</span>':'')+'</td>'
+      +'<td style="'+td+'">'+cellHtml(rows)+'</td>'
+      +'<td style="'+td+';text-align:center;background:#EEEDFE;font-weight:700;color:#3C3489">'+rows.length+'</td>'
+      +'<td style="'+td+';text-align:center;background:#EEEDFE;white-space:nowrap;'+(over?'color:#B91C1C;font-weight:700':'color:#3C3489')+'"'+(over?' title="超过学年规定"':'')+'>'+yt+' / '+(t.l||'—')+(over?' ⚠':'')+'</td></tr>';
   });
   if(pend.length){
-    const m=cellsFor(pend);
-    h+='<tr><td style="position:sticky;left:0;background:#FEF2F2;padding:5px 10px;white-space:nowrap;border-top:0.5px solid #eee;color:#B91C1C;font-weight:600">⏳ 待定老师</td>'
-      +cols.map(c=>'<td style="'+td+';background:#FEF8F8">'+(m[c].length?m[c].join('<br>'):'<span style="color:#dcdce4">·</span>')+'</td>').join('')
-      +'<td style="'+td+';background:#FEF2F2;font-weight:700;color:#B91C1C">'+pend.length+'</td><td style="'+td+';background:#FEF2F2"></td></tr>';
+    h+='<tr><td style="'+td+';background:#FEF2F2;white-space:nowrap;color:#B91C1C;font-weight:600;padding-left:12px">⏳ 待定老师</td>'
+      +'<td style="'+td+';background:#FEF8F8">'+cellHtml(pend)+'</td>'
+      +'<td style="'+td+';text-align:center;background:#FEF2F2;font-weight:700;color:#B91C1C">'+pend.length+'</td><td style="'+td+';background:#FEF2F2"></td></tr>';
   }
-  h+='</tbody></table><div style="font-size:11px;color:#999;margin-top:6px">上标:上=上半学期 · 下=下半学期 · B=BTEC。「其他专业」= 该老师教的、不含本专业届别的课。「课时」为本学期权重,年限额是全学年,仅供参考。</div>';
+  h+='</tbody></table><div style="font-size:11px;color:#999;margin-top:6px">每门课只列一次;课码旁为总人数,鼠标移上去看届别明细,点击编辑。B=BTEC。「总课时 / 学年规定」= 该学年 3 学期合计(含 BTEC),与「教学统计」学年总数一致,超过标红。</div>';
   wrap.innerHTML=h;
 }
 function renderSpStu(){
@@ -5887,7 +5898,7 @@ function autoSyncBtec(){
 
 // ═══════ §STATS 教学统计 ═══════
 let _teachBtec=null;  // {老师名: 手填BTEC另值},加进学年总数;null=未载入
-async function loadTeachBtec(){try{const r=await gasGet({action:'teachBtec'});_teachBtec=(r&&r.map)||{};}catch(e){_teachBtec={};}renderSta();}
+async function loadTeachBtec(){try{const r=await gasGet({action:'teachBtec'});_teachBtec=(r&&r.map)||{};}catch(e){_teachBtec={};}renderSta();if(_panelActive('sum'))renderDeptTchMatrix();}
 async function saveTeachBtec(name,val){
   const v=String(val||'').trim();
   if(v!==''&&!/^\d+(\.\d+)?$/.test(v)){alert('请填数字(可小数),或留空清除');renderSta();return;}

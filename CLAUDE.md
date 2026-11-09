@@ -43,7 +43,8 @@
   2. **排课批量导入自动建档新届别**:导入时若 `cc` 里引用了库中没有的届别,先逐个 `adminAddCohort` 建档(专业用新函数 `_cohGuessDept()`,全前缀匹配,IBCE 等 4 字母专业不会被截错),建完 `loadRefFromSheets()+rebuildUI()` 刷新;确认框会列出将自动建的届别。
   3. **班级总表「届别」下拉改为只列排课表里出现过的届别**:新 `_cohByDeptMerged()`(读 `schD`,经 `_filtArch` 过滤归档)。已毕业届别默认隐藏,工具栏加「显示已毕业」勾选框(`toggleCoShowGrad`/`_coShowGrad`)带出。`filterCohByDept` 与 `rebuildUI` 的 f-co-d/f-co 均改用此源。
   4. **修下拉载入时机**:下拉来源改读 `schD` 后,因 `init()` 的首次 `rebuildUI()` 在 `loadDataFromSheets()` 之前跑(此时 schD 空),会导致「专业」只剩「全部」。已在 `init()` 排课载入后、及 `syncAll()` 刷新后各补一次 `rebuildUI()`(线上 `rebuildUI()` 共 8 处)。
-- **2026-11-09 新增「学期总表 › 专业老师课表」子页(`sub-smt`,纯前端)**:`renderDeptTchMatrix()` / `_mtFillSelectors()`,紧接在 `renderDeptMatrix()` 后。行=所选部门老师(`tchrDrop()` 中 `t.d===dept`,有限额或本学期有课),列=该专业届别(`cohortDept`)+「其他专业」,格=课码·人数小标签,**点课码 → `startES(id)` 编辑**;末行「⏳ 待定老师」= 本专业 tc 空的排课;右侧「本学期课数」与「课时(`semDetail().wt`)/ 年限额」(年限额是全学年,仅参考不标红)。已挂进 `switchSub` 和 `renderAllSum`。本机预览验证过,已上线。
+- **2026-11-09 新增「学期总表 › 专业老师课表」子页(`sub-smt`,纯前端)**:`renderDeptTchMatrix()` / `_mtFillSelectors()`,紧接在 `renderDeptMatrix()` 后。行=所选部门老师(`tchrDrop()` 中 `t.d===dept`,有限额或本学期有课),列=该专业届别(`cohortDept`)+「其他专业」,格=课码·人数小标签,**点课码 → `startES(id)` 编辑**;末行「⏳ 待定老师」= 本专业 tc 空的排课;右侧「本学期课数」与「总课时 / 学年规定」。已挂进 `switchSub` 和 `renderAllSum`。
+  - 11-09 二修(**版面已改,上面「列=届别」的描述作废**):① 拿掉届别列,所有专业统一为「老师 | 任课课程 | 本学期课数 | 总课时 / 学年规定」,**每门课只出现一次**(chip = 课码 + 总人数,tooltip 列届别明细)②「总课时 / 学年规定」= `_tchYearLoad(n,yr)`:该学年 3 学期 `semDetail().wt` + BTEC×0.5 + 手填 `_teachBtec`,**与「教学统计」学年总数同算法**(已逐人核对一致),超额标红 ③ 任课课程格按 上半/下半/全学期 分行,chips 并排换行。
 - 上一轮完成:
   - 修 3 个 bug(均已上线):① 分页高亮错位(教务须知↔教学统计)② 排课/IS-SG 表头计数误导 → 「显示 X / 共 Y」③ 顶部「专业库」计数错源(11→10)
   - 新功能:老师离职软删存档(`migrations/003`)、后台分页分组 + 学年学期/专业卡片、编辑记录加「老师/届别」类型 + 改动一行逗号、归档按类型(排课+IS/SG vs 期末考 独立)
