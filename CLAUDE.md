@@ -32,11 +32,12 @@
 
 ---
 
-## 进度 / 待办（最后更新 2026-11-07 · 每次有进展就更这里）
+## 进度 / 待办（最后更新 2026-11-09 · 每次有进展就更这里）
 
 ### 目前做到哪
 - 系统上线稳定运行,约 8 位同事日常使用;**全站实际操作体检通过,无 JS 崩溃**。
-- DB 已跑到 `migrations/003`;**RLS 安全盘点 2026-11-05 全数通过**(全绿)。
+- DB 已跑到 `migrations/004`(002 已确认跑过);**RLS 安全盘点 2026-11-05 全数通过**(全绿)。
+- **2026-11-09 清 audit 双写(`migrations/004`,已跑+验证)**:`add_record/update_record/delete_record` 移除手写旧列审计,排课/IS-SG 增删改只剩 `trg_audit` 一条新列行。`audit_trg` 的 DELETE 改取 `coalesce(current_setting('app.editor'), old.editor)`,`delete_record` 删前 `set_config('app.editor', ed, true)` → 编辑记录的删除人 = 真正删的人(其他删除路径如 `exam_special` 仍取 old.editor)。验证:TEST999 新增/删除各只一条、editor 正确;同事改排课也只一条。旧列历史行保留未删。体检查询 `migrations/checks/audit_dual_write_inspect.sql`。
 - **2026-11-07 本轮完成(纯前端,均已上线验证)**:
   1. **后台编辑全面收齐为居中弹窗**:老师库 / 职位 / 毕业学分 / 课程总库 四个视图改成同一套路(顶部表单恒为「新增」,点 ✎/编辑 弹居中 modal)。靠 `form(E)` 双渲染 + `_opsF(id)`(作用域取值器:编辑时取 modal 内输入框,否则取顶部表单)。
   2. **排课批量导入自动建档新届别**:导入时若 `cc` 里引用了库中没有的届别,先逐个 `adminAddCohort` 建档(专业用新函数 `_cohGuessDept()`,全前缀匹配,IBCE 等 4 字母专业不会被截错),建完 `loadRefFromSheets()+rebuildUI()` 刷新;确认框会列出将自动建的届别。
@@ -50,7 +51,7 @@
 
 ### 下一步要做什么（按优先级）
 1. **基线快照 `migrations/000`**（一次性,未做)— 请 Aj. Tsai 跑 `000_baseline_HOWTO.md` 里的只读查询,把结果给我存档,作为 DB 现状定锚。
-2. **P1 · 清 audit 双写** — `add_record/update_record/delete_record` 仍有手写旧列审计,与触发器重复,每次编辑写两条(一真一空;前端已过滤空行,但 DB 仍持续膨胀)。移除这三个函数里的手写审计即可。
+2. ~~P1 · 清 audit 双写~~ ✅ 2026-11-09 完成(`migrations/004`)。其余约 10 个后台手写审计函数(admin_add_teacher 等)仍写旧列,不在编辑记录界面显示;要的话比照 002 改新列。
 3. **P1 · 报错透出推广** — 把 `_errText()` 接到更多后台写操作(目前只接了 `opsAfter` / `addCohSubmit`)。
 4. **P1 · 届别改卡片** — 后台「届别」仍是表格;改卡片时**必须保留年限 + 在读/已毕业状态**,别丢信息。
 5. **P2** — 原生 `alert`(117 处)→ toast;加**云端排程备份**(目前只靠本机 launchd,单点风险);顶部「专业」三处数字标示统一。

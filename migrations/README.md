@@ -19,7 +19,10 @@
 |---|---|---|
 | `000_baseline_2026-11-05.sql` | 基线:当天所有函数/表的完整定义 | 待填入(见 `000_baseline_HOWTO.md`) |
 | `001_audit_log_dual_schema_2026-11-05.sql` | 修 audit_log 新旧列冲突(新增届别/老师报错 42703) | ✅ 已跑 |
-| `002_admin_add_cohort_audit_newcols_2026-11-05.sql` | 新增届别写进「编辑记录」 | ⏳ 待确认已跑 |
+| `002_admin_add_cohort_audit_newcols_2026-11-05.sql` | 新增届别写进「编辑记录」 | ✅ 已跑(2026-11-09 audit_log 见 cohorts INSERT 新列行) |
+| `003_teacher_resigned_archive_2026-11-05.sql` | 老师离职软删存档(`teachers.resigned`) | ✅ 已跑 |
+| `004_remove_manual_audit_record_fns_2026-11-09.sql` | 清 audit 双写:排课/IS-SG 增删改只留触发器一条;删除人改记真正删的人 | ✅ 已跑 |
 | `checks/rls_audit.sql` | RLS 安全盘点(全表防护+外人写权限) | 只读,可重跑 |
+| `checks/audit_dual_write_inspect.sql` | audit 双写体检(三函数定义 / 触发器 / 新旧列行数) | 只读,可重跑 |
 
 > 约定:**从此以后,凡是给出要在 Supabase 跑的 SQL,都会同时在这里存一个编号档。**
