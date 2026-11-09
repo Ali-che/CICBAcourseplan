@@ -62,6 +62,7 @@ input[readonly]{color:#888;background:#f2f2f2}
 .btn-ic{width:26px;height:26px;padding:0;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border:0.5px solid;background:transparent;line-height:1;margin:0 2px;font-family:inherit}
 .btn-ic-edit{color:#185FA5;border-color:#B5D4F4}
 .btn-ic-del{color:#a32d2d;border-color:#f7c1c1}
+.btn-ic-copy{color:#3B6D11;border-color:#C0DD97}
 .btn-ok{color:#3B6D11;border-color:#C0DD97;font-size:11px;padding:3px 8px}.btn-ok:hover{background:#EAF3DE}
 .btn-d{color:#a32d2d;border-color:#f7c1c1;font-size:11px;padding:3px 8px}.btn-d:hover{background:#FCEBEB}
 .sechdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem}
@@ -4828,8 +4829,28 @@ function renderSp(){
       '<td>'+r.cls+'</td><td>'+semBadge(r.sem)+'</td>'+
       '<td style="font-size:12px;white-space:nowrap">'+(r.tc?eh(r.tc):'<span style="background:#FEE2E2;color:#B91C1C;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;display:inline-block">⏳ 待定</span>')+'</td>'+
       '<td style="font-size:11px;color:#888">'+(r.nt?eh(r.nt):'')+'</td>'+
-      '<td style="white-space:nowrap"><button class="btn-ic btn-ic-edit" onclick="startESp('+r.id+')" title="更动"><svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zm.708 1.06L11.5 2.5l2 2L14.5 3.5 12.854 1.207zM10.5 3.5l-9 9 1.5 1.5 9-9-1.5-1.5z"/></svg></button><button class="btn-ic btn-ic-del" onclick="delSp('+r.id+')" title="删除"><svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H3.5V0a1 1 0 0 1 1-1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg></button></td></tr>';
+      '<td style="white-space:nowrap"><button class="btn-ic btn-ic-edit" onclick="startESp('+r.id+')" title="更动"><svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zm.708 1.06L11.5 2.5l2 2L14.5 3.5 12.854 1.207zM10.5 3.5l-9 9 1.5 1.5 9-9-1.5-1.5z"/></svg></button><button class="btn-ic btn-ic-copy" onclick="copySp('+r.id+')" title="复制（同一学生再加一门课）"><svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H6z"/><path d="M2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1H2z"/></svg></button><button class="btn-ic btn-ic-del" onclick="delSp('+r.id+')" title="删除"><svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H3.5V0a1 1 0 0 1 1-1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg></button></td></tr>';
   }).join('');
+}
+// 复制：把这笔的学生资料 + 班级 + 学年学期带进「新增」表单，清空课程/老师/备注，方便同一学生再报一门
+function copySp(id){
+  id=String(id);const r=spD.find(x=>String(x.id)===id);if(!r)return;
+  const set=(k,v)=>{const el=document.getElementById(k);if(el)el.value=v||'';};
+  set('p-id',r.sid);set('p-mr',r.mr);set('p-nm',r.nm);
+  const mj=document.getElementById('p-mj');
+  if(mj&&r.mj&&![...mj.options].some(o=>o.value===r.mj)){const o=document.createElement('option');o.value=r.mj;o.textContent=r.mj;mj.appendChild(o);}
+  set('p-mj',r.mj);
+  ['p-cls','p-sem'].forEach(k=>{const v=k==='p-cls'?r.cls:r.sem,el=document.getElementById(k);
+    if(el&&v&&![...el.options].some(o=>o.value===v)){const o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o);}
+    set(k,v);});
+  set('p-co','');set('p-en','');set('p-tc','');set('p-nt','');
+  toggleAddSp(true);
+  const hint=document.getElementById('add-sp-hint');
+  if(hint){hint.textContent='已复制 '+(r.mr||'')+' '+r.nm+'（'+r.sid+'），请填新的课程代码与老师';hint.style.color='#3B6D11';hint.style.fontWeight='600';}
+  const hdr=document.getElementById('add-sp-hdr');
+  if(hdr)hdr.scrollIntoView({behavior:'smooth',block:'start'});
+  const co=document.getElementById('p-co');
+  if(co){co.focus();co.style.boxShadow='0 0 0 2px #C0DD97';setTimeout(()=>{co.style.boxShadow='';},2000);}
 }
 function clearSpF(){
   ['p-id','p-mr','p-nm','p-mj','p-co','p-cls','p-tc','p-nt'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -7394,7 +7415,7 @@ function toggleAddSp(forceOpen){
   const open=(forceOpen!==undefined)?forceOpen:!isOpen;
   body.style.display=open?'block':'none';
   if(arrow)arrow.style.transform=open?'rotate(180deg)':'rotate(0deg)';
-  if(hint)hint.textContent=open?'（点击收起）':'（点击展开）';
+  if(hint){hint.textContent=open?'（点击收起）':'（点击展开）';hint.style.color='';hint.style.fontWeight='';}
   try{localStorage.setItem('cic_add_sp_open',open?'1':'0');}catch(e){}
   // FIX: 同 toggleAddSch
   setTimeout(syncTblHeight,50);
