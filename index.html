@@ -556,10 +556,10 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       </div>
     </div>
     <div class="fbar no-print" style="margin-bottom:.6rem;flex-wrap:wrap">
-      <label>学年学期</label><select id="sch-sem-f" onchange="renderSch()"><option value="">全部学年学期</option></select>
-      <label>课程代码</label><select id="sch-dept-f" onchange="renderSch()"><option value="">课程代码</option></select>
-      <label>老师</label><select id="sch-tc-f" onchange="renderSch()"><option value="">全部老师</option></select>
-      <input id="sch-search" type="text" oninput="renderSch()" placeholder="🔍 搜课程代码 / 英文名 / 班级" style="width:220px">
+      <label>学年学期</label><select id="sch-sem-f" onchange="renderSch()"><option value="">全部</option></select>
+      <label>课程代码</label><select id="sch-dept-f" onchange="renderSch()"><option value="">全部</option></select>
+      <label>老师</label><select id="sch-tc-f" onchange="renderSch()"><option value="">全部</option></select>
+      <input id="sch-search" type="text" oninput="renderSch()" placeholder="🔍 搜索：课程代码 / 英文名 / 班级" style="width:220px">
       <label style="font-size:11px;color:#888;cursor:pointer;white-space:nowrap" title="勾选后在各视图临时显示已归档学期(全局)"><input type="checkbox" id="sch-showarch" onchange="toggleShowArch(this.checked)" style="width:auto;vertical-align:middle"> 显示已归档</label>
     </div>
     <div class="tbl-wrap">
@@ -660,10 +660,10 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       </div>
     </div>
     <div class="fbar no-print" style="margin-bottom:.6rem;flex-wrap:wrap">
-      <label>学年学期</label><select id="sp-sem-f" onchange="renderSp()"><option value="">全部学年学期</option></select>
-      <label>课程代码</label><select id="sp-dept-f" onchange="renderSp()"><option value="">课程代码</option></select>
-      <label>专业</label><select id="sp-mj-f" onchange="renderSp()"><option value="">全部专业</option></select>
-      <input id="sp-search" type="text" oninput="renderSp()" placeholder="🔍 搜课程代码 / 英文名 / 学号 / 姓名 / 班级" style="width:260px">
+      <label>学年学期</label><select id="sp-sem-f" onchange="renderSp()"><option value="">全部</option></select>
+      <label>课程代码</label><select id="sp-dept-f" onchange="renderSp()"><option value="">全部</option></select>
+      <label>专业</label><select id="sp-mj-f" onchange="renderSp()"><option value="">全部</option></select>
+      <input id="sp-search" type="text" oninput="renderSp()" placeholder="🔍 搜索：课程代码 / 英文名 / 学号 / 姓名 / 班级" style="width:260px">
       <label style="font-size:11px;color:#888;cursor:pointer;white-space:nowrap" title="显示已归档学期(全局)"><input type="checkbox" id="sp-showarch" onchange="toggleShowArch(this.checked)" style="width:auto;vertical-align:middle"> 显示已归档</label>
     </div>
     <div class="tbl-wrap">
@@ -712,12 +712,12 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     <div class="fbar">
       <label>学年学期</label>
       <select id="f-tc-s" onchange="renderTchr()"><option value="">全部</option></select>
-      <label>所属部门</label>
+      <label>部门</label>
       <select id="f-tc-d" onchange="filterTchrByDept()"><option value="">全部</option></select>
-      <label>任课老师</label><select id="f-tc" onchange="renderTchr()"><option value="">请选择</option></select>
+      <label>老师</label><select id="f-tc" onchange="renderTchr()"><option value="">请选择</option></select>
       <label>课程类型</label>
       <select id="f-tc-t" onchange="renderTchr()"><option value="">全部</option><option>正常</option><option>英文</option><option>CD-实习</option><option>实习</option><option>SG</option><option>Capstone</option></select>
-      <input id="f-tc-q" oninput="renderTchr()" placeholder="🔍 课程代码 / 英文名 / 班级" style="width:200px">
+      <input id="f-tc-q" oninput="renderTchr()" placeholder="🔍 搜索：课程代码 / 英文名 / 班级" style="width:200px">
     </div>
     <div class="card">
       <div class="ct" id="tc-ttl">任课老师课程总表</div>
@@ -735,7 +735,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <label>专业</label>
       <select id="f-co-d" onchange="filterCohByDept()"><option value="">全部</option></select>
       <label>届别</label><select id="f-co" onchange="renderCoh()"><option value="">请选择</option></select>
-      <input id="f-co-q" oninput="renderCoh()" placeholder="🔍 课程代码 / 英文名 / 班级" style="width:200px">
+      <input id="f-co-q" oninput="renderCoh()" placeholder="🔍 搜索：课程代码 / 英文名 / 班级" style="width:200px">
       <label style="font-size:12px;color:#555;cursor:pointer;white-space:nowrap" title="届别下拉只列排课表里出现过的;已毕业届别默认隐藏,勾此显示"><input type="checkbox" id="f-co-grad" onchange="toggleCoShowGrad(this.checked)" style="width:auto;vertical-align:middle"> 显示已毕业</label>
     </div>
     <div class="card">
@@ -751,9 +751,9 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     <div class="fbar">
       <label>学年学期</label>
       <select id="f-sp-sem" onchange="renderSpStu()"><option value="">全部</option></select>
-      <label>学生专业</label><select id="f-sm" onchange="renderSpStu()"><option value="">全部</option></select>
-      <label>搜索</label><input id="f-stu" placeholder="🔍 姓名 / 学号" style="width:150px" oninput="renderSpStu()">
-      <input id="f-sss-q" oninput="renderSpStu()" placeholder="🔍 课程代码 / 英文名" style="width:170px">
+      <label>专业</label><select id="f-sm" onchange="renderSpStu()"><option value="">全部</option></select>
+      <input id="f-stu" placeholder="🔍 搜索：姓名 / 学号" style="width:150px" oninput="renderSpStu()">
+      <input id="f-sss-q" oninput="renderSpStu()" placeholder="🔍 搜索：课程代码 / 英文名" style="width:170px">
     </div>
     <div class="card">
       <div class="ct">IS/SG 排课总表 · 学生维度</div>
@@ -767,8 +767,8 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <select id="f-st-s" onchange="renderSpTchr()"><option value="">全部</option></select>
       <label>专业</label>
       <select id="f-st-d" onchange="filterSpTchrByDept()"><option value="">全部</option></select>
-      <label>授课老师</label><select id="f-st" onchange="renderSpTchr()"><option value="">请选择</option></select>
-      <input id="f-sst-q" oninput="renderSpTchr()" placeholder="🔍 课程代码 / 英文名" style="width:170px">
+      <label>老师</label><select id="f-st" onchange="renderSpTchr()"><option value="">请选择</option></select>
+      <input id="f-sst-q" oninput="renderSpTchr()" placeholder="🔍 搜索：课程代码 / 英文名" style="width:170px">
     </div>
     <div class="card">
       <div class="ct">IS/SG 排课总表 · 老师维度</div>
@@ -812,8 +812,8 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 <div id="panel-sta" class="panel">
   <div class="mgrid" id="sta-m"></div>
   <div class="fbar" style="margin-bottom:.875rem">
-    <label>学年筛选</label>
-    <select id="sta-yr" onchange="renderSta()" style="width:auto;font-size:12px;padding:5px 8px"><option value="">— 请选择学年 —</option></select>
+    <label>学年</label>
+    <select id="sta-yr" onchange="renderSta()" style="width:auto;font-size:12px;padding:5px 8px"><option value="">请选择</option></select>
   </div>
 
   <!-- v7.9.11: Top 10 可优先排课面板（可折叠）-->
@@ -823,7 +823,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <span id="sta-low-arrow" style="display:inline-block;transition:transform .15s">🔻</span>
         <span>可优先排课</span>
       </span>
-      <select id="sta-low-dept" onchange="renderLowPanel()" style="font-size:11px;padding:2px 8px;border:0.5px solid #FDE68A;border-radius:5px;background:#fff;color:#92400E;font-weight:500;cursor:pointer;height:24px;width:auto;min-width:100px"><option value="">全本科</option></select>
+      <select id="sta-low-dept" onchange="renderLowPanel()" style="font-size:11px;padding:2px 8px;border:0.5px solid #FDE68A;border-radius:5px;background:#fff;color:#92400E;font-weight:500;cursor:pointer;height:24px;width:auto;min-width:100px"><option value="">全部</option></select>
       <span style="font-size:11px;font-weight:400;color:#A16207">% 最低 10 位 · 点击跳到表格行</span>
     </div>
     <div id="sta-low-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px;margin-top:8px"></div>
@@ -957,7 +957,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     <div class="fbar no-print" style="margin-bottom:.6rem;flex-wrap:wrap">
       <label>专业</label><select id="btec-dept-f" onchange="renderBtec()"><option value="">全部</option></select>
       <label>学年学期</label><select id="btec-intake-f" onchange="renderBtec()"><option value="">全部</option></select>
-      <input id="btec-q" oninput="renderBtec()" placeholder="🔍 学号 / 姓名" style="width:150px">
+      <input id="btec-q" oninput="renderBtec()" placeholder="🔍 搜索：学号 / 姓名" style="width:150px">
       <label style="font-size:11px;color:#888;cursor:pointer"><input type="checkbox" id="btec-meta" onchange="renderBtec()" style="width:auto"> 显示讲师</label>
       <label style="font-size:11px;color:#888;cursor:pointer"><input type="checkbox" id="btec-kind-show" onchange="renderBtec()" style="width:auto"> 显示类别</label>
     </div>
@@ -1016,9 +1016,9 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     </div>
     <div class="fbar no-print" style="margin-bottom:.6rem;flex-wrap:wrap">
       <label>学年学期</label><select id="exam-sem-f" onchange="renderExam()"><option value="">全部</option></select>
-      <label>系别</label><select id="exam-dept-f" onchange="renderExam()"><option value="">全部</option></select>
+      <label>专业</label><select id="exam-dept-f" onchange="renderExam()"><option value="">全部</option></select>
       <label>类型</label><select id="exam-kind-f" onchange="renderExam()"><option value="">全部</option><option>登分</option><option>补考</option><option>缓考</option><option>考试冲突</option><option>其他</option></select>
-      <input id="exam-q" oninput="renderExam()" placeholder="🔍 老师/课程/学号/姓名/学校" style="width:200px">
+      <input id="exam-q" oninput="renderExam()" placeholder="🔍 搜索：老师 / 课程 / 学号 / 姓名 / 学校" style="width:200px">
       <label style="font-size:11px;color:#888;cursor:pointer;white-space:nowrap" title="显示已归档学期(全局)"><input type="checkbox" id="exam-showarch" onchange="toggleShowArch(this.checked)" style="width:auto;vertical-align:middle"> 显示已归档</label>
     </div>
     <div class="tbl-wrap" style="overflow:auto;max-height:calc(100vh - 300px)">
@@ -1608,8 +1608,8 @@ function opsCohView(){
       +'<div class="fg"><label>状态</label><select id="ops-coh-eov"><option value="">自动(按年限)</option><option value="active"'+(opsEV('coh','ov')==='active'?' selected':'')+'>强制在读</option><option value="grad"'+(opsEV('coh','ov')==='grad'?' selected':'')+'>强制已毕业</option></select></div>'
       +'<button class="btn btn-p" onclick="opsUpdateCoh()">保存修改</button> <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button></div>'):'';
   return addForm
-    +'<div class="fbar" style="margin:4px 0 8px;align-items:center">筛选 <select onchange="_cohDeptF=this.value;opsRenderSec()" style="font-size:12px;padding:4px 8px"><option value="">全部专业</option>'+filtOpts+'</select>'
-    +'<select onchange="_cohYrF=this.value;opsRenderSec()" style="font-size:12px;padding:4px 8px;margin-left:6px"><option value="">全部入学年</option>'+yrOpts.map(function(y){return '<option value="'+y+'"'+(_cohYrF===y?' selected':'')+'>'+y+' 级</option>';}).join('')+'</select>'
+    +'<div class="fbar" style="margin:4px 0 8px;align-items:center"><label>专业</label><select onchange="_cohDeptF=this.value;opsRenderSec()" style="font-size:12px;padding:4px 8px"><option value="">全部</option>'+filtOpts+'</select>'
+    +'<label>入学年</label><select onchange="_cohYrF=this.value;opsRenderSec()" style="font-size:12px;padding:4px 8px"><option value="">全部</option>'+yrOpts.map(function(y){return '<option value="'+y+'"'+(_cohYrF===y?' selected':'')+'>'+y+' 级</option>';}).join('')+'</select>'
     +'<label style="font-size:12px;color:#555;cursor:pointer;margin-left:10px"><input type="checkbox"'+(_cohHideGrad?'':' checked')+' onchange="_cohHideGrad=!this.checked;opsRenderSec()" style="width:auto;vertical-align:middle"> 显示已毕业</label>'
     +'<span style="font-size:11px;color:#888;margin-left:10px">显示 '+list.length+' / 共 '+total+' 届</span></div>'
     +'<div class="tbl-wrap" style="max-height:calc(100vh - 470px);overflow:auto">'+groupsHtml+'</div>'
@@ -1666,7 +1666,7 @@ function opsTchView(){
     const dQuota=E?(opsEV('tch','quota')||''):opsPosQuota(dPos);
     return '<div class="ops-add">'+(E?'<div style="width:100%;font-size:12px;color:#534AB7;font-weight:600;margin-bottom:2px">✏️ 编辑老师(姓名不可改;要改名请删除后重加)</div>':'')+
     '<div class="fg"><label>姓名*</label><input id="ops-tch-name" '+(E?'readonly style="width:150px;background:#eee"':'style="width:150px"')+' value="'+(E?eh(opsEV('tch','name')):'')+'" placeholder="Aj. Xxx, Yyy"></div>'+
-    '<div class="fg"><label>所属部门</label><select id="ops-tch-dept">'+opsTchDeptOpts(E?opsEV('tch','dept'):'')+'</select></div>'+
+    '<div class="fg"><label>部门</label><select id="ops-tch-dept">'+opsTchDeptOpts(E?opsEV('tch','dept'):'')+'</select></div>'+
     '<div class="fg"><label>职位</label><select id="ops-tch-pos" onchange="opsFillQuota()" style="min-width:130px">'+opsPosOpts(dPos)+'</select></div>'+
     '<div class="fg"><label>限额</label><input id="ops-tch-quota" type="number" step="0.5" style="width:65px" value="'+eh(String(dQuota||''))+'" placeholder="10"></div>'+
     '<div class="fg"><label>员工号</label><input id="ops-tch-eid" style="width:90px" value="'+(E?eh(opsEV('tch','employee_id')):'')+'"></div>'+
@@ -1769,7 +1769,7 @@ function opsCatView(){
     '<div class="fg" style="flex:1 1 280px;min-width:240px"><label>说明(课程结构页 ⓘ 展开的介绍)</label><textarea id="ops-cat-desc" rows="2" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:12px;padding:5px 8px;border:0.5px solid #cbd5e1;border-radius:6px;resize:vertical" placeholder="课程简介…">'+eh(curDesc)+'</textarea></div>'+
     '<button class="btn btn-p" onclick="opsAddCat()">'+(E?'保存修改':'+ 新增')+'</button>'+(E?' <button class="btn btn-sm" onclick="opsCancelEdit()">取消</button>':'')+'</div>';};
   return form(false)+
-    '<div style="margin-bottom:8px"><input id="ops-cat-q" value="'+eh(opsCatQ)+'" oninput="opsCatQ=this.value;opsCatApply()" placeholder="🔍 全局搜(代码/中英文/对接/模块/版本/备注/说明)" style="width:320px;padding:6px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:12px"> <span id="ops-cat-count" style="font-size:11px;color:#888">共 '+all.length+' 条，筛出 '+rows.length+' 条</span> <button class="btn btn-sm" id="ops-cat-batch" onclick="opsCatBatchDel()" style="display:none;color:#a32d2d;border-color:#f7c1c1;vertical-align:middle">'+_ICOs.del+' 删除选中 <span id="ops-cat-batch-n">0</span></button> <button class="btn btn-sm" onclick="opsCatExport()" title="导出当前课程库为 CSV(带 id,可在 Excel 改好再导入)" style="vertical-align:middle">📤 导出 CSV</button> <button class="btn btn-sm" onclick="opsCatTemplate()" title="下载空白导入模版(CSV,含表头与示例行)" style="vertical-align:middle">📄 下载模版</button> <button class="btn btn-sm" onclick="opsCatImportOpen()" title="从 Excel/CSV 批量导入·以(专业+代码+版本)或 id 为键 upsert" style="vertical-align:middle;color:#185FA5;border-color:#AFcbE8">📥 批量导入</button></div>'+
+    '<div style="margin-bottom:8px"><input id="ops-cat-q" value="'+eh(opsCatQ)+'" oninput="opsCatQ=this.value;opsCatApply()" placeholder="🔍 搜索：代码 / 中英文 / 对接 / 模块 / 版本 / 备注 / 说明" style="width:320px;padding:6px 10px;border:0.5px solid #cbd5e1;border-radius:6px;font-size:12px"> <span id="ops-cat-count" style="font-size:11px;color:#888">共 '+all.length+' 条，筛出 '+rows.length+' 条</span> <button class="btn btn-sm" id="ops-cat-batch" onclick="opsCatBatchDel()" style="display:none;color:#a32d2d;border-color:#f7c1c1;vertical-align:middle">'+_ICOs.del+' 删除选中 <span id="ops-cat-batch-n">0</span></button> <button class="btn btn-sm" onclick="opsCatExport()" title="导出当前课程库为 CSV(带 id,可在 Excel 改好再导入)" style="vertical-align:middle">📤 导出 CSV</button> <button class="btn btn-sm" onclick="opsCatTemplate()" title="下载空白导入模版(CSV,含表头与示例行)" style="vertical-align:middle">📄 下载模版</button> <button class="btn btn-sm" onclick="opsCatImportOpen()" title="从 Excel/CSV 批量导入·以(专业+代码+版本)或 id 为键 upsert" style="vertical-align:middle;color:#185FA5;border-color:#AFcbE8">📥 批量导入</button></div>'+
     '<div class="tbl-wrap" style="max-height:calc(100vh - 490px)"><table><thead><tr>'+
       '<th style="background:#534AB7;text-align:center;vertical-align:top;padding:4px 5px"><input type="checkbox" id="ops-cat-master" onclick="opsCatToggleAll(this.checked)" title="全选/全不选(当前筛选)"></th>'+
       hd('code','代码',ti('code'))+hd('zh','中文名',ti('zh'))+hd('en','英文名',ti('en'))+
@@ -2066,7 +2066,7 @@ async function loadBtec(){
   // 学生备注:独立小 RPC 兜底合并(不依赖 btec_data 是否带回 note;RPC 未建时静默跳过)
   try{const nr=await gasGet({action:'btecNotes'});if(nr&&nr.success&&Array.isArray(nr.notes)){var _nm={};nr.notes.forEach(function(x){_nm[String(x.id)]=x.note;});(_btec.students||[]).forEach(function(s){s.note=(_nm[String(s.id)]!=null?_nm[String(s.id)]:(s.note||''));});}}catch(e){}
   const df=document.getElementById('btec-dept-f');
-  if(df){const cur=df.value;const ds=[...new Set((_btec.students||[]).map(s=>s.dept).filter(Boolean))].sort();df.innerHTML='<option value="">全部专业</option>'+ds.map(d=>'<option value="'+eh(d)+'"'+(d===cur?' selected':'')+'>'+eh(d)+'</option>').join('');}
+  if(df){const cur=df.value;const ds=[...new Set((_btec.students||[]).map(s=>s.dept).filter(Boolean))].sort();df.innerHTML='<option value="">全部</option>'+ds.map(d=>'<option value="'+eh(d)+'"'+(d===cur?' selected':'')+'>'+eh(d)+'</option>').join('');}
   renderBtec();
 }
 let _btecYrF='';  // 学年色块筛选(''=全部;'未设'=没填学年)
@@ -2439,11 +2439,11 @@ function opsEditsView(){
   var ib='font-size:12px;padding:5px 8px;border:0.5px solid #cbd5e1;border-radius:6px;box-sizing:border-box';
   var names=((_acct&&_acct.rows)||[]).map(function(x){return x.name;}).filter(Boolean);names=names.filter(function(v,i){return names.indexOf(v)===i;}).sort();
   if(f.editor&&names.indexOf(f.editor)<0)names.push(f.editor);
-  var edSel='<select id="aud-editor" style="'+ib+';width:150px"><option value="">全部修改人</option>'+names.map(function(nm){return '<option value="'+eh(nm)+'"'+(f.editor===nm?' selected':'')+'>'+eh(nm)+'</option>';}).join('')+(!_acct.loaded?'<option value="" disabled>(账号载入中…)</option>':'')+'</select>';
+  var edSel='<select id="aud-editor" style="'+ib+';width:150px"><option value="">全部</option>'+names.map(function(nm){return '<option value="'+eh(nm)+'"'+(f.editor===nm?' selected':'')+'>'+eh(nm)+'</option>';}).join('')+(!_acct.loaded?'<option value="" disabled>(账号载入中…)</option>':'')+'</select>';
   var h='<div style="display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 10px;background:#F7F6FD;border-radius:8px">'+
-     edSel+
-     '<select id="aud-tbl" style="'+ib+';width:100px">'+o('','全部类型',f.tbl)+o('schedule','排课',f.tbl)+o('special','IS/SG',f.tbl)+o('exam_special','期末考',f.tbl)+o('cohorts','届别',f.tbl)+o('teachers','老师',f.tbl)+'</select>'+
-     '<select id="aud-op" style="'+ib+';width:96px">'+o('','全部动作',f.op)+o('INSERT','新增',f.op)+o('UPDATE','修改',f.op)+o('DELETE','删除',f.op)+o('BASELINE','起始',f.op)+'</select>'+
+     '<label style="font-size:11px;color:#666">修改人</label>'+edSel+
+     '<label style="font-size:11px;color:#666">类型</label><select id="aud-tbl" style="'+ib+';width:100px">'+o('','全部',f.tbl)+o('schedule','排课',f.tbl)+o('special','IS/SG',f.tbl)+o('exam_special','期末考',f.tbl)+o('cohorts','届别',f.tbl)+o('teachers','老师',f.tbl)+'</select>'+
+     '<label style="font-size:11px;color:#666">动作</label><select id="aud-op" style="'+ib+';width:96px">'+o('','全部',f.op)+o('INSERT','新增',f.op)+o('UPDATE','修改',f.op)+o('DELETE','删除',f.op)+o('BASELINE','起始',f.op)+'</select>'+
      '<span style="font-size:11px;color:#888">时间</span>'+
      '<input id="aud-from" type="date" value="'+eh(f.from)+'" style="'+ib+';width:140px">'+
      '<span style="color:#aaa">–</span>'+
@@ -2795,7 +2795,7 @@ function renderBtec(){
   renderBtecIV(units0,isAdmin);
   // 学年学期筛选:选项=表格里真的出现过的学期
   const semF=document.getElementById('btec-intake-f');const inf=(semF||{}).value||'';
-  if(semF){const appear={};studs.forEach(s=>units0.forEach(u=>{const c=_btecCell(s,u.code);if(c.sem)appear[c.sem]=1;}));(typeof SEMS!=='undefined'?SEMS:[]).forEach(x=>{if(x)appear[x]=1;});const xs=Object.keys(appear).sort();const byYr={};xs.forEach(s=>{const yr=String(s).substring(0,4);(byYr[yr]=byYr[yr]||[]).push(s);});let want='<option value="">全部学年学期</option>';Object.keys(byYr).sort().forEach(yr=>{want+='<optgroup label="─ '+yr+' ─">'+byYr[yr].map(s=>'<option'+(s===inf?' selected':'')+'>'+eh(s)+'</option>').join('')+'</optgroup>';});if(semF.innerHTML!==want)semF.innerHTML=want;}
+  if(semF){const appear={};studs.forEach(s=>units0.forEach(u=>{const c=_btecCell(s,u.code);if(c.sem)appear[c.sem]=1;}));(typeof SEMS!=='undefined'?SEMS:[]).forEach(x=>{if(x)appear[x]=1;});const xs=Object.keys(appear).sort();const byYr={};xs.forEach(s=>{const yr=String(s).substring(0,4);(byYr[yr]=byYr[yr]||[]).push(s);});let want='<option value="">全部</option>';Object.keys(byYr).sort().forEach(yr=>{want+='<optgroup label="─ '+yr+' ─">'+byYr[yr].map(s=>'<option'+(s===inf?' selected':'')+'>'+eh(s)+'</option>').join('')+'</optgroup>';});if(semF.innerHTML!==want)semF.innerHTML=want;}
   // 选了某学期 → 只显示该学期有课的单元行
   const units=inf?units0.filter(u=>studs.some(s=>_btecCell(s,u.code).sem===inf)):units0;
   const hint=document.getElementById('btec-hint');if(hint)hint.textContent=studs.length+' 生 · '+units.length+' 单元'+(inf?(' @'+inf):'')+(isAdmin?' · 点格子改 学期/讲师/IV':'');
@@ -4047,9 +4047,9 @@ function _showTransferDialog(cur,candidates){
     const allSems=[...new Set(candidates.map(c=>c.sem).filter(Boolean))].sort();
     const allHalves=[...new Set(candidates.map(c=>c.half).filter(Boolean))];
     const allCls=[...new Set(candidates.map(c=>c.cls).filter(Boolean))].sort();
-    const semOpts='<option value="">全部学年学期</option>'+allSems.map(s=>'<option value="'+eh(s)+'">'+eh(s)+'</option>').join('');
-    const halfOpts='<option value="">全部上下半</option>'+allHalves.map(h=>'<option value="'+eh(h)+'">'+eh(h)+'</option>').join('');
-    const clsOpts='<option value="">全部班级</option>'+allCls.map(c=>'<option value="'+eh(c)+'">'+eh(c)+'</option>').join('');
+    const semOpts='<option value="">全部</option>'+allSems.map(s=>'<option value="'+eh(s)+'">'+eh(s)+'</option>').join('');
+    const halfOpts='<option value="">全部</option>'+allHalves.map(h=>'<option value="'+eh(h)+'">'+eh(h)+'</option>').join('');
+    const clsOpts='<option value="">全部</option>'+allCls.map(c=>'<option value="'+eh(c)+'">'+eh(c)+'</option>').join('');
 
     modal.innerHTML='<div class="modal-box" style="max-width:720px">'+
       '<div class="modal-hdr"><h3>↔ 转到其他课程</h3><button class="modal-close" data-action="cancel">✕</button></div>'+
@@ -4063,12 +4063,11 @@ function _showTransferDialog(cur,candidates){
       '<div style="background:#F8F8FA;padding:8px;border-radius:6px;margin-bottom:12px">'+cohCks+'</div>'+
       '<div class="modal-sec">② 选目标课程（可筛学期/上下半，含新学期新上下半的已开课）</div>'+
       // 筛选器
-      '<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center">'+
-      '<span style="font-size:11px;color:#666">筛选：</span>'+
-      '<select id="tr-f-sem" style="font-size:12px;width:auto;padding:4px 8px" onchange="_filterTransferList()">'+semOpts+'</select>'+
-      '<select id="tr-f-half" style="font-size:12px;width:auto;padding:4px 8px" onchange="_filterTransferList()">'+halfOpts+'</select>'+
-      '<select id="tr-f-cls" style="font-size:12px;width:auto;padding:4px 8px" onchange="_filterTransferList()">'+clsOpts+'</select>'+
-      '<input id="tr-f-search" placeholder="🔍 搜课程代码 / 英文名" oninput="_filterTransferList()" style="font-size:12px;flex:1;min-width:180px;padding:5px 10px">'+
+      '<div class="fbar" style="margin-bottom:8px;width:100%">'+
+      '<label>学年学期</label><select id="tr-f-sem" style="font-size:12px;width:auto;padding:4px 8px" onchange="_filterTransferList()">'+semOpts+'</select>'+
+      '<label>上下半</label><select id="tr-f-half" style="font-size:12px;width:auto;padding:4px 8px" onchange="_filterTransferList()">'+halfOpts+'</select>'+
+      '<label>班级</label><select id="tr-f-cls" style="font-size:12px;width:auto;padding:4px 8px" onchange="_filterTransferList()">'+clsOpts+'</select>'+
+      '<input id="tr-f-search" placeholder="🔍 搜索：课程代码 / 英文名" oninput="_filterTransferList()" style="font-size:12px;flex:1;min-width:180px;padding:5px 10px">'+
       '<button class="btn btn-sm" onclick="_trMatchCurrent()" style="font-size:10px;padding:3px 8px;color:#534AB7;border-color:#AFA9EC" title="一键填入跟当前记录相同的学期/上下半/班级">📌 同当前</button>'+
       '</div>'+
       '<div style="font-size:11px;color:#888;margin-bottom:6px"><span id="tr-count">—</span></div>'+
@@ -4488,15 +4487,15 @@ const SCH_DEPT_OPTIONS=['CA','CD','EV','FA','GE','GE-KE','GE-KH','GE-LA','IB','I
 function buildSchDeptFilter(){
   const sel=document.getElementById('sch-dept-f');if(!sel)return;
   const cur=sel.value;
-  // 默认项文字 = "课程代码"（同时作为「显示全部」状态）
-  sel.innerHTML='<option value="">课程代码</option>'+
+  // 默认项文字 = "全部"(前方有「课程代码」标签)
+  sel.innerHTML='<option value="">全部</option>'+
     SCH_DEPT_OPTIONS.map(d=>'<option value="'+eh(d)+'"'+(cur===d?' selected':'')+'>'+eh(d)+'</option>').join('');
 }
 // IS/SG 用同一份选项
 function buildSpDeptFilter(){
   const sel=document.getElementById('sp-dept-f');if(!sel)return;
   const cur=sel.value;
-  sel.innerHTML='<option value="">课程代码</option>'+
+  sel.innerHTML='<option value="">全部</option>'+
     SCH_DEPT_OPTIONS.map(d=>'<option value="'+eh(d)+'"'+(cur===d?' selected':'')+'>'+eh(d)+'</option>').join('');
 }
 
@@ -4524,7 +4523,7 @@ function buildSchTcFilter(){
       tcByDept[dept].add(r.tc);
     }
   });
-  let html='<option value="">全部老师</option>';
+  let html='<option value="">全部</option>';
   // v8.6.2：3 个待定选项，分别筛
   html+='<option value="__PENDING_ANY__">⏳ 任一待定'+(pendingN?' ('+pendingN+')':'')+'</option>';
   html+='<option value="__PENDING_TC__">⏳ 老师待定'+(pendingTcN?' ('+pendingTcN+')':'')+'</option>';
@@ -4559,7 +4558,7 @@ function buildSemSelect(id, mode){
     byYr[yr].push(s);
   });
   const years=Object.keys(byYr).sort();
-  let html=(mode==='filter')?'<option value="">全部学年学期</option>':'';
+  let html=(mode==='filter')?'<option value="">全部</option>':'';
   years.forEach(yr=>{
     html+='<optgroup label="─ '+yr+' ─">';
     byYr[yr].forEach(s=>{
@@ -4575,7 +4574,7 @@ function buildYearSelect(id){
   const sel=document.getElementById(id);if(!sel)return;
   const cur=sel.value;
   const years=[...new Set(SEMS.map(s=>String(s).substring(0,4)))].sort();
-  sel.innerHTML='<option value="">— 请选择学年 —</option>'+
+  sel.innerHTML='<option value="">请选择</option>'+
     years.map(y=>'<option value="'+y+'"'+(cur===y?' selected':'')+'>'+y+' 学年</option>').join('');
 }
 // 一键刷新所有学期相关下拉
@@ -4859,7 +4858,7 @@ function renderSp(){
   if(spDeptF&&spDeptF.value)disp=disp.filter(r=>getCourseDept(r.co)===spDeptF.value);
   // v8.22：专业筛选(选中后配合「批量删除」可删该专业全部学生)
   const spMjF=document.getElementById('sp-mj-f');
-  if(spMjF){const cur=spMjF.value;const majors=[...new Set(spD.map(r=>r.mj).filter(Boolean))].sort();spMjF.innerHTML='<option value="">全部专业</option>'+majors.map(m=>'<option value="'+eh(m)+'">'+eh(m)+'</option>').join('');spMjF.value=cur;}
+  if(spMjF){const cur=spMjF.value;const majors=[...new Set(spD.map(r=>r.mj).filter(Boolean))].sort();spMjF.innerHTML='<option value="">全部</option>'+majors.map(m=>'<option value="'+eh(m)+'">'+eh(m)+'</option>').join('');spMjF.value=cur;}
   if(spMjF&&spMjF.value)disp=disp.filter(r=>r.mj===spMjF.value);
   // v8.10：IS/SG 搜索同时匹配 课程代码 / 英文名 / 学号 / 姓名 / 班级
   if(spSearchF&&spSearchF.value.trim()){
@@ -6070,7 +6069,7 @@ function renderSta(){
   if(deptSel){
     const prev=deptSel.value;
     const uniqDepts=[...new Set(allTeacherStats.map(t=>t.d))].sort();
-    deptSel.innerHTML='<option value="">全本科</option>'+uniqDepts.map(d=>'<option value="'+eh(d)+'"'+(d===prev?' selected':'')+'>'+eh(d)+'</option>').join('');
+    deptSel.innerHTML='<option value="">全部</option>'+uniqDepts.map(d=>'<option value="'+eh(d)+'"'+(d===prev?' selected':'')+'>'+eh(d)+'</option>').join('');
   }
   renderLowPanel();
 }
