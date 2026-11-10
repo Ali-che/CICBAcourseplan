@@ -26,7 +26,7 @@
 - 届别→专业判定:用 `cohortDept()`,**不要** `cohortPrefix()`(后者截前 2 字母,IBCE 这类 4 字母专业会错)
 - `audit_log` **新旧两套列并存**:触发器写 `tbl/op/row_id/editor/before/after`;约 13 个手写审计函数写 `editor/action/target/detail`。**改此表前先查谁在写**,别换列名
 - 老师离职 = 软删 `teachers.resigned`(**不要硬删**,会让历史排课变孤儿)
-- 顶部主分页高亮靠 `switchTab` 的顺序数组按位置配对——**改分页顺序要同步改该数组**
+- 顶部主分页高亮按按钮的 `data-tab` 配对(2026-11-10 起,不再靠顺序数组);**新增主分页要加 `data-tab`**,并放进对应的 `.tab-grp` 分组
 
 ## 相关档案
 - `docs/运维交接单.md` — 接手/救急完整指南
@@ -34,7 +34,7 @@
 
 ---
 
-## 进度 / 待办（最后更新 2026-11-09 · 每次有进展就更这里）
+## 进度 / 待办（最后更新 2026-11-10 · 每次有进展就更这里）
 
 ### 目前做到哪
 - 系统上线稳定运行,约 8 位同事日常使用;**全站实际操作体检通过,无 JS 崩溃**。
@@ -57,6 +57,8 @@
   - 运维基建:建 `migrations/` 变更存档、写 `docs/运维交接单.md`、建本 CLAUDE.md、交接单+migrations 已备份到 Google Drive
 
 - **2026-11-09 加画面冒烟测试 `tools/ui_smoke.mjs`**:无头 Chrome 打开网页、模拟一般同事点遍分页,有 JS 报错就失败;已用放回旧 bug 验证能拦下(9/12 失败),修好版 12/12 通过。也接进 GitHub Actions 每 30 分钟测线上(失败 email)。
+
+- **2026-11-10 分页优化(纯前端,分支 `ui/tab-optimize`)**:① 主分页分 4 组(日常排课 排课表/期末考/IS-SG | 查看汇总 学期总表/教学统计/BTEC/课程结构 | 参考 教务须知 | 管理 后台操作),组间细线,分页高度压低;`switchTab` 改按 `data-tab` 配对;后台组 `#tabgrp-ops` 随权限一起隐藏 ②「➕ 新增届别」移出分页列,改为排课表工具栏按钮 `#btn-addcoh`(仍只给 admin/director) ③ 学期总表子页分「按老师 / 按班级」两组,全站「SG/IS」统一为「IS/SG」 ④ 列印说明只显示「🖨️ 直向/横向 A4 ⓘ」,完整内容放悬停提示;紫色提示条加「✕ 不再显示」(localStorage `cic_hide_sum_tip`) ⑤ 网址记住分页:`#sum/smt` 形式,`_writeTabHash()`/`_restoreTabFromHash()`,init 末尾还原,看不到的分页(权限)不跳。ui_smoke 12/12 通过。「列印」一词全站一致,未改。
 
 ### 下一步要做什么（按优先级）
 1. **基线快照 `migrations/000`**（一次性,未做)— 请 Aj. Tsai 跑 `000_baseline_HOWTO.md` 里的只读查询,把结果给我存档,作为 DB 现状定锚。

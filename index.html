@@ -15,8 +15,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .app{max-width:1400px;margin:0 auto;padding:1.5rem 1rem 3rem}
 .sticky-top{position:sticky;top:0;z-index:100;background:#f5f5f7;padding:.5rem 1rem .375rem;margin:-1.5rem -1rem .5rem;border-bottom:0.5px solid #e0e0e0;box-shadow:0 2px 6px rgba(0,0,0,.06)}
 .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem;flex-wrap:wrap;gap:8px}
-.tabs{display:flex;gap:6px;margin-bottom:1.25rem;overflow-x:auto;background:transparent;padding:0}
-.tab{padding:10px 20px;font-size:14px;font-weight:500;cursor:pointer;border:0.5px solid #ddd;background:#fff;color:#888;border-radius:8px;white-space:nowrap;font-family:inherit;transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.tabs{display:flex;gap:6px;margin-bottom:.75rem;overflow-x:auto;background:transparent;padding:0;align-items:center}
+.tab-grp{display:flex;gap:6px;flex-shrink:0}
+.tab-grp+.tab-grp{border-left:1px solid #d8d6e8;padding-left:10px;margin-left:4px}
+.tab{padding:8px 16px;font-size:13.5px;font-weight:500;cursor:pointer;border:0.5px solid #ddd;background:#fff;color:#888;border-radius:8px;white-space:nowrap;font-family:inherit;transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .tab.active{background:#534AB7;color:#fff;border-color:#534AB7;box-shadow:0 2px 8px rgba(83,74,183,.3)}
 .ops-tab{padding:6px 14px;font-size:12.5px;font-weight:500;border:0.5px solid #ddd;background:#fff;color:#666;border-radius:8px;cursor:pointer;font-family:inherit;transition:all .15s}
 .ops-tab.active{background:#534AB7;color:#fff;border-color:#534AB7}
@@ -44,6 +46,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .stabs{display:flex;gap:5px;margin-bottom:.875rem;flex-wrap:wrap}
 .stab{padding:4px 12px;font-size:12px;cursor:pointer;border:0.5px solid #ddd;background:transparent;border-radius:20px;color:#666;font-family:inherit}
 .stab.active{background:#534AB7;color:#fff;border-color:#534AB7}
+.stab-lbl{font-size:10.5px;color:#9a93c9;font-weight:600;letter-spacing:.04em;margin-right:1px}
+.stab-sep{width:1px;height:18px;background:#d8d6e8;margin:0 6px}
 .spanel{display:none}.spanel.active{display:block}
 .card{background:#fff;border:0.5px solid #e0e0e0;border-radius:10px;padding:1.125rem 1.25rem;margin-bottom:.875rem;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .ct{font-size:10px;font-weight:600;color:#888;margin-bottom:.875rem;text-transform:uppercase;letter-spacing:.06em}
@@ -448,16 +452,24 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 
 <!-- ══ 主标签 ═════════════════════════════ -->
 <div class="tabs">
-  <button class="tab active" onclick="switchTab('sch')">📋 排课表</button>
-  <button class="tab" id="tab-exam" onclick="switchTab('exam')">📝 期末考特例</button>
-  <button class="tab" onclick="switchTab('sp')">👤 IS/SG 排课</button>
-  <button class="tab" onclick="switchTab('sum')">📊 学期总表</button>
-  <button class="tab" id="tab-btec" onclick="switchTab('btec')">🎓 BTEC 计划</button>
-  <button class="tab" onclick="switchTab('cs')">📚 课程结构</button>
-  <button class="tab" id="tab-notice" onclick="switchTab('notice')">📌 教务须知</button>
-  <button class="tab" id="tab-sta" onclick="switchTab('sta')">📈 教学统计</button>
-  <button class="tab" id="tab-ops" onclick="switchTab('ops')" style="display:none">⚙️ 后台操作</button>
-  <button class="tab" id="tab-addcoh" onclick="openAddCoh()" title="新增届别" style="display:none;margin-left:auto;color:#1b7a5a;border-color:#9FE1CB">➕ 新增届别</button>
+  <!-- 2026-11-10 分组:日常排课 | 查看汇总 | 参考 | 管理。高亮按 data-tab 配对,改顺序不用再同步数组 -->
+  <div class="tab-grp" title="日常排课">
+    <button class="tab active" data-tab="sch" onclick="switchTab('sch')">📋 排课表</button>
+    <button class="tab" data-tab="exam" id="tab-exam" onclick="switchTab('exam')">📝 期末考特例</button>
+    <button class="tab" data-tab="sp" onclick="switchTab('sp')">👤 IS/SG 排课</button>
+  </div>
+  <div class="tab-grp" title="查看汇总">
+    <button class="tab" data-tab="sum" onclick="switchTab('sum')">📊 学期总表</button>
+    <button class="tab" data-tab="sta" id="tab-sta" onclick="switchTab('sta')">📈 教学统计</button>
+    <button class="tab" data-tab="btec" id="tab-btec" onclick="switchTab('btec')">🎓 BTEC 计划</button>
+    <button class="tab" data-tab="cs" onclick="switchTab('cs')">📚 课程结构</button>
+  </div>
+  <div class="tab-grp" title="参考">
+    <button class="tab" data-tab="notice" id="tab-notice" onclick="switchTab('notice')">📌 教务须知</button>
+  </div>
+  <div class="tab-grp" id="tabgrp-ops" title="管理" style="display:none">
+    <button class="tab" data-tab="ops" id="tab-ops" onclick="switchTab('ops')">⚙️ 后台操作</button>
+  </div>
 </div>
 </div><!-- /.sticky-top -->
 
@@ -493,7 +505,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <div class="fg"><label>课程类型（自动检测）</label>
           <select id="s-tp">
             <option value="正常">正常</option><option value="英文">英文</option>
-            <option value="CD-实习">CD-实习</option><option value="实习">实习</option><option value="SG">SG/IS</option><option value="Capstone">Capstone</option>
+            <option value="CD-实习">CD-实习</option><option value="实习">实习</option><option value="SG">IS/SG</option><option value="Capstone">Capstone</option>
           </select>
         </div>
         <div class="fg"><label>班级代码</label>
@@ -543,6 +555,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <button class="btn btn-sm" onclick="syncFromSheets('schedule')" title="从 Supabase 重新载入最新">↻ 重新载入</button>
         <span style="width:1px;height:18px;background:#e0e0e0;margin:0 2px"></span>
         <button class="btn btn-sm no-print" onclick="exportSchExcel()" style="color:#1a6b2f;border-color:#9ed4ae" title="导出当前筛选结果为 Excel">📊 Excel</button>
+        <button id="btn-addcoh" class="btn btn-sm no-print" onclick="openAddCoh()" style="display:none;color:#1b7a5a;border-color:#9FE1CB" title="新增届别(含年限)">➕ 新增届别</button>
         <button class="btn btn-sm no-print" onclick="openCsvImport()" style="color:#854F0B;border-color:#FCD34D" title="从 CSV 批量导入">📥 批量导入</button>
         <button class="btn btn-sm no-print" onclick="openCohortCleanup()" style="color:#7c2d92;border-color:#d8b4e2" title="精准移除某个届别:独占的整笔删,共享的仅摘除该届别">🧹 按届别清理</button>
         <button id="sch-batch-del" class="btn btn-sm no-print" onclick="deleteFiltered('schedule')" style="color:#a32d2d;border-color:#f7c1c1;display:none" title="按目前筛选条件删除全部">🗑 批量删除 <span id="sch-batch-del-n">0</span></button>
@@ -672,20 +685,23 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <th>备注</th><th>操作</th>
       </tr></thead><tbody id="sp-tb"></tbody></table>
     </div>
-    <div class="empty" id="sp-em">暂无 SG/IS 排课记录</div>
+    <div class="empty" id="sp-em">暂无 IS/SG 排课记录</div>
   </div>
 </div>
 
 <!-- ══ 学期总表 ════════════════════════════ -->
 <div id="panel-sum" class="panel">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.875rem;flex-wrap:wrap;gap:8px">
-    <div class="stabs" style="margin-bottom:0">
+    <div class="stabs" style="margin-bottom:0;align-items:center">
+      <span class="stab-lbl">按老师</span>
       <button class="stab active" onclick="switchSub('stc')">任课老师总表</button>
+      <button class="stab" onclick="switchSub('smt')">专业老师课表</button>
+      <button class="stab" onclick="switchSub('sst')">IS/SG·老师</button>
+      <span class="stab-sep"></span>
+      <span class="stab-lbl">按班级</span>
       <button class="stab" onclick="switchSub('sco')">班级总表</button>
-      <button class="stab" onclick="switchSub('sss')">SG/IS·学生</button>
-      <button class="stab" onclick="switchSub('sst')">SG/IS·老师</button>
-      <button class="stab" onclick="switchSub('smx')">📋 专业班级课表</button>
-      <button class="stab" onclick="switchSub('smt')">👩‍🏫 专业老师课表</button>
+      <button class="stab" onclick="switchSub('smx')">专业班级课表</button>
+      <button class="stab" onclick="switchSub('sss')">IS/SG·学生</button>
     </div>
     <div class="no-print" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
       <span id="sum-print-hint" style="font-size:11px;color:#888;text-align:right;line-height:1.35;max-width:520px"></span>
@@ -694,10 +710,12 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     </div>
   </div>
   <!-- v8.11.1：醒目提示 -->
-  <div style="background:linear-gradient(90deg,#EEEDFE 0%,#F5F4FE 100%);border:0.5px solid #AFA9EC;border-radius:8px;padding:8px 14px;margin-bottom:10px;display:flex;align-items:center;gap:8px;font-size:12px;color:#3C3489">
+  <div id="sum-tip" style="background:linear-gradient(90deg,#EEEDFE 0%,#F5F4FE 100%);border:0.5px solid #AFA9EC;border-radius:8px;padding:8px 14px;margin-bottom:10px;display:flex;align-items:center;gap:8px;font-size:12px;color:#3C3489">
     <span style="font-size:16px">💡</span>
-    <span><b>提示：</b>任何表格行或学生项目都可<u>直接点击编辑</u> —— 修改后总表自动刷新，不用切到排课表 tab</span>
+    <span style="flex:1"><b>提示：</b>任何表格行或学生项目都可<u>直接点击编辑</u> —— 修改后总表自动刷新，不用切到排课表 tab</span>
+    <span onclick="document.getElementById('sum-tip').style.display='none';try{localStorage.setItem('cic_hide_sum_tip','1')}catch(e){}" style="cursor:pointer;color:#9a93c9;font-size:11px;white-space:nowrap" title="隐藏这条提示(本机记住)">✕ 不再显示</span>
   </div>
+  <script>try{if(localStorage.getItem('cic_hide_sum_tip')==='1')document.getElementById('sum-tip').style.display='none';}catch(e){}</script>
   <div id="sub-stc" class="spanel active">
     <div class="fbar">
       <label>学年学期</label>
@@ -746,7 +764,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <input id="f-sss-q" oninput="renderSpStu()" placeholder="🔍 课程代码 / 英文名" style="width:170px">
     </div>
     <div class="card">
-      <div class="ct">SG/IS 排课总表 · 学生维度</div>
+      <div class="ct">IS/SG 排课总表 · 学生维度</div>
       <div id="ss-cards" class="ss-grid"></div>
       <div class="empty" id="ss-em">暂无数据</div>
     </div>
@@ -761,7 +779,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <input id="f-sst-q" oninput="renderSpTchr()" placeholder="🔍 课程代码 / 英文名" style="width:170px">
     </div>
     <div class="card">
-      <div class="ct">SG/IS 排课总表 · 老师维度</div>
+      <div class="ct">IS/SG 排课总表 · 老师维度</div>
       <div id="st-cards" class="ss-grid"></div>
       <div class="empty" id="st-em"></div>
     </div>
@@ -1097,7 +1115,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <div class="fg"><label>课程类型</label>
           <select id="m-tp">
             <option value="正常">正常</option><option value="英文">英文</option>
-            <option value="CD-实习">CD-实习</option><option value="实习">实习</option><option value="SG">SG/IS</option><option value="Capstone">Capstone</option>
+            <option value="CD-实习">CD-实习</option><option value="实习">实习</option><option value="SG">IS/SG</option><option value="Capstone">Capstone</option>
           </select>
         </div>
         <div class="fg"><label>BTEC 课程</label>
@@ -1359,11 +1377,12 @@ function applyRoleVisibility(){
   const opsTabBtn = document.getElementById('tab-ops');
   if(opsTabBtn){
     opsTabBtn.style.display = canOps ? '' : 'none';
+    const opsGrp = document.getElementById('tabgrp-ops'); if(opsGrp) opsGrp.style.display = canOps ? '' : 'none';
     if(!canOps && opsTabBtn.classList.contains('active')) switchTab('sch');
   }
   // 账号权限子分页:仅 admin 可见;非 admin 若正停在该子页则退回「学期」
   const _canCoh = (currentRole==='admin'||currentRole==='director');
-  const addcohTab = document.getElementById('tab-addcoh');
+  const addcohTab = document.getElementById('btn-addcoh');
   if(addcohTab) addcohTab.style.display = _canCoh ? '' : 'none';
   const acctBtn = document.getElementById('ops-tab-acct');
   if(acctBtn){
@@ -4916,7 +4935,7 @@ function renderTchr(){
       '<td class="note-cell" style="font-size:11px;color:#888;max-width:130px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(r.nt?eh(r.nt):'')+'</div>'+(r.nt?'<div class="note-tip">'+eh(r.nt)+'</div>':'')+'</td></tr>';}).join('');
   const sgRows=spRows.map((r,i)=>
     '<tr style="background:#FFF8F0"><td>'+(data.length+i+1)+'</td>'+
-    '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.co+'</span><span class="badge b3" style="font-size:9.5px;padding:1px 6px;opacity:.85">SG/IS</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+mpHint(r.co)+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
+    '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.co+'</span><span class="badge b3" style="font-size:9.5px;padding:1px 6px;opacity:.85">IS/SG</span></div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+mpHint(r.co)+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
     '<td style="font-size:11px;white-space:nowrap">'+eh(r.tc||'—')+'</td>'+
     '<td>'+r.cls+'</td><td>'+semBadge(r.sem)+'</td>'+
     '<td>—</td><td>'+r.stus.length+'</td>'+
@@ -5128,7 +5147,7 @@ function renderSpStu(){
         '<span class="ss-name">'+eh(s.nm)+'</span>'+
         '<code style="font-size:11px;color:#666;font-family:ui-monospace,monospace">'+eh(s.sid)+'</code>'+
         '<span style="flex:1"></span>'+
-        '<span class="ss-cnt"><strong>'+s.rows.length+'</strong> 门 SG/IS</span>'+
+        '<span class="ss-cnt"><strong>'+s.rows.length+'</strong> 门 IS/SG</span>'+
       '</div>'+
       sharedRow+
       '<div class="ss-card-b">'+
@@ -5140,7 +5159,7 @@ function renderSpStu(){
           if(!allSameCls)parts.push('<span class="badge b4">'+r.cls+'</span>');
           parts.push('<span style="font-size:11.5px;color:#888;margin-left:4px">'+eh(r.en||'—')+'</span>');
           if(!allSameTc)parts.push('<span style="font-size:11px;color:#666;margin-left:6px">'+(r.tc?eh(r.tc):'<span style="background:#FEE2E2;color:#B91C1C;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;display:inline-block">⏳ 待定</span>')+'</span>');
-          return '<div class="ss-course" style="cursor:pointer" onclick="startESp(\''+r.id+'\')" onmouseover="this.style.background=\'#F5F4FE\'" onmouseout="this.style.background=\'\'" title="点击编辑这笔 SG/IS 排课">'+
+          return '<div class="ss-course" style="cursor:pointer" onclick="startESp(\''+r.id+'\')" onmouseover="this.style.background=\'#F5F4FE\'" onmouseout="this.style.background=\'\'" title="点击编辑这笔 IS/SG 排课">'+
             '<div class="ss-line1">'+
               parts.join('')+
               (r.nt?'<span class="ss-note" style="margin-left:auto">'+eh(r.nt)+'</span>':'')+
@@ -5170,7 +5189,7 @@ function renderSpTchr(){
   if(sem)data=data.filter(r=>r.sem===sem);
   if(dept&&!tc){const deptTchrs=T.filter(t=>t.d===dept).map(t=>t.n);data=data.filter(r=>deptTchrs.includes(r.tc));}
   if(q)data=data.filter(r=>(r.co||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q)||_mapMatch(r.co,q));
-  if(!data.length){wrap.innerHTML='';em.textContent='暂无符合条件的 SG/IS 排课记录';em.style.display='block';return;}
+  if(!data.length){wrap.innerHTML='';em.textContent='暂无符合条件的 IS/SG 排课记录';em.style.display='block';return;}
   em.style.display='none';
   // 双层 group: 先按老师，再按课程
   const teacherMap={};
@@ -5218,7 +5237,7 @@ function renderSpTchr(){
               c.stus.map((s,si)=>{
                 const mjC=COHORT_COLOR[s.mj];
                 const mjStyle=mjC?'background:'+mjC.bg+';color:'+mjC.fg:'';
-                return '<div class="ss-stuitem" style="cursor:pointer" onclick="event.stopPropagation();startESp(\''+s.id+'\')" onmouseover="this.style.background=\'#F5F4FE\'" onmouseout="this.style.background=\'\'" title="点击编辑这笔 SG/IS 排课">'+
+                return '<div class="ss-stuitem" style="cursor:pointer" onclick="event.stopPropagation();startESp(\''+s.id+'\')" onmouseover="this.style.background=\'#F5F4FE\'" onmouseout="this.style.background=\'\'" title="点击编辑这笔 IS/SG 排课">'+
                   '<span class="ss-stunum">'+(si+1)+'.</span>'+
                   '<span class="badge" style="'+mjStyle+'">'+eh(s.mj)+'</span>'+
                   '<span class="badge b4">'+eh(s.mr)+'</span>'+
@@ -7270,7 +7289,7 @@ function _noticePdfHtml(url){
 // 课程结构 iframe 要求认证时,把当前角色+PIN 传给它(同源;iframe 的 localStorage 可能被分区隔离故用 postMessage)
 window.addEventListener('message',function(e){try{if(e.origin!==location.origin)return;if(e.data&&e.data.t==='cs-need-auth'){var f=document.getElementById('cs-frame');if(f&&f.contentWindow)f.contentWindow.postMessage({t:'cs-auth',role:(typeof currentRole!=='undefined'?currentRole:''),pin:(localStorage.getItem('cic_pin')||'')},location.origin);}}catch(_){}});
 function switchTab(id){
-  ['sch','exam','sp','sum','btec','cs','notice','sta','ops'].forEach((x,i)=>{const tb=document.querySelectorAll('.tab')[i];if(tb)tb.classList.toggle('active',x===id);});
+  document.querySelectorAll('.tab[data-tab]').forEach(tb=>tb.classList.toggle('active',tb.dataset.tab===id));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+id).classList.add('active');
   if(typeof _syncShowArchBoxes==='function')_syncShowArchBoxes();  // 各视图「显示已归档」勾状态跟上全局
@@ -7285,8 +7304,29 @@ function switchTab(id){
   else if(id==='notice')loadNotices();
   else if(id==='ops')renderOps();
   if(id==='sum'){if(!window._sumHintWired){const ps=document.getElementById('panel-sum');if(ps){ps.addEventListener('change',updateSumPrintHint);ps.addEventListener('input',updateSumPrintHint);window._sumHintWired=true;}}updateSumPrintHint();}
+  _writeTabHash();
   setTimeout(syncTblHeight,50); // 等 panel 显示后再算高度
 }
+// 2026-11-10:网址记住所在分页(#sum/smt),刷新不跳回排课表、可分享「看这一页」的链接
+function _writeTabHash(){
+  try{
+    const tb=document.querySelector('.tab.active[data-tab]'); if(!tb) return;
+    let h=tb.dataset.tab;
+    if(h==='sum'){const sp=document.querySelector('#panel-sum .spanel.active');if(sp)h+='/'+sp.id.replace(/^sub-/,'');}
+    if(location.hash!=='#'+h) history.replaceState(null,'','#'+h);
+  }catch(e){}
+}
+function _restoreTabFromHash(){
+  try{
+    const parts=decodeURIComponent((location.hash||'').replace(/^#/,'')).split('/');
+    const tab=parts[0]; if(!tab) return;
+    const btn=document.querySelector('.tab[data-tab="'+tab+'"]');
+    if(!btn||btn.offsetParent===null) return;   // 不存在或此角色看不到(如一般老师的后台操作)→ 留在默认页
+    if(!btn.classList.contains('active')) switchTab(tab);
+    if(tab==='sum'&&parts[1]&&document.getElementById('sub-'+parts[1])) switchSub(parts[1]);
+  }catch(e){}
+}
+window.addEventListener('hashchange',_restoreTabFromHash);
 // 学期总表:列印按钮旁的动态说明——随子页与筛选实时反映「将印什么」
 function updateSumPrintHint(){
   const el=document.getElementById('sum-print-hint'); if(!el) return;
@@ -7300,11 +7340,14 @@ function updateSumPrintHint(){
     const d=v('f-tc-d'),tc=v('f-tc'),s=v('f-tc-s');
     t='🖨️ 将印:'+(d?'部门 '+d:'全部部门')+' · '+(tc?'老师 '+tc:'全部老师')+' · '+(s?'学期 '+s:'全部学年学期')+' —— 按部门→老师分组 · 直向 A4';
   }else if(active==='sub-sss'){
-    t='🖨️ 将印:SG/IS 学生名单(依当前筛选)· 横向 A4';
+    t='🖨️ 将印:IS/SG 学生名单(依当前筛选)· 横向 A4';
   }else if(active==='sub-sst'){
-    t='🖨️ 将印:SG/IS 老师名单(依当前筛选)· 横向 A4';
+    t='🖨️ 将印:IS/SG 老师名单(依当前筛选)· 横向 A4';
   }
-  el.textContent=t;
+  // 2026-11-10:只显示纸张方向,完整「将印什么」移到鼠标悬停提示,省版面
+  el.textContent=t?('🖨️ '+(t.indexOf('直向')>-1?'直向':'横向')+' A4 ⓘ'):'';
+  el.title=t.replace(/^🖨️ /,'');
+  el.style.cursor=t?'help':'';
 }
 function switchSub(id){
   document.querySelectorAll('.stab').forEach(t=>t.classList.toggle('active',t.getAttribute('onclick').includes(id)));
@@ -7313,6 +7356,7 @@ function switchSub(id){
   if(id==='smx')renderDeptMatrix();
   if(id==='smt')renderDeptTchMatrix();
   updateSumPrintHint();
+  _writeTabHash();
   setTimeout(syncTblHeight,50);
 }
 
@@ -7387,6 +7431,7 @@ async function init(){
   window.addEventListener('resize',syncTblHeight);
   initAddSchState();
   initAddSpState();
+  _restoreTabFromHash();  // 资料到齐后再按网址 #分页 切过去
 }
 
 // ── 新增排课折叠 ──────────────────────────
