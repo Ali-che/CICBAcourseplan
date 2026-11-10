@@ -2433,6 +2433,26 @@ function opsArchView(){
 function _archRerender(){if(typeof renderSch==='function')renderSch();if(typeof renderSp==='function')renderSp();if(typeof renderExam==='function')renderExam();if(typeof renderAllSum==='function')renderAllSum();}
 // ── 后台:编辑记录(B方案·完整变更历史,读 audit_log,仅 admin)──
 var _auditFilter={editor:'',tbl:'',op:'',from:'',to:''};
+// 编辑记录的资料类型(006 起后台各表都有触发器)。[表名, 显示名, 徽章色, 分组, 对象显示]
+var _AUD_TBLS=[
+  ['schedule','排课','b0','排课'],['special','IS/SG','b5','排课'],['exam_special','期末考','b4','排课'],
+  ['cohorts','届别','b2','基础数据'],['cohort_years','届别年限','b2','基础数据',function(j){return j.cohort+(j.years!=null?' · '+j.years+' 年':'');}],
+  ['teachers','老师','b6','基础数据',function(j){return j.name;}],['positions','职位','b6','基础数据',function(j){return j.position;}],
+  ['depts','专业','b1','基础数据',function(j){return [j.code,j.name].filter(Boolean).join(' · ');}],
+  ['semesters','学年学期','b1','基础数据',function(j){return j.sem;}],['archived_terms','归档','b4','基础数据',function(j){return j.sem+' · '+(j.type==='exam'?'期末考':'排课+IS/SG');}],
+  ['catalog','课程总库','b3','课程与学分',function(j){return [j.dept,j.version,j.code,j.zh||j.en].filter(Boolean).join(' · ');}],
+  ['dept_map','课程部门','b3','课程与学分',function(j){return [j.code,j.dept].filter(Boolean).join(' · ');}],
+  ['courses_extra','课程补充','b3','课程与学分',function(j){return [j.code,j.zh||j.en].filter(Boolean).join(' · ');}],
+  ['grad','毕业学分','b3','课程与学分',function(j){return j.pid;}],['exam_school','登分学校','b3','课程与学分',function(j){return j.name;}],
+  ['notice','教务须知','b7','内容',function(j){return j.title;}],
+  ['teach_btec','手填BTEC课时','b7','BTEC',function(j){return j.teacher;}],['btec','BTEC课时','b7','BTEC',function(j){return j.name;}],
+  ['btec_student','BTEC学生','b7','BTEC',function(j){return [j.sid,j.en||j.zh].filter(Boolean).join(' · ');}],
+  ['btec_unit','BTEC单元','b7','BTEC',function(j){return [j.code,j.name_en].filter(Boolean).join(' · ');}],
+  ['btec_plan','BTEC计划','b7','BTEC',function(j){return '学生#'+j.student_id+' · '+j.code;}],
+  ['btec_iv','BTEC IV','b7','BTEC',function(j){return j.code+' · '+j.sem;}],
+  ['btec_kind','BTEC类别','b7','BTEC',function(j){return '学生#'+j.student_id+' · '+j.code;}],
+  ['btec_stat','BTEC统计','b7','BTEC',function(j){return '学生#'+j.student_id+' · '+j.k;}]
+];
 function _short(v){if(v==null)return '';if(typeof v==='object')return JSON.stringify(v);var s=String(v);return s.length>48?s.slice(0,48)+'…':s;}
 function opsEditsView(){
   if(currentRole!=='admin')return '<div style="color:#aaa;padding:12px">仅管理员可见</div>';
@@ -2443,7 +2463,7 @@ function opsEditsView(){
   var edSel='<select id="aud-editor" style="'+ib+';width:150px"><option value="">全部</option>'+names.map(function(nm){return '<option value="'+eh(nm)+'"'+(f.editor===nm?' selected':'')+'>'+eh(nm)+'</option>';}).join('')+(!_acct.loaded?'<option value="" disabled>(账号载入中…)</option>':'')+'</select>';
   var h='<div style="display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 10px;background:#F7F6FD;border-radius:8px">'+
      '<label style="font-size:11px;color:#666">修改人</label>'+edSel+
-     '<label style="font-size:11px;color:#666">类型</label><select id="aud-tbl" style="'+ib+';width:100px">'+o('','全部',f.tbl)+o('schedule','排课',f.tbl)+o('special','IS/SG',f.tbl)+o('exam_special','期末考',f.tbl)+o('cohorts','届别',f.tbl)+o('teachers','老师',f.tbl)+'</select>'+
+     '<label style="font-size:11px;color:#666">类型</label><select id="aud-tbl" style="'+ib+';width:130px">'+o('','全部',f.tbl)+(function(){var g={},ord=[];_AUD_TBLS.forEach(function(t){if(!g[t[3]]){g[t[3]]=[];ord.push(t[3]);}g[t[3]].push(o(t[0],t[1],f.tbl));});return ord.map(function(k){return '<optgroup label="'+k+'">'+g[k].join('')+'</optgroup>';}).join('');})()+'</select>'+
      '<label style="font-size:11px;color:#666">动作</label><select id="aud-op" style="'+ib+';width:96px">'+o('','全部',f.op)+o('INSERT','新增',f.op)+o('UPDATE','修改',f.op)+o('DELETE','删除',f.op)+o('BASELINE','起始',f.op)+'</select>'+
      '<span style="font-size:11px;color:#888">时间</span>'+
      '<input id="aud-from" type="date" value="'+eh(f.from)+'" style="'+ib+';width:140px">'+
@@ -2451,7 +2471,7 @@ function opsEditsView(){
      '<input id="aud-to" type="date" value="'+eh(f.to)+'" style="'+ib+';width:140px">'+
      '<button class="btn btn-sm" onclick="opsAuditApply()">🔍 查询</button>'+
      '<button class="btn btn-sm" onclick="opsAuditReset()">清除</button>'+
-     '<span style="flex:1"></span><span style="font-size:11px;color:#999">排课 / IS·SG / 期末考 / 届别 / 老师 的每一次增·改·删</span></div>';
+     '<span style="flex:1"></span><span style="font-size:11px;color:#999">排课、期末考与后台各项资料的每一次增·改·删(账号权限除外)</span></div>';
   h+='<div id="ops-edits-body"><div style="color:#888;padding:12px">加载中…</div></div>';
   setTimeout(opsAuditLoad,0);
   return h;
@@ -2477,11 +2497,17 @@ async function opsAuditLoad(){
 function _auditRender(){
   var box=document.getElementById('ops-edits-body');if(!box)return;
   if(!_auditRows.length){box.innerHTML='<div style="color:#aaa;padding:12px">没有符合的记录</div>';return;}
-  var TBL={schedule:'排课',special:'IS/SG',exam_special:'期末考',cohorts:'届别',teachers:'老师'},TBLC={schedule:'b0',special:'b5',exam_special:'b4',cohorts:'b2',teachers:'b6'};
+  var TBL={},TBLC={},TBLO={},tblOrd={};_AUD_TBLS.forEach(function(t,i){TBL[t[0]]=t[1];TBLC[t[0]]=t[2];if(t[4])TBLO[t[0]]=t[4];tblOrd[t[0]]=i;});
   var OP={INSERT:'新增',UPDATE:'修改',DELETE:'删除',BASELINE:'起始'},OPC={INSERT:'#1b7a5a',UPDATE:'#8a5a00',DELETE:'#a32d2d',BASELINE:'#6b7280'};
-  var FN={course_code:'代码',course_en:'英文名',sem:'学期',half:'上下半',type:'类型',class_code:'班级',teacher:'老师',cohorts:'届别',total:'人数',note:'备注',btec:'BTEC',student_id:'学号',name:'姓名',major:'专业',title:'题目',course:'课程',dept:'系别',kind:'种类',school:'登分学校',conflict_course:'冲突课'};
+  var FN={course_code:'代码',course_en:'英文名',sem:'学期',half:'上下半',type:'类型',class_code:'班级',teacher:'老师',cohorts:'届别',total:'人数',note:'备注',btec:'BTEC',student_id:'学号',name:'姓名',major:'专业',title:'题目',course:'课程',dept:'系别',kind:'种类',school:'登分学校',conflict_course:'冲突课',
+    code:'代码',zh:'中文名',en:'英文名',version:'版本',block:'模块',req:'必/选修',block_credit:'模块学分',credit:'学分',mapping:'对应',fixed:'固定',source:'来源',description:'描述',
+    position:'职位',quota:'额度',employee_id:'员工号',resigned:'离职',cohort:'届别',years:'年限',grad_override:'毕业状态',
+    pid:'专业',courses_count:'课程数',course_n:'课程门数',course_cr:'课程学分',intern_n:'实习门数',intern_cr:'实习学分',intern_sub:'实习抵课',
+    body:'内容',accent:'颜色',sort:'排序',is_open:'展开',pdf_url:'PDF',val:'数值',la500:'课时',
+    sid:'学号',active:'在读',intake:'入学',track:'方向',acad_year:'学年',seq:'序号',unit_no:'单元号',name_en:'英文名',glh:'GLH',assess:'评核',
+    enroll_sem:'修读学期',instructor:'授课',verifier:'审核',course_name:'课程名',tc:'老师',iv:'IV',k:'项目'};
   var fmt=function(t){if(!t)return '—';var d=new Date(t);if(isNaN(d))return eh(String(t));var p=function(n){return String(n).padStart(2,'0');};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());};
-  var objOf=function(j){if(!j)return '';if(typeof j.resigned!=='undefined'&&j.name)return eh(String(j.name));if(j.cohort&&!Array.isArray(j.cohorts))return eh(String(j.cohort)+(j.dept?(' · '+j.dept):''));var c=j.course_code||j.course||'',s=j.sem||'',cl=j.class_code||'';return eh([s,c,cl].filter(Boolean).join(' · '));};  // 顺序:学年学期·课程·班级;届别:代码·专业;老师:姓名
+  var objOf=function(j,tb){if(!j)return '';if(tb&&TBLO[tb]){try{return eh(String(TBLO[tb](j)||''));}catch(e){}}if(typeof j.resigned!=='undefined'&&j.name)return eh(String(j.name));if(j.cohort&&!Array.isArray(j.cohorts))return eh(String(j.cohort)+(j.dept?(' · '+j.dept):''));var c=j.course_code||j.course||'',s=j.sem||'',cl=j.class_code||'';return eh([s,c,cl].filter(Boolean).join(' · '));};  // 顺序:学年学期·课程·班级;届别:代码·专业;老师:姓名
   var cohMap=function(arr){var m={};(arr||[]).forEach(function(x){if(x&&x.cohort)m[x.cohort]=(x.count==null?'':x.count);});return m;};
   var cohDiffStr=function(b,a){var mb=cohMap(b),ma=cohMap(a),keys={},out=[];Object.keys(mb).forEach(function(k){keys[k]=1;});Object.keys(ma).forEach(function(k){keys[k]=1;});
     Object.keys(keys).sort().forEach(function(k){var x=mb[k],y=ma[k];
@@ -2491,21 +2517,26 @@ function _auditRender(){
     return out.length?out.join('、'):'<span style="color:#bbb">(届别无变化)</span>';};
   var cohList=function(arr){var m=cohMap(arr),out=[];Object.keys(m).sort().forEach(function(k){out.push(eh(k)+' ×'+m[k]);});return out.join('、')||'—';};
   var diffOf=function(b,a){var keys={},out=[];if(b)Object.keys(b).forEach(function(k){keys[k]=1;});if(a)Object.keys(a).forEach(function(k){keys[k]=1;});
-    Object.keys(keys).forEach(function(k){if(k==='updated_at'||k==='editor'||k==='id')return;
+    Object.keys(keys).forEach(function(k){if(k==='updated_at'||k==='created_at'||k==='editor'||k==='id')return;
       var bv=JSON.stringify((b||{})[k]==null?'':b[k]),av=JSON.stringify((a||{})[k]==null?'':a[k]);if(bv===av)return;
       if(k==='cohorts'){out.push('<span style="white-space:nowrap"><b style="color:#555">届别</b> '+cohDiffStr((b||{}).cohorts,(a||{}).cohorts)+'</span>');return;}
       out.push('<span style="white-space:nowrap"><b style="color:#555">'+eh(FN[k]||k)+'</b> <span style="color:#a32d2d">'+eh(_short((b||{})[k]))+'</span>→<span style="color:#1b7a5a">'+eh(_short((a||{})[k]))+'</span></span>');});
     return out.length?('<span style="line-height:1.7">'+out.join('<span style="color:#bbb">,</span> ')+'</span>'):'<span style="color:#bbb">(无字段变化)</span>';};
   var detailOf=function(x){
-    if(x.tbl==='teachers'){var ta=x.after||{};return ta.resigned?'<span style="color:#a32d2d">离职存档</span>':'<span style="color:#1b7a5a">复职</span>';}
+    if(x.tbl==='teachers'&&x.op==='UPDATE'){var ta=x.after||{},tb=x.before;  // 无 before = 003 手写的离职/复职行
+      if(!tb||!!tb.resigned!==!!ta.resigned)return ta.resigned?'<span style="color:#a32d2d">离职存档</span>':'<span style="color:#1b7a5a">复职</span>';}
     if(x.op==='UPDATE')return diffOf(x.before,x.after);
+    if(!{schedule:1,special:1,exam_special:1,cohorts:1}[x.tbl]&&(x.op==='INSERT'||x.op==='DELETE')){  // 后台参考资料:列出栏位
+      var j=(x.op==='INSERT'?x.after:x.before)||{},fs=[];
+      Object.keys(j).forEach(function(k){if(k==='id'||k==='created_at'||k==='updated_at'||k==='editor')return;var v=j[k];if(v==null||v==='')return;fs.push('<b style="color:#555">'+eh(FN[k]||k)+'</b> '+eh(_short(v)));});
+      return (x.op==='INSERT'?'<span style="color:#1b7a5a">＋ 新增</span>':'<span style="color:#a32d2d">－ 删除</span>')+(fs.length?' <span style="line-height:1.7">'+fs.slice(0,6).join('<span style="color:#bbb">,</span> ')+(fs.length>6?' …':'')+'</span>':'');}
     if(x.op==='INSERT'){var a=x.after||{};if(a.cohort&&!Array.isArray(a.cohorts))return '<span style="color:#1b7a5a">＋ 新增届别</span> '+eh(String(a.cohort))+(a.dept?' · 专业 '+eh(a.dept):'');return '<span style="color:#1b7a5a">＋ 新建</span>'+(a.teacher?' · 老师 '+eh(a.teacher):'')+(a.cohorts?' · 届别 '+cohList(a.cohorts):'');}
     if(x.op==='DELETE'){var b=x.before||{};if(b.cohort&&!Array.isArray(b.cohorts))return '<span style="color:#a32d2d">－ 删除届别</span> '+eh(String(b.cohort))+(b.dept?' · 专业 '+eh(b.dept):'');return '<span style="color:#a32d2d">－ 删除整笔</span>'+(b.teacher?' · 老师 '+eh(b.teacher):'')+(b.cohorts?' · 届别 '+cohList(b.cohorts):'');}
     if(x.op==='BASELINE'){var c=x.after||{};return '<span style="color:#6b7280">迁移前最后状态</span>'+(c.teacher?' · 老师 '+eh(c.teacher):'')+(c.cohorts?' · 届别 '+cohList(c.cohorts):'');}
     return '';};
   // 排序(点表头)
   var rows=_auditRows.slice(),k=_auditSort.key,d=_auditSort.dir;
-  var tblOrd={schedule:0,special:1,exam_special:2,cohorts:3,teachers:4},opOrd={INSERT:0,UPDATE:1,DELETE:2,BASELINE:3};
+  var opOrd={INSERT:0,UPDATE:1,DELETE:2,BASELINE:3};
   rows.sort(function(a,b){
     if(k==='tbl'){var at=(tblOrd[a.tbl]==null?9:tblOrd[a.tbl]),bt=(tblOrd[b.tbl]==null?9:tblOrd[b.tbl]);return d*(at-bt)||(String(b.at||'').localeCompare(String(a.at||'')));}
     if(k==='op'){var ao=(opOrd[a.op]==null?9:opOrd[a.op]),bo=(opOrd[b.op]==null?9:opOrd[b.op]);return d*(ao-bo)||(String(b.at||'').localeCompare(String(a.at||'')));}
@@ -2523,7 +2554,7 @@ function _auditRender(){
       '<td style="padding:4px 9px;white-space:nowrap;border-bottom:1px solid #eee">'+(x.editor?eh(x.editor):'<span style="color:#bbb">—</span>')+'</td>'+
       '<td style="padding:4px 9px;border-bottom:1px solid #eee"><span class="badge '+(TBLC[x.tbl]||'b4')+'" style="font-size:10px">'+(TBL[x.tbl]||eh(x.tbl))+'</span></td>'+
       '<td style="padding:4px 9px;white-space:nowrap;border-bottom:1px solid #eee;color:'+(OPC[x.op]||'#555')+';font-weight:600">'+(OP[x.op]||eh(x.op))+'</td>'+
-      '<td style="padding:4px 9px;border-bottom:1px solid #eee;white-space:nowrap">'+objOf(x.after||x.before)+'</td>'+
+      '<td style="padding:4px 9px;border-bottom:1px solid #eee;white-space:nowrap">'+objOf(x.after||x.before,x.tbl)+'</td>'+
       '<td style="padding:4px 9px;border-bottom:1px solid #eee;font-size:11px">'+detailOf(x)+'</td></tr>';
   });
   box.innerHTML=h+'</tbody></table></div>';

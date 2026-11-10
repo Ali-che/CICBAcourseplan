@@ -23,7 +23,9 @@
 | `003_teacher_resigned_archive_2026-11-05.sql` | 老师离职软删存档(`teachers.resigned`) | ✅ 已跑 |
 | `004_remove_manual_audit_record_fns_2026-11-09.sql` | 清 audit 双写:排课/IS-SG 增删改只留触发器一条;删除人改记真正删的人 | ✅ 已跑 |
 | `005_btec_students_ic_to_ibce_2026-11-10.sql` | BTEC 学生专业 IC → IBCE(只改 BTEC 学生表 dept) | ✅ 已跑(2026-11-10 Aj. Tsai 回报) |
+| `006_audit_ref_tables_2026-11-10.sql` | 编辑记录覆盖后台全部资料(课程总库/学期/专业/职位/毕业学分/教务须知/BTEC…);修改人由 `_admin`/`_pin_editor`/`_can_exam` 设 `app.editor` | ⏳ 待跑 |
 | `checks/rls_audit.sql` | RLS 安全盘点(全表防护+外人写权限) | 只读,可重跑 |
 | `checks/audit_dual_write_inspect.sql` | audit 双写体检(三函数定义 / 触发器 / 新旧列行数) | 只读,可重跑 |
+| `checks/audit_coverage_inspect.sql` | 编辑记录覆盖面体检(全表栏位 / 触发器 / 全部函数定义) | 只读,可重跑;结果勿提交 |
 
 > 约定:**从此以后,凡是给出要在 Supabase 跑的 SQL,都会同时在这里存一个编号档。**
