@@ -2061,7 +2061,9 @@ async function loadBtec(){
   if(df){const cur=df.value;const ds=[...new Set((_btec.students||[]).map(s=>s.dept).filter(Boolean))].sort();df.innerHTML='<option value="">全部专业</option>'+ds.map(d=>'<option value="'+eh(d)+'"'+(d===cur?' selected':'')+'>'+eh(d)+'</option>').join('');}
   renderBtec();
 }
+let _btecYrF='';  // 学年色块筛选(''=全部;'未设'=没填学年)
 function reloadBtec(){loadBtec();}
+function btecPickYr(y){_btecYrF=(_btecYrF===y)?'':y;renderBtec();}
 // 点专业色块:筛出该专业学生(同步上方「专业」下拉);点已选中的色块 = 显示全部
 function btecPickDept(d){const df=document.getElementById('btec-dept-f');if(!df)return;df.value=(df.value===d)?'':d;renderBtec();}
 // ═══════ §EXAM 期末考特例 ═══════
@@ -2769,6 +2771,7 @@ function _btecStudents(){
   const df=(document.getElementById('btec-dept-f')||{}).value||'';
   const q=((document.getElementById('btec-q')||{}).value||'').trim().toLowerCase();
   if(df)list=list.filter(s=>s.dept===df);
+  if(_btecYrF)list=list.filter(s=>(s.acad_year||'未设')===_btecYrF);
   if(q)list=list.filter(s=>((s.sid||'')+(s.zh||'')+(s.en||'')).toLowerCase().includes(q));
   return list.sort((a,b)=>String(a.sid||'').localeCompare(String(b.sid||'')));  // 按学号排序
 }
@@ -2788,8 +2791,6 @@ function renderBtec(){
   // 选了某学期 → 只显示该学期有课的单元行
   const units=inf?units0.filter(u=>studs.some(s=>_btecCell(s,u.code).sem===inf)):units0;
   const hint=document.getElementById('btec-hint');if(hint)hint.textContent=studs.length+' 生 · '+units.length+' 单元'+(inf?(' @'+inf):'')+(isAdmin?' · 点格子改 学期/讲师/IV':'');
-  if(!studs.length){wrap.innerHTML='';if(em)em.style.display='block';return;}
-  if(em)em.style.display='none';
   const showTc=((document.getElementById('btec-meta')||{}).checked)||false;
   const showKind=((document.getElementById('btec-kind-show')||{}).checked)||false;
   const semSet={};studs.forEach(s=>units.forEach(u=>{const c=_btecCell(s,u.code);if(c.sem)semSet[c.sem]=1;}));
@@ -2800,10 +2801,13 @@ function renderBtec(){
   const _cEl=document.getElementById('btec-count');
   if(_cEl){const byDept={};(_btec.students||[]).forEach(s=>{const d=s.dept||'—';byDept[d]=(byDept[d]||0)+1;});  // 2026-11-10:色块数全体学生,点选=筛该专业,再点取消
     const _curD=(document.getElementById('btec-dept-f')||{}).value||'';
-    const chips=Object.keys(byDept).sort().map(d=>{const c=(typeof COHORT_COLOR!=='undefined'?COHORT_COLOR[d]:null);const bg=c?c.bg:'#EEE',fg=c?c.fg:'#555';const on=(_curD===d),dim=(_curD&&!on);return '<span onclick="btecPickDept(\''+jsq(d==='—'?'':d)+'\')" title="'+(on?'再点一下显示全部专业':'只看 '+eh(d)+' 的学生')+'" style="cursor:pointer;background:'+bg+';color:'+fg+';border-radius:10px;padding:1px 9px;font-size:11px;font-weight:600;'+(on?'box-shadow:0 0 0 2px '+fg+';':'')+(dim?'opacity:.45;':'')+'">'+eh(d)+' '+byDept[d]+'</span>';}).join('');
-    const byYr={};studs.forEach(s=>{const y=s.acad_year||'未设';byYr[y]=(byYr[y]||0)+1;});
-    const yrChips=Object.keys(byYr).sort().map(y=>'<span style="background:#EEF2FF;color:#3949ab;border-radius:10px;padding:1px 9px;font-size:11px;font-weight:600">🎓 '+eh(y)+' '+byYr[y]+'</span>').join('');
+    const chips=Object.keys(byDept).sort().map(d=>{const c=(typeof COHORT_COLOR!=='undefined'?COHORT_COLOR[d]:null);const bg=c?c.bg:'#EEE',fg=c?c.fg:'#555';const on=(_curD===d),dim=(_curD&&!on);return '<span onclick="btecPickDept(\''+jsq(d==='—'?'':d)+'\')" title="'+(on?'再点一下显示全部专业':'只看 '+eh(d)+' 的学生')+'" style="cursor:pointer;background:'+bg+';color:'+fg+';border-radius:10px;padding:1px 9px;font-size:11px;font-weight:600;'+(on?'box-shadow:0 0 0 2px '+fg+';':'')+(dim?'opacity:.45;':'')+'">'+eh(d)+' · '+byDept[d]+' 人</span>';}).join('');
+    const byYr={},yrNames={};(_btec.students||[]).forEach(s=>{const y=s.acad_year||'未设';byYr[y]=(byYr[y]||0)+1;(yrNames[y]=yrNames[y]||[]).push((s.zh||s.en||s.sid||'')+(s.dept?'('+s.dept+')':''));});
+    const yrChips=Object.keys(byYr).sort((a,b)=>(a==='未设')-(b==='未设')||a.localeCompare(b)).map(y=>{const on=(_btecYrF===y),dim=(_btecYrF&&!on);return '<span onclick="btecPickYr(\''+jsq(y)+'\')" title="'+eh((y==='未设'?'没填 BTEC 学年的学生':'BTEC 学年 '+y)+':\n'+yrNames[y].join('、')+'\n\n'+(on?'再点一下显示全部':'点一下只看这些学生'))+'" style="cursor:pointer;background:'+(y==='未设'?'#FFF4E5':'#EEF2FF')+';color:'+(y==='未设'?'#9a5b00':'#3949ab')+';border-radius:10px;padding:1px 9px;font-size:11px;font-weight:600;'+(on?'box-shadow:0 0 0 2px currentColor;':'')+(dim?'opacity:.45;':'')+'">🎓 '+(y==='未设'?'未设学年':eh(y)+' 学年')+' · '+byYr[y]+' 人</span>';}).join('');
     _cEl.innerHTML='<b style="color:#3C3489">👥 共 '+studs.length+' 生</b>'+(inf?'<span style="color:#888">(@'+eh(inf)+')</span>':'')+(chips?'<span style="color:#ccc">|</span>'+chips:'')+(yrChips?'<span style="color:#ccc">|</span>'+yrChips:'');}
+  // 色块先画好再判空:筛到 0 人时仍能点色块取消筛选
+  if(!studs.length){const _filt=(_btec.students||[]).length>0;if(_filt){wrap.innerHTML='<div style="padding:24px;text-align:center;color:#999;font-size:13px">没有符合筛选条件的学生 —— 再点一次已选中的色块即可取消</div>';if(em)em.style.display='none';}else{wrap.innerHTML='';if(em)em.style.display='block';}return;}
+  if(em)em.style.display='none';
   if(_btecTransp){wrap.innerHTML=_btecTranspHtml(units,studs,sems,isAdmin,showTc,showKind,inf);return;}
   const th=dep=>{const c=(typeof COHORT_COLOR!=='undefined'?COHORT_COLOR[dep]:null);const bg=c?c.bg:'#534AB7',fg=c?c.fg:'#fff';return '<th style="position:sticky;top:0;background:'+bg+';color:'+fg+';padding:4px 4px;font-size:10px;font-weight:700;white-space:nowrap;z-index:2;width:104px;overflow:hidden;text-overflow:ellipsis;border:0.5px solid #fff" title="专业 '+eh(dep||'')+'">'+eh(dep||'')+'</th>';};
   const corner='<th style="position:sticky;left:0;top:0;background:#3C3489;color:#fff;z-index:3;width:410px;text-align:left;padding:4px 8px">BTEC 单元＼学生</th>';
