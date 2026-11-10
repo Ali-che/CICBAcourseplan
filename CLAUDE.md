@@ -31,7 +31,8 @@
 ## 容易踩的结构(改前必读)
 - `courses` 是**视图** = catalog + dept_map + courses_extra:改部门动 `dept_map`、改课码动 `catalog`,**别改视图**
 - 届别→专业判定:用 `cohortDept()`,**不要** `cohortPrefix()`(后者截前 2 字母,IBCE 这类 4 字母专业会错)
-- `audit_log` **新旧两套列并存**:触发器写 `tbl/op/row_id/editor/before/after`;约 13 个手写审计函数写 `editor/action/target/detail`。**改此表前先查谁在写**,别换列名
+- `audit_log` **新旧两套列并存**:触发器写 `tbl/op/row_id/editor/before/after`;约 13 个手写审计函数写 `editor/action/target/detail`(界面隐藏)。**改此表前先查谁在写**,别换列名
+- 编辑记录的**修改人**(006 起):`_admin`/`_pin_editor`/`_can_exam` 验证成功时 `set_config('app.editor')`,`audit_trg` 先取它。**新写 RPC 一律先调这三个之一**;新增资料表要进编辑记录 → 挂 `trg_audit` + 前端 `_AUD_TBLS` 加一行。含 PIN 的表(pins/app_admins/partner_*)**不要挂**
 - 老师离职 = 软删 `teachers.resigned`(**不要硬删**,会让历史排课变孤儿)
 - 顶部主分页高亮按按钮的 `data-tab` 配对(2026-11-10 起,不再靠顺序数组);**新增主分页要加 `data-tab`**,并放进对应的 `.tab-grp` 分组
 
@@ -79,9 +80,10 @@
 
 - **2026-11-10 全站紫色表头可点排序 + 排序图示统一(已上线)**:新通用排序 `_gSort*`(在 `syncTblHeight` 前):MutationObserver 自动给「没有自带排序」的紫色表头每栏加 `.gs-ic`(图示一律 `siIcon`:灰 ⇅ / ▲ / ▼),点击 升序→降序→还原;重新渲染(换筛选)后自动套回。规则:分组列 `.dh`、小计列 `.dt`、整列跨栏列当分隔线,只在段内排;展开明细列(class 含 acc/detail,或隐藏列)跟着上一列走;「#」栏序号保持 1,2,3;`#`/操作/含输入框的表头不加;tbody 有 rowspan 的表跳过;列印隐藏图示。已有自带排序的表(排课/IS-SG/期末考/后台老师库/课程库/编辑记录)不动,但图示都改用 `siIcon`。**不想要排序的表加 `data-gsort="off"`**(公式说明表已加)。用 rAF 会在背景分页停住,故用 setTimeout。
 - **2026-11-10 专业老师课表「本学期课数」改与教学统计同算法(已上线)**:原本是该学期排课笔数,现改为 `semDetail(老师,学期).wt`(按类型/人数加权,含 IS/SG、Capstone),= 教学统计该学期栏;数字悬停列逐课明细。「⏳ 待定老师」行用 `_pendWt()` 同规则加权。已逐人核对 2569-2 全部 34 位老师一致。
+- **2026-11-10 编辑记录覆盖全部后台资料(006 ✅ 2026-11-10 已跑,前端已上线)**:起因:编辑记录只看得到排课/IS-SG/期末考。`migrations/006`:① `_admin`/`_pin_editor`/`_can_exam` 设 `app.editor` → 所有 RPC 的修改人自动正确(顺带修好期末考修改人一直空白、批量删除记成原编辑人)② `audit_trg` 修改人先取 app.editor,UPDATE 无变化不记 ③ 21 张参考表挂 `trg_audit`(不含账号/PIN/消息/在线)④ 移除 002/003 手写新列审计免重复。前端:全局 `_AUD_TBLS`(类型名/徽章色/分组/对象显示)驱动类型下拉(optgroup 5 组)、徽章、排序;参考表新增/删除列出栏位,修改沿用 diff;老师 UPDATE 只有 resigned 变化才显示离职/复职。ui_smoke 12/12;用假资料渲染 10 种行已核对。
 ### 下一步要做什么（按优先级）
 1. **基线快照 `migrations/000`**（一次性,未做)— 请 Aj. Tsai 跑 `000_baseline_HOWTO.md` 里的只读查询,把结果给我存档,作为 DB 现状定锚。
-2. ~~P1 · 清 audit 双写~~ ✅ 2026-11-09 完成(`migrations/004`)。其余约 10 个后台手写审计函数(admin_add_teacher 等)仍写旧列,不在编辑记录界面显示;要的话比照 002 改新列。
+2. ~~P1 · 清 audit 双写~~ ✅ 2026-11-09 完成(`migrations/004`)。其余后台手写旧列审计在 006 后已被触发器取代(旧列行仍写但界面隐藏,可日后清掉)。
 3. **P1 · 报错透出推广** — 把 `_errText()` 接到更多后台写操作(目前只接了 `opsAfter` / `addCohSubmit`)。
 4. **P1 · 届别改卡片** — 后台「届别」仍是表格;改卡片时**必须保留年限 + 在读/已毕业状态**,别丢信息。
 5. **P2** — 原生 `alert`(117 处)→ toast;加**云端排程备份**(目前只靠本机 launchd,单点风险);顶部「专业」三处数字标示统一。
