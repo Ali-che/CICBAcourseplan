@@ -2567,7 +2567,7 @@ function renderExam(){
     '<td style="white-space:nowrap">'+eh(x.teacher||'')+'</td>'+
     '<td style="white-space:nowrap">'+eh(x.school||'')+'</td>'+
     '<td style="font-size:11px;color:#888;max-width:140px">'+eh(x.note||'')+'</td>'+
-    '<td class="no-print" style="white-space:nowrap">'+(isAdmin?'<button class="btn-ic btn-ic-edit" onclick="examEdit('+x.id+')" title="编辑">✎</button> <button class="btn-ic btn-ic-del" onclick="examDel('+x.id+',\''+jsq(x.name_zh||x.sid||'')+'\')" title="删除">🗑</button>':'')+'</td>'+
+    '<td class="no-print" style="white-space:nowrap">'+(isAdmin?'<button class="btn-ic btn-ic-edit" onclick="examEdit('+x.id+')" title="编辑">✎</button> <button class="btn-ic btn-ic-copy" onclick="examCopy('+x.id+')" title="复制（同一学生再加一门课）"><svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H6z"/><path d="M2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1H2z"/></svg></button> <button class="btn-ic btn-ic-del" onclick="examDel('+x.id+',\''+jsq(x.name_zh||x.sid||'')+'\')" title="删除">🗑</button>':'')+'</td>'+
     '</tr>').join('');
   const setIc=(id,k)=>{const el=document.getElementById(id);if(el)el.innerHTML=(typeof siIcon==='function')?siIcon(k,_examSK,_examSD):(_examSK===k?(_examSD>0?'▲':'▼'):'⇅');};
   setIc('exam-si-dept','dept');setIc('exam-si-sem','sem');setIc('exam-si-course','course');
@@ -2577,10 +2577,23 @@ function examToggleAdd(force){
   if(!b)return;const open=(typeof force==='boolean')?force:(b.style.display==='none');
   b.style.display=open?'':'none';
   if(ar)ar.style.transform=open?'rotate(180deg)':'';
-  if(hn)hn.textContent=open?(_examEdit&&_examEdit.id?'（编辑中）':'（填写中）'):'（点击展开）';
+  if(hn){hn.textContent=open?(_examEdit&&_examEdit.id?'（编辑中）':'（填写中）'):'（点击展开）';hn.style.color='';hn.style.fontWeight='';}
   if(open){_examModalMode=false;const mf=document.getElementById('exam-modal-form');if(mf)mf.innerHTML='';if(!_examEdit)_examEdit={};_examShowForm('exam-form');}else{_examEdit=null;}
 }
 function examNew(){_examEdit={};examToggleAdd(true);}
+// 2026-11-10 复制:带入学生资料+学年学期/班级/负责学校/类型,清空课程/老师/上下半/备注,走「新增」(无 id)
+function examCopy(id){
+  const r=(_exam.rows||[]).find(x=>String(x.id)===String(id));if(!r)return;
+  if(_examModalMode)examModalClose();
+  examToggleAdd(false);
+  _examEdit={sid:r.sid,salut:r.salut,name_py:r.name_py,name_zh:r.name_zh,dept:r.dept,sem:r.sem,cls:r.cls,school:r.school,kind:(r.kind==='考试冲突'?'登分':r.kind)};
+  examToggleAdd(true);
+  const hn=document.getElementById('exam-add-hint');
+  if(hn){hn.textContent='已复制 '+(r.salut||'')+' '+(r.name_py||r.name_zh||'')+'（'+(r.sid||'')+'），请填新的课程与老师';hn.style.color='#3B6D11';hn.style.fontWeight='600';}
+  const hdr=document.getElementById('exam-add-hdr');if(hdr)hdr.scrollIntoView({behavior:'smooth',block:'start'});
+  const co=document.getElementById('exam-course');
+  if(co){co.focus();co.style.boxShadow='0 0 0 2px #C0DD97';setTimeout(()=>{co.style.boxShadow='';},2000);}
+}
 // 修改 → 弹窗（同排课表）
 function examEdit(id){
   const r=(_exam.rows||[]).find(x=>String(x.id)===String(id));if(!r)return;
