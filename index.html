@@ -542,30 +542,25 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     </div>
   </div>
   <div class="card">
-    <div class="sechdr" style="flex-wrap:wrap;gap:10px;align-items:center">
-      <span class="ct" style="margin:0;font-size:12px">排课记录<span id="sch-n" style="font-weight:400;color:#888;margin-left:4px"></span></span>
-      <!-- 🔍 筛选区（紫色淡底 + 圆角）-->
-      <div style="display:flex;gap:5px;align-items:center;background:#F5F4FE;border:0.5px solid #E5E3F8;border-radius:8px;padding:4px 8px">
-        <span style="font-size:10px;color:#888;white-space:nowrap">筛选</span>
-        <select id="sch-sem-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">全部学年学期</option></select>
-        <select id="sch-dept-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">课程代码</option></select>
-        <select id="sch-tc-f" onchange="renderSch()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">全部老师</option></select>
-        <input id="sch-search" type="text" oninput="renderSch()" placeholder="🔍 搜课程代码 / 英文名 / 班级" style="font-size:11px;padding:4px 8px;width:220px;border-color:#E5E3F8">
-        <label style="font-size:11px;color:#888;cursor:pointer;white-space:nowrap" title="勾选后在各视图临时显示已归档学期(全局)"><input type="checkbox" id="sch-showarch" onchange="toggleShowArch(this.checked)" style="width:auto;vertical-align:middle"> 显示已归档</label>
-      </div>
-      <!-- 操作区 -->
-      <div class="sch-tools" style="display:flex;gap:4px;align-items:center;flex:1 1 100%;flex-wrap:wrap;padding-top:6px;border-top:0.5px dashed #ECEAF6">
+    <div class="sechdr" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:.6rem">
+      <span class="ct" style="margin:0;font-size:13px">📋 排课记录<span id="sch-n" style="font-weight:400;color:#888;margin-left:4px"></span></span>
+      <div class="lh-tools" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
         <button class="btn btn-sm" onclick="syncToSheets('schedule')" title="整张上传" style="display:none">↑ 上传</button>
         <button class="btn btn-sm" onclick="syncFromSheets('schedule')" title="从 Supabase 重新载入最新">↻ 重新载入</button>
-        <span style="width:1px;height:18px;background:#e0e0e0;margin:0 2px"></span>
-        <button class="btn btn-sm no-print" onclick="exportSchExcel()" style="color:#1a6b2f;border-color:#9ed4ae" title="导出当前筛选结果为 Excel">📊 Excel</button>
-        <button class="btn btn-sm no-print" onclick="printPanel('sch')" title="按目前的学期/搜索筛选,列印排课记录(横向 A4);未筛选则印全部">🖨️ 列印</button>
-        <span style="flex:1"></span>
+        <button class="btn btn-sm no-print" onclick="exportSchExcel()" style="color:#1a6b2f;border-color:#9ed4ae" title="导出当前筛选结果为 Excel">📊 导出 Excel</button>
         <button id="btn-addcoh" class="btn btn-sm no-print" onclick="openAddCoh()" style="display:none;color:#1b7a5a;border-color:#9FE1CB" title="新增届别(含年限)">➕ 新增届别</button>
         <button class="btn btn-sm no-print" onclick="openCsvImport()" style="color:#854F0B;border-color:#FCD34D" title="从 CSV 批量导入">📥 批量导入</button>
         <button class="btn btn-sm no-print" onclick="openCohortCleanup()" style="color:#7c2d92;border-color:#d8b4e2" title="精准移除某个届别:独占的整笔删,共享的仅摘除该届别">🧹 按届别清理</button>
         <button id="sch-batch-del" class="btn btn-sm no-print" onclick="deleteFiltered('schedule')" style="color:#a32d2d;border-color:#f7c1c1;display:none" title="按目前筛选条件删除全部"><svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true" style="vertical-align:-1px"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H3.5V0a1 1 0 0 1 1-1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg> 批量删除 <span id="sch-batch-del-n">0</span></button>
+        <button class="btn btn-sm no-print" onclick="printPanel('sch')" title="按目前的学期/搜索筛选,列印排课记录(横向 A4);未筛选则印全部">🖨️ 列印</button>
       </div>
+    </div>
+    <div class="fbar no-print" style="margin-bottom:.6rem;flex-wrap:wrap">
+      <label>学年学期</label><select id="sch-sem-f" onchange="renderSch()"><option value="">全部学年学期</option></select>
+      <label>课程代码</label><select id="sch-dept-f" onchange="renderSch()"><option value="">课程代码</option></select>
+      <label>老师</label><select id="sch-tc-f" onchange="renderSch()"><option value="">全部老师</option></select>
+      <input id="sch-search" type="text" oninput="renderSch()" placeholder="🔍 搜课程代码 / 英文名 / 班级" style="width:220px">
+      <label style="font-size:11px;color:#888;cursor:pointer;white-space:nowrap" title="勾选后在各视图临时显示已归档学期(全局)"><input type="checkbox" id="sch-showarch" onchange="toggleShowArch(this.checked)" style="width:auto;vertical-align:middle"> 显示已归档</label>
     </div>
     <div class="tbl-wrap">
       <table id="sch-table"><thead><tr>
@@ -653,28 +648,23 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     </div>
   </div>
   <div class="card">
-    <div class="sechdr" style="flex-wrap:wrap;gap:10px;align-items:center">
-      <span class="ct" style="margin:0;font-size:12px">IS/SG 排课记录<span id="sp-n" style="font-weight:400;color:#888;margin-left:4px"></span></span>
-      <!-- 🔍 筛选区 -->
-      <div style="display:flex;gap:5px;align-items:center;background:#F5F4FE;border:0.5px solid #E5E3F8;border-radius:8px;padding:4px 8px">
-        <span style="font-size:10px;color:#888;white-space:nowrap">筛选</span>
-        <select id="sp-sem-f" onchange="renderSp()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">全部学年学期</option></select>
-        <select id="sp-dept-f" onchange="renderSp()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">课程代码</option></select>
-        <select id="sp-mj-f" onchange="renderSp()" style="font-size:11px;padding:4px 8px;width:auto;border-color:#E5E3F8"><option value="">全部专业</option></select>
-        <input id="sp-search" type="text" oninput="renderSp()" placeholder="🔍 搜课程代码 / 英文名 / 学号 / 姓名 / 班级" style="font-size:11px;padding:4px 8px;width:260px;border-color:#E5E3F8">
-        <label style="font-size:11px;color:#888;cursor:pointer;white-space:nowrap" title="显示已归档学期(全局)"><input type="checkbox" id="sp-showarch" onchange="toggleShowArch(this.checked)" style="width:auto;vertical-align:middle"> 显示已归档</label>
-      </div>
-      <!-- 操作区 -->
-      <div class="sch-tools" style="display:flex;gap:4px;align-items:center;flex:1 1 100%;flex-wrap:wrap;padding-top:6px;border-top:0.5px dashed #ECEAF6">
+    <div class="sechdr" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:.6rem">
+      <span class="ct" style="margin:0;font-size:13px">👤 IS/SG 排课记录<span id="sp-n" style="font-weight:400;color:#888;margin-left:4px"></span></span>
+      <div class="lh-tools" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
         <button class="btn btn-sm" onclick="syncToSheets('special')" title="整张上传" style="display:none">↑ 上传</button>
         <button class="btn btn-sm" onclick="syncFromSheets('special')" title="从 Supabase 重新载入最新">↻ 重新载入</button>
-        <span style="width:1px;height:18px;background:#e0e0e0;margin:0 2px"></span>
-        <button class="btn btn-sm no-print" onclick="exportSpExcel()" style="color:#1a6b2f;border-color:#9ed4ae" title="导出当前筛选结果为 Excel">📊 Excel</button>
-        <button class="btn btn-sm no-print" onclick="printPanel('sp')" title="按目前筛选,列印 IS/SG 排课学生名单(横向 A4);未筛选则印全部">🖨️ 列印</button>
-        <span style="flex:1"></span>
+        <button class="btn btn-sm no-print" onclick="exportSpExcel()" style="color:#1a6b2f;border-color:#9ed4ae" title="导出当前筛选结果为 Excel">📊 导出 Excel</button>
         <button class="btn btn-sm no-print" onclick="openCsvImportSp()" style="color:#854F0B;border-color:#FCD34D" title="从 CSV 批量导入">📥 批量导入</button>
         <button id="sp-batch-del" class="btn btn-sm no-print" onclick="deleteFiltered('special')" style="color:#a32d2d;border-color:#f7c1c1;display:none" title="按目前筛选条件删除全部"><svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true" style="vertical-align:-1px"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H3.5V0a1 1 0 0 1 1-1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg> 批量删除 <span id="sp-batch-del-n">0</span></button>
+        <button class="btn btn-sm no-print" onclick="printPanel('sp')" title="按目前筛选,列印 IS/SG 排课学生名单(横向 A4);未筛选则印全部">🖨️ 列印</button>
       </div>
+    </div>
+    <div class="fbar no-print" style="margin-bottom:.6rem;flex-wrap:wrap">
+      <label>学年学期</label><select id="sp-sem-f" onchange="renderSp()"><option value="">全部学年学期</option></select>
+      <label>课程代码</label><select id="sp-dept-f" onchange="renderSp()"><option value="">课程代码</option></select>
+      <label>专业</label><select id="sp-mj-f" onchange="renderSp()"><option value="">全部专业</option></select>
+      <input id="sp-search" type="text" oninput="renderSp()" placeholder="🔍 搜课程代码 / 英文名 / 学号 / 姓名 / 班级" style="width:260px">
+      <label style="font-size:11px;color:#888;cursor:pointer;white-space:nowrap" title="显示已归档学期(全局)"><input type="checkbox" id="sp-showarch" onchange="toggleShowArch(this.checked)" style="width:auto;vertical-align:middle"> 显示已归档</label>
     </div>
     <div class="tbl-wrap">
       <table><thead><tr>
@@ -844,8 +834,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <span class="ct" style="margin:0">各授课老师工作量</span>
       <div style="display:flex;gap:6px;align-items:center">
         <button class="btn btn-sm no-print" onclick="showFormulaInfo()" style="color:#534AB7;border-color:#AFA9EC" title="查看工作量计算公式">ℹ️ 公式说明</button>
-        <button class="btn btn-sm" onclick="renderSta()">↻ 刷新</button>
-        <span class="no-print" style="font-size:11px;color:#888">全部老师明细展开 · 直向 A4</span>
+        <button class="btn btn-sm" onclick="renderSta()">↻ 重新载入</button>
         <button class="btn btn-sm no-print" onclick="printPanel('sta')" title="列印教学统计:所有老师的课程明细自动展开(直向 A4);印的是当前学年筛选">🖨️ 列印</button>
       </div>
     </div>
@@ -956,22 +945,22 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 </div>
 
 <div id="panel-btec" class="panel">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:8px">
-    <div class="fbar" style="margin-bottom:0">
+  <div class="sechdr" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:.6rem">
+    <span id="btec-hint" class="ct" style="margin:0;font-size:12px;color:#888;font-weight:400"></span>
+    <div class="lh-tools" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+      <button class="btn btn-sm no-print" onclick="btecToggleTransp()" title="切换布局:学生为列 ⇄ 学生为行">⇄ 转置</button>
+      <button class="btn btn-sm no-print" onclick="reloadBtec()">↻ 重新载入</button>
+      <button class="btn btn-sm no-print" onclick="btecExportExcel()" style="color:#1a6b2f;border-color:#9ed4ae" title="导出当前(专业筛选后)的修课计划为 Excel">📊 导出 Excel</button>
+      <button class="btn btn-sm no-print" onclick="printPanel('btec')">🖨️ 列印</button>
+    </div>
+  </div>
+    <div class="fbar no-print" style="margin-bottom:.6rem;flex-wrap:wrap">
       <label>专业</label><select id="btec-dept-f" onchange="renderBtec()"><option value="">全部</option></select>
       <label>学年学期</label><select id="btec-intake-f" onchange="renderBtec()"><option value="">全部</option></select>
       <input id="btec-q" oninput="renderBtec()" placeholder="🔍 学号 / 姓名" style="width:150px">
       <label style="font-size:11px;color:#888;cursor:pointer"><input type="checkbox" id="btec-meta" onchange="renderBtec()" style="width:auto"> 显示讲师</label>
       <label style="font-size:11px;color:#888;cursor:pointer"><input type="checkbox" id="btec-kind-show" onchange="renderBtec()" style="width:auto"> 显示类别</label>
     </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <span id="btec-hint" style="font-size:11px;color:#888"></span>
-      <button class="btn btn-sm no-print" onclick="btecToggleTransp()" title="切换布局:学生为列 ⇄ 学生为行">⇄ 转置</button>
-      <button class="btn btn-sm no-print" onclick="reloadBtec()">↻ 重载</button>
-      <button class="btn btn-sm no-print" onclick="btecExportExcel()" title="导出当前(专业筛选后)的修课计划为 Excel">📊 导出 Excel</button>
-      <button class="btn btn-sm no-print" onclick="printPanel('btec')">🖨️ 列印</button>
-    </div>
-  </div>
   <div id="btec-title" style="margin-bottom:6px"></div>
   <div id="btec-count" style="margin:0 2px 10px;font-size:12px;color:#555;display:flex;flex-wrap:wrap;gap:6px;align-items:center"></div>
   <div id="btec-addbar" class="no-print" style="display:none;background:#F7F6FE;border-radius:8px;padding:9px 12px;margin-bottom:10px"></div>
@@ -991,12 +980,12 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:.6rem">
       <span class="ct" style="margin:0;font-size:13px">📝 本科期末考特例<span id="exam-n" style="font-weight:400;color:#888;margin-left:6px"></span></span>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        <button class="btn btn-sm no-print" onclick="reloadExam()">↻ 重载</button>
+        <button class="btn btn-sm no-print" onclick="reloadExam()">↻ 重新载入</button>
         <a href="https://changchuanchi.github.io/ciclearninghub/mou_student_grades.html" target="_blank" rel="noopener" class="no-print" onmouseover="var s=this.querySelector('span');if(s)s.style.opacity=1" onmouseout="var s=this.querySelector('span');if(s)s.style.opacity=0" style="position:relative;display:inline-flex;align-items:center;font-size:12px;color:#8A84C9;text-decoration:none;padding:4px 6px;border:0.5px solid #E5E3F8;border-radius:7px">🔗 查询成绩<span style="position:absolute;left:0;top:100%;margin-top:3px;white-space:nowrap;font-size:9.5px;color:#cbc8e0;opacity:0;transition:opacity .25s;pointer-events:none;letter-spacing:.05em">🔑 dpucicba</span></a>
         <a href="https://cicexam.vercel.app/admin.html" target="_blank" rel="noopener" class="no-print" title="英语毕业考试 管理员后台" onmouseover="var s=this.querySelector('span');if(s)s.style.opacity=1" onmouseout="var s=this.querySelector('span');if(s)s.style.opacity=0" style="position:relative;display:inline-flex;align-items:center;font-size:12px;color:#8A84C9;text-decoration:none;padding:4px 6px;border:0.5px solid #E5E3F8;border-radius:7px">🔗 英语毕业考<span style="position:absolute;left:0;top:100%;margin-top:3px;white-space:nowrap;font-size:9.5px;color:#cbc8e0;opacity:0;transition:opacity .25s;pointer-events:none;letter-spacing:.05em">🔑 询问张全吉老师</span></a>
         <button class="btn btn-sm no-print" onclick="examToggleGrade()" style="color:#534AB7;border-color:#AFA9EC" title="期末成绩评分标准">ℹ️ 评分说明</button>
-        <button class="btn btn-sm no-print" onclick="examExportExcel()">📊 导出 Excel</button>
-        <button class="btn btn-sm no-print" onclick="openCsvImportExam()" style="color:#8a5a00;border-color:#e6c27a">📥 批量导入</button>
+        <button class="btn btn-sm no-print" onclick="examExportExcel()" style="color:#1a6b2f;border-color:#9ed4ae">📊 导出 Excel</button>
+        <button class="btn btn-sm no-print" onclick="openCsvImportExam()" style="color:#854F0B;border-color:#FCD34D">📥 批量导入</button>
         <button class="btn btn-sm no-print" onclick="printPanel('exam')">🖨️ 列印</button>
       </div>
     </div>
@@ -1093,7 +1082,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <button class="ops-tab sys" id="ops-tab-acct" data-sec="acct" onclick="opsSwitch('acct')" style="display:none">🔑 账号权限</button>
         <button class="ops-tab sys" id="ops-tab-edits" data-sec="edits" onclick="opsSwitch('edits')" style="display:none">📋 编辑记录</button>
       </div></div>
-      <button class="btn btn-sm" onclick="renderOps(true)" style="margin-left:auto;align-self:center">↻ 重载</button>
+      <button class="btn btn-sm" onclick="renderOps(true)" style="margin-left:auto;align-self:center">↻ 重新载入</button>
     </div>
     <div id="ops-body"><div style="color:#888;padding:20px">载入中…</div></div>
   </div>
