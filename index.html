@@ -2062,6 +2062,8 @@ async function loadBtec(){
   renderBtec();
 }
 function reloadBtec(){loadBtec();}
+// 点专业色块:筛出该专业学生(同步上方「专业」下拉);点已选中的色块 = 显示全部
+function btecPickDept(d){const df=document.getElementById('btec-dept-f');if(!df)return;df.value=(df.value===d)?'':d;renderBtec();}
 // ═══════ §EXAM 期末考特例 ═══════
 let _exam={rows:[],schools:[]}, _examEdit=null, _examLoaded=false, _examSK='', _examSD=1, _examModalMode=false;
 // ═══════ §ARCHIVE 学期归档(排课/IS·SG/期末考/学期总表 默认隐藏已归档学期;教学统计照常计入) ═══════
@@ -2796,8 +2798,9 @@ function renderBtec(){
   const _tEl=document.getElementById('btec-title');
   if(_tEl){const totU=units0.length;const totG=units0.reduce((a,x)=>a+(x.glh||0),0);_tEl.innerHTML='<div style="background:#FCEEC8;border:0.5px solid #EBD9A0;border-radius:8px;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><b style="color:#7a5b00;font-size:13px">Pearson BTEC International Level 3 Extended Diploma in Business (2 Years)</b><span style="font-family:ui-monospace;font-size:12px;color:#7a5b00;font-weight:700">'+totG+' Hours · '+totU+' Units</span></div>';}
   const _cEl=document.getElementById('btec-count');
-  if(_cEl){const byDept={};studs.forEach(s=>{const d=s.dept||'—';byDept[d]=(byDept[d]||0)+1;});
-    const chips=Object.keys(byDept).sort().map(d=>{const c=(typeof COHORT_COLOR!=='undefined'?COHORT_COLOR[d]:null);const bg=c?c.bg:'#EEE',fg=c?c.fg:'#555';return '<span style="background:'+bg+';color:'+fg+';border-radius:10px;padding:1px 9px;font-size:11px;font-weight:600">'+eh(d)+' '+byDept[d]+'</span>';}).join('');
+  if(_cEl){const byDept={};(_btec.students||[]).forEach(s=>{const d=s.dept||'—';byDept[d]=(byDept[d]||0)+1;});  // 2026-11-10:色块数全体学生,点选=筛该专业,再点取消
+    const _curD=(document.getElementById('btec-dept-f')||{}).value||'';
+    const chips=Object.keys(byDept).sort().map(d=>{const c=(typeof COHORT_COLOR!=='undefined'?COHORT_COLOR[d]:null);const bg=c?c.bg:'#EEE',fg=c?c.fg:'#555';const on=(_curD===d),dim=(_curD&&!on);return '<span onclick="btecPickDept(\''+jsq(d==='—'?'':d)+'\')" title="'+(on?'再点一下显示全部专业':'只看 '+eh(d)+' 的学生')+'" style="cursor:pointer;background:'+bg+';color:'+fg+';border-radius:10px;padding:1px 9px;font-size:11px;font-weight:600;'+(on?'box-shadow:0 0 0 2px '+fg+';':'')+(dim?'opacity:.45;':'')+'">'+eh(d)+' '+byDept[d]+'</span>';}).join('');
     const byYr={};studs.forEach(s=>{const y=s.acad_year||'未设';byYr[y]=(byYr[y]||0)+1;});
     const yrChips=Object.keys(byYr).sort().map(y=>'<span style="background:#EEF2FF;color:#3949ab;border-radius:10px;padding:1px 9px;font-size:11px;font-weight:600">🎓 '+eh(y)+' '+byYr[y]+'</span>').join('');
     _cEl.innerHTML='<b style="color:#3C3489">👥 共 '+studs.length+' 生</b>'+(inf?'<span style="color:#888">(@'+eh(inf)+')</span>':'')+(chips?'<span style="color:#ccc">|</span>'+chips:'')+(yrChips?'<span style="color:#ccc">|</span>'+yrChips:'');}
