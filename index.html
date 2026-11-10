@@ -1365,7 +1365,27 @@ async function checkPin(){
   }
 }
 
+// 2026-11-10 修 macOS Secure Input:Chrome 只要焦点停在 type=password 上就会开启安全输入,
+// 整台电脑的第三方输入法(OpenVanilla)会被停用。所以:不自动聚焦密码框;隐藏前一律先 blur()。
+function _blurPwds(){
+  try{
+    var a=document.activeElement;
+    if(a&&a.tagName==='INPUT'&&(a.type==='password'||a.id==='pin-input'||/^chpin-/.test(a.id||''))){
+      a.blur();   // blur 后焦点自动回到 body
+    }
+  }catch(e){}
+}
+// 视窗切走 / 分页隐藏时也放掉密码框焦点,避免 App 留在背景时一直占住 Secure Input
+try{
+  window.addEventListener('blur',_blurPwds);
+  document.addEventListener('visibilitychange',function(){if(document.hidden)_blurPwds();});
+}catch(e){}
+
 function unlockApp(){
+  var _pi=document.getElementById('pin-input');
+  if(_pi){_pi.blur();_pi.value='';_pi.type='password';}
+  var _pe=document.getElementById('pin-eye');if(_pe)_pe.textContent='👁';
+  _blurPwds();
   document.getElementById('pin-overlay').style.display = 'none';
   document.getElementById('main-app').style.display = 'block';
   applyRoleVisibility();  // v8.8：按当前角色隐藏不该看的 tab
@@ -1897,12 +1917,12 @@ function checkAuth(){
   } else {
     document.getElementById('pin-overlay').style.display = 'flex';
     document.getElementById('main-app').style.display = 'none';
-    setTimeout(()=>document.getElementById('pin-input').focus(), 100);
+    // 不自动聚焦密码框(会触发 macOS Secure Input),由使用者点一下再输入
   }
 }
 
-function openChangePin(){var m=document.getElementById('chpin-modal');if(!m)return;['chpin-old','chpin-new','chpin-new2'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});var msg=document.getElementById('chpin-msg');if(msg)msg.textContent='';m.style.display='flex';try{setTimeout(function(){var e=document.getElementById('chpin-old');if(e)e.focus();},50);}catch(e){}}
-function closeChangePin(){var m=document.getElementById('chpin-modal');if(m)m.style.display='none';}
+function openChangePin(){var m=document.getElementById('chpin-modal');if(!m)return;['chpin-old','chpin-new','chpin-new2'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});var msg=document.getElementById('chpin-msg');if(msg)msg.textContent='';m.style.display='flex';}
+function closeChangePin(){['chpin-old','chpin-new','chpin-new2'].forEach(function(id){var e=document.getElementById(id);if(e){e.blur();e.value='';}});_blurPwds();var m=document.getElementById('chpin-modal');if(m)m.style.display='none';}
 async function changeMyPin(){
   var old=(document.getElementById('chpin-old')||{}).value||'';
   var nw=(document.getElementById('chpin-new')||{}).value||'';
@@ -1918,6 +1938,7 @@ async function changeMyPin(){
   if(r&&r.success){
     try{localStorage.setItem('cic_pin',nw.trim());}catch(e){}
     if(typeof window.__cicSetPin==='function')window.__cicSetPin(nw.trim());
+    _blurPwds();  // 成功即放掉密码框焦点(Secure Input),不等弹窗 0.9 秒后关闭
     setMsg('✅ 已更改,下次登录请用新密码',true);
     if(typeof showToast==='function')showToast('密码已更改',{kind:'success',duration:2000});
     setTimeout(closeChangePin,900);
@@ -1937,7 +1958,7 @@ function logout(){
   document.getElementById('pin-err').textContent='';
   document.getElementById('pin-overlay').style.display='flex';
   document.getElementById('main-app').style.display='none';
-  setTimeout(()=>document.getElementById('pin-input').focus(),100);
+  _blurPwds();
 }
 
 // ══════════ 站内消息(私信 + 公告)══════════
@@ -5640,8 +5661,6 @@ function handleTokenExpired(){
   const err=document.getElementById('pin-err');
   if(err){err.textContent='登入凭证已过期，请重新输入 PIN';err.style.color='#854F0B';}
   setTimeout(()=>{
-    const inp=document.getElementById('pin-input');
-    if(inp)inp.focus();
     _tokenExpiredAlerted=false;
   },200);
 }
@@ -7579,7 +7598,6 @@ function syncTblHeight(){
     else{
       var ov=document.getElementById('pin-overlay'),ma=document.getElementById('main-app');
       if(ov)ov.style.display='flex'; if(ma)ma.style.display='none';
-      setTimeout(function(){var i=document.getElementById('pin-input');if(i)i.focus();},100);
     }
   };
 
