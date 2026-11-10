@@ -5082,6 +5082,12 @@ function _tchYearLoad(n,yr){
   const mb=+((_teachBtec||{})[n])||0;
   return Math.round((wt+btec+mb)*100)/100;
 }
+// 待定老师的课 → 课时权重合计(与 semDetail 同规则:一般课 courseWeight;Capstone 计一份全学期查表值)
+function _pendWt(rows,sem){
+  let w=0;rows.forEach(r=>{if(r.type==='Capstone')return;w+=courseWeight(r.type,(r.cc||[]).reduce((s,x)=>s+(+x.count||0),0),false);});
+  if(rows.some(r=>r.type==='Capstone'))w+=capstoneSemLoad(sem).load;
+  return Math.round(w*100)/100;
+}
 function renderDeptTchMatrix(){
   _mxFillSelectors();_mtFillSelectors();
   if(_teachBtec===null){_teachBtec={};loadTeachBtec();}
@@ -5123,22 +5129,23 @@ function renderDeptTchMatrix(){
   let h='<table style="border-collapse:collapse;font-size:12px;width:100%;max-width:900px"><thead><tr>'
     +'<th style="background:#3C3489;color:#fff;text-align:left;padding:7px 12px;width:210px">老师</th>'
     +'<th style="background:#534AB7;color:#fff;text-align:left;padding:7px 12px">任课课程</th>'
-    +'<th style="background:#EEEDFE;color:#3C3489;padding:7px 10px;white-space:nowrap;width:80px">本学期课数</th>'
+    +'<th style="background:#EEEDFE;color:#3C3489;padding:7px 10px;white-space:nowrap;width:80px" title="与「教学统计」该学期栏同算法:按类型与人数加权,含 IS/SG、Capstone;鼠标移到数字上看明细">本学期课数</th>'
     +(_priv?'<th style="background:#EEEDFE;color:#3C3489;padding:7px 10px;white-space:nowrap;width:150px" title="该学年 3 学期课时 + BTEC + 手填 BTEC 另值,与「教学统计」学年总数一致">总课时 / 学年规定 ('+eh(sem.split('-')[0])+')</th>':'')+'</tr></thead><tbody>';
   tchs.forEach(t=>{
     const rows=mine.filter(r=>r.tc===t.n);
     const yt=_priv?_tchYearLoad(t.n,sem.split('-')[0]):0;const over=t.l>0&&yt>t.l;
     h+='<tr'+(rows.length?'':' style="opacity:.5"')+'><td style="'+td+';white-space:nowrap;font-weight:600;padding-left:12px">'+eh(t.n)+(_priv&&t.r?' <span style="color:#999;font-size:10px;font-weight:400">'+eh(t.r)+'</span>':'')+'</td>'
       +'<td style="'+td+'">'+cellHtml(rows)+'</td>'
-      +'<td style="'+td+';text-align:center;background:#EEEDFE;font-weight:700;color:#3C3489">'+rows.length+'</td>'
+      +(()=>{const sd=semDetail(t.n,sem);const tip=sd.courses.length?sd.courses.slice().sort((a,b)=>halfRank(a)-halfRank(b)||String(a.code).localeCompare(String(b.code))).map(c=>c.code+' · '+c.type+' · '+c.students+'人 → '+c.weight).join('\n')+'\n合计 '+sd.wt+'(与「教学统计」同算法)':'';
+        return '<td style="'+td+';text-align:center;background:#EEEDFE;font-weight:700;color:#3C3489"'+(tip?' title="'+eh(tip)+'"':'')+'>'+(sd.wt||0)+'</td>';})()
       +(_priv?'<td style="'+td+';text-align:center;background:#EEEDFE;white-space:nowrap;'+(over?'color:#B91C1C;font-weight:700':'color:#3C3489')+'"'+(over?' title="超过学年规定"':'')+'>'+yt+' / '+(t.l||'—')+(over?' ⚠':'')+'</td>':'')+'</tr>';
   });
   if(pend.length){
     h+='<tr><td style="'+td+';background:#FEF2F2;white-space:nowrap;color:#B91C1C;font-weight:600;padding-left:12px">⏳ 待定老师</td>'
       +'<td style="'+td+';background:#FEF8F8">'+cellHtml(pend)+'</td>'
-      +'<td style="'+td+';text-align:center;background:#FEF2F2;font-weight:700;color:#B91C1C">'+pend.length+'</td>'+(_priv?'<td style="'+td+';background:#FEF2F2"></td>':'')+'</tr>';
+      +'<td style="'+td+';text-align:center;background:#FEF2F2;font-weight:700;color:#B91C1C" title="按「教学统计」课时权重合计(未分配老师)">'+_pendWt(pend,sem)+'</td>'+(_priv?'<td style="'+td+';background:#FEF2F2"></td>':'')+'</tr>';
   }
-  h+='</tbody></table><div style="font-size:11px;color:#999;margin-top:6px">每门课只列一次;课码旁为总人数,鼠标移上去看届别明细,点击编辑。B=BTEC。'+(_priv?'「总课时 / 学年规定」= 该学年 3 学期合计(含 BTEC),与「教学统计」学年总数一致,超过标红。':'')+'</div>';
+  h+='</tbody></table><div style="font-size:11px;color:#999;margin-top:6px">每门课只列一次;课码旁为总人数,鼠标移上去看届别明细,点击编辑。B=BTEC。「本学期课数」与「教学统计」该学期栏同算法(按类型、人数加权,含 IS/SG),鼠标移上去看明细。'+(_priv?'「总课时 / 学年规定」= 该学年 3 学期合计(含 BTEC),与「教学统计」学年总数一致,超过标红。':'')+'</div>';
   wrap.innerHTML=h;
 }
 function renderSpStu(){
