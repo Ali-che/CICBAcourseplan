@@ -38,7 +38,7 @@
 
 ## 相关档案
 - `docs/运维交接单.md` — 接手/救急完整指南
-- `migrations/` — 所有 DB 变更 SQL + `checks/rls_audit.sql`(安全体检,可随时重跑)
+- `migrations/` — 所有 DB 变更 SQL + `checks/health_check_all.sql`(安全体检**合一版**:RLS + 审计覆盖 + 双写,一次 Run 出一张表,可随时重跑;`rls_audit.sql`/`audit_*_inspect.sql` 为单项旧脚本)
 
 ---
 
@@ -46,6 +46,7 @@
 
 ### 目前做到哪
 - 系统上线稳定运行,约 8 位同事日常使用;**全站实际操作体检通过,无 JS 崩溃**。
+- **2026-11-13 安全体检合一版 + RLS 复查全绿(只读,没改 DB;新增 `migrations/checks/health_check_all.sql`)**:把 `rls_audit` + 审计覆盖 + 双写量三支 checks 合成「单一 UNION 结果表」(Supabase SQL Editor 一次 Run 只显示最后一个结果,故不能多 SELECT 叠贴)。Aj. Tsai 在 SQL Editor 跑过:**区块 A·RLS 零 ⚠️ 零 🟡**——无任何表外人可写,5 张 RLS 关但不可写(archived_terms/courses_extra/exam_school/notice/teach_btec)同 11-05 基线;**区块 B·审计覆盖无漏挂**——9 张「无审计」全是账号/PIN/消息/在线类(app_admins/audit_log/message_reads/messages/partner_*/pins/presence)本就不挂,其余业务+参考表全有;**区块 C·双写**——新列现行(I36/U415/D22/BASELINE329),旧列历史残留约 200 行(add12/del14/upd174,均 004 前,界面隐藏、可日后清)。要坐实旧列是否停写:`select max("at"), max("at")<date '2026-11-09' from audit_log where tbl is null`(audit_log 时间栏=`at`)。**结论:006 没开出任何漏洞,DB 侧干净。** 另两个真实资安项与 DB 无关、待办:① 备份含 PIN 明文+学生个资同步到 Google Drive → 确认该资料夹没对外分享 + 账号两步验证;② 云端单点(同一 Google 账号)。
 - **2026-11-12 修 Secure Input 最后残留(纯前端,已上线 `5bbacd6`)**:三系统(TM/BA/测验)并行修 macOS Secure Input,本项目补齐最后一处——`togglePinEye`(登入页 PIN 眼睛钮)原本切换后一律 `i.focus()`,眼睛由「显示(text)」切回「隐藏(password)」时会聚焦密码框→又触发 Secure Input;改为切到 text 才 `focus()`、切回 password 改 `blur()`。其余密码/PIN 框(`pin-input`、`chpin-*`)2026-11-10 已处理。ui_smoke 本地 12/12;push 后以 `curl -H 'Cache-Control: no-cache'` 比对线上确认新版已上线(Pages 的 Fastly CDN `max-age=600`,带 `?cb=` 查询串不会破缓存,要用 no-cache 头或等 10 分钟/硬刷新才看得到)。**本机无法真正重开 Chrome App,Secure Input 释放待 Aj. Tsai 重开 App 后用 `ioreg -l -w 0 | grep -i SecureInput` 验收**。
 - DB 已跑到 `migrations/004`(002 已确认跑过);**RLS 安全盘点 2026-11-05 全数通过**(全绿)。
 - **2026-11-12(二轮) 课程结构选专业合并成一个药丸窗 + 专业老师课表列印满版 + 修教学统计手风琴列印截字(已上线验证 `d82a14b`)**:① **course_structure_online.html**:把「选专业 Excel」与「选专业 PDF」两窗**合并成一个「📤 导出 / 列印(选专业)」窗**(`openOutSel`,勾一次专业→底部绿 Excel(仅编辑者)/紫 PDF);选专业 UI 从朴素勾选格**改药丸式**(`.msel-chipitem`,选中紫底打勾/未选淡紫,与顶部专业 tab 同款,flex-wrap);`_mselRender/_mselPicked/_mselCount/outSelAll` 改读 `.msel-chipitem.on`。② **index.html 专业老师课表列印满版**:表加 class `mt-fullw` + 列印 `.mt-fullw{width:100%!important}`(覆盖全站列印预设 `table{width:auto}` 造成的半版)。③ **index.html 修教学统计手风琴列印截字**:`.tip-row` 固定 `min-width`(徽章44/课码50/人40/课时30…)在窄列印卡片里撑爆、最右「课时」被截→列印时(`body.print-sta .acc-sec .tip-row>span{min-width:0}`+缩字)放进卡片。**上一轮(`c7128f8`)以为是 `td *` 规则,其实元凶是这些 min-width**。验证:ui_smoke 本地/线上 12/12、选专业窗 11/11+6/6、满版+窄卡不截 7/7。**教学统计真实数据需 PIN,纸面待人工确认**。
