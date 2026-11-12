@@ -275,8 +275,6 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   .panel.active table{width:auto!important;max-width:100%;table-layout:auto!important;margin:0 auto!important;font-size:7pt!important}
   .panel.active th,.panel.active td{white-space:nowrap!important;word-break:normal!important;overflow-wrap:normal!important;padding:2pt 4pt!important;font-size:7pt!important}
   .panel.active th{font-size:6.8pt!important}
-  /* v8.17: 让带 inline 字号的表(如专业班级课表矩阵 font-size:12px)也吃列印小字,否则会超出 A4 */
-  .panel.active td *,.panel.active th *{font-size:inherit!important}
   .panel.active .badge{white-space:nowrap}
 
   /* ── 教学统计专属：列印时辅助面板不印；默认展开所有老师的手风琴明细 ── */
@@ -5283,7 +5281,7 @@ function renderDeptTchMatrix(){
       +'<div style="flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:4px">'+g[k].sort((a,b)=>String(a.course||'').localeCompare(String(b.course||''))).map(chip).join('')+'</div></div>').join('');
   };
   const td='border-top:0.5px solid #eee;padding:5px 8px;vertical-align:middle';
-  let h='<table style="border-collapse:collapse;font-size:12px;width:100%;max-width:900px"><thead><tr>'
+  let h='<table style="border-collapse:collapse;font-size:12px;width:100%"><thead><tr>'
     +'<th style="background:#3C3489;color:#fff;text-align:left;padding:7px 12px;width:210px">老师</th>'
     +'<th style="background:#534AB7;color:#fff;text-align:left;padding:7px 12px">任课课程</th>'
     +'<th style="background:#EEEDFE;color:#3C3489;padding:7px 10px;white-space:nowrap;width:80px" title="与「教学统计」该学期栏同算法:按类型与人数加权,含 IS/SG、Capstone;鼠标移到数字上看明细">本学期课数</th>'
@@ -6492,7 +6490,6 @@ function _measurePrintTableW(table){
   clone.style.cssText='width:auto!important;max-width:none!important;table-layout:auto!important;font-size:7pt;border-collapse:collapse;margin:0';
   clone.querySelectorAll('th,td').forEach(c=>{c.style.whiteSpace='nowrap';c.style.wordBreak='normal';c.style.overflowWrap='normal';c.style.padding='2pt 4pt';c.style.fontSize='7pt';});
   clone.querySelectorAll('th').forEach(c=>{c.style.fontSize='6.8pt';});
-  clone.querySelectorAll('td *,th *').forEach(e=>{e.style.fontSize='inherit';});   // 与列印 CSS 一致:inline 字号归到小字再量
   const box=document.createElement('div');
   box.style.cssText='position:absolute;left:-99999px;top:0;visibility:hidden;width:auto;max-width:none';
   box.appendChild(clone);document.body.appendChild(box);
