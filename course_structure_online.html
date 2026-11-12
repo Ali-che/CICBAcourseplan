@@ -87,10 +87,12 @@
 .msel-tools{display:flex;gap:6px;margin-bottom:11px}
 .msel-chip{font-size:11.5px;color:#534AB7;background:#EEEDFE;border:0;border-radius:999px;padding:5px 13px;cursor:pointer;font-weight:600;font-family:inherit}
 .msel-chip:hover{background:#E0DDFA}
-.msel-list{display:grid;grid-template-columns:1fr 1fr;gap:5px 14px}
-.msel-list label{display:flex;align-items:center;gap:9px;cursor:pointer;font-size:12.5px;padding:6px 9px;border-radius:8px;color:#333;border:1px solid transparent}
-.msel-list label:hover{background:#F7F6FD;border-color:#EDEAFB}
-.msel-list input{width:15px;height:15px;accent-color:#534AB7;cursor:pointer;flex:0 0 auto}
+.msel-grid{display:flex;flex-wrap:wrap;gap:7px}
+.msel-chipitem{display:inline-flex;align-items:center;gap:5px;padding:7px 15px;border-radius:999px;background:#ECEAF8;color:#534AB7;font-weight:700;font-size:13px;line-height:1.15;cursor:pointer;border:1.5px solid #E0DCF7;user-select:none;transition:background .12s,color .12s,border-color .12s,box-shadow .12s}
+.msel-chipitem:hover{background:#DCD6F5;border-color:#C9C1EE}
+.msel-chipitem .ck{width:12px;text-align:center;font-size:11px;opacity:.35}
+.msel-chipitem.on{background:#534AB7;color:#fff;border-color:#534AB7;box-shadow:0 1px 5px rgba(83,74,183,.28)}
+.msel-chipitem.on .ck{opacity:1}
 .msel-ft{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:15px 20px 18px;border-top:1px solid #F0EEF8;margin-top:12px}
 .msel-cnt{font-size:11.5px;color:#888}
 .msel-ft .acts{display:flex;gap:8px}
@@ -100,10 +102,9 @@
 .msel-btn.go:hover{background:#443a9e}
 .msel-btn.go.xls{background:#2E7D32}
 .msel-btn.go.xls:hover{background:#245e28}
-@media(max-width:430px){.msel-list{grid-template-columns:1fr}}
 </style></head><body><div class="wrap">
 <div class="tabs" id="tabs"></div>
-<div class="bar"><select id="fprog" onchange="selDrop(this.value)"></select><input id="fq" placeholder="🔍 全专业搜索 · 代码 / 中文 / 英文 / 对接" oninput="render()"><button class="rf" onclick="loadSheet()">↻ 刷新数据</button><button id="btn-xls1" class="rf" onclick="openXlsSel()" style="border-color:#8FC46B;color:#3B6D11;display:none" title="选专业导出 Excel（可单个 / 多个 / 全部，每个专业一个工作表）">📊 导出 Excel</button><button class="rf" onclick="window.print()" style="border-color:#AFA9EC;color:#534AB7" title="列印当前专业（直式 A4）">🖨️ 列印</button><button class="rf" onclick="openPdfSel()" style="border-color:#AFA9EC;color:#534AB7" title="选专业列印 / 存 PDF（可单个 / 多个 / 全部）">📄 选专业列印 / PDF</button></div>
+<div class="bar"><select id="fprog" onchange="selDrop(this.value)"></select><input id="fq" placeholder="🔍 全专业搜索 · 代码 / 中文 / 英文 / 对接" oninput="render()"><button class="rf" onclick="loadSheet()">↻ 刷新数据</button><button class="rf" onclick="window.print()" style="border-color:#AFA9EC;color:#534AB7" title="列印当前所选专业（直式 A4）">🖨️ 列印</button><button class="rf" onclick="openOutSel()" style="border-color:#AFA9EC;color:#534AB7" title="勾选专业 → 导出 Excel 或 列印 / 存 PDF（可单个 / 多个 / 全部）">📤 导出 / 列印（选专业）</button></div>
 <div class="status" id="status">载入中…</div>
 <div id="out"></div>
 </div>
@@ -133,38 +134,20 @@
   </div>
 </div>
 
-<!-- 选专业 · 列印 / PDF -->
-<div id="pdfsel" class="msel-ov" onclick="if(event.target===this)closePdfSel()">
+<!-- 选专业 → 导出 Excel 或 列印 / PDF(勾一次、两种格式都能出) -->
+<div id="outsel" class="msel-ov" onclick="if(event.target===this)closeOutSel()">
   <div class="msel">
     <div class="msel-hd">
-      <div><div class="tt">📄 选专业列印 / 存 PDF</div><div class="sub">勾选要输出的专业，每个专业一页（直式 A4）</div></div>
-      <span class="msel-x" onclick="closePdfSel()">✕</span>
+      <div><div class="tt">📤 选专业 · 导出 / 列印</div><div class="sub">勾选专业，再选「导出 Excel」或「列印 / 存 PDF」</div></div>
+      <span class="msel-x" onclick="closeOutSel()">✕</span>
     </div>
     <div class="msel-bd">
-      <div class="msel-tools"><button class="msel-chip" onclick="pdfSelAll(true)">全选</button><button class="msel-chip" onclick="pdfSelAll(false)">全不选</button></div>
-      <div id="pdfsel-list" class="msel-list"></div>
+      <div class="msel-tools"><button class="msel-chip" onclick="outSelAll(true)">全选</button><button class="msel-chip" onclick="outSelAll(false)">全不选</button></div>
+      <div id="outsel-list" class="msel-grid"></div>
     </div>
     <div class="msel-ft">
-      <span class="msel-cnt" id="pdfsel-cnt"></span>
-      <div class="acts"><button class="msel-btn" onclick="closePdfSel()">取消</button><button class="msel-btn go" onclick="pdfSelGo()">生成 PDF</button></div>
-    </div>
-  </div>
-</div>
-
-<!-- 选专业 · 导出 Excel -->
-<div id="xlssel" class="msel-ov" onclick="if(event.target===this)closeXlsSel()">
-  <div class="msel">
-    <div class="msel-hd">
-      <div><div class="tt">📊 选专业导出 Excel</div><div class="sub">勾选要导出的专业，每个专业一个工作表（.xlsx）</div></div>
-      <span class="msel-x" onclick="closeXlsSel()">✕</span>
-    </div>
-    <div class="msel-bd">
-      <div class="msel-tools"><button class="msel-chip" onclick="xlsSelAll(true)">全选</button><button class="msel-chip" onclick="xlsSelAll(false)">全不选</button></div>
-      <div id="xlssel-list" class="msel-list"></div>
-    </div>
-    <div class="msel-ft">
-      <span class="msel-cnt" id="xlssel-cnt"></span>
-      <div class="acts"><button class="msel-btn" onclick="closeXlsSel()">取消</button><button class="msel-btn go xls" onclick="xlsSelGo()">导出 Excel</button></div>
+      <span class="msel-cnt" id="outsel-cnt"></span>
+      <div class="acts"><button class="msel-btn" onclick="closeOutSel()">取消</button><button class="msel-btn go xls" id="outsel-xls" onclick="outGoXls()" title="每个专业一个工作表 .xlsx">📊 导出 Excel</button><button class="msel-btn go" onclick="outGoPdf()" title="每个专业一页，直式 A4">📄 列印 / PDF</button></div>
     </div>
   </div>
 </div>
@@ -436,29 +419,29 @@ function _cxPrintPids(pids){
 }
 // ── 选专业弹窗(导出 Excel / PDF 共用渲染+计数) ──
 function _mselPids(){return Object.keys(DATA).filter(function(k){return DATA[k]&&DATA[k].blocks&&DATA[k].blocks.length;});}
-function _mselRender(listId,ckClass,onchg){
+function _mselRender(listId,_ck,onchg){
   const pids=_mselPids();if(!pids.length){alert('资料尚未载入');return null;}
   document.getElementById(listId).innerHTML=pids.map(function(pid){
-    return '<label title="'+_cxEsc(DATA[pid].name||'')+'"><input type="checkbox" class="'+ckClass+'" value="'+pid+'" checked onchange="'+onchg+'()"><span style="font-weight:600">'+_cxEsc(DATA[pid].label||pid)+'</span></label>';
+    return '<span class="msel-chipitem on" data-pid="'+_cxEsc(pid)+'" title="'+_cxEsc(DATA[pid].name||'')+'" onclick="this.classList.toggle(\'on\');'+onchg+'()"><span class="ck">✓</span>'+_cxEsc(DATA[pid].label||pid)+'</span>';
   }).join('');
   return pids;
 }
-function _mselPicked(listId,ckClass){var a=[];document.querySelectorAll('#'+listId+' .'+ckClass).forEach(function(c){if(c.checked)a.push(c.value);});return a;}
-function _mselCount(listId,ckClass,cntId){var n=0,tot=0;document.querySelectorAll('#'+listId+' .'+ckClass).forEach(function(c){tot++;if(c.checked)n++;});var el=document.getElementById(cntId);if(el)el.textContent='已选 '+n+' / '+tot+' 个专业';}
-// PDF 选专业
-function openPdfSel(){if(!_mselRender('pdfsel-list','pdfselck','pdfSelCount'))return;pdfSelCount();document.getElementById('pdfsel').style.display='flex';}
-function closePdfSel(){document.getElementById('pdfsel').style.display='none';}
-function pdfSelAll(v){document.querySelectorAll('#pdfsel-list .pdfselck').forEach(function(c){c.checked=v;});pdfSelCount();}
-function pdfSelCount(){_mselCount('pdfsel-list','pdfselck','pdfsel-cnt');}
-function pdfSelGo(){var pids=_mselPicked('pdfsel-list','pdfselck');if(!pids.length){alert('请至少勾选一个专业');return;}closePdfSel();setTimeout(function(){_cxPrintPids(pids);},60);}
-// Excel 选专业
-function openXlsSel(){if(!_mselRender('xlssel-list','xlsselck','xlsSelCount'))return;xlsSelCount();document.getElementById('xlssel').style.display='flex';}
-function closeXlsSel(){document.getElementById('xlssel').style.display='none';}
-function xlsSelAll(v){document.querySelectorAll('#xlssel-list .xlsselck').forEach(function(c){c.checked=v;});xlsSelCount();}
-function xlsSelCount(){_mselCount('xlssel-list','xlsselck','xlssel-cnt');}
-function xlsSelGo(){var pids=_mselPicked('xlssel-list','xlsselck');if(!pids.length){alert('请至少勾选一个专业');return;}closeXlsSel();_cxXlsxPids(pids);}
-// Excel 下载仅管理员(master/admin)可见,其他人锁起来
-function _cxApplyPerm(){const show=_cxCanEdit();['btn-xls1'].forEach(function(id){const b=document.getElementById(id);if(b)b.style.display=show?'':'none';});}
+function _mselPicked(listId){var a=[];document.querySelectorAll('#'+listId+' .msel-chipitem.on').forEach(function(c){a.push(c.getAttribute('data-pid'));});return a;}
+function _mselCount(listId,_ck,cntId){var tot=document.querySelectorAll('#'+listId+' .msel-chipitem').length;var n=document.querySelectorAll('#'+listId+' .msel-chipitem.on').length;var el=document.getElementById(cntId);if(el)el.textContent='已选 '+n+' / '+tot+' 个专业';}
+// 选专业 → 导出 Excel 或 列印 / PDF(勾一次、两种格式都能出;Excel 仅编辑者)
+function openOutSel(){
+  if(!_mselRender('outsel-list','outselck','outSelCount'))return;
+  var xb=document.getElementById('outsel-xls');if(xb)xb.style.display=_cxCanEdit()?'':'none';
+  outSelCount();document.getElementById('outsel').style.display='flex';
+}
+function closeOutSel(){document.getElementById('outsel').style.display='none';}
+function outSelAll(v){document.querySelectorAll('#outsel-list .msel-chipitem').forEach(function(c){c.classList.toggle('on',v);});outSelCount();}
+function outSelCount(){_mselCount('outsel-list','outselck','outsel-cnt');}
+function _outPicked(){return _mselPicked('outsel-list','outselck');}
+function outGoXls(){var pids=_outPicked();if(!pids.length){alert('请至少勾选一个专业');return;}closeOutSel();_cxXlsxPids(pids);}
+function outGoPdf(){var pids=_outPicked();if(!pids.length){alert('请至少勾选一个专业');return;}closeOutSel();setTimeout(function(){_cxPrintPids(pids);},60);}
+// 权限:弹窗里「导出 Excel」钮仅编辑者(master/admin)可见
+function _cxApplyPerm(){var b=document.getElementById('outsel-xls');if(b&&document.getElementById('outsel')&&document.getElementById('outsel').style.display==='flex')b.style.display=_cxCanEdit()?'':'none';}
 // ── 课程结构页内嵌编辑(限有后台权限者:master/admin，PIN 从同源 localStorage 取) ──
 function _cxCanEdit(){var r=_CSAUTH.role,p=_CSAUTH.pin;if(!r){try{r=localStorage.getItem('cic_role');p=localStorage.getItem('cic_pin');}catch(e){}}return (r==='master'||r==='admin')&&!!p;}
 function _cxFindCourse(id){id=String(id);for(const k in DATA){const p=DATA[k];if(!p||!p.blocks)continue;for(const b of p.blocks){for(const c of (b.courses||[])){if(String(c.id)===id)return c;}}}return null;}

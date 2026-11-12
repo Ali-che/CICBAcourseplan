@@ -277,6 +277,15 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   .panel.active th{font-size:6.8pt!important}
   .panel.active .badge{white-space:nowrap}
 
+  /* v8.17: 专业老师课表列印要占满版(全站表预设 width:auto 会让它只占半版,这张要满) */
+  .panel.active table.mt-fullw{width:100%!important;max-width:100%!important;margin:0!important}
+  /* v8.17: 教学统计手风琴明细——列印时卡片变窄,.tip-row 的固定 min-width 会把最右「课时」挤出卡片被截。
+     列印时清掉这些 min-width、缩小字,让整行放得进卡片 */
+  body.print-sta .acc-wrap{gap:7pt!important}
+  body.print-sta .acc-sec{padding:6pt 7pt!important}
+  body.print-sta .acc-sec .tip-row{font-size:7.5pt!important;gap:3px!important}
+  body.print-sta .acc-sec .tip-row>span{min-width:0!important}
+  body.print-sta .acc-sec .tip-row>span[style*="margin-left:auto"]{margin-left:auto!important}
   /* ── 教学统计专属：列印时辅助面板不印；默认展开所有老师的手风琴明细 ── */
   body.print-sta #sta-low-panel{display:none!important}
   body.print-sta tr.sta-acc{display:table-row!important}
@@ -5281,7 +5290,7 @@ function renderDeptTchMatrix(){
       +'<div style="flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:4px">'+g[k].sort((a,b)=>String(a.course||'').localeCompare(String(b.course||''))).map(chip).join('')+'</div></div>').join('');
   };
   const td='border-top:0.5px solid #eee;padding:5px 8px;vertical-align:middle';
-  let h='<table style="border-collapse:collapse;font-size:12px;width:100%"><thead><tr>'
+  let h='<table class="mt-fullw" style="border-collapse:collapse;font-size:12px;width:100%"><thead><tr>'
     +'<th style="background:#3C3489;color:#fff;text-align:left;padding:7px 12px;width:210px">老师</th>'
     +'<th style="background:#534AB7;color:#fff;text-align:left;padding:7px 12px">任课课程</th>'
     +'<th style="background:#EEEDFE;color:#3C3489;padding:7px 10px;white-space:nowrap;width:80px" title="与「教学统计」该学期栏同算法:按类型与人数加权,含 IS/SG、Capstone;鼠标移到数字上看明细">本学期课数</th>'
