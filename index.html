@@ -1385,7 +1385,7 @@ try { currentToken  = localStorage.getItem(TOKEN_KEY)  || ''; } catch(e){}
 try { currentRole   = localStorage.getItem(ROLE_KEY)   || 'teacher'; } catch(e){}
 
 // v7.5: PIN 验证整个搬到后端。前端不再持有 PIN 列表。
-function togglePinEye(){var i=document.getElementById('pin-input'),e=document.getElementById('pin-eye');if(!i)return;if(i.type==='password'){i.type='text';if(e)e.textContent='🙈';}else{i.type='password';if(e)e.textContent='👁';}try{i.focus();}catch(_){}}
+function togglePinEye(){var i=document.getElementById('pin-input'),e=document.getElementById('pin-eye');if(!i)return;if(i.type==='password'){i.type='text';if(e)e.textContent='🙈';try{i.focus();}catch(_){}}else{i.type='password';if(e)e.textContent='👁';try{i.blur();}catch(_){}}}
 async function checkPin(){
   const val = document.getElementById('pin-input').value.trim();
   if(!val) return;
