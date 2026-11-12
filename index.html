@@ -272,9 +272,11 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   .panel.active .card{page-break-inside:auto!important}            /* 长表允许自然跨页 */
   .panel.active .tbl-wrap{overflow:visible!important}              /* 取消横向滚动容器 */
   /* 自然宽度 + 单行不断字 + 置中，只把字体调小 */
-  .panel.active table{width:auto!important;max-width:100%;table-layout:auto!important;margin:0 auto!important;font-size:7pt}
-  .panel.active th,.panel.active td{white-space:nowrap!important;word-break:normal!important;overflow-wrap:normal!important;padding:2pt 4pt!important}
+  .panel.active table{width:auto!important;max-width:100%;table-layout:auto!important;margin:0 auto!important;font-size:7pt!important}
+  .panel.active th,.panel.active td{white-space:nowrap!important;word-break:normal!important;overflow-wrap:normal!important;padding:2pt 4pt!important;font-size:7pt!important}
   .panel.active th{font-size:6.8pt!important}
+  /* v8.17: 让带 inline 字号的表(如专业班级课表矩阵 font-size:12px)也吃列印小字,否则会超出 A4 */
+  .panel.active td *,.panel.active th *{font-size:inherit!important}
   .panel.active .badge{white-space:nowrap}
 
   /* ── 教学统计专属：列印时辅助面板不印；默认展开所有老师的手风琴明细 ── */
@@ -6482,6 +6484,48 @@ function buildStcPrint(){
   });
   cont.innerHTML=html||'<div style="padding:20px;color:#999">此筛选下无排课数据</div>';
 }
+// ── 列印自动缩放成 A4：量出每张可见表的实际列印宽度,超过页宽就对该表加 zoom 缩到放得下 ──
+// 为什么要 clone 量:列印时字体缩到 7pt、cell nowrap,宽度跟屏幕不同;用等同列印样式的离屏 clone 量才准。
+function _measurePrintTableW(table){
+  const clone=table.cloneNode(true);
+  clone.querySelectorAll('.gs-ic').forEach(e=>e.remove());   // 排序图示列印时不印
+  clone.style.cssText='width:auto!important;max-width:none!important;table-layout:auto!important;font-size:7pt;border-collapse:collapse;margin:0';
+  clone.querySelectorAll('th,td').forEach(c=>{c.style.whiteSpace='nowrap';c.style.wordBreak='normal';c.style.overflowWrap='normal';c.style.padding='2pt 4pt';c.style.fontSize='7pt';});
+  clone.querySelectorAll('th').forEach(c=>{c.style.fontSize='6.8pt';});
+  clone.querySelectorAll('td *,th *').forEach(e=>{e.style.fontSize='inherit';});   // 与列印 CSS 一致:inline 字号归到小字再量
+  const box=document.createElement('div');
+  box.style.cssText='position:absolute;left:-99999px;top:0;visibility:hidden;width:auto;max-width:none';
+  box.appendChild(clone);document.body.appendChild(box);
+  const w=Math.max(clone.scrollWidth,clone.offsetWidth,Math.ceil(clone.getBoundingClientRect().width));
+  document.body.removeChild(box);
+  return w;
+}
+function _printFitClear(){
+  const st=document.getElementById('print-fit-style');if(st)st.remove();
+  document.querySelectorAll('[data-pfit]').forEach(t=>t.removeAttribute('data-pfit'));
+}
+function _printFitApply(id){
+  _printFitClear();
+  try{
+    const panel=document.querySelector('.panel.active');if(!panel)return;
+    const scoActive=(id==='sum'&&(document.getElementById('sub-sco')||{}).classList&&document.getElementById('sub-sco').classList.contains('active'));
+    const stcActive=(id==='sum'&&(document.getElementById('sub-stc')||{}).classList&&document.getElementById('sub-stc').classList.contains('active'));
+    const portrait=(id==='sta'||scoActive||stcActive);
+    const pageMM=portrait?(210-12-12):(297-14-14);        // A4 内容区宽(mm):直向186 / 横向269
+    const pageW=(pageMM/25.4*96)*0.98;                     // px @96dpi,留 2% 安全边
+    let css='';
+    const tables=[...panel.querySelectorAll('table')].filter(t=>t.offsetParent!==null); // 只量当前可见的表
+    tables.forEach((t,i)=>{
+      const w=_measurePrintTableW(t);
+      if(w>pageW+2){
+        const sc=Math.max(0.35,pageW/w);
+        t.setAttribute('data-pfit','pf'+i);
+        css+='@media print{[data-pfit="pf'+i+'"]{zoom:'+sc.toFixed(3)+'}}\n';
+      }
+    });
+    if(css){const st=document.createElement('style');st.id='print-fit-style';st.textContent=css;document.head.appendChild(st);}
+  }catch(e){}
+}
 function printPanel(id){
   switchTab(id);
   const titles={sch:'排课记录',sp:'IS/SG 排课记录',sum:'学期总表',sta:'教学统计 · 各授课老师工作量',btec:'BTEC 修课计划',exam:'本科期末考特例'};
@@ -6525,7 +6569,9 @@ function printPanel(id){
     document.head.appendChild(st);
   }
   setTimeout(()=>{
+    _printFitApply(id);     // 列印前:超宽表自动缩放成 A4
     window.print();
+    _printFitClear();       // 列印后:移除缩放,屏幕不受影响
     document.body.classList.remove('print-sch','print-sta','print-sco');
     const ps=document.getElementById('print-page-override'); if(ps) ps.remove();
   },300);
