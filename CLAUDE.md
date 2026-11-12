@@ -47,6 +47,7 @@
 ### 目前做到哪
 - 系统上线稳定运行,约 8 位同事日常使用;**全站实际操作体检通过,无 JS 崩溃**。
 - DB 已跑到 `migrations/004`(002 已确认跑过);**RLS 安全盘点 2026-11-05 全数通过**(全绿)。
+- **2026-11-12 IS/SG·期末考·BTEC 导出也统一加筛选 modal(纯前端,已上线验证 `67e1eff`)**:延续排课做法,三页「导出 Excel」改为点钮先弹居中 modal(`openSpExp`/`openExamExp`/`openBtecExp`)、预填屏幕当前筛选、底部实时笔数、确认才下载并关窗。**把 `_examRows`/`_btecStudents` 重构为委派 `_examRowsFrom(sem/专业/类型/搜索)` / `_btecStudentsFrom(专业/学年/搜索)`,render 与导出共用同一筛选函数(结构上不会分叉)**;IS/SG 走 `_spExpFilter`,**顺带补齐旧导出漏掉的「专业 `sp-mj-f`」筛选 + 搜索范围与 renderSp 对齐**(课码/英文名/学号/姓名/班级)。BTEC 的学年色块 `_btecYrF` 会一并带入导出并在 modal 提示。各 .xls 副标题列出实际筛选。验证:ui_smoke 本地+线上各 12/12;交互脚本 11/11+15/15(exam/btec 匿名只读返 0 笔,但 render=导出同源,空数据下仍一致)。
 - **2026-11-12 排课「导出 Excel」改为先弹筛选 modal(纯前端,已上线验证 `03cae50`)**:点「📊 导出 Excel」不再直接下载,改开居中 modal `#schexp-modal`(`openSchExp` 复制屏幕上的 学年学期/课程代码/老师/搜索 下拉选项+当前值作预设,可调整),底部 `schExpCount` 实时显示「将导出 N 条」,按「确认导出」才下载并 `closeSchExp`。抽出 `_schExpFilter`(= `renderSch` 同一套四筛选逻辑)供预览与导出共用,**顺手修旧 bug**:原 `exportSchExcel` 只认学期、忽略课程代码/老师/搜索;`.xls` 副标题改列出本次实际用到的筛选。modal 筛选是独立副本,不改屏幕。验证:ui_smoke 本地+线上各 12/12,另写临时交互脚本点开 modal 跑 11/11(预填/笔数=屏幕可见行/独立性/导出无报错+下载+关窗)。
 - **2026-11-09 清 audit 双写(`migrations/004`,已跑+验证)**:`add_record/update_record/delete_record` 移除手写旧列审计,排课/IS-SG 增删改只剩 `trg_audit` 一条新列行。`audit_trg` 的 DELETE 改取 `coalesce(current_setting('app.editor'), old.editor)`,`delete_record` 删前 `set_config('app.editor', ed, true)` → 编辑记录的删除人 = 真正删的人(其他删除路径如 `exam_special` 仍取 old.editor)。验证:TEST999 新增/删除各只一条、editor 正确;同事改排课也只一条。旧列历史行保留未删。体检查询 `migrations/checks/audit_dual_write_inspect.sql`。
 - **2026-11-07 本轮完成(纯前端,均已上线验证)**:
