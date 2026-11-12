@@ -47,6 +47,7 @@
 ### 目前做到哪
 - 系统上线稳定运行,约 8 位同事日常使用;**全站实际操作体检通过,无 JS 崩溃**。
 - DB 已跑到 `migrations/004`(002 已确认跑过);**RLS 安全盘点 2026-11-05 全数通过**(全绿)。
+- **2026-11-12 排课「导出 Excel」改为先弹筛选 modal(纯前端,已上线验证 `03cae50`)**:点「📊 导出 Excel」不再直接下载,改开居中 modal `#schexp-modal`(`openSchExp` 复制屏幕上的 学年学期/课程代码/老师/搜索 下拉选项+当前值作预设,可调整),底部 `schExpCount` 实时显示「将导出 N 条」,按「确认导出」才下载并 `closeSchExp`。抽出 `_schExpFilter`(= `renderSch` 同一套四筛选逻辑)供预览与导出共用,**顺手修旧 bug**:原 `exportSchExcel` 只认学期、忽略课程代码/老师/搜索;`.xls` 副标题改列出本次实际用到的筛选。modal 筛选是独立副本,不改屏幕。验证:ui_smoke 本地+线上各 12/12,另写临时交互脚本点开 modal 跑 11/11(预填/笔数=屏幕可见行/独立性/导出无报错+下载+关窗)。
 - **2026-11-09 清 audit 双写(`migrations/004`,已跑+验证)**:`add_record/update_record/delete_record` 移除手写旧列审计,排课/IS-SG 增删改只剩 `trg_audit` 一条新列行。`audit_trg` 的 DELETE 改取 `coalesce(current_setting('app.editor'), old.editor)`,`delete_record` 删前 `set_config('app.editor', ed, true)` → 编辑记录的删除人 = 真正删的人(其他删除路径如 `exam_special` 仍取 old.editor)。验证:TEST999 新增/删除各只一条、editor 正确;同事改排课也只一条。旧列历史行保留未删。体检查询 `migrations/checks/audit_dual_write_inspect.sql`。
 - **2026-11-07 本轮完成(纯前端,均已上线验证)**:
   1. **后台编辑全面收齐为居中弹窗**:老师库 / 职位 / 毕业学分 / 课程总库 四个视图改成同一套路(顶部表单恒为「新增」,点 ✎/编辑 弹居中 modal)。靠 `form(E)` 双渲染 + `_opsF(id)`(作用域取值器:编辑时取 modal 内输入框,否则取顶部表单)。
