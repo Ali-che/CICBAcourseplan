@@ -548,7 +548,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <div class="lh-tools" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
         <button class="btn btn-sm" onclick="syncToSheets('schedule')" title="整张上传" style="display:none">↑ 上传</button>
         <button class="btn btn-sm" onclick="syncFromSheets('schedule')" title="从 Supabase 重新载入最新">↻ 重新载入</button>
-        <button class="btn btn-sm no-print" onclick="exportSchExcel()" style="color:#1a6b2f;border-color:#9ed4ae" title="导出当前筛选结果为 Excel">📊 导出 Excel</button>
+        <button class="btn btn-sm no-print" onclick="openSchExp()" style="color:#1a6b2f;border-color:#9ed4ae" title="选择筛选后导出 Excel(预设为当前筛选)">📊 导出 Excel</button>
         <button id="btn-addcoh" class="btn btn-sm no-print" onclick="openAddCoh()" style="display:none;color:#1b7a5a;border-color:#9FE1CB" title="新增届别(含年限)">➕ 新增届别</button>
         <button class="btn btn-sm no-print" onclick="openCsvImport()" style="color:#854F0B;border-color:#FCD34D" title="从 CSV 批量导入">📥 批量导入</button>
         <button class="btn btn-sm no-print" onclick="openCohortCleanup()" style="color:#7c2d92;border-color:#d8b4e2" title="精准移除某个届别:独占的整笔删,共享的仅摘除该届别">🧹 按届别清理</button>
@@ -590,6 +590,22 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     </div>
     <div id="addcoh-msg" style="font-size:12px;margin-top:10px;min-height:16px"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button class="btn btn-sm" onclick="closeAddCoh()">取消</button><button class="btn btn-p btn-sm" onclick="addCohSubmit()">+ 新增</button></div>
+  </div>
+</div>
+
+<!-- ══ 排课导出 Excel · 筛选 Modal ══════════════ -->
+<div id="schexp-modal" onclick="closeSchExp()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9999;align-items:center;justify-content:center">
+  <div onclick="event.stopPropagation()" style="background:#fff;border-radius:12px;padding:18px 20px;min-width:360px;max-width:92vw;box-shadow:0 12px 44px rgba(0,0,0,.25)">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;color:#1a6b2f;font-size:15px">📊 导出 Excel · 选择筛选</span><span onclick="closeSchExp()" style="cursor:pointer;color:#999;font-size:16px">✕</span></div>
+    <div style="font-size:11px;color:#999;margin:2px 0 14px">预设为你当前的筛选,可调整后再导出</div>
+    <div style="display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:center;font-size:13px">
+      <label style="color:#555">学年学期</label><select id="schexp-sem" onchange="schExpCount()" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px"></select>
+      <label style="color:#555">课程代码</label><select id="schexp-dept" onchange="schExpCount()" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px"></select>
+      <label style="color:#555">老师</label><select id="schexp-tc" onchange="schExpCount()" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px"></select>
+      <label style="color:#555">搜索</label><input id="schexp-q" oninput="schExpCount()" placeholder="课程代码 / 英文名 / 班级" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px">
+    </div>
+    <div id="schexp-msg" style="font-size:12px;color:#1a6b2f;margin-top:12px;min-height:16px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button class="btn btn-sm" onclick="closeSchExp()">取消</button><button class="btn btn-sm" style="color:#1a6b2f;border-color:#9ed4ae;font-weight:600" onclick="exportSchExcel()">📊 确认导出</button></div>
   </div>
 </div>
 
@@ -6408,16 +6424,66 @@ function printPanel(id){
 }
 
 // ── Excel 输出（排课记录）────────────────
+// —— 导出筛选 Modal（点「导出 Excel」先选筛选，预设=当前屏幕筛选）——
+// 与 renderSch 同一套筛选逻辑，供 modal 预览笔数与导出共用
+function _schExpFilter(sem,dept,tc,q){
+  let data=_filtArch([...schD]);
+  if(sem)data=data.filter(r=>r.sem===sem);
+  if(dept)data=data.filter(r=>getCourseDept(r.course)===dept);
+  if(tc){
+    if(tc==='__PENDING_ANY__')       data=data.filter(r=>!r.tc||!r.half);
+    else if(tc==='__PENDING_TC__')   data=data.filter(r=>!r.tc);
+    else if(tc==='__PENDING_HALF__') data=data.filter(r=>!r.half);
+    else data=data.filter(r=>r.tc===tc);
+  }
+  if(q&&q.trim()){const s=q.trim().toLowerCase();data=data.filter(r=>
+    (r.course||'').toLowerCase().includes(s)||(r.en||'').toLowerCase().includes(s)||
+    String(r.cls||'').toLowerCase().includes(s)||_mapMatch(r.course,s)||(r.btec&&'btec'.includes(s)));}
+  return data;
+}
+function _schExpVals(){return{
+  sem:(document.getElementById('schexp-sem')||{}).value||'',
+  dept:(document.getElementById('schexp-dept')||{}).value||'',
+  tc:(document.getElementById('schexp-tc')||{}).value||'',
+  q:(document.getElementById('schexp-q')||{}).value||''
+};}
+function openSchExp(){
+  var m=document.getElementById('schexp-modal');if(!m)return;
+  // 复制屏幕筛选下拉的选项与当前值作为预设
+  [['sch-sem-f','schexp-sem'],['sch-dept-f','schexp-dept'],['sch-tc-f','schexp-tc']].forEach(function(p){
+    var src=document.getElementById(p[0]),dst=document.getElementById(p[1]);
+    if(src&&dst){dst.innerHTML=src.innerHTML;dst.value=src.value;}
+  });
+  var sq=document.getElementById('sch-search'),dq=document.getElementById('schexp-q');
+  if(dq)dq.value=sq?sq.value:'';
+  m.style.display='flex';schExpCount();
+}
+function closeSchExp(){var m=document.getElementById('schexp-modal');if(m)m.style.display='none';}
+function schExpCount(){
+  var v=_schExpVals();var n=_schExpFilter(v.sem,v.dept,v.tc,v.q).length;
+  var el=document.getElementById('schexp-msg');if(el)el.textContent='将导出 '+n+' 条记录';
+}
+function _tcLabel(tc){
+  if(tc==='__PENDING_ANY__')return'待定';
+  if(tc==='__PENDING_TC__')return'未定老师';
+  if(tc==='__PENDING_HALF__')return'未定上下半';
+  return tc;
+}
 function exportSchExcel(){
   const now=new Date();
   const dateStr=now.toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
-  const semEl=document.getElementById('sch-sem-f');
-  const semVal=semEl?semEl.value:'';
+  const v=_schExpVals();
+  const semVal=v.sem;
   const semTxt=semVal||'全部学年学期';
 
-  // 筛选同 renderSch 逻辑
-  let data=_filtArch([...schD]);
-  if(semVal)data=data.filter(r=>r.sem===semVal);
+  // 按 modal 所选筛选导出（= 屏幕同一套逻辑）
+  let data=_schExpFilter(semVal,v.dept,v.tc,v.q);
+  // 副标题筛选摘要
+  let filtParts=['学期：'+semTxt];
+  if(v.dept)filtParts.push('课程代码：'+v.dept);
+  if(v.tc)filtParts.push('老师：'+_tcLabel(v.tc));
+  if(v.q&&v.q.trim())filtParts.push('搜索：'+v.q.trim());
+  const filtTxt=filtParts.join('　｜　');
 
   // 表头
   const headers=['#','课程代码','课程英文名','类型','学期','上下半学期','班级代码','授课老师','届别（人数）','总人数','备注','BTEC'];
@@ -6450,7 +6516,7 @@ function exportSchExcel(){
 
   // 标题行
   html+='<tr><td colspan="'+headers.length+'" style="background:#534AB7;color:#fff;font-size:14pt;font-weight:bold;text-align:center;padding:8px">CIC 本科排课管理系统 · 排课记录</td></tr>';
-  html+='<tr><td colspan="'+headers.length+'" style="font-size:9pt;color:#666;text-align:center;padding:4px">学期：'+semTxt+'　｜　列印日期：'+dateStr+'　｜　共 '+data.length+' 条记录</td></tr>';
+  html+='<tr><td colspan="'+headers.length+'" style="font-size:9pt;color:#666;text-align:center;padding:4px">'+filtTxt+'　｜　列印日期：'+dateStr+'　｜　共 '+data.length+' 条记录</td></tr>';
   html+='<tr><td colspan="'+headers.length+'" style="padding:2px"></td></tr>';
 
   // 表头
@@ -6474,6 +6540,7 @@ function exportSchExcel(){
   a.download=fn;
   a.click();
   URL.revokeObjectURL(a.href);
+  closeSchExp();
 }
 
 // ════════════════════════════════════════
