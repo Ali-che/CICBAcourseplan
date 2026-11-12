@@ -609,6 +609,54 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   </div>
 </div>
 
+<!-- ══ IS/SG 导出 Excel · 筛选 Modal ══════════════ -->
+<div id="spexp-modal" onclick="closeSpExp()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9999;align-items:center;justify-content:center">
+  <div onclick="event.stopPropagation()" style="background:#fff;border-radius:12px;padding:18px 20px;min-width:360px;max-width:92vw;box-shadow:0 12px 44px rgba(0,0,0,.25)">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;color:#1a6b2f;font-size:15px">📊 导出 Excel · 选择筛选</span><span onclick="closeSpExp()" style="cursor:pointer;color:#999;font-size:16px">✕</span></div>
+    <div style="font-size:11px;color:#999;margin:2px 0 14px">预设为你当前的筛选,可调整后再导出</div>
+    <div style="display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:center;font-size:13px">
+      <label style="color:#555">学年学期</label><select id="spexp-sem" onchange="spExpCount()" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px"></select>
+      <label style="color:#555">课程代码</label><select id="spexp-dept" onchange="spExpCount()" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px"></select>
+      <label style="color:#555">专业</label><select id="spexp-mj" onchange="spExpCount()" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px"></select>
+      <label style="color:#555">搜索</label><input id="spexp-q" oninput="spExpCount()" placeholder="课程代码 / 英文名 / 学号 / 姓名 / 班级" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px">
+    </div>
+    <div id="spexp-msg" style="font-size:12px;color:#1a6b2f;margin-top:12px;min-height:16px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button class="btn btn-sm" onclick="closeSpExp()">取消</button><button class="btn btn-sm" style="color:#1a6b2f;border-color:#9ed4ae;font-weight:600" onclick="exportSpExcel()">📊 确认导出</button></div>
+  </div>
+</div>
+
+<!-- ══ 期末考 导出 Excel · 筛选 Modal ══════════════ -->
+<div id="examexp-modal" onclick="closeExamExp()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9999;align-items:center;justify-content:center">
+  <div onclick="event.stopPropagation()" style="background:#fff;border-radius:12px;padding:18px 20px;min-width:360px;max-width:92vw;box-shadow:0 12px 44px rgba(0,0,0,.25)">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;color:#1a6b2f;font-size:15px">📊 导出 Excel · 选择筛选</span><span onclick="closeExamExp()" style="cursor:pointer;color:#999;font-size:16px">✕</span></div>
+    <div style="font-size:11px;color:#999;margin:2px 0 14px">预设为你当前的筛选,可调整后再导出</div>
+    <div style="display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:center;font-size:13px">
+      <label style="color:#555">学年学期</label><select id="examexp-sem" onchange="examExpCount()" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px"></select>
+      <label style="color:#555">专业</label><select id="examexp-dept" onchange="examExpCount()" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px"></select>
+      <label style="color:#555">类型</label><select id="examexp-kind" onchange="examExpCount()" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px"></select>
+      <label style="color:#555">搜索</label><input id="examexp-q" oninput="examExpCount()" placeholder="老师 / 课程 / 学号 / 姓名 / 学校" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px">
+    </div>
+    <div id="examexp-msg" style="font-size:12px;color:#1a6b2f;margin-top:12px;min-height:16px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button class="btn btn-sm" onclick="closeExamExp()">取消</button><button class="btn btn-sm" style="color:#1a6b2f;border-color:#9ed4ae;font-weight:600" onclick="examExportExcel()">📊 确认导出</button></div>
+  </div>
+</div>
+
+<!-- ══ BTEC 导出 Excel · 筛选 Modal ══════════════ -->
+<div id="btecexp-modal" onclick="closeBtecExp()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9999;align-items:center;justify-content:center">
+  <div onclick="event.stopPropagation()" style="background:#fff;border-radius:12px;padding:18px 20px;min-width:360px;max-width:92vw;box-shadow:0 12px 44px rgba(0,0,0,.25)">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;color:#1a6b2f;font-size:15px">📊 导出 Excel · 选择筛选</span><span onclick="closeBtecExp()" style="cursor:pointer;color:#999;font-size:16px">✕</span></div>
+    <div style="font-size:11px;color:#999;margin:2px 0 14px">预设为你当前的筛选,可调整后再导出</div>
+    <div style="display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:center;font-size:13px">
+      <label style="color:#555">专业</label><select id="btecexp-dept" onchange="btecExpCount()" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px"></select>
+      <label style="color:#555">学年学期</label><select id="btecexp-intake" onchange="btecExpCount()" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px"></select>
+      <label style="color:#555">搜索</label><input id="btecexp-q" oninput="btecExpCount()" placeholder="学号 / 姓名" style="padding:6px 8px;border:0.5px solid #cbd5e1;border-radius:6px">
+    </div>
+    <div id="btecexp-note" style="font-size:11px;color:#b7791f;margin-top:8px;display:none"></div>
+    <div id="btecexp-msg" style="font-size:12px;color:#1a6b2f;margin-top:8px;min-height:16px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button class="btn btn-sm" onclick="closeBtecExp()">取消</button><button class="btn btn-sm" style="color:#1a6b2f;border-color:#9ed4ae;font-weight:600" onclick="btecExportExcel()">📊 确认导出</button></div>
+  </div>
+</div>
+
 <!-- ══ 课程库批量导入 Modal ══════════════════ -->
 <div id="catimp-modal" onclick="if(event.target===this)opsCatImportClose()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9999;align-items:center;justify-content:center">
   <div onclick="event.stopPropagation()" style="background:#fff;border-radius:12px;max-width:780px;width:92%;max-height:88vh;overflow:auto;padding:18px 20px;box-shadow:0 12px 44px rgba(0,0,0,.25)">
@@ -670,7 +718,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <div class="lh-tools" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
         <button class="btn btn-sm" onclick="syncToSheets('special')" title="整张上传" style="display:none">↑ 上传</button>
         <button class="btn btn-sm" onclick="syncFromSheets('special')" title="从 Supabase 重新载入最新">↻ 重新载入</button>
-        <button class="btn btn-sm no-print" onclick="exportSpExcel()" style="color:#1a6b2f;border-color:#9ed4ae" title="导出当前筛选结果为 Excel">📊 导出 Excel</button>
+        <button class="btn btn-sm no-print" onclick="openSpExp()" style="color:#1a6b2f;border-color:#9ed4ae" title="选择筛选后导出 Excel(预设为当前筛选)">📊 导出 Excel</button>
         <button class="btn btn-sm no-print" onclick="openCsvImportSp()" style="color:#854F0B;border-color:#FCD34D" title="从 CSV 批量导入">📥 批量导入</button>
         <button id="sp-batch-del" class="btn btn-sm no-print" onclick="deleteFiltered('special')" style="color:#a32d2d;border-color:#f7c1c1;display:none" title="按目前筛选条件删除全部"><svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true" style="vertical-align:-1px"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H3.5V0a1 1 0 0 1 1-1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg> 批量删除 <span id="sp-batch-del-n">0</span></button>
         <button class="btn btn-sm no-print" onclick="printPanel('sp')" title="按目前筛选,列印 IS/SG 排课学生名单(横向 A4);未筛选则印全部">🖨️ 列印</button>
@@ -967,7 +1015,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     <div class="lh-tools" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
       <button class="btn btn-sm no-print" onclick="btecToggleTransp()" title="切换布局:学生为列 ⇄ 学生为行">⇄ 转置</button>
       <button class="btn btn-sm no-print" onclick="reloadBtec()">↻ 重新载入</button>
-      <button class="btn btn-sm no-print" onclick="btecExportExcel()" style="color:#1a6b2f;border-color:#9ed4ae" title="导出当前(专业筛选后)的修课计划为 Excel">📊 导出 Excel</button>
+      <button class="btn btn-sm no-print" onclick="openBtecExp()" style="color:#1a6b2f;border-color:#9ed4ae" title="选择筛选后导出修课计划 Excel(预设为当前筛选)">📊 导出 Excel</button>
       <button class="btn btn-sm no-print" onclick="printPanel('btec')">🖨️ 列印</button>
     </div>
   </div>
@@ -1001,7 +1049,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <a href="https://changchuanchi.github.io/ciclearninghub/mou_student_grades.html" target="_blank" rel="noopener" class="no-print" onmouseover="var s=this.querySelector('span');if(s)s.style.opacity=1" onmouseout="var s=this.querySelector('span');if(s)s.style.opacity=0" style="position:relative;display:inline-flex;align-items:center;font-size:12px;color:#8A84C9;text-decoration:none;padding:4px 6px;border:0.5px solid #E5E3F8;border-radius:7px">🔗 查询成绩<span style="position:absolute;left:0;top:100%;margin-top:3px;white-space:nowrap;font-size:9.5px;color:#cbc8e0;opacity:0;transition:opacity .25s;pointer-events:none;letter-spacing:.05em">🔑 dpucicba</span></a>
         <a href="https://cicexam.vercel.app/admin.html" target="_blank" rel="noopener" class="no-print" title="英语毕业考试 管理员后台" onmouseover="var s=this.querySelector('span');if(s)s.style.opacity=1" onmouseout="var s=this.querySelector('span');if(s)s.style.opacity=0" style="position:relative;display:inline-flex;align-items:center;font-size:12px;color:#8A84C9;text-decoration:none;padding:4px 6px;border:0.5px solid #E5E3F8;border-radius:7px">🔗 英语毕业考<span style="position:absolute;left:0;top:100%;margin-top:3px;white-space:nowrap;font-size:9.5px;color:#cbc8e0;opacity:0;transition:opacity .25s;pointer-events:none;letter-spacing:.05em">🔑 询问张全吉老师</span></a>
         <button class="btn btn-sm no-print" onclick="examToggleGrade()" style="color:#534AB7;border-color:#AFA9EC" title="期末成绩评分标准">ℹ️ 评分说明</button>
-        <button class="btn btn-sm no-print" onclick="examExportExcel()" style="color:#1a6b2f;border-color:#9ed4ae">📊 导出 Excel</button>
+        <button class="btn btn-sm no-print" onclick="openExamExp()" style="color:#1a6b2f;border-color:#9ed4ae" title="选择筛选后导出 Excel(预设为当前筛选)">📊 导出 Excel</button>
         <button class="btn btn-sm no-print" onclick="openCsvImportExam()" style="color:#854F0B;border-color:#FCD34D">📥 批量导入</button>
         <button class="btn btn-sm no-print" onclick="printPanel('exam')">🖨️ 列印</button>
       </div>
@@ -2599,19 +2647,42 @@ async function opsArchYear(year,archived){
   await loadArchTerms();opsRenderSec();_archRerender();
   if(typeof showToast==='function')showToast((archived?'已归档':'已恢复')+' '+ok+' 个学期',{kind:'success',duration:2000});
 }
-function _examRows(){
+function _examRowsFrom(sm,df,kf,q){
   let list=_filtArch([...(_exam.rows||[])],'exam');
-  const sm=(document.getElementById('exam-sem-f')||{}).value||'';
-  const df=(document.getElementById('exam-dept-f')||{}).value||'';
-  const kf=(document.getElementById('exam-kind-f')||{}).value||'';
-  const q=((document.getElementById('exam-q')||{}).value||'').trim().toLowerCase();
   if(sm)list=list.filter(x=>x.sem===sm);
   if(df)list=list.filter(x=>x.dept===df);
   if(kf)list=list.filter(x=>(x.kind||'登分')===kf);
+  q=(q||'').trim().toLowerCase();
   if(q)list=list.filter(x=>((x.teacher||'')+(x.course||'')+(x.sid||'')+(x.name_py||'')+(x.name_zh||'')+(x.school||'')+(x.cls||'')).toLowerCase().includes(q));
   if(_examSK){const key=_examSK;list.sort((a,b)=>_examSD*String(a[key]||'').localeCompare(String(b[key]||''),'zh'));}
   return list;
 }
+function _examRows(){
+  return _examRowsFrom(
+    (document.getElementById('exam-sem-f')||{}).value||'',
+    (document.getElementById('exam-dept-f')||{}).value||'',
+    (document.getElementById('exam-kind-f')||{}).value||'',
+    (document.getElementById('exam-q')||{}).value||''
+  );
+}
+// —— 期末考 导出筛选 Modal（预设=当前屏幕筛选）——
+function _examExpVals(){return{
+  sem:(document.getElementById('examexp-sem')||{}).value||'',
+  dept:(document.getElementById('examexp-dept')||{}).value||'',
+  kind:(document.getElementById('examexp-kind')||{}).value||'',
+  q:(document.getElementById('examexp-q')||{}).value||''
+};}
+function openExamExp(){
+  var m=document.getElementById('examexp-modal');if(!m)return;
+  [['exam-sem-f','examexp-sem'],['exam-dept-f','examexp-dept'],['exam-kind-f','examexp-kind']].forEach(function(p){
+    var src=document.getElementById(p[0]),dst=document.getElementById(p[1]);
+    if(src&&dst){dst.innerHTML=src.innerHTML;dst.value=src.value;}
+  });
+  var sq=document.getElementById('exam-q'),dq=document.getElementById('examexp-q');if(dq)dq.value=sq?sq.value:'';
+  m.style.display='flex';examExpCount();
+}
+function closeExamExp(){var m=document.getElementById('examexp-modal');if(m)m.style.display='none';}
+function examExpCount(){var v=_examExpVals();var n=_examRowsFrom(v.sem,v.dept,v.kind,v.q).length;var el=document.getElementById('examexp-msg');if(el)el.textContent='将导出 '+n+' 条记录';}
 function renderExam(){
   if(!_panelActive('exam'))return;
   const isAdmin=(['admin','director','pic'].indexOf(currentRole)>=0);  // 期末考改删:Admin/Director/Program-in Charge(后端 _can_exam 同步放行)
@@ -2763,30 +2834,66 @@ async function examSaveForm(){
 }
 async function examDel(id,name){if(!confirm('删除「'+name+'」这笔期末考特例?'))return;const r=await gasPost('adminDelExamSpecial',{id});if(r&&r.success)await loadExam();else alert('删除失败:'+_errText(r));}
 function examExportExcel(){
-  const rows=_examRows();if(!rows.length){alert('无记录可导出');return;}
+  const _v=_examExpVals();
+  const rows=_examRowsFrom(_v.sem,_v.dept,_v.kind,_v.q);if(!rows.length){alert('无记录可导出');return;}
   const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const dateStr=new Date().toISOString().slice(0,10);
+  let _fp=['学期：'+(_v.sem||'全部学年学期')];
+  if(_v.dept)_fp.push('专业：'+_v.dept);
+  if(_v.kind)_fp.push('类型：'+_v.kind);
+  if(_v.q&&_v.q.trim())_fp.push('搜索：'+_v.q.trim());
+  const _ft=_fp.join('　｜　');
   const HD=['#','学号','称谓','姓名(英文)','姓名(中文)','学生专业','学年学期','上半/下半','课程代码','课程英文名','班级','任课老师','负责学校','类型','冲突课程','备注'];
   const coEn=cc=>((typeof C!=='undefined'?(C.find(c=>c.c===cc)||{}):{}).en)||'';
   let html='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>期末考特例</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>';
   html+='<table border="1" style="border-collapse:collapse;font-size:11pt;font-family:Arial">';
   html+='<tr><td colspan="'+HD.length+'" style="background:#534AB7;color:#fff;font-size:14pt;font-weight:bold;text-align:center;padding:8px">本科期末考特例 · '+esc(dateStr)+'</td></tr>';
+  html+='<tr><td colspan="'+HD.length+'" style="font-size:9pt;color:#666;text-align:center;padding:4px">'+esc(_ft)+'　｜　共 '+rows.length+' 条记录</td></tr>';
   html+='<tr>'+HD.map(h=>'<td style="background:#534AB7;color:#fff;font-weight:bold;padding:6px 8px;white-space:nowrap">'+h+'</td>').join('')+'</tr>';
   const hlx=h=>h==='上半学期'?'上半':h==='下半学期'?'下半':h==='全学期'?'全学期':(h||'');
   rows.forEach((x,i)=>{html+='<tr>'+[i+1,x.sid,x.salut,x.name_py,x.name_zh,x.dept,x.sem,hlx(x.half),x.course,coEn(x.course),x.cls,x.teacher,x.school,(x.kind||''),(x.conflict_course||''),x.note].map(c=>'<td style="padding:4px 7px">'+esc(c)+'</td>').join('')+'</tr>';});
   html+='</table></body></html>';
   const blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='本科期末考特例_'+dateStr+'.xls';a.click();URL.revokeObjectURL(a.href);
+  closeExamExp();
 }
+// —— BTEC 导出筛选 Modal（预设=当前屏幕筛选；学年色块 _btecYrF 一并带入）——
+function _btecStudentsFrom(dept,yr,q){
+  let list=[...(_btec.students||[])];
+  if(dept)list=list.filter(s=>s.dept===dept);
+  if(yr)list=list.filter(s=>(s.acad_year||'未设')===yr);
+  q=(q||'').trim().toLowerCase();
+  if(q)list=list.filter(s=>((s.sid||'')+(s.zh||'')+(s.en||'')).toLowerCase().includes(q));
+  return list.sort((a,b)=>String(a.sid||'').localeCompare(String(b.sid||'')));
+}
+function _btecExpVals(){return{
+  dept:(document.getElementById('btecexp-dept')||{}).value||'',
+  intake:(document.getElementById('btecexp-intake')||{}).value||'',
+  q:(document.getElementById('btecexp-q')||{}).value||''
+};}
+function openBtecExp(){
+  var m=document.getElementById('btecexp-modal');if(!m)return;
+  [['btec-dept-f','btecexp-dept'],['btec-intake-f','btecexp-intake']].forEach(function(p){
+    var src=document.getElementById(p[0]),dst=document.getElementById(p[1]);
+    if(src&&dst){dst.innerHTML=src.innerHTML;dst.value=src.value;}
+  });
+  var sq=document.getElementById('btec-q'),dq=document.getElementById('btecexp-q');if(dq)dq.value=sq?sq.value:'';
+  var note=document.getElementById('btecexp-note');
+  if(note){if(_btecYrF){note.style.display='';note.textContent='⚠ 还套用了「学年：'+_btecYrF+'」色块筛选,导出会一并套用(在表格上点该色块可取消)。';}else{note.style.display='none';note.textContent='';}}
+  m.style.display='flex';btecExpCount();
+}
+function closeBtecExp(){var m=document.getElementById('btecexp-modal');if(m)m.style.display='none';}
+function btecExpCount(){var v=_btecExpVals();var n=_btecStudentsFrom(v.dept,_btecYrF,v.q).length;var el=document.getElementById('btecexp-msg');if(el)el.textContent='将导出 '+n+' 名学生';}
 function btecExportExcel(){
-  const studs=_btecStudents();
+  const _v=_btecExpVals();
+  const studs=_btecStudentsFrom(_v.dept,_btecYrF,_v.q);
   if(!studs.length){alert('没有学生可导出(先调整专业/搜索筛选)');return;}
   const rank=r=>(r==='Mandatory'?0:r==='Optional'?1:2);
-  const inf=(document.getElementById('btec-intake-f')||{}).value||'';
+  const inf=_v.intake;
   let units=(_btec.units||[]).slice().sort((a,b)=>(rank(a.req)-rank(b.req))||((a.seq||0)-(b.seq||0)));
   if(inf)units=units.filter(u=>studs.some(s=>_btecCell(s,u.code).sem===inf));  // 选了学期→只导该学期有课的单元(与画面一致)
   const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const df=(document.getElementById('btec-dept-f')||{}).value||'';
+  const df=_v.dept;
   const now=new Date();const dateStr=now.toISOString().slice(0,10);
   const ncol=3+studs.length;
   const th=t=>'<td style="background:#3C3489;color:#fff;font-weight:bold;padding:6px 8px;white-space:nowrap;text-align:center">'+t+'</td>';
@@ -2812,6 +2919,7 @@ function btecExportExcel(){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download='BTEC修课计划_'+(df||'全部')+(inf?'_'+inf:'')+'_'+dateStr+'.xls';
   a.click();URL.revokeObjectURL(a.href);
+  closeBtecExp();
 }
 function _btecPlan(sid,code){var r=_btecPlanRow(sid,code);return r?r.sem:null;}
 function _btecAuto(stu,code){var _yrs={};String((stu&&stu.acad_year)||'').split(/[^0-9]+/).forEach(function(y){if(y&&y.length===4)_yrs[String((+y)+543)]=1;});var _hasYr=Object.keys(_yrs).length>0;/* 学年(西元) → 佛历年前缀(+543):2026→2569、2027→2570;无学年则沿用旧默认 2569 */const all=schD.filter(x=>String(x.course).toUpperCase()===String(code).toUpperCase()&&(x.btec===true||x.btec==='TRUE'||x.btec==='true')&&(_hasYr?_yrs[String(x.sem||'').slice(0,4)]:String(x.sem||'').indexOf('2569')===0));if(!all.length)return {sem:'',tc:''};const mine=all.filter(x=>(x.cc||[]).some(c=>(stu.cohort&&c.cohort===stu.cohort)||(stu.dept&&cohortDept(c.cohort)===stu.dept)));const pool=mine.length?mine:all;const r=pool.slice().sort((a,b)=>String(a.sem||'').localeCompare(String(b.sem||'')))[0];return {sem:r.sem||'',tc:r.tc||''};}
@@ -6546,20 +6654,49 @@ function exportSchExcel(){
 // ════════════════════════════════════════
 // IS/SG Excel 导出
 // ════════════════════════════════════════
+// —— IS/SG 导出筛选 Modal（预设=当前屏幕筛选，与 renderSp 同一套逻辑）——
+function _spExpFilter(sem,dept,mj,q){
+  let data=_filtArch([...spD]);
+  if(sem)data=data.filter(r=>r.sem===sem);
+  if(dept)data=data.filter(r=>getCourseDept(r.co)===dept);
+  if(mj)data=data.filter(r=>r.mj===mj);
+  if(q&&q.trim()){const s=q.trim().toLowerCase();data=data.filter(r=>
+    (r.co||'').toLowerCase().includes(s)||(r.en||'').toLowerCase().includes(s)||
+    String(r.sid||'').toLowerCase().includes(s)||(r.nm||'').toLowerCase().includes(s)||
+    String(r.cls||'').toLowerCase().includes(s)||_mapMatch(r.co,s));}
+  return data;
+}
+function _spExpVals(){return{
+  sem:(document.getElementById('spexp-sem')||{}).value||'',
+  dept:(document.getElementById('spexp-dept')||{}).value||'',
+  mj:(document.getElementById('spexp-mj')||{}).value||'',
+  q:(document.getElementById('spexp-q')||{}).value||''
+};}
+function openSpExp(){
+  var m=document.getElementById('spexp-modal');if(!m)return;
+  [['sp-sem-f','spexp-sem'],['sp-dept-f','spexp-dept'],['sp-mj-f','spexp-mj']].forEach(function(p){
+    var src=document.getElementById(p[0]),dst=document.getElementById(p[1]);
+    if(src&&dst){dst.innerHTML=src.innerHTML;dst.value=src.value;}
+  });
+  var sq=document.getElementById('sp-search'),dq=document.getElementById('spexp-q');if(dq)dq.value=sq?sq.value:'';
+  m.style.display='flex';spExpCount();
+}
+function closeSpExp(){var m=document.getElementById('spexp-modal');if(m)m.style.display='none';}
+function spExpCount(){var v=_spExpVals();var n=_spExpFilter(v.sem,v.dept,v.mj,v.q).length;var el=document.getElementById('spexp-msg');if(el)el.textContent='将导出 '+n+' 条记录';}
 function exportSpExcel(){
   const now=new Date();
   const dateStr=now.toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
-  const semEl=document.getElementById('sp-sem-f'),deptEl=document.getElementById('sp-dept-f'),searchEl=document.getElementById('sp-search');
-  const semVal=semEl?semEl.value:'';
-  const deptVal=deptEl?deptEl.value:'';
-  const searchVal=searchEl?searchEl.value.trim():'';
+  const v=_spExpVals();
+  const semVal=v.sem;
   const semTxt=semVal||'全部学年学期';
 
-  // 跟随当前筛选条件
-  let data=_filtArch([...spD]);
-  if(semVal)data=data.filter(r=>r.sem===semVal);
-  if(deptVal)data=data.filter(r=>getCourseDept(r.co)===deptVal);
-  if(searchVal){const q=searchVal.toLowerCase();data=data.filter(r=>(r.co||'').toLowerCase().includes(q)||(r.en||'').toLowerCase().includes(q));}
+  // 按 modal 所选筛选导出（= 屏幕同一套逻辑）
+  let data=_spExpFilter(v.sem,v.dept,v.mj,v.q);
+  let filtParts=['学期：'+semTxt];
+  if(v.dept)filtParts.push('课程代码：'+v.dept);
+  if(v.mj)filtParts.push('专业：'+v.mj);
+  if(v.q&&v.q.trim())filtParts.push('搜索：'+v.q.trim());
+  const filtTxt=filtParts.join('　｜　');
 
   const headers=['#','学号','称谓','学生姓名','学生专业','课程代码','课程英文名','班级','学期','授课老师','备注'];
   const rows=data.map((r,i)=>[
@@ -6574,7 +6711,7 @@ function exportSpExcel(){
   html+='<table border="1" style="border-collapse:collapse;font-size:11pt;font-family:Arial">';
 
   html+='<tr><td colspan="'+headers.length+'" style="background:#534AB7;color:#fff;font-size:14pt;font-weight:bold;text-align:center;padding:8px">CIC 本科排课管理系统 · IS/SG 排课记录</td></tr>';
-  html+='<tr><td colspan="'+headers.length+'" style="font-size:9pt;color:#666;text-align:center;padding:4px">学期：'+semTxt+'　｜　列印日期：'+dateStr+'　｜　共 '+data.length+' 条记录</td></tr>';
+  html+='<tr><td colspan="'+headers.length+'" style="font-size:9pt;color:#666;text-align:center;padding:4px">'+filtTxt+'　｜　列印日期：'+dateStr+'　｜　共 '+data.length+' 条记录</td></tr>';
   html+='<tr><td colspan="'+headers.length+'" style="padding:2px"></td></tr>';
   html+='<tr>'+headers.map(h=>'<td style="background:#534AB7;color:#fff;font-weight:bold;padding:6px 8px;white-space:nowrap">'+h+'</td>').join('')+'</tr>';
 
@@ -6593,6 +6730,7 @@ function exportSpExcel(){
   a.download='IS-SG排课_'+(semVal||'全学期')+'_'+now.toISOString().slice(0,10)+'.xls';
   a.click();
   URL.revokeObjectURL(a.href);
+  closeSpExp();
 }
 
 // ════════════════════════════════════════
