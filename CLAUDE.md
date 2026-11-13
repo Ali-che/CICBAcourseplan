@@ -46,6 +46,11 @@
 
 ### 目前做到哪
 - 系统上线稳定运行,约 8 位同事日常使用;**全站实际操作体检通过,无 JS 崩溃**。
+- **2026-11-14【课表制作】新功能已建好但未部署(分支 `claude/courseplan-b040ee`;本机预览多轮迭代过)**:把原本「不归 BA 系统管」的时段+教室请进系统,自动把该学期排课表的课排进「周几·上午/下午·教室」,画成课表、拖拉微调、存档、列印。设计规格 `docs/课表制作设计.md`。
+  - **前端**(index.html):顶部「📋 课表制作」分页(§TT)。核心:`_ttSolve` 贪心求解器(硬约束:容量±5宽容/教室撞/老师撞/届别撞/Capstone 下半周五六;软:CD 优先 321/322、非CD 避开、LA/KH 层级)、三种检视「依教室号/依届别/依老师」(行=星期、上蓝下橙、按专业上色 用 `COHORT_COLOR`、课片三区版式、框统一大小、表头+教室栏冻结、周几分隔线)、未排课做胶囊三视图可拖进网格(entity 拖自动挑房)、即时标红、诊断式建议(含改另一半)、漂移侦测(存档后 schD 被改→标出受影响课)、列印(上/下半或全学期 A4横向,抬头带日期)、「↩ 上下半写回排课表」。LA/MA 归 GE;Capstone=班级是 Capstone;实习课不排。
+  - **后台操作**新增:「教室库」(增删改容量/优先专业)、「📅 课表日期」(仅 admin 设上下半/全学期日期,列印抬头用)、「👁 分页显示」(把秘书处对账 tab 改打勾开启,预设隐藏——课表制作已大致取代它)。
+  - **DB migration(待 Aj. Tsai 在 Supabase 跑,按序)**:`008_rooms`(教室库+种12间+admin RPC)、`009_timetable`(存档,能存=teacher[Head]+admin)、`010_tt_sem_dates`(半日期)、`011_rooms_391_392_dates_admin`(加 391/392 两间+日期 RPC 收紧为 admin)。都 RLS 关/anon 只读/写走 security-definer/不挂审计;没跑时前端安全降级。
+  - **纪律**:**未 commit 时已多轮预览,此 commit 仅存分支,未 push 未部署**;等 Aj. Tsai 说「可以部署」才 push main。ui_smoke 每轮 12/12。详细迭代记录在本组 session 共享笔记 `课表制作_架构勘查与计划.md`。
 - **2026-11-13【秘书处对账】功能 ①②③ 全做完(前端改好未部署;DB migration 007 ✅ 已跑)**:流程痛点——排课表「定版」交秘书处(Head of Administration,内部角色码=`teacher`,只读)去排教室/定时间并印出,但主任(director)之后还会微调(改 课程/届别/班级人数/老师/上下半,**不碰时段教室**;时段/教室不归 BA 系统管),秘书处不知情→纸本过期。
   - **① 列印版本章(纯前端)**:排课表每次列印,表头盖「版本章」=内容版本码(4码)+笔数+列印时刻,例 `版本 KQKU · 1 笔 · 列印 11/13 15:03`。两张纸版本码相同=内容一字不差,不同=被动过。新增 `_schVerCode(sem)`(按 课程·上下半·班级·老师·届别+人数 算指纹,**≠ `hashRecords` 的 id 指纹,勿混**);只盖排课表(`printPanel` 内 `id==='sch'`);样式 `.ph-ver`。**⚠ 用户待定:版本章里的「列印时刻」是专为此破例加的(全站原本「不压列印日期」);用户若不要可拿掉。**
   - **② 基准线表(`migrations/007_sched_lock_baseline_2026-11-13.sql`,✅ 已跑)**:`sched_lock`(每学期一条:version/locked_by/locked_at/ver_code/**snapshot**=定版那刻排课精简快照)+`sched_lock_ack`(单笔已对账标记:row_id+row_code内容指纹)。RPC:`sched_set_baseline(p_pin,p_sem,p_snapshot,p_ver_code)`=定版/对账到此(version++、清该学期全部 ack),`sched_ack_row(...p_on)`=单笔勾/取消。都 `_pin_editor` 验 PIN(任何有效 PIN;Head=teacher 可用)。**两表 RLS 关、仅 grant select 给 anon、写走 security-definer RPC(同 schedule);下次安全体检会列为「RLS 关但不可写」,属预期基线。** 刻意不挂 trg_audit。线上已实证:两表匿名读回 `[]`、两 RPC 假 PIN 正确挡回「PIN 无效」。
