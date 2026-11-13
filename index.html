@@ -481,6 +481,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     <button class="tab active" data-tab="sch" onclick="switchTab('sch')">📋 排课表</button>
     <button class="tab" data-tab="exam" id="tab-exam" onclick="switchTab('exam')">📝 期末考特例</button>
     <button class="tab" data-tab="sp" onclick="switchTab('sp')">👤 IS/SG 排课</button>
+    <button class="tab" data-tab="reco" id="tab-reco" onclick="switchTab('reco')" style="display:none">🤝 秘书处对账</button>
   </div>
   <div class="tab-grp" title="查看汇总">
     <button class="tab" data-tab="sum" onclick="switchTab('sum')">📊 学期总表</button>
@@ -567,7 +568,6 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <div class="lh-tools" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
         <button class="btn btn-sm" onclick="syncToSheets('schedule')" title="整张上传" style="display:none">↑ 上传</button>
         <button class="btn btn-sm" onclick="syncFromSheets('schedule')" title="从 Supabase 重新载入最新">↻ 重新载入</button>
-        <button id="btn-sch-reco" class="btn btn-sm no-print" onclick="openReco()" style="display:none;color:#6d28d9;border-color:#c4b5fd" title="定版给秘书处 / 查看定版后的变更对账(先在下方选一个学年学期)">📌 定版 / 对账</button>
         <button class="btn btn-sm no-print" onclick="openSchExp()" style="color:#1a6b2f;border-color:#9ed4ae" title="选择筛选后导出 Excel(预设为当前筛选)">📊 导出 Excel</button>
         <button id="btn-addcoh" class="btn btn-sm no-print" onclick="openAddCoh()" style="display:none;color:#1b7a5a;border-color:#9FE1CB" title="新增届别(含年限)">➕ 新增届别</button>
         <button class="btn btn-sm no-print" onclick="openCsvImport()" style="color:#854F0B;border-color:#FCD34D" title="从 CSV 批量导入">📥 批量导入</button>
@@ -595,19 +595,6 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       </tr></thead><tbody id="sch-tb"></tbody></table>
     </div>
     <div class="empty" id="sch-em">暂无排课记录</div>
-  </div>
-</div>
-
-<!-- ══ 秘书处对账 弹窗 ════════ -->
-<div id="reco-modal" class="no-print" onclick="closeReco()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9999;align-items:center;justify-content:center">
-  <div onclick="event.stopPropagation()" style="background:#fff;border-radius:12px;padding:16px 18px;width:560px;max-width:94vw;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 12px 44px rgba(0,0,0,.25)">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px">
-      <span id="reco-head" style="font-weight:700;color:#3C3489;font-size:15px">秘书处对账</span>
-      <span onclick="closeReco()" style="cursor:pointer;color:#999;font-size:16px">✕</span>
-    </div>
-    <div style="font-size:11px;color:#999;margin-bottom:10px">定版后主任的变更 → 这里列给秘书处核对教室/时段。只影响这张清单，不改排课。</div>
-    <div id="reco-body" style="overflow:auto;flex:1;min-height:60px"></div>
-    <div id="reco-foot" style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px;border-top:1px solid #eee;padding-top:10px"></div>
   </div>
 </div>
 
@@ -1156,6 +1143,23 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   </div>
 </div>
 
+<div id="panel-reco" class="panel">
+  <div class="card">
+    <div class="sechdr" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:.6rem">
+      <span class="ct" style="margin:0;font-size:13px">🤝 秘书处对账<span id="reco-n" style="font-weight:400;color:#888;margin-left:4px"></span></span>
+      <div class="lh-tools" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+        <button class="btn btn-sm" onclick="renderRecoPanel(true)" title="重新载入基准线与对账清单">↻ 重新载入</button>
+      </div>
+    </div>
+    <div class="fbar no-print" style="margin-bottom:.6rem;flex-wrap:wrap">
+      <label>学年学期</label><select id="reco-sem" onchange="renderRecoPanel(true)"><option value="">请选择</option></select>
+    </div>
+    <div style="font-size:11.5px;color:#999;margin:0 2px 10px">定版后主任的变更 → 这里列给秘书处核对教室/时段（主任不碰时段教室）。只影响这张清单，不改排课。</div>
+    <div id="reco-status" style="margin-bottom:10px"></div>
+    <div id="reco-list-wrap"></div>
+  </div>
+</div>
+
 <div id="panel-ops" class="panel">
   <div class="card">
     <div class="sechdr"><span class="ct" style="margin:0">⚙️ 后台操作 · 参考数据管理</span></div>
@@ -1497,9 +1501,13 @@ function applyRoleVisibility(){
   const _canCoh = (currentRole==='admin'||currentRole==='director');
   const addcohTab = document.getElementById('btn-addcoh');
   if(addcohTab) addcohTab.style.display = _canCoh ? '' : 'none';
-  // 定版/对账钮:Head of Administration(teacher)/Director/Admin
-  const recoBtn = document.getElementById('btn-sch-reco');
-  if(recoBtn) recoBtn.style.display = (typeof _recoCanUse==='function' && _recoCanUse()) ? '' : 'none';
+  // 秘书处对账分页:Head of Administration(teacher)/Director/Admin
+  const recoTab = document.getElementById('tab-reco');
+  if(recoTab){
+    const _canReco = (typeof _recoCanUse==='function' && _recoCanUse());
+    recoTab.style.display = _canReco ? '' : 'none';
+    if(!_canReco && recoTab.classList.contains('active')) switchTab('sch');
+  }
   const acctBtn = document.getElementById('ops-tab-acct');
   if(acctBtn){
     acctBtn.style.display = (currentRole==='admin') ? '' : 'none';
@@ -3527,41 +3535,47 @@ function _recoRenderBar(){
   if(!pend.length){bar.style.display='none';return;}
   bar.style.display='';
   bar.innerHTML='<span class="rb-t">⚠ 已定版 v'+lk.version+'（'+eh(lk.locked_by||'')+'）· 之后有 <b>'+pend.length+'</b> 笔待秘书处对账</span>'+
-    '<button class="btn btn-sm" onclick="openReco()" style="color:#92400e;border-color:#f6c667">查看对账</button>';
+    '<button class="btn btn-sm" onclick="gotoReco('+JSON.stringify(_recoCache.sem)+')" style="color:#92400e;border-color:#f6c667">前往对账 →</button>';
 }
 // 打开对账弹窗
-async function openReco(){
-  const semEl=document.getElementById('sch-sem-f');const sem=semEl?semEl.value:'';
-  const m=document.getElementById('reco-modal');if(!m)return;
-  m.style.display='flex';
-  document.getElementById('reco-body').innerHTML='<div style="color:#888;padding:20px;text-align:center">⏳ 载入中…</div>';
-  _recoCache={sem:sem,lock:null,acks:[]};
-  if(sem){try{const r=await gasGet({action:'schedLock',sem:sem});if(r&&r.success){_recoCache.lock=r.lock;_recoCache.acks=r.acks||[];}}catch(e){}}
-  renderReco();
+// 从排课表横幅跳到对账分页(带着该学期)
+function gotoReco(sem){const sel=document.getElementById('reco-sem');if(sel&&sem){let has=false;[...sel.options].forEach(o=>{if(o.value===sem)has=true;});if(!has){const op=document.createElement('option');op.value=sem;op.textContent=sem;sel.appendChild(op);}sel.value=sem;}if(typeof switchTab==='function')switchTab('reco');}
+// 对账分页的学年学期下拉(同排课表来源:schD 出现过的 + SEMS)
+function _recoFillSemSel(){
+  const sel=document.getElementById('reco-sem');if(!sel)return;
+  const cur=sel.value;const ss={};_filtArch([...(typeof schD!=='undefined'?schD:[])]).forEach(r=>{if(r.sem)ss[r.sem]=1;});(typeof SEMS!=='undefined'?SEMS:[]).forEach(s=>{if(s)ss[s]=1;});
+  const xs=Object.keys(ss).sort();const byYr={};xs.forEach(s=>{const y=String(s).substring(0,4);(byYr[y]=byYr[y]||[]).push(s);});
+  let want='<option value="">请选择</option>';Object.keys(byYr).sort().forEach(y=>{want+='<optgroup label="─ '+y+' ─">'+byYr[y].map(s=>'<option'+(s===cur?' selected':'')+'>'+eh(s)+'</option>').join('')+'</optgroup>';});
+  if(sel.innerHTML!==want)sel.innerHTML=want;
 }
-function closeReco(){const m=document.getElementById('reco-modal');if(m)m.style.display='none';_recoRenderBar();}
-function renderReco(){
-  const sem=_recoCache.sem,lk=_recoCache.lock;
-  const head=document.getElementById('reco-head'),body=document.getElementById('reco-body'),foot=document.getElementById('reco-foot');
-  if(!sem){head.textContent='秘书处对账';body.innerHTML='<div style="padding:20px;color:#92400e;background:#FEF9ED;border-radius:8px">请先在排课表上方「学年学期」选一个学期，再定版 / 对账。</div>';foot.innerHTML='<button class="btn" onclick="closeReco()">关闭</button>';return;}
+// 渲染「秘书处对账」分页
+async function renderRecoPanel(force){
+  _recoFillSemSel();
+  const sem=(document.getElementById('reco-sem')||{}).value||'';
+  const st=document.getElementById('reco-status'),lw=document.getElementById('reco-list-wrap'),nn=document.getElementById('reco-n');
+  if(!st||!lw)return;
+  if(!sem){st.innerHTML='<div style="padding:14px;background:#FEF9ED;border-radius:8px;color:#7a5b16">请先选一个学年学期，再定版 / 对账。</div>';lw.innerHTML='';if(nn)nn.textContent='';return;}
+  if(force||_recoCache.sem!==sem){
+    st.innerHTML='<div style="color:#888;padding:10px">⏳ 载入中…</div>';lw.innerHTML='';
+    _recoCache={sem:sem,lock:null,acks:[]};
+    try{const r=await gasGet({action:'schedLock',sem:sem});if(r&&r.success){_recoCache.lock=r.lock;_recoCache.acks=r.acks||[];}}catch(e){}
+  }
+  const lk=_recoCache.lock;
   if(!lk){
-    head.innerHTML='秘书处对账 · <b>'+eh(sem)+'</b>';
     const v=_schVerCode(sem);
-    body.innerHTML='<div style="padding:16px;background:#FEF9ED;border-radius:8px;color:#7a5b16;line-height:1.7">本学期<b>尚未定版</b>。<br>按下方「📌 定版给秘书处」，系统会把<b>现在</b>的排课（'+v.n+' 笔，版本码 <code style="color:#534AB7">'+v.code+'</code>）记为基准线。<br>之后主任任何微调，都会在这里列成「待对账」清单给秘书处。</div>';
-    foot.innerHTML='<button class="btn btn-p" onclick="recoSetBaseline()">📌 定版给秘书处</button><button class="btn" onclick="closeReco()">关闭</button>';
-    return;
+    st.innerHTML='<div style="padding:16px;background:#FEF9ED;border-radius:8px;color:#7a5b16;line-height:1.7">本学期<b>尚未定版</b>。按「📌 定版给秘书处」把<b>现在</b>的排课（'+v.n+' 笔 · 版本码 <code style="color:#534AB7">'+v.code+'</code>）记为基准线；之后主任的微调都会在这里列成待对账清单。<div style="margin-top:10px"><button class="btn btn-p" onclick="recoSetBaseline()">📌 定版给秘书处</button></div></div>';
+    lw.innerHTML='';if(nn)nn.textContent='';return;
   }
-  head.innerHTML='秘书处对账 · <b>'+eh(sem)+'</b> <span style="font-weight:400;color:#888;font-size:12px">· 基准线 v'+lk.version+'（'+eh(lk.locked_by||'')+' · '+_recoFmtTime(lk.locked_at)+' · 码 '+eh(lk.ver_code||'')+'）</span>';
-  const diff=_recoDiff(sem,lk.snapshot);
-  const pend=diff.filter(it=>!_recoAcked(it)),done=diff.filter(it=>_recoAcked(it));
-  if(!diff.length){
-    body.innerHTML='<div style="padding:20px;background:#ECFDF3;border-radius:8px;color:#1b7a5a;text-align:center">✅ 自 v'+lk.version+' 定版以来，排课没有任何变更，秘书处手上的纸是最新的。</div>';
-  }else{
-    body.innerHTML='<div id="reco-list">'+_recoListHtml(pend,false)+(done.length?('<div style="margin-top:14px;color:#aaa;font-size:12px;border-top:1px dashed #e5e7eb;padding-top:10px">已处理 '+done.length+' 笔（灰）</div>'+_recoListHtml(done,true)):'')+'</div>';
-  }
-  foot.innerHTML=(pend.length?'<button class="btn btn-p" onclick="recoSetBaseline()" title="把基准线重设为现在，清掉整张待对账清单">✓ 对账到此（重设基准线）</button>':'')+
-    (diff.length?'<button class="btn" onclick="recoPrint()">📄 列印小抄</button>':'<button class="btn btn-p" onclick="recoSetBaseline()">🔄 重新定版</button>')+
-    '<button class="btn" onclick="closeReco()">关闭</button>';
+  const diff=_recoDiff(sem,lk.snapshot);const pend=diff.filter(it=>!_recoAcked(it)),done=diff.filter(it=>_recoAcked(it));
+  if(nn)nn.textContent=pend.length?('· '+pend.length+' 笔待对账'):'· 已对齐';
+  st.innerHTML='<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 12px;background:#F5F4FE;border-radius:8px">'+
+    '<span style="font-size:12.5px;color:#3C3489">基准线 <b>v'+lk.version+'</b> · '+eh(lk.locked_by||'')+' · '+_recoFmtTime(lk.locked_at)+' · 码 '+eh(lk.ver_code||'')+'</span>'+
+    '<span style="display:flex;gap:8px;flex-wrap:wrap">'+
+      (pend.length?'<button class="btn btn-p btn-sm" onclick="recoSetBaseline()" title="把基准线重设为现在，清掉整张待对账清单">✓ 对账到此</button>':'<button class="btn btn-sm" onclick="recoSetBaseline()" title="把基准线重设为现在">🔄 重新定版</button>')+
+      (diff.length?'<button class="btn btn-sm no-print" onclick="recoPrint()">📄 列印小抄</button>':'')+
+    '</span></div>';
+  if(!diff.length){lw.innerHTML='<div style="padding:20px;background:#ECFDF3;border-radius:8px;color:#1b7a5a;text-align:center">✅ 自 v'+lk.version+' 定版以来，排课没有任何变更，秘书处手上的纸是最新的。</div>';return;}
+  lw.innerHTML=_recoListHtml(pend,false)+(done.length?('<div style="margin-top:14px;color:#aaa;font-size:12px;border-top:1px dashed #e5e7eb;padding-top:10px">已处理 '+done.length+' 笔（灰）</div>'+_recoListHtml(done,true)):'');
 }
 function _recoFmtTime(t){try{return new Date(t).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});}catch(e){return t||'';}}
 function _recoListHtml(items,isDone){
@@ -3593,7 +3607,7 @@ async function recoAck(id,code,on){
   if(r&&r.success){
     if(on)_recoCache.acks.push({row_id:String(id),row_code:code});
     else _recoCache.acks=_recoCache.acks.filter(a=>!(String(a.row_id)===String(id)&&a.row_code===code));
-    renderReco();
+    renderRecoPanel();
   }else if(typeof showToast==='function'){showToast('保存失败：'+_errText(r),{kind:'error'});}
 }
 async function recoSetBaseline(){
@@ -3606,8 +3620,8 @@ async function recoSetBaseline(){
   const r=await gasPost('setBaseline',{sem:sem,snapshot:snap,ver_code:v.code});
   if(r&&r.success){
     if(typeof showToast==='function')showToast((lk?'已对账到此 · 基准线 v':'已定版 v')+r.version,{kind:'success'});
-    await openReco();        // 重抓并重画
-    _recoRefresh(true);
+    await renderRecoPanel(true);   // 重抓并重画分页
+    _recoRefresh(true);            // 顺带刷新排课表横幅
   }else{alert('定版失败：'+_errText(r));}
 }
 function recoPrint(){
@@ -6754,9 +6768,8 @@ function printPanel(id){
     let verSpan='';
     if(id==='sch'){
       const _v=_schVerCode(semVal);
-      const _t=new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
       verSpan='<span><span class="ph-label">版本</span><span class="ph-ver">'+_v.code+'</span>'+
-              '<span class="ph-vermeta">· '+_v.n+' 笔 · 列印 '+_t+'</span></span>';
+              '<span class="ph-vermeta">· '+_v.n+' 笔</span></span>';
     }
     hdr.innerHTML=
       '<h1>CIC 本科排课管理系统 · '+titleT+'</h1>'+
@@ -7840,6 +7853,7 @@ function switchTab(id){
   else if(id==='btec')loadBtec();
   else if(id==='exam')loadExam();
   else if(id==='notice')loadNotices();
+  else if(id==='reco')renderRecoPanel();
   else if(id==='ops')renderOps();
   if(id==='sum'){if(!window._sumHintWired){const ps=document.getElementById('panel-sum');if(ps){ps.addEventListener('change',updateSumPrintHint);ps.addEventListener('input',updateSumPrintHint);window._sumHintWired=true;}}updateSumPrintHint();}
   _writeTabHash();
