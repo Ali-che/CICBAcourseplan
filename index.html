@@ -3965,14 +3965,14 @@ function _ttSolve(sem){
       // 每门课一周 2 个时段 = 6 小时(Aj. Tsai);找同一间教室里 2 个老师/届别都空的时段(优先不同天、同一时段)
       const hs=halves(c);let days=(hs.indexOf('dn')>=0?TT_DN_DAYS:TT_UP_DAYS).filter(d=>d!=='周六');
       if(c.note.days.length===1&&c.note.days[0]!=='周六'&&c.note.days[0]!=='周日')days=days.filter(d=>d===c.note.days[0]);
+      let oneRoom=null,oneCell=null;   // 凑不到 2 节时的「至少 1 节」后备(不锁死 2 节 — Aj. Tsai)
       for(var r2=0;r2<cand.length&&!placed;r2++){
         const rm=cand[r2].code,freeCells=[];
         for(var di=0;di<days.length;di++)for(var si=0;si<2;si++){const d=days[di],s=['am','pm'][si];if(hs.every(h=>free(h,rm,d,s,c)))freeCells.push([d,s]);}
-        if(freeCells.length<2)continue;
-        const pick=_ttPickSessions(freeCells,2);
-        pick.forEach(function(cs){hs.forEach(function(h){mark(h,rm,cs[0],cs[1],c);});});
-        c.room=rm;c.cells=pick;placements.push(c);placed=true;
+        if(freeCells.length>=2){const pick=_ttPickSessions(freeCells,2);pick.forEach(function(cs){hs.forEach(function(h){mark(h,rm,cs[0],cs[1],c);});});c.room=rm;c.cells=pick;placements.push(c);placed=true;}
+        else if(freeCells.length===1&&!oneRoom){oneRoom=rm;oneCell=freeCells[0];}
       }
+      if(!placed&&oneRoom){hs.forEach(function(h){mark(h,oneRoom,oneCell[0],oneCell[1],c);});c.room=oneRoom;c.cells=[oneCell];placements.push(c);placed=true;}  // 只排到 1 节也先排上(3h),可人工再补第二节
     }
     if(!placed){
       const reason=c.count>_ttMaxCap(rooms)+TT_CAP_SLACK?('人数 '+c.count+' 超过最大教室容量（含 +5 宽容）'):(c.note.roomMissing?('备注要求教室 '+c.note.roomMissing+'（不在教室库）'):(c.note.room?('指定教室 '+c.note.room+' 排不下 2 个时段'):(c.note.days.length===1?('限定 '+c.note.days[0]+' 排不下 2 个时段'):'找不到同一教室的 2 个空时段（每周 6 小时/2 节）')));
