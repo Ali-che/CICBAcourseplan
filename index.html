@@ -3535,7 +3535,7 @@ function _recoRenderBar(){
   if(!pend.length){bar.style.display='none';return;}
   bar.style.display='';
   bar.innerHTML='<span class="rb-t">⚠ 已定版 v'+lk.version+'（'+eh(lk.locked_by||'')+'）· 之后有 <b>'+pend.length+'</b> 笔待秘书处对账</span>'+
-    '<button class="btn btn-sm" onclick="gotoReco('+JSON.stringify(_recoCache.sem)+')" style="color:#92400e;border-color:#f6c667">前往对账 →</button>';
+    '<button class="btn btn-sm" onclick="gotoReco(\''+jsq(_recoCache.sem)+'\')" style="color:#92400e;border-color:#f6c667">前往对账 →</button>';
 }
 // 打开对账弹窗
 // 从排课表横幅跳到对账分页(带着该学期)
@@ -3563,15 +3563,17 @@ async function renderRecoPanel(force){
   const lk=_recoCache.lock;
   if(!lk){
     const v=_schVerCode(sem);
-    st.innerHTML='<div style="padding:16px;background:#FEF9ED;border-radius:8px;color:#7a5b16;line-height:1.7">本学期<b>尚未定版</b>。按「📌 定版给秘书处」把<b>现在</b>的排课（'+v.n+' 笔 · 版本码 <code style="color:#534AB7">'+v.code+'</code>）记为基准线；之后主任的微调都会在这里列成待对账清单。<div style="margin-top:10px"><button class="btn btn-p" onclick="recoSetBaseline()">📌 定版给秘书处</button></div></div>';
+    const _canLock=(currentRole==='admin');   // 定版(锁基准线)=管理员操作
+    st.innerHTML='<div style="padding:16px;background:#FEF9ED;border-radius:8px;color:#7a5b16;line-height:1.7">本学期<b>尚未定版</b>。'+(_canLock?'按「📌 定版给秘书处」把<b>现在</b>的排课（'+v.n+' 笔 · 版本码 <code style="color:#534AB7">'+v.code+'</code>）记为基准线；之后主任的微调都会在这里列成待对账清单。<div style="margin-top:10px"><button class="btn btn-p" onclick="recoSetBaseline()">📌 定版给秘书处</button></div>':'目前这张清单还没有基准线，<b>等管理员定版</b>后，这里会列出定版后被改动的排课。')+'</div>';
     lw.innerHTML='';if(nn)nn.textContent='';return;
   }
   const diff=_recoDiff(sem,lk.snapshot);const pend=diff.filter(it=>!_recoAcked(it)),done=diff.filter(it=>_recoAcked(it));
   if(nn)nn.textContent=pend.length?('· '+pend.length+' 笔待对账'):'· 已对齐';
+  const _canLock=(currentRole==='admin');   // 定版/对账到此(锁基准线)=管理员操作;其余角色只看清单+单笔勾
   st.innerHTML='<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 12px;background:#F5F4FE;border-radius:8px">'+
     '<span style="font-size:12.5px;color:#3C3489">基准线 <b>v'+lk.version+'</b> · '+eh(lk.locked_by||'')+' · '+_recoFmtTime(lk.locked_at)+' · 码 '+eh(lk.ver_code||'')+'</span>'+
     '<span style="display:flex;gap:8px;flex-wrap:wrap">'+
-      (pend.length?'<button class="btn btn-p btn-sm" onclick="recoSetBaseline()" title="把基准线重设为现在，清掉整张待对账清单">✓ 对账到此</button>':'<button class="btn btn-sm" onclick="recoSetBaseline()" title="把基准线重设为现在">🔄 重新定版</button>')+
+      (_canLock?(pend.length?'<button class="btn btn-p btn-sm" onclick="recoSetBaseline()" title="把基准线重设为现在，清掉整张待对账清单">✓ 对账到此</button>':'<button class="btn btn-sm" onclick="recoSetBaseline()" title="把基准线重设为现在">🔄 重新定版</button>'):'')+
       (diff.length?'<button class="btn btn-sm no-print" onclick="recoPrint()">📄 列印小抄</button>':'')+
     '</span></div>';
   if(!diff.length){lw.innerHTML='<div style="padding:20px;background:#ECFDF3;border-radius:8px;color:#1b7a5a;text-align:center">✅ 自 v'+lk.version+' 定版以来，排课没有任何变更，秘书处手上的纸是最新的。</div>';return;}
@@ -3592,7 +3594,7 @@ function _recoListHtml(items,isDone){
       else if(it.kind==='add')detail='<span style="color:#b45309">给它排时段+教室 · '+eh(_ccSet(r)||'')+' · '+_ccTotal(r)+' 人</span>';
       else detail='<span style="color:#b45309">把原本占的时段/教室释放 · '+eh(_ccSet(r)||'')+' · '+_ccTotal(r)+' 人</span>';
       h+='<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 8px;border-radius:6px;background:'+(isDone?'#fafafa':k[1])+';margin-bottom:5px;'+(isDone?'opacity:.6':'')+'">'+
-         '<input type="checkbox" class="no-print" '+(isDone?'checked':'')+' onchange="recoAck('+JSON.stringify(String(it.id))+','+JSON.stringify(_recoItemCode(it))+',this.checked)" style="width:auto;margin-top:3px;cursor:pointer" title="标为已处理">'+
+         '<input type="checkbox" class="no-print" '+(isDone?'checked':'')+' onchange="recoAck(\''+jsq(String(it.id))+'\',\''+jsq(_recoItemCode(it))+'\',this.checked)" style="width:auto;margin-top:3px;cursor:pointer" title="标为已处理">'+
          '<div style="flex:1;min-width:0;font-size:12.5px">'+
            '<div><span style="font-weight:700;color:'+k[2]+'">'+k[0]+'</span> <b>'+eh(String(r.course||''))+'</b>'+(r.cls?' · '+eh(String(r.cls)):'')+(r.half?' · '+eh(r.half):'')+'</div>'+
            '<div style="color:#555;margin-top:2px;line-height:1.5">'+detail+'</div>'+
