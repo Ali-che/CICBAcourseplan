@@ -208,6 +208,8 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   .print-header .ph-meta{font-size:8.5pt;color:#555;display:flex;justify-content:center;gap:20pt;flex-wrap:wrap;margin-top:3pt}
   .print-header .ph-meta span{display:inline-flex;align-items:center;gap:4pt}
   .print-header .ph-label{color:#888;font-weight:500}
+  .print-header .ph-ver{font-family:ui-monospace,SFMono-Regular,monospace;font-weight:700;color:#534AB7;letter-spacing:.5pt;border:0.5pt solid #AFA9EC;border-radius:3pt;padding:0 4pt}
+  .print-header .ph-vermeta{color:#aaa}
 
   /* ── 卡片 ── */
   .card{box-shadow:none!important;border:0.5pt solid #ccc!important;margin-bottom:8pt;padding:6pt 8pt;border-radius:0!important;}
@@ -315,6 +317,14 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 }
 .print-header{display:none}
 #sco-print{display:none}
+/* 秘书处对账:横幅 + 列印小抄 */
+#sch-reco-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;background:#FEF9ED;border:0.5px solid #F6C667;border-radius:8px;padding:6px 12px;margin-bottom:.6rem;font-size:12.5px;color:#92400e}
+#reco-print{display:none}
+@media print{
+  body.print-reco>*{display:none!important}
+  body.print-reco #reco-print{display:block!important}
+  body.print-reco #reco-print .no-print{display:none!important}
+}
 /* 排课表横向列印 */
 @media print{
   body.print-sch @page{size:A4 landscape;margin:10mm 12mm 14mm 12mm;}
@@ -557,6 +567,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <div class="lh-tools" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
         <button class="btn btn-sm" onclick="syncToSheets('schedule')" title="整张上传" style="display:none">↑ 上传</button>
         <button class="btn btn-sm" onclick="syncFromSheets('schedule')" title="从 Supabase 重新载入最新">↻ 重新载入</button>
+        <button id="btn-sch-reco" class="btn btn-sm no-print" onclick="openReco()" style="display:none;color:#6d28d9;border-color:#c4b5fd" title="定版给秘书处 / 查看定版后的变更对账(先在下方选一个学年学期)">📌 定版 / 对账</button>
         <button class="btn btn-sm no-print" onclick="openSchExp()" style="color:#1a6b2f;border-color:#9ed4ae" title="选择筛选后导出 Excel(预设为当前筛选)">📊 导出 Excel</button>
         <button id="btn-addcoh" class="btn btn-sm no-print" onclick="openAddCoh()" style="display:none;color:#1b7a5a;border-color:#9FE1CB" title="新增届别(含年限)">➕ 新增届别</button>
         <button class="btn btn-sm no-print" onclick="openCsvImport()" style="color:#854F0B;border-color:#FCD34D" title="从 CSV 批量导入">📥 批量导入</button>
@@ -565,6 +576,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <button class="btn btn-sm no-print" onclick="printPanel('sch')" title="按目前的学期/搜索筛选,列印排课记录(横向 A4);未筛选则印全部">🖨️ 列印</button>
       </div>
     </div>
+    <div id="sch-reco-bar" class="no-print" style="display:none"></div>
     <div class="fbar no-print" style="margin-bottom:.6rem;flex-wrap:wrap">
       <label>学年学期</label><select id="sch-sem-f" onchange="renderSch()"><option value="">全部</option></select>
       <label>课程代码</label><select id="sch-dept-f" onchange="renderSch()"><option value="">全部</option></select>
@@ -583,6 +595,19 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       </tr></thead><tbody id="sch-tb"></tbody></table>
     </div>
     <div class="empty" id="sch-em">暂无排课记录</div>
+  </div>
+</div>
+
+<!-- ══ 秘书处对账 弹窗 ════════ -->
+<div id="reco-modal" class="no-print" onclick="closeReco()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9999;align-items:center;justify-content:center">
+  <div onclick="event.stopPropagation()" style="background:#fff;border-radius:12px;padding:16px 18px;width:560px;max-width:94vw;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 12px 44px rgba(0,0,0,.25)">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px">
+      <span id="reco-head" style="font-weight:700;color:#3C3489;font-size:15px">秘书处对账</span>
+      <span onclick="closeReco()" style="cursor:pointer;color:#999;font-size:16px">✕</span>
+    </div>
+    <div style="font-size:11px;color:#999;margin-bottom:10px">定版后主任的变更 → 这里列给秘书处核对教室/时段。只影响这张清单，不改排课。</div>
+    <div id="reco-body" style="overflow:auto;flex:1;min-height:60px"></div>
+    <div id="reco-foot" style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px;border-top:1px solid #eee;padding-top:10px"></div>
   </div>
 </div>
 
@@ -1472,6 +1497,9 @@ function applyRoleVisibility(){
   const _canCoh = (currentRole==='admin'||currentRole==='director');
   const addcohTab = document.getElementById('btn-addcoh');
   if(addcohTab) addcohTab.style.display = _canCoh ? '' : 'none';
+  // 定版/对账钮:Head of Administration(teacher)/Director/Admin
+  const recoBtn = document.getElementById('btn-sch-reco');
+  if(recoBtn) recoBtn.style.display = (typeof _recoCanUse==='function' && _recoCanUse()) ? '' : 'none';
   const acctBtn = document.getElementById('ops-tab-acct');
   if(acctBtn){
     acctBtn.style.display = (currentRole==='admin') ? '' : 'none';
@@ -3429,6 +3457,172 @@ function hashRecords(arr){
   if(!Array.isArray(arr))return '0';
   return arr.length+':'+arr.map(r=>String(r.id)).sort().join(',');
 }
+// 排课表「内容版本码」:按 课程·上下半·班级·老师·届别+人数 算指纹,内容一变码就变。
+// 给列印版本章「辨真伪」用——两张纸版本码相同=内容一字不差;不同=被动过。≠ hashRecords(只按 id,给同步用,勿混)。
+function _schVerCode(sem){
+  const rows=(typeof schD!=='undefined'?schD:[]).filter(r=>!sem||r.sem===sem);
+  const sig=rows.map(r=>{
+    const cc=(r.cc||[]).map(c=>c.cohort+':'+(c.count==null?'':c.count)).sort().join('+');
+    return [String(r.course||'').toUpperCase(),r.half||'',r.cls||'',r.tc||'',cc].join('|');
+  }).sort().join('\n');
+  let h=5381>>>0; for(let i=0;i<sig.length;i++){h=(((h*33)>>>0)^sig.charCodeAt(i))>>>0;}
+  return {n:rows.length,code:h.toString(36).toUpperCase().slice(-4).padStart(4,'0')};
+}
+// ═══════ §RECO 秘书处对账(定版基准线 → 净差异 → 对账) ═══════
+// 流程:排课表「定版」交 Head of Administration 排教室并印出;主任之后微调(改课程/届别/人数/老师/上下半);
+// 系统把「定版当时(快照) → 现在」的净差异摊给秘书处对账。基准线存 sched_lock(007)。
+let _recoCache={sem:'',lock:null,acks:[]};
+const _RECO_ROLES=['teacher','director','admin'];  // Head of Administration(=teacher)/Director/Admin
+function _recoCanUse(){return _RECO_ROLES.indexOf(currentRole)>=0;}
+// 单笔课的内容签名(= _schVerCode 同口径:课程·上下半·班级·老师·届别+人数)
+function _schRowSig(r){const cc=(r.cc||[]).map(c=>c.cohort+':'+(c.count==null?'':c.count)).sort().join('+');return [String(r.course||'').toUpperCase(),r.half||'',r.cls||'',r.tc||'',cc].join('|');}
+function _rowCode(r){const s=_schRowSig(r);let h=5381>>>0;for(let i=0;i<s.length;i++){h=(((h*33)>>>0)^s.charCodeAt(i))>>>0;}return h.toString(36).toUpperCase().slice(-6);}
+// 定版用:把某学期当前排课做成精简快照
+function _schSnapshot(sem){return (schD||[]).filter(r=>r.sem===sem).map(r=>({id:r.id,course:r.course,half:r.half||'',cls:r.cls||'',tc:r.tc||'',cc:(r.cc||[]).map(c=>({cohort:c.cohort,count:c.count}))}));}
+function _ccTotal(r){return (r&&r.cc||[]).reduce((s,x)=>s+(+x.count||0),0);}
+function _ccSet(r){return (r&&r.cc||[]).map(c=>c.cohort).sort().join('、');}
+// 字段级差异 + 「秘书处要复查什么」提示(主任不碰时段教室,故提示指向撞堂/容量)
+function _recoFields(o,n){
+  const F=[];
+  if(String(o.course||'').toUpperCase()!==String(n.course||'').toUpperCase())F.push({t:'课程',a:o.course||'—',b:n.course||'—',hint:'查教室类型/课表名'});
+  if((o.half||'')!==(n.half||''))F.push({t:'上下半',a:o.half||'—',b:n.half||'—',hint:'影响半学期时段'});
+  if(String(o.cls||'')!==String(n.cls||''))F.push({t:'班级',a:o.cls||'—',b:n.cls||'—',hint:'查该班时段撞堂'});
+  if((o.tc||'')!==(n.tc||''))F.push({t:'老师',a:o.tc||'待定',b:n.tc||'待定',hint:'查该老师时段撞堂'});
+  const os=_ccSet(o),ns=_ccSet(n),ot=_ccTotal(o),nt=_ccTotal(n);
+  if(os!==ns)F.push({t:'届别',a:os||'—',b:ns||'—',hint:'查该届别时段撞堂'});
+  else if(ot!==nt)F.push({t:'人数',a:ot,b:nt,hint:'查原教室容量够不够'});
+  return F;
+}
+// 净差异:快照 vs 现在(按 id 配对)。kind: del(删,快照有现无) / add(新增) / chg(变更)
+function _recoDiff(sem,snapshot){
+  const cur=(schD||[]).filter(r=>r.sem===sem);
+  const curById={};cur.forEach(r=>curById[String(r.id)]=r);
+  const snapById={};(snapshot||[]).forEach(s=>snapById[String(s.id)]=s);
+  const out=[];
+  (snapshot||[]).forEach(s=>{if(!curById[String(s.id)])out.push({id:s.id,kind:'del',o:s,n:null,fields:[]});});
+  cur.forEach(r=>{const s=snapById[String(r.id)];if(!s){out.push({id:r.id,kind:'add',o:null,n:r,fields:[]});return;}const f=_recoFields(s,r);if(f.length)out.push({id:r.id,kind:'chg',o:s,n:r,fields:f});});
+  // 删除置顶(教室可能还空排着),再新增,再变更
+  const ord={del:0,add:1,chg:2};
+  return out.sort((a,b)=>(ord[a.kind]-ord[b.kind])||(String((a.n||a.o).course||'')).localeCompare(String((b.n||b.o).course||'')));
+}
+function _recoItemCode(it){return it.kind==='del'?'DEL':_rowCode(it.n);}
+function _recoAcked(it){const code=_recoItemCode(it);return (_recoCache.acks||[]).some(a=>String(a.row_id)===String(it.id)&&a.row_code===code);}
+function _recoDept(it){const r=it.n||it.o;const c=(r&&r.cc||[])[0];return (c&&typeof cohortDept==='function')?(cohortDept(c.cohort)||'其他'):'其他';}
+// 刷新排课表上的「待对账」横幅(sem 变才重抓 lock/acks;diff 本地重算)
+async function _recoRefresh(force){
+  const bar=document.getElementById('sch-reco-bar');if(!bar)return;
+  const semEl=document.getElementById('sch-sem-f');const sem=semEl?semEl.value:'';
+  if(!_recoCanUse()||!sem){bar.style.display='none';return;}
+  if(force||_recoCache.sem!==sem){
+    _recoCache={sem:sem,lock:null,acks:[]};
+    try{const r=await gasGet({action:'schedLock',sem:sem});if(r&&r.success){_recoCache.lock=r.lock;_recoCache.acks=r.acks||[];}}catch(e){}
+  }
+  _recoRenderBar();
+}
+function _recoRenderBar(){
+  const bar=document.getElementById('sch-reco-bar');if(!bar)return;
+  const lk=_recoCache.lock;
+  if(!lk){bar.style.display='none';return;}  // 未定版 → 不打扰(定版入口在工具栏「📌 定版/对账」钮)
+  const pend=_recoDiff(_recoCache.sem,lk.snapshot).filter(it=>!_recoAcked(it));
+  if(!pend.length){bar.style.display='none';return;}
+  bar.style.display='';
+  bar.innerHTML='<span class="rb-t">⚠ 已定版 v'+lk.version+'（'+eh(lk.locked_by||'')+'）· 之后有 <b>'+pend.length+'</b> 笔待秘书处对账</span>'+
+    '<button class="btn btn-sm" onclick="openReco()" style="color:#92400e;border-color:#f6c667">查看对账</button>';
+}
+// 打开对账弹窗
+async function openReco(){
+  const semEl=document.getElementById('sch-sem-f');const sem=semEl?semEl.value:'';
+  const m=document.getElementById('reco-modal');if(!m)return;
+  m.style.display='flex';
+  document.getElementById('reco-body').innerHTML='<div style="color:#888;padding:20px;text-align:center">⏳ 载入中…</div>';
+  _recoCache={sem:sem,lock:null,acks:[]};
+  if(sem){try{const r=await gasGet({action:'schedLock',sem:sem});if(r&&r.success){_recoCache.lock=r.lock;_recoCache.acks=r.acks||[];}}catch(e){}}
+  renderReco();
+}
+function closeReco(){const m=document.getElementById('reco-modal');if(m)m.style.display='none';_recoRenderBar();}
+function renderReco(){
+  const sem=_recoCache.sem,lk=_recoCache.lock;
+  const head=document.getElementById('reco-head'),body=document.getElementById('reco-body'),foot=document.getElementById('reco-foot');
+  if(!sem){head.textContent='秘书处对账';body.innerHTML='<div style="padding:20px;color:#92400e;background:#FEF9ED;border-radius:8px">请先在排课表上方「学年学期」选一个学期，再定版 / 对账。</div>';foot.innerHTML='<button class="btn" onclick="closeReco()">关闭</button>';return;}
+  if(!lk){
+    head.innerHTML='秘书处对账 · <b>'+eh(sem)+'</b>';
+    const v=_schVerCode(sem);
+    body.innerHTML='<div style="padding:16px;background:#FEF9ED;border-radius:8px;color:#7a5b16;line-height:1.7">本学期<b>尚未定版</b>。<br>按下方「📌 定版给秘书处」，系统会把<b>现在</b>的排课（'+v.n+' 笔，版本码 <code style="color:#534AB7">'+v.code+'</code>）记为基准线。<br>之后主任任何微调，都会在这里列成「待对账」清单给秘书处。</div>';
+    foot.innerHTML='<button class="btn btn-p" onclick="recoSetBaseline()">📌 定版给秘书处</button><button class="btn" onclick="closeReco()">关闭</button>';
+    return;
+  }
+  head.innerHTML='秘书处对账 · <b>'+eh(sem)+'</b> <span style="font-weight:400;color:#888;font-size:12px">· 基准线 v'+lk.version+'（'+eh(lk.locked_by||'')+' · '+_recoFmtTime(lk.locked_at)+' · 码 '+eh(lk.ver_code||'')+'）</span>';
+  const diff=_recoDiff(sem,lk.snapshot);
+  const pend=diff.filter(it=>!_recoAcked(it)),done=diff.filter(it=>_recoAcked(it));
+  if(!diff.length){
+    body.innerHTML='<div style="padding:20px;background:#ECFDF3;border-radius:8px;color:#1b7a5a;text-align:center">✅ 自 v'+lk.version+' 定版以来，排课没有任何变更，秘书处手上的纸是最新的。</div>';
+  }else{
+    body.innerHTML='<div id="reco-list">'+_recoListHtml(pend,false)+(done.length?('<div style="margin-top:14px;color:#aaa;font-size:12px;border-top:1px dashed #e5e7eb;padding-top:10px">已处理 '+done.length+' 笔（灰）</div>'+_recoListHtml(done,true)):'')+'</div>';
+  }
+  foot.innerHTML=(pend.length?'<button class="btn btn-p" onclick="recoSetBaseline()" title="把基准线重设为现在，清掉整张待对账清单">✓ 对账到此（重设基准线）</button>':'')+
+    (diff.length?'<button class="btn" onclick="recoPrint()">📄 列印小抄</button>':'<button class="btn btn-p" onclick="recoSetBaseline()">🔄 重新定版</button>')+
+    '<button class="btn" onclick="closeReco()">关闭</button>';
+}
+function _recoFmtTime(t){try{return new Date(t).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});}catch(e){return t||'';}}
+function _recoListHtml(items,isDone){
+  if(!items.length)return '';
+  const grp={};items.forEach(it=>{const d=_recoDept(it);(grp[d]=grp[d]||[]).push(it);});
+  const KIND={del:['🗑 删除','#fef2f2','#b42318'],add:['➕ 新增','#ECFDF3','#1b7a5a'],chg:['✎ 变更','#F5F4FE','#534AB7']};
+  let h='';
+  Object.keys(grp).sort().forEach(function(d){
+    h+='<div style="font-size:11px;color:#888;margin:10px 2px 4px;font-weight:600">专业 '+eh(d)+'</div>';
+    grp[d].forEach(function(it){
+      const r=it.n||it.o,k=KIND[it.kind];
+      let detail='';
+      if(it.kind==='chg')detail=it.fields.map(f=>'<span style="display:inline-block;margin:1px 8px 1px 0"><b style="color:#534AB7">'+f.t+'</b> '+eh(String(f.a))+' → '+eh(String(f.b))+' <span style="color:#b45309">· '+f.hint+'</span></span>').join('');
+      else if(it.kind==='add')detail='<span style="color:#b45309">给它排时段+教室 · '+eh(_ccSet(r)||'')+' · '+_ccTotal(r)+' 人</span>';
+      else detail='<span style="color:#b45309">把原本占的时段/教室释放 · '+eh(_ccSet(r)||'')+' · '+_ccTotal(r)+' 人</span>';
+      h+='<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 8px;border-radius:6px;background:'+(isDone?'#fafafa':k[1])+';margin-bottom:5px;'+(isDone?'opacity:.6':'')+'">'+
+         '<input type="checkbox" class="no-print" '+(isDone?'checked':'')+' onchange="recoAck('+JSON.stringify(String(it.id))+','+JSON.stringify(_recoItemCode(it))+',this.checked)" style="width:auto;margin-top:3px;cursor:pointer" title="标为已处理">'+
+         '<div style="flex:1;min-width:0;font-size:12.5px">'+
+           '<div><span style="font-weight:700;color:'+k[2]+'">'+k[0]+'</span> <b>'+eh(String(r.course||''))+'</b>'+(r.cls?' · '+eh(String(r.cls)):'')+(r.half?' · '+eh(r.half):'')+'</div>'+
+           '<div style="color:#555;margin-top:2px;line-height:1.5">'+detail+'</div>'+
+         '</div></div>';
+    });
+  });
+  return h;
+}
+async function recoAck(id,code,on){
+  const sem=_recoCache.sem;if(!sem)return;
+  const r=await gasPost('ackRow',{sem:sem,row_id:id,row_code:code,on:!!on});
+  if(r&&r.success){
+    if(on)_recoCache.acks.push({row_id:String(id),row_code:code});
+    else _recoCache.acks=_recoCache.acks.filter(a=>!(String(a.row_id)===String(id)&&a.row_code===code));
+    renderReco();
+  }else if(typeof showToast==='function'){showToast('保存失败：'+_errText(r),{kind:'error'});}
+}
+async function recoSetBaseline(){
+  const sem=_recoCache.sem;if(!sem){alert('请先选一个学期');return;}
+  const lk=_recoCache.lock;
+  const v=_schVerCode(sem);
+  const msg=lk?('确定把 '+sem+' 的基准线重设为「现在」（'+v.n+' 笔 · 码 '+v.code+'）？\n这会清掉目前整张待对账清单，并把版本号升到 v'+((+lk.version||0)+1)+'。'):('确定把 '+sem+' 现在的排课（'+v.n+' 笔 · 码 '+v.code+'）定版给秘书处？');
+  if(!confirm(msg))return;
+  const snap=_schSnapshot(sem);
+  const r=await gasPost('setBaseline',{sem:sem,snapshot:snap,ver_code:v.code});
+  if(r&&r.success){
+    if(typeof showToast==='function')showToast((lk?'已对账到此 · 基准线 v':'已定版 v')+r.version,{kind:'success'});
+    await openReco();        // 重抓并重画
+    _recoRefresh(true);
+  }else{alert('定版失败：'+_errText(r));}
+}
+function recoPrint(){
+  const sem=_recoCache.sem,lk=_recoCache.lock;if(!lk)return;
+  const diff=_recoDiff(sem,lk.snapshot).filter(it=>!_recoAcked(it));
+  const old=document.getElementById('reco-print');if(old)old.remove();
+  const box=document.createElement('div');box.id='reco-print';
+  box.innerHTML='<h1 style="font-size:15pt;margin:0 0 4pt">秘书处对账小抄 · '+eh(sem)+'</h1>'+
+    '<div style="font-size:9pt;color:#555;margin-bottom:8pt">基准线 v'+lk.version+'（'+eh(lk.locked_by||'')+' · '+_recoFmtTime(lk.locked_at)+' · 码 '+eh(lk.ver_code||'')+'）· 待对账 '+diff.length+' 笔 · 列印 '+new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})+'</div>'+
+    (diff.length?_recoListHtml(diff,false):'<div>✅ 无待对账变更</div>');
+  document.body.appendChild(box);
+  document.body.classList.add('print-reco');
+  setTimeout(function(){window.print();document.body.classList.remove('print-reco');const b=document.getElementById('reco-print');if(b)b.remove();},200);
+}
+
 function trackDelete(type,id){
   if(deletedIds[type])deletedIds[type].add(String(id));
 }
@@ -4810,6 +5004,7 @@ function renderSch(){
   updateBatchDelButton('sch',disp.length,schD.length);
   // 表头计数:有筛选/归档隐藏时,诚实显示「显示 X / 共 Y」,避免和实际行数(及批量删除)对不上
   {var _schN=document.getElementById('sch-n');if(_schN)_schN.innerHTML=((disp.length<schD.length)?('(显示 '+disp.length+' / 共 '+schD.length+' 条)'):('('+schD.length+' 条)'))+_archHint(schD);}
+  if(typeof _recoRefresh==='function')_recoRefresh();   // 刷新「待对账」横幅(sem 变才重抓基准线)
   // v7.9.13: 表头 BTEC 数（届别/总人数 不显示统计）
   let _btecN=0;
   disp.forEach(r=>{if(r.btec===true||r.btec==='TRUE'||r.btec==='true')_btecN++;});
@@ -6555,11 +6750,20 @@ function printPanel(id){
   const hdr=document.getElementById('print-header');
   if(hdr){
     // v8.16.2: 所有 tab 统一不压列印日期
+    // 版本章(仅排课表):内容版本码 + 笔数 + 列印时刻,让纸本能辨真伪/辨新旧
+    let verSpan='';
+    if(id==='sch'){
+      const _v=_schVerCode(semVal);
+      const _t=new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+      verSpan='<span><span class="ph-label">版本</span><span class="ph-ver">'+_v.code+'</span>'+
+              '<span class="ph-vermeta">· '+_v.n+' 笔 · 列印 '+_t+'</span></span>';
+    }
     hdr.innerHTML=
       '<h1>CIC 本科排课管理系统 · '+titleT+'</h1>'+
       '<div class="ph-meta">'+
         '<span><span class="ph-label">文件说明</span>'+subT+'</span>'+
         '<span><span class="ph-label">学年学期</span>'+semTxt+'</span>'+
+        verSpan+
       '</div>';
   }
   // 版面：排课表 / 教学统计 各有专属列印类
@@ -8029,6 +8233,7 @@ function syncTblHeight(){
     if(a==='cohortYears'){const d=await sget('cohort_years?select=cohort,years').catch(function(){return [];});return{success:true,rows:(d||[]).map(function(x){return {cohort:x.cohort,years:x.years};})};}
     if(a==='cohortOverrides'){const d=await sget('cohorts?select=cohort,grad_override').catch(function(){return [];});return{success:true,rows:(d||[]).map(function(x){return {cohort:x.cohort,ov:x.grad_override||''};})};}
     if(a==='noticeData'){const r=await sget('notice?select=*&order=sort,id').catch(function(){return [];});return{success:true,rows:r||[]};}
+    if(a==='schedLock'){const sm=encodeURIComponent(params.sem||'');const[lk,ak]=await Promise.all([sget('sched_lock?sem=eq.'+sm+'&select=*').catch(function(){return [];}),sget('sched_lock_ack?sem=eq.'+sm+'&select=row_id,row_code,acked_by,acked_at').catch(function(){return [];})]);return{success:true,lock:(lk&&lk[0])||null,acks:ak||[]};}
     if(a==='opsData'){
       const[se,de,ch,te,ca,po,gr]=await Promise.all([
         sget('semesters?select=sem&order=sem'),
@@ -8062,6 +8267,8 @@ function syncTblHeight(){
     if(action==='deleteBtec')return srpc('delete_btec',{p_pin:_pin,p_name:body.name});
     if(action==='heartbeat')return srpc('presence_beat',{p_editor:(typeof currentEditor!=='undefined'?currentEditor:'')||''}).catch(function(){return{success:true};});
     if(action==='goodbye')return srpc('presence_bye',{p_editor:(typeof currentEditor!=='undefined'?currentEditor:'')||''}).catch(function(){return{success:true};});
+    if(action==='setBaseline')return srpc('sched_set_baseline',{p_pin:_pin,p_sem:body.sem,p_snapshot:body.snapshot||[],p_ver_code:body.ver_code||''});
+    if(action==='ackRow')return srpc('sched_ack_row',{p_pin:_pin,p_sem:body.sem,p_row_id:String(body.row_id),p_row_code:body.row_code||'',p_on:!!body.on});
     // ⚙️ 后台操作 admin RPC(服务端 _admin 再验权限)
     if(action==='adminAddSemester')return srpc('admin_add_semester',{p_pin:_pin,p_sem:body.sem});
     if(action==='adminDelSemester')return srpc('admin_del_semester',{p_pin:_pin,p_sem:body.sem});

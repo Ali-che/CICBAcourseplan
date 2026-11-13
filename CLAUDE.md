@@ -46,6 +46,11 @@
 
 ### 目前做到哪
 - 系统上线稳定运行,约 8 位同事日常使用;**全站实际操作体检通过,无 JS 崩溃**。
+- **2026-11-13【秘书处对账】功能 ①②③ 全做完(前端改好未部署;DB migration 007 ✅ 已跑)**:流程痛点——排课表「定版」交秘书处(Head of Administration,内部角色码=`teacher`,只读)去排教室/定时间并印出,但主任(director)之后还会微调(改 课程/届别/班级人数/老师/上下半,**不碰时段教室**;时段/教室不归 BA 系统管),秘书处不知情→纸本过期。
+  - **① 列印版本章(纯前端)**:排课表每次列印,表头盖「版本章」=内容版本码(4码)+笔数+列印时刻,例 `版本 KQKU · 1 笔 · 列印 11/13 15:03`。两张纸版本码相同=内容一字不差,不同=被动过。新增 `_schVerCode(sem)`(按 课程·上下半·班级·老师·届别+人数 算指纹,**≠ `hashRecords` 的 id 指纹,勿混**);只盖排课表(`printPanel` 内 `id==='sch'`);样式 `.ph-ver`。**⚠ 用户待定:版本章里的「列印时刻」是专为此破例加的(全站原本「不压列印日期」);用户若不要可拿掉。**
+  - **② 基准线表(`migrations/007_sched_lock_baseline_2026-11-13.sql`,✅ 已跑)**:`sched_lock`(每学期一条:version/locked_by/locked_at/ver_code/**snapshot**=定版那刻排课精简快照)+`sched_lock_ack`(单笔已对账标记:row_id+row_code内容指纹)。RPC:`sched_set_baseline(p_pin,p_sem,p_snapshot,p_ver_code)`=定版/对账到此(version++、清该学期全部 ack),`sched_ack_row(...p_on)`=单笔勾/取消。都 `_pin_editor` 验 PIN(任何有效 PIN;Head=teacher 可用)。**两表 RLS 关、仅 grant select 给 anon、写走 security-definer RPC(同 schedule);下次安全体检会列为「RLS 关但不可写」,属预期基线。** 刻意不挂 trg_audit。线上已实证:两表匿名读回 `[]`、两 RPC 假 PIN 正确挡回「PIN 无效」。
+  - **③ 对账前端(纯前端)**:§RECO 区块(`_schSnapshot/_schRowSig/_rowCode/_recoFields/_recoDiff/_recoItemCode/_recoAcked/_recoRefresh/_recoRenderBar/openReco/renderReco/recoSetBaseline/recoAck/recoPrint`)。排课表工具栏「📌 定版/对账」钮(`btn-sch-reco`,给 teacher/director/admin,`applyRoleVisibility` 控);选学期后点开弹窗 `#reco-modal`:未定版→「📌 定版给秘书处」;已定版→列「定版当时→现在」**净差异**(按专业分组,删置顶→新增→变更,每笔右侧写「秘书处要复查什么」:人数→查教室容量、届别/班级→查撞堂、老师→查老师撞堂),每笔可单笔勾(`recoAck`,**那笔再被改→指纹变→自动重新亮灯**),底部一颗「✓ 对账到此」整批清(重设基准线)+「📄 列印小抄」(只印待对账清单,`body.print-reco`)。排课表挂橘色横幅 `#sch-reco-bar`「⚠ 已定版 vN 后有 M 笔待对账」(`renderSch` 末尾 `_recoRefresh()`;sem 变才重抓 lock/acks,diff 本地重算)。前端接线:`gasGet` 加 `schedLock` 读、`gasPost` 加 `setBaseline`/`ackRow` 写(Supabase 块内)。
+  - **验证**:`ui_smoke` 12/12;无头逻辑测 15/15(钮可见/快照=全学期/无变更空/改人数→人数+容量提示/改老师→老师/删→del/单笔勾+再改重亮/弹窗含人数容量/徽章/两 RPC 载荷);375px 溢出 0、弹窗 353px 合身。**待 Aj. Tsai 亲手确认(本机验不到):㈠ 用 Head 真 PIN 实际「定版」→改一笔排课→看徽章与对账清单是否正确、「对账到此」能清、单笔勾能存;㈡ 印一张排课表 PDF + 一张对账小抄看纸面观感。** 整个功能**尚未 commit、未部署**。下一阶段(未做):课程表——把时段/教室请进系统、系统帮排(撞堂/容量自动抓)。
 - **2026-11-13 备份加固:个资档加密 + 旧快照补加密(备份脚本在 repo 外:`~/CICBA-backups/`、`~/Documents/网站备份/_脚本/`,不进本 repo)**:① 三个含个资/PIN 的档(pins/btec_data/exam_special)**落地前一律 AES-256 加密**(`openssl enc -pbkdf2 -iter 200000`,机器无 gpg)成 `*.json.enc`、明文当场删;密码存钥匙圈 `cic-ba-backup-enc`(≠ PIN 的 `cic-ba-admin-pin`),**缺密码则 fail-closed 跳过个资**(绝不写明文)。② `ba_cloud.mjs` 完整性判断改「基础表 ≥17 个 .json」并把 `.enc` 一并镜像上云;`restore_sql.sh` 遇 `.enc` 自动解密到临时夹、用完即焚(密码错→exit1、不输出 SQL)。③ **retro 一次性补加密现存旧快照**(`~/CICBA-backups/retro_encrypt_pii.sh`,幂等,加密→解密验证一致→才删明文):本机 150 + 云端 150 = **300 档全加密、0 失败**,两处残留明文 = 0、`.enc` 各 150、抽样解密为合法 JSON。④ Drive「网站备份」资料夹查实 = **PRIVATE、仅 owner、无连结分享**(备份未外泄)。干跑全绿;改动没碰网站,`ui_smoke` 本机 12/12、线上 12/12。异地第二份(云端单点)这次按用户选择暂不做。**遗留待用户:㈠ Drive「回收站」可能还留着被删的明文(约 30 天可还原)→ 去 drive.google.com 回收站清空;㈡ `cic-ba-backup-enc` 密码务必另存安全处,是唯一能解 `.enc` 的钥匙,且别覆盖(300 个 .enc 锁在当前密码上)。**
 - **2026-11-13 安全体检合一版 + RLS 复查全绿(只读,没改 DB;新增 `migrations/checks/health_check_all.sql`)**:把 `rls_audit` + 审计覆盖 + 双写量三支 checks 合成「单一 UNION 结果表」(Supabase SQL Editor 一次 Run 只显示最后一个结果,故不能多 SELECT 叠贴)。Aj. Tsai 在 SQL Editor 跑过:**区块 A·RLS 零 ⚠️ 零 🟡**——无任何表外人可写,5 张 RLS 关但不可写(archived_terms/courses_extra/exam_school/notice/teach_btec)同 11-05 基线;**区块 B·审计覆盖无漏挂**——9 张「无审计」全是账号/PIN/消息/在线类(app_admins/audit_log/message_reads/messages/partner_*/pins/presence)本就不挂,其余业务+参考表全有;**区块 C·双写**——新列现行(I36/U415/D22/BASELINE329),旧列历史残留约 200 行(add12/del14/upd174,均 004 前,界面隐藏、可日后清)。要坐实旧列是否停写:`select max("at"), max("at")<date '2026-11-09' from audit_log where tbl is null`(audit_log 时间栏=`at`)。**结论:006 没开出任何漏洞,DB 侧干净。** 另两个真实资安项与 DB 无关、待办:① 备份含 PIN 明文+学生个资同步到 Google Drive → 确认该资料夹没对外分享 + 账号两步验证;② 云端单点(同一 Google 账号)。
 - **2026-11-12 修 Secure Input 最后残留(纯前端,已上线 `5bbacd6`)**:三系统(TM/BA/测验)并行修 macOS Secure Input,本项目补齐最后一处——`togglePinEye`(登入页 PIN 眼睛钮)原本切换后一律 `i.focus()`,眼睛由「显示(text)」切回「隐藏(password)」时会聚焦密码框→又触发 Secure Input;改为切到 text 才 `focus()`、切回 password 改 `blur()`。其余密码/PIN 框(`pin-input`、`chpin-*`)2026-11-10 已处理。ui_smoke 本地 12/12;push 后以 `curl -H 'Cache-Control: no-cache'` 比对线上确认新版已上线(Pages 的 Fastly CDN `max-age=600`,带 `?cb=` 查询串不会破缓存,要用 no-cache 头或等 10 分钟/硬刷新才看得到)。**本机无法真正重开 Chrome App,Secure Input 释放待 Aj. Tsai 重开 App 后用 `ioreg -l -w 0 | grep -i SecureInput` 验收**。
@@ -96,3 +101,13 @@
 4. **P1 · 届别改卡片** — 后台「届别」仍是表格;改卡片时**必须保留年限 + 在读/已毕业状态**,别丢信息。
 5. **P2** — 原生 `alert`(117 处)→ toast;加**云端排程备份**(目前只靠本机 launchd,单点风险);顶部「专业」三处数字标示统一。
 6. **非技术待办** — 运维交接单第 2、9 节「待填」(密码保管处、备援联络人)由 Aj. Tsai 补;Drive 交接单副本是快照,需同步时请我重传。
+
+## web-design-rules 体检设定
+> 给 skill `web-design-rules` 的「体检模式」用(2026-11-13 加)。说「体检」就照这里的参数跑 8 项,只读不改。
+- 网站根资料夹:.(repo 根目录;会列到 `index_supa_test.html`、`staging.html` 两个测试页,结果里可忽略)
+- 线上网址:https://ali-che.github.io/CICBAcourseplan(GitHub Pages,keep-ext)
+- 测试指令:`node tools/ui_smoke.mjs`(线上:`--url https://ali-che.github.io/CICBAcourseplan/index.html`)
+- 备份:~/Documents/网站备份/BA课纲排课|'*'|2 天
+- 匿名读取:--supabase ahygebtmavcmzqdwwhbs --key-from index.html pins app_admins btec btec_student exam_special
+- 反向验证纪录:2026-11-09 ui_smoke 放回旧 bug(opsD null)→ 9/12 失败
+- 已知:GitHub Pages 不能自订安全标头;个资表 2026-11-13 匿名读取全 0 笔/401
