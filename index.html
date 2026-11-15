@@ -5715,7 +5715,8 @@ async function renderTtPanel(force){
     '<span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="font-size:12px;color:'+(canEdit?'#1b7a5a':'#999')+'">'+(canEdit?'你可排/存':'只读')+'</span>'+tools+'</span></div>'+
     _ttDatesHtml(sem)+(sol?_ttViewToggle():'');   // 视图切换挪进 sticky 工具列,滚动不消失(Aj. Tsai 2026-11-15)
   if(!sol){
-    bd.innerHTML='<div style="padding:18px;background:#FEF9ED;border-radius:8px;color:#7a5b16;line-height:1.7">本学期共 <b>'+n+'</b> 门课待排。'+(canEdit?'点 <b>⚡ 一键自动排</b> 自动排进时段+教室（排不下的会标红留空、列到右侧「待处理」；🖨️ 列印在下一阶段加入）。':'尚未排课（等 Head of Administration 或管理员排）。')+'</div>';return;
+    const it=_ttInternList(sem);   // 还没存档、还没自动排的画面也列实习课(Aj. Tsai 2026-11-16);「待排」的门数不含实习课(本来就不排)
+    bd.innerHTML=_ttInternsBar({interns:it})+'<div style="padding:18px;background:#FEF9ED;border-radius:8px;color:#7a5b16;line-height:1.7">本学期共 <b>'+(n-it.length)+'</b> 门课待排。'+(canEdit?'点 <b>⚡ 一键自动排</b> 自动排进时段+教室（排不下的会标红留空、列到右侧「待处理」；🖨️ 列印在下一阶段加入）。':'尚未排课（等 Head of Administration 或管理员排）。')+'</div>';return;
   }
   bd.innerHTML=_ttBodyHtml(sol);
   _ttJumpFill();   // 依现在画面上的分组填「跳到」下拉
