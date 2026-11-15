@@ -4241,9 +4241,17 @@ function _ttCC(p){return eh(p.course)+(p.cls?'-'+eh(p.cls):'');}
 // 课片按「专业」上色(用全站 COHORT_COLOR 配色);Capstone 另加左侧色条 + 🎓
 function _ttDeptColor(dep){const c=(typeof COHORT_COLOR!=='undefined'&&dep)?COHORT_COLOR[dep]:null;return c?{bg:c.bg,fg:c.fg}:{bg:'#EEF2FF',fg:'#312e81'};}
 // 课片上色规则(Aj. Tsai 2026-11-15):KB 基础课/KE 英语课/KH 泰语课各一个专属色(不与专业色重复);
-// 通识课(LA/MA/GE 开头)→ 授课老师所属专业的颜色;其余专业课 → 修课人数最多的学生专业的颜色
+// 通识课(依课程架构的通识模块,见 _ttIsGE)→ 授课老师所属专业的颜色;其余专业课 → 修课人数最多的学生专业的颜色
 const TT_CAT_COLOR={KB:{bg:'#E6EE9C',fg:'#5F6B00',name:'KB 基础课'},KE:{bg:'#D1C4E9',fg:'#4527A0',name:'KE 英语课'},KH:{bg:'#FFCDD2',fg:'#B71C1C',name:'KH 泰语课'}};
-function _ttIsGE(p){return p.dept==='GE'||/^(LA|MA|GE)/.test(String(p.course||'').toUpperCase());}
+// 通识课的判定照「课程架构」(course_structure_online.html 的 GE_BASES):课程总库的模块(block)属于下列大类即通识教育;
+// 同一课码只要任一专业的课纲列在通识模块就算通识课(实查只有 KH150/KH160/LA160 三个课码各专业归类不同)
+const TT_GE_BASES=['通识','人文与社会科学','科学与技术','健康科学','终身学习','价值与伦理','生活质量','跨文化交际','语言'];
+function _ttIsGEBlock(b){b=String(b||'');return TT_GE_BASES.some(function(x){return b.indexOf(x)===0;});}
+function _ttIsGE(p){
+  const code=String(p.course||'').toUpperCase(),c=((_ttCache.refs&&_ttCache.refs.cat)||{})[code];
+  if(c&&typeof c.ge==='boolean')return c.ge;
+  return /^(LA|MA|GE)/.test(code);   // 总库查不到这门课时的后备
+}
 function _ttChipColor(p){
   const pre=String(p.course||'').toUpperCase().slice(0,2);
   if(TT_CAT_COLOR[pre])return TT_CAT_COLOR[pre];
@@ -4255,7 +4263,7 @@ function _ttChipColor(p){
 }
 function _ttLegendHtml(){
   const sw=function(c,t){return '<span style="display:inline-block;background:'+c.bg+';color:'+c.fg+';border:1px solid rgba(0,0,0,.08);border-radius:5px;padding:0 7px;font-weight:600">'+t+'</span>';};
-  return '<div style="font-size:11px;color:#777;margin:0 2px 6px;display:flex;gap:7px;flex-wrap:wrap;align-items:center">颜色：<span>专业课＝学生专业色</span><span>· 通识课(LA/MA/GE)＝授课老师专业色</span><span>·</span>'+sw(TT_CAT_COLOR.KB,TT_CAT_COLOR.KB.name)+sw(TT_CAT_COLOR.KE,TT_CAT_COLOR.KE.name)+sw(TT_CAT_COLOR.KH,TT_CAT_COLOR.KH.name)+'</div>';
+  return '<div style="font-size:11px;color:#777;margin:0 2px 6px;display:flex;gap:7px;flex-wrap:wrap;align-items:center">颜色：<span>专业课＝学生专业色</span><span>· 通识课（依课程架构）＝授课老师专业色</span><span>·</span>'+sw(TT_CAT_COLOR.KB,TT_CAT_COLOR.KB.name)+sw(TT_CAT_COLOR.KE,TT_CAT_COLOR.KE.name)+sw(TT_CAT_COLOR.KH,TT_CAT_COLOR.KH.name)+'</div>';
 }
 function _ttChipStyle(p){const col=_ttChipColor(p);return 'background:'+col.bg+';color:'+col.fg+';border:1px solid rgba(0,0,0,.08)'+(p.isCap?';border-left:3px solid '+col.fg:'');}
 // 房间网格课片:三区 → 左上 届别·人数(+备注)、中间 课程-班级(粗)、右下 老师(三种字体)
@@ -9518,9 +9526,9 @@ function syncTblHeight(){
     if(a==='ttRefs'){
       const[ro,ca]=await Promise.all([
         sget('rooms?select=code,cap,pref_dept,sort&order=sort,code').catch(function(){return [];}),
-        sget('catalog?select=code,dept,credit').catch(function(){return [];})
+        sget('catalog?select=code,dept,credit,block').catch(function(){return [];})
       ]);
-      const cat={};(ca||[]).forEach(function(x){if(x.code)cat[String(x.code).toUpperCase()]={dept:x.dept||'',credit:x.credit};});
+      const cat={};(ca||[]).forEach(function(x){if(!x.code)return;const k=String(x.code).toUpperCase(),prev=cat[k];cat[k]={dept:x.dept||'',credit:x.credit,ge:!!((prev&&prev.ge)||_ttIsGEBlock(x.block))};});   // ge:任一专业的课纲把它列在通识模块 → 通识课
       return{success:true,rooms:(Array.isArray(ro)?ro:[]).map(x=>({code:x.code,cap:+x.cap||0,pref_dept:x.pref_dept||'',sort:(x.sort==null?null:+x.sort)})),cat:cat};
     }
     if(a==='opsData'){
