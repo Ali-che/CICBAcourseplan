@@ -4913,11 +4913,9 @@ function _ttDropUnplace(ev){
   _ttUnplaceCourse(id);
 }
 function _ttCellUnplace(){if(!_ttEdit)return;const id=_ttEdit.id;_ttCellClose();_ttUnplaceCourse(id);}
-function _ttInternsBar(sol){   // 蓝色说明框:实习课(不排进课表)+ 合班(几门当一门排)
+function _ttInternsBar(sol){   // 蓝色说明框:实习课(不排进课表)+ Capstone 时段说明(合班那一行 2026-11-15 Aj. Tsai 要求拿掉;合班的课看课片上用「+」连起来的课码)
   const rows=[];
   if(sol.interns&&sol.interns.length)rows.push('<div><b>ℹ️ 实习课 '+sol.interns.length+' 门</b> —— 本来就不排进课表（实习不占教室时段）：<span>'+sol.interns.map(function(i){return eh(i.course)+(i.cls?'-'+eh(i.cls):'');}).join('、')+'</span></div>');
-  const gs=(sol.placements||[]).concat(sol.unplaced||[]).filter(_ttMem);
-  if(gs.length)rows.push('<div><b>🔗 合班 '+gs.length+' 组</b> —— 同老师、同时间、同教室一起上，当一门课排：<span>'+gs.map(function(g){return _ttCC(g)+'（'+g.count+'人）';}).join('、')+'</span></div>');
   if((sol.placements||[]).concat(sol.unplaced||[]).some(function(p){return p.isCap;}))rows.push('<div><b>🎓 Capstone</b> —— 一天三个时段 09:00–12:00、12:00–15:00（排在「下午」栏）、15:00–18:00（「傍晚」栏）；排周五、周六，排不下才用周日；同一位老师固定一间教室（优先 233～236）。</div>');
   return rows.length?'<div class="tt-internbar">'+rows.join('')+'</div>':'';
 }
