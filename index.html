@@ -753,7 +753,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <th class="sort" onclick="sortSch('course')">课程代码 / 类型 / 英文名 <span id="si-co">⇅</span></th>
         <th class="sort" onclick="sortSch('sem')">学期 <span id="si-sem">⇅</span></th>
         <th class="sort" onclick="sortSch('half')">上下半 <span id="si-hl">⇅</span></th>
-        <th>班级</th><th>授课老师</th><th>届别（人数）</th><th class="sort" onclick="sortSch('total')">总人数 <span id="si-total">⇅</span></th><th>备注</th><th>操作</th>
+        <th>班级</th><th class="sort" onclick="sortSch('tc')">授课老师 <span id="si-sch-tc">⇅</span></th><th>届别（人数）</th><th class="sort" onclick="sortSch('total')">总人数 <span id="si-total">⇅</span></th><th>备注</th><th>操作</th>
       </tr></thead><tbody id="sch-tb"></tbody></table>
     </div>
     <div class="empty" id="sch-em">暂无排课记录</div>
@@ -6589,6 +6589,7 @@ function renderSch(){
   const el_sem=document.getElementById('si-sem');if(el_sem)el_sem.innerHTML=siIcon('sem',schSK,schSD);
   const el_hl=document.getElementById('si-hl');if(el_hl)el_hl.innerHTML=siIcon('half',schSK,schSD);
   const el_btec=document.getElementById('si-btec');if(el_btec)el_btec.innerHTML=siIcon('btec',schSK,schSD);
+  const el_sch_tc=document.getElementById('si-sch-tc');if(el_sch_tc)el_sch_tc.innerHTML=siIcon('tc',schSK,schSD);
   const el_tot=document.getElementById('si-total');if(el_tot)el_tot.innerHTML=siIcon('total',schSK,schSD);
   if(!schD.length){tb.innerHTML='';em.style.display='block';return;}
   em.style.display='none';
@@ -6622,6 +6623,7 @@ function renderSch(){
   if(schSK==='half'){const ho={'上半学期':0,'上半':0,'下半学期':1,'下半':1,'全学期':2};disp.sort((a,b)=>schSD*((ho[a.half]??2)-(ho[b.half]??2)));}
   if(schSK==='btec'){const isB=r=>r.btec===true||r.btec==='TRUE'||r.btec==='true'?1:0;disp.sort((a,b)=>schSD*(isB(b)-isB(a)));}
   if(schSK==='total'){const tot=r=>(r.cc||[]).reduce((s,x)=>s+(x.count||0),0);disp.sort((a,b)=>schSD*(tot(b)-tot(a)));}
+  if(schSK==='tc'){const tv=r=>String(r.tc||'').trim();disp.sort((a,b)=>{const va=tv(a),vb=tv(b);if(!va&&!vb)return 0;if(!va)return 1;if(!vb)return -1;return schSD*va.localeCompare(vb);});}  // 待定/空老师恒沉底
   // v7.9: 批量删除按钮 —— 只在「有筛选 + 结果不是全部 + N > 0」时显示
   _schFilteredIds=disp.map(r=>r.id);
   updateBatchDelButton('sch',disp.length,schD.length);
