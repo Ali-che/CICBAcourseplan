@@ -104,7 +104,7 @@
 .msel-btn.go.xls:hover{background:#245e28}
 </style></head><body><div class="wrap">
 <div class="tabs" id="tabs"></div>
-<div class="bar"><select id="fprog" onchange="selDrop(this.value)"></select><input id="fq" placeholder="🔍 全专业搜索 · 代码 / 中文 / 英文 / 对接" oninput="render()"><button class="rf" onclick="loadSheet()">↻ 刷新数据</button><button class="rf" onclick="window.print()" style="border-color:#AFA9EC;color:#534AB7" title="列印当前所选专业（直式 A4）">🖨️ 列印</button><button class="rf" onclick="openOutSel()" style="border-color:#AFA9EC;color:#534AB7" title="勾选专业 → 导出 Excel 或 列印 / 存 PDF（可单个 / 多个 / 全部）">📤 导出 / 列印（选专业）</button></div>
+<div class="bar"><select id="fprog" onchange="selDrop(this.value)"></select><input id="fq" placeholder="🔍 全专业搜索 · 代码 / 中文 / 英文 / 对接" oninput="render()"><button class="rf" onclick="loadSheet()">↻ 刷新数据</button><button class="rf" onclick="window.print()" style="border-color:#AFA9EC;color:#534AB7" title="列印画面上所见——所选专业，或对照 / 搜索结果（直式 A4）">🖨️ 列印目前检视</button><button class="rf" onclick="openOutSel()" style="border-color:#AFA9EC;color:#534AB7" title="勾选专业 → 导出 Excel 或 列印 / 存 PDF（可单个 / 多个 / 全部）">📤 导出 / 列印（选专业）</button></div>
 <div class="status" id="status">载入中…</div>
 <div id="out"></div>
 </div>
