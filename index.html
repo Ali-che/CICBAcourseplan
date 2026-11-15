@@ -498,6 +498,16 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 .tt-solo-fc{font-size:11px;font-weight:600;border-radius:999px;padding:2px 9px;cursor:pointer;background:#EEEDFE;color:#534AB7;border:1px solid rgba(0,0,0,.06);user-select:none}
 .tt-solo-fc.on{background:#534AB7;color:#fff}
 .tt-solo-dep{display:inline-block;font-size:10px;font-weight:700;border-radius:4px;padding:0 5px;margin-right:5px;vertical-align:1px}
+.tt-lang-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:1px 10px}
+.tt-lang-row .res{font-weight:700;color:#1a6b2f}
+.tt-lang-row.no .res{color:#b42318}
+.tt-wchip .tt-solo-dep{margin-right:2px}
+.tt-solo-main{flex:1 1 220px;min-width:0}
+.tt-solo-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
+.tt-solo-h .when{color:#92400e;font-weight:700}
+.tt-solo-h .what{color:#555}
+.tt-solo-c{display:flex;flex-wrap:wrap;align-items:baseline;gap:1px 12px;margin-top:2px;padding-left:2px;color:#444}
+.tt-solo-c .no{color:#92400e;margin-right:-6px}
 .tt-solo-row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .tt-solo-btns{display:flex;gap:4px;flex-shrink:0}
 .tt-solo-btns .btn{padding:1px 8px;font-size:10.5px;display:inline-flex;align-items:center;gap:3px}
@@ -4189,7 +4199,15 @@ function _ttLangRefresh(sem){
 const TT_SOLO_MAX=1,TT_SOLO_PEN=80;   // 扣分 80:比「两节间隔普通」(25)重,比「两节挤同一天」(100)轻
 let _ttRows={};
 // 开关(Aj. Tsai 2026-11-15):工具栏「个别学生不挡排课」可关掉,比较两种结果。记在本机(预设开);切换时会重排(可按还原退回)
-function ttSoloDept(d){_ttCache.soloDept=d||'';renderTtPanel();}   // 个别学生撞课清单的专业筛选(只影响这份清单的显示)
+// 撞课清单的时段文字:同一半的并在一起,例「下半 · 周一下午、周三下午」(Aj. Tsai 2026-11-16:谁、什么时候要一眼看到)
+function _ttSoloWhenTxt(arr){
+  const g={},od=[];(arr||[]).forEach(function(w){const m=String(w).match(/^(上下半|上半|下半)\s+(.+)$/),h=m?m[1]:'',t=m?m[2]:String(w);if(!(h in g)){g[h]=[];od.push(h);}if(g[h].indexOf(t)<0)g[h].push(t);});
+  return od.map(function(h){return (h?h+' · ':'')+g[h].join('、');}).join('；');
+}
+function _ttRoomsOf(p){const a=[];(p.cells||[]).forEach(function(cs){const r=String(_ttCR(p,cs)||'');if(r&&a.indexOf(r)<0)a.push(r);});return a.join('／')||'待定';}   // 这门课用到的教室
+function ttSoloDept(d){_ttCache.soloDept=d||'';renderTtPanel();}
+function ttWarnDept(d){_ttCache.warnDept=d||'';renderTtPanel();}   // 提醒(软约束)的专业筛选
+function _ttDepTag(dep){const col=_ttDeptColor(dep);return '<span class="tt-solo-dep" style="background:'+col.bg+';color:'+col.fg+'">'+eh(dep)+'</span>';}   // 专业色小标签(撞课清单/备注/提醒/KE-KH 共用)   // 个别学生撞课清单的专业筛选(只影响这份清单的显示)
 function _ttSoloOn(){return _lsGet('cic_tt_solo')!=='0';}
 function ttSoloToggle(on){
   _lsSet('cic_tt_solo',on?'1':'0');
@@ -5304,8 +5322,10 @@ function _ttFootDetails(sol){
   let right='';
   const curBy={};(sol.placements||[]).concat(un).forEach(function(c){curBy[String(c.id)]=c;});
   const notes=(sol.manualNotes||[]).map(function(c){c=curBy[String(c.id)]||c;const n=_ttNoteOf(c,sol);return {c:c,n:n,kind:_ttNoteKind(c,n)};}),todo=notes.filter(function(o){return o.kind==='todo';}),other=notes.filter(function(o){return o.kind!=='todo';});
-  if(todo.length)right+='<div class="tt-iss-h note">📝 备注待看 '+todo.length+' 门<span> · 点一下跳到课表</span></div>'+todo.map(function(o){const c=o.c;return '<div class="tt-side-item note jump" onclick="_ttJumpTo(\''+jsq(String(c.id))+'\')"><b>'+_ttCC(c)+'</b>'+(c.room?' · 暂排 '+eh(c.room):'')+'<br><span class="t">'+eh(o.n.raw||c.nt||'')+'</span>'+_ttNoteApplied(c,o.n)+'</div>';}).join('');
-  if(other.length)right+='<details class="tt-iss-fold"'+_ttFoldAttr('notes')+'><summary>其他备注 '+other.length+' 条（已照办／变更记录，不用处理）</summary>'+other.map(function(o){const c=o.c;return '<div class="tt-side-item log jump" onclick="_ttJumpTo(\''+jsq(String(c.id))+'\')"><b>'+_ttCC(c)+'</b>：'+eh(o.n.raw||c.nt||'')+(o.kind==='done'?' <span class="ok">✓ 已照办</span>':'')+'</div>';}).join('')+'</details>';
+  const nDep=function(o){return o.c.dept||'其他';},nSort=function(a,b){return nDep(a).localeCompare(nDep(b))||String(a.c.course).localeCompare(String(b.c.course));};
+  todo.sort(nSort);other.sort(nSort);   // 照专业(课程所属专业)→ 课码排
+  if(todo.length)right+='<div class="tt-iss-h note">📝 备注待看 '+todo.length+' 门<span> · 点一下跳到课表</span></div>'+todo.map(function(o){const c=o.c;return '<div class="tt-side-item note jump" onclick="_ttJumpTo(\''+jsq(String(c.id))+'\')">'+_ttDepTag(nDep(o))+'<b>'+_ttCC(c)+'</b>'+(c.room?' · 暂排 '+eh(c.room):'')+'<br><span class="t">'+eh(o.n.raw||c.nt||'')+'</span>'+_ttNoteApplied(c,o.n)+'</div>';}).join('');
+  if(other.length)right+='<details class="tt-iss-fold"'+_ttFoldAttr('notes')+'><summary>其他备注 '+other.length+' 条（已照办／变更记录，不用处理）</summary>'+other.map(function(o){const c=o.c;return '<div class="tt-side-item log jump" onclick="_ttJumpTo(\''+jsq(String(c.id))+'\')">'+_ttDepTag(nDep(o))+'<b>'+_ttCC(c)+'</b>：'+eh(o.n.raw||c.nt||'')+(o.kind==='done'?' <span class="ok">✓ 已照办</span>':'')+'</div>';}).join('')+'</details>';
   // 个别学生撞课:同一届别、同两门课的几个时段并成一条
   const soloG=[],soloK={};(_ttCache.solo||[]).forEach(function(x){const k=x.co+'\u0001'+[String(x.a.id),String(x.b.id)].sort().join('\u0001');if(!soloK[k]){soloK[k]={co:x.co,a:x.a,b:x.b,when:[]};soloG.push(soloK[k]);}soloK[k].when.push(_ttSoloWhen(x,sol.whole));});
   // 照专业排序(专业 → 届别名),并可用专业筛选(Aj. Tsai 2026-11-16);专业的判法同全站(cohortDept)
@@ -5320,20 +5340,32 @@ function _ttFootDetails(sol){
       (dl.length>1?'<div class="tt-solo-f"><span class="lab">专业</span>'+fchip('','全部 '+solo.length)+dl.map(function(d){return fchip(d,d+' '+dc[d]);}).join('')+'</div>':'')+
       shown.map(function(x){
       const row=_ttSoloRow(x),rc=row&&_ttRows[row]?String(_ttRows[row].course||''):'',col=_ttDeptColor(x.dep);   // 该届别只占 1 人的那笔排课 → 「改排课」直接开它的编辑窗
-      return '<div class="tt-side-item note tt-solo-row" data-dep="'+eh(x.dep)+'"><div><span class="tt-solo-dep" style="background:'+col.bg+';color:'+col.fg+'">'+eh(x.dep)+'</span><b>'+eh(x.co)+'</b>：'+_ttCC(x.a)+' ↔ '+_ttCC(x.b)+'<br><span class="t">'+eh(x.when.join('、'))+'</span></div><span class="tt-solo-btns"><button class="btn btn-sm" onclick="_ttJumpTo(\''+jsq(String(x.a.id))+'\')" title="跳到课表里这门课">看课表</button>'+(rc?'<button class="btn btn-sm" onclick="startES(\''+jsq(row)+'\')" title="打开 '+eh(rc)+' 的排课编辑窗：把这位同学拿掉，或改到别的班">'+_ICO.edit+' 改 '+eh(rc)+'</button>':'')+'</span></div>';
+      return '<div class="tt-side-item note tt-solo-row" data-dep="'+eh(x.dep)+'"><div class="tt-solo-main"><div class="tt-solo-h"><span class="tt-solo-dep" style="background:'+col.bg+';color:'+col.fg+'">'+eh(x.dep)+'</span><b>'+eh(x.co)+'</b><span class="when">'+eh(_ttSoloWhenTxt(x.when))+'</span><span class="what">同时要上两门课</span></div>'+[x.a,x.b].sort(function(m,n){return (n.count||0)-(m.count||0);}).map(function(c,i){return '<div class="tt-solo-c"><span class="no">'+(i?'②':'①')+'</span><b>'+_ttCC(c)+'</b><span>教室 '+eh(_ttRoomsOf(c))+'</span><span>'+eh(c.tc||'老师待定')+'</span><span>全班 '+c.count+' 人</span></div>';}).join('')+'</div><span class="tt-solo-btns"><button class="btn btn-sm" onclick="_ttJumpTo(\''+jsq(String(x.a.id))+'\')" title="跳到课表里这门课">看课表</button>'+(rc?'<button class="btn btn-sm" onclick="startES(\''+jsq(row)+'\')" title="打开 '+eh(rc)+' 的排课编辑窗：把这位同学拿掉，或改到别的班">'+_ICO.edit+' 改 '+eh(rc)+'</button>':'')+'</span></div>';
     }).join('')+'<div class="tt-iss-tip">'+(_ttCanEdit()?'在排课编辑窗存好之后，回来按「⚡ 一键自动排」重排，这份清单才会更新。':'在排课编辑窗存好之后，要请 Head of Administration 或管理员重排并存档，这份清单才会更新（你这个账号不能重排课表）。')+'</div></details>';}
-  const lg=_ttLang,lgCo=Object.keys(lg.ke||{}).filter(function(co){return lg.kh&&lg.kh[co];}).sort();
+  const coDep=function(co){return (typeof cohortDept==='function'&&cohortDept(co))||'其他';};
+  const lg=_ttLang,lgCo=Object.keys(lg.ke||{}).filter(function(co){return lg.kh&&lg.kh[co];}).sort(function(a,b){return coDep(a).localeCompare(coDep(b))||a.localeCompare(b);});
   if(lgCo.length){
-    const fmt=function(co){return eh(co)+'（KE '+lg.ke[co]+'＋KH '+lg.kh[co]+'／约 '+lg.size[co]+' 人）';},okL=lgCo.filter(function(co){return lg.ok[co];}),noL=lgCo.filter(function(co){return !lg.ok[co];});
-    right+='<details class="tt-iss-fold"'+_ttFoldAttr('lang')+'><summary>KE／KH 同时段：'+(okL.length?'放行 '+okL.length+' 个届别':'')+(noL.length?(okL.length?' · ':'')+'<span class="bad">不放行 '+noL.length+' 个</span>':'')+'</summary><div class="tt-side-item lang">同届别的学生只选 KE 或 KH 其一，才让两门排同一时段。'+(okL.length?'<br>放行：'+okL.map(fmt).join('、'):'')+(noL.length?'<br><span class="bad">不放行（人数加起来超过届别人数，有学生两门都修）：'+noL.map(fmt).join('、')+'</span>':'')+'</div></details>';
+    const okL=lgCo.filter(function(co){return lg.ok[co];}),noL=lgCo.filter(function(co){return !lg.ok[co];});
+    const row=function(co){const ok=!!lg.ok[co];return '<div class="tt-side-item lang tt-lang-row'+(ok?'':' no')+'">'+_ttDepTag(coDep(co))+'<b>'+eh(co)+'</b><span>KE '+lg.ke[co]+' 人＋KH '+lg.kh[co]+' 人</span><span>届别约 '+lg.size[co]+' 人</span><span class="res">'+(ok?'✓ 放行':'✗ 不放行（有学生两门都修）')+'</span></div>';};
+    right+='<details class="tt-iss-fold"'+_ttFoldAttr('lang')+'><summary>KE／KH 同时段：'+(okL.length?'放行 '+okL.length+' 个届别':'')+(noL.length?(okL.length?' · ':'')+'<span class="bad">不放行 '+noL.length+' 个</span>':'')+'</summary><div class="tt-iss-tip">同届别的学生只选 KE 或 KH 其一（两门人数加起来不超过届别人数），才让两门排同一时段。</div>'+noL.concat(okL).map(row).join('')+'</details>';
   }
   const warns=sol.warns||[],openW=warns.filter(function(w){return !acked[w];}).length;
   if(warns.length){
-    const grp={},gord=[];
-    warns.forEach(function(wn){let kd=null,m=null;for(let i=0;i<TT_WARN_KINDS.length&&!m;i++){m=wn.match(TT_WARN_KINDS[i].re);if(m)kd=TT_WARN_KINDS[i];}const k=kd?kd.k:'oth';if(!grp[k]){grp[k]={name:kd?kd.name:'其他提醒',items:[]};gord.push(k);}grp[k].items.push({w:wn,t:kd?kd.fmt(m):wn});});
-    right+='<div class="tt-iss-h warn">提醒（软约束）未核对 '+openW+'／共 '+warns.length+'<span> · '+(canAck?'点开分类，勾选＝已核对':'点开分类看明细')+'</span></div>'+gord.map(function(k){
-      const g=grp[k],o=g.items.filter(function(it){return !acked[it.w];}).length;
-      return '<details class="tt-iss-fold"'+_ttFoldAttr('w_'+k)+'><summary>'+eh(g.name)+' · '+g.items.length+' 条'+(o<g.items.length?'（未核对 '+o+'）':'')+'</summary><div class="tt-wchips">'+g.items.map(function(it){const ok=!!acked[it.w];return '<label class="tt-wchip'+(ok?' ok':'')+'">'+(canAck?'<input type="checkbox" '+(ok?'checked':'')+' onchange="_ttWarnAck(\''+jsq(sem)+'\',\''+jsq(it.w)+'\',this.checked)" title="标为已核对">':'')+eh(it.t)+'</label>';}).join('')+'</div></details>';
+    const grp={},gord=[],wdc={},wdl=[];
+    warns.forEach(function(wn){let kd=null,m=null;for(let i=0;i<TT_WARN_KINDS.length&&!m;i++){m=wn.match(TT_WARN_KINDS[i].re);if(m)kd=TT_WARN_KINDS[i];}const k=kd?kd.k:'oth';if(!grp[k]){grp[k]={name:kd?kd.name:'其他提醒',items:[]};gord.push(k);}
+      const key=kd?m[1]:'',dep=!kd?'其他':(kd.k==='tch'?_ttTeacherDept(key,sol):coDep(key));   // 届别的提醒看届别的专业;老师的提醒看老师所属专业
+      if(!wdc[dep]){wdc[dep]=0;wdl.push(dep);}wdc[dep]++;
+      grp[k].items.push({w:wn,t:kd?kd.fmt(m):wn,dep:dep,key:key});});
+    wdl.sort(function(a,b){return a.localeCompare(b);});
+    let wf=_ttCache.warnDept||'';if(wf&&!wdc[wf])wf=_ttCache.warnDept='';   // 筛选的专业现在没有提醒了 → 回到全部
+    const wchip=function(d,txt){const col=d?_ttDeptColor(d):null;return '<span class="tt-solo-fc'+(wf===d?' on':'')+'"'+(col&&wf!==d?' style="background:'+col.bg+';color:'+col.fg+'"':'')+' onclick="ttWarnDept(\''+jsq(d)+'\')">'+eh(txt)+'</span>';};
+    right+='<div class="tt-iss-h warn">提醒（软约束）未核对 '+openW+'／共 '+warns.length+'<span> · '+(canAck?'点开分类，勾选＝已核对':'点开分类看明细')+'</span></div>'+
+      (wdl.length>1?'<div class="tt-solo-f tt-warn-f"><span class="lab">专业</span>'+wchip('','全部 '+warns.length)+wdl.map(function(d){return wchip(d,d+' '+wdc[d]);}).join('')+'</div>':'')+
+      gord.map(function(k){
+      const g=grp[k];g.items.sort(function(a,b){return a.dep.localeCompare(b.dep)||a.key.localeCompare(b.key);});   // 照专业 → 名称排
+      const shown=g.items.filter(function(it){return !wf||it.dep===wf;});if(!shown.length)return '';
+      const o=shown.filter(function(it){return !acked[it.w];}).length;
+      return '<details class="tt-iss-fold"'+_ttFoldAttr('w_'+k)+'><summary>'+eh(g.name)+' · '+shown.length+' 条'+(wf?'（全部专业共 '+g.items.length+' 条）':'')+(o<shown.length?'（未核对 '+o+'）':'')+'</summary><div class="tt-wchips">'+shown.map(function(it){const ok=!!acked[it.w];return '<label class="tt-wchip'+(ok?' ok':'')+'" data-dep="'+eh(it.dep)+'">'+(canAck?'<input type="checkbox" '+(ok?'checked':'')+' onchange="_ttWarnAck(\''+jsq(sem)+'\',\''+jsq(it.w)+'\',this.checked)" title="标为已核对">':'')+_ttDepTag(it.dep)+eh(it.t)+'</label>';}).join('')+'</div></details>';
     }).join('');
   }
   if(!left&&!right&&!soloHtml)return '';
