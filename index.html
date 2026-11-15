@@ -2849,6 +2849,9 @@ var _auditFilter={editor:'',tbl:'',op:'',from:'',to:''};
 // 编辑记录的资料类型(006 起后台各表都有触发器)。[表名, 显示名, 徽章色, 分组, 对象显示]
 var _AUD_TBLS=[
   ['schedule','排课','b0','排课'],['special','IS/SG','b5','排课'],['exam_special','期末考','b4','排课'],
+  ['timetable','课表存档','b5','课表制作',function(j){return (j.sem||'')+(j.version!=null?' · v'+j.version:'')+(j.placed!=null?' · '+j.placed+' 门':'');}],
+  ['rooms','教室库','b5','课表制作',function(j){return (j.code||'')+(j.cap!=null?' · 容'+j.cap+'人':'');}],
+  ['tt_sem_dates','课表日期','b5','课表制作',function(j){return (j.sem||'');}],
   ['cohorts','届别','b2','基础数据'],['cohort_years','届别年限','b2','基础数据',function(j){return j.cohort+(j.years!=null?' · '+j.years+' 年':'');}],
   ['teachers','老师','b6','基础数据',function(j){return j.name;}],['positions','职位','b6','基础数据',function(j){return j.position;}],
   ['depts','专业','b1','基础数据',function(j){return [j.code,j.name].filter(Boolean).join(' · ');}],
@@ -2918,7 +2921,8 @@ function _auditRender(){
     pid:'专业',courses_count:'课程数',course_n:'课程门数',course_cr:'课程学分',intern_n:'实习门数',intern_cr:'实习学分',intern_sub:'实习抵课',
     body:'内容',accent:'颜色',sort:'排序',is_open:'展开',pdf_url:'PDF',val:'数值',la500:'课时',
     sid:'学号',active:'在读',intake:'入学',track:'方向',acad_year:'学年',seq:'序号',unit_no:'单元号',name_en:'英文名',glh:'GLH',assess:'评核',
-    enroll_sem:'修读学期',instructor:'授课',verifier:'审核',course_name:'课程名',tc:'老师',iv:'IV',k:'项目'};
+    enroll_sem:'修读学期',instructor:'授课',verifier:'审核',course_name:'课程名',tc:'老师',iv:'IV',k:'项目',
+    placed:'落位门数',cap:'容量',pref_dept:'优先专业',up_start:'上半开始',up_end:'上半结束',dn_start:'下半开始',dn_end:'下半结束'};
   var fmt=function(t){if(!t)return '—';var d=new Date(t);if(isNaN(d))return eh(String(t));var p=function(n){return String(n).padStart(2,'0');};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());};
   var objOf=function(j,tb){if(!j)return '';if(tb&&TBLO[tb]){try{return eh(String(TBLO[tb](j)||''));}catch(e){}}if(typeof j.resigned!=='undefined'&&j.name)return eh(String(j.name));if(j.cohort&&!Array.isArray(j.cohorts))return eh(String(j.cohort)+(j.dept?(' · '+j.dept):''));var c=j.course_code||j.course||'',s=j.sem||'',cl=j.class_code||'';return eh([s,c,cl].filter(Boolean).join(' · '));};  // 顺序:学年学期·课程·班级;届别:代码·专业;老师:姓名
   var cohMap=function(arr){var m={};(arr||[]).forEach(function(x){if(x&&x.cohort)m[x.cohort]=(x.count==null?'':x.count);});return m;};
