@@ -4056,7 +4056,7 @@ function _ttChipHtml(p,bad,src){
   const dr=(_ttCache.driftIds&&_ttCache.driftIds[String(p.id)])?' tt-drift':'';
   const title=p.course+(p.cls?' '+p.cls:'')+' @'+rm+(p.tc?' · '+p.tc:'')+(p.dept?' · 专业'+p.dept:'')+(cl.full?' · 届别:'+cl.full:'')+(note?' · 备注:'+note:'')+(dr?' · ⚠存档后被改动':'')+((bad[p.id]&&_ttBadWhy[p.id])?' ｜ ⚠ 为什么红：'+_ttBadWhy[p.id].join('；'):'')+(edit?' · 可单独拖这一节':'');
   const dragStart=edit?(' draggable="true" ondragstart="_ttDragStart(event,\''+jsq(String(p.id))+'\','+(src?'\''+jsq(src[0])+'\',\''+src[1]+'\'':'null,null')+')"'):'';
-  const clickEdit=edit?(' onclick="_ttEditCell(event,\''+jsq(String(p.id))+'\','+(src?'\''+jsq(src[0])+'\',\''+src[1]+'\'':'null,null')+')"'):'';
+  const clickEdit=edit?(' onmousedown="_ttChipDown(event)" onmouseup="_ttChipUp(event,\''+jsq(String(p.id))+'\','+(src?'\''+jsq(src[0])+'\',\''+src[1]+'\'':'null,null')+')"'):'';
   return '<span class="tt-chip'+bd+dr+(edit?' tt-drag':'')+'" style="'+_ttChipStyle(p)+'" data-tt-id="'+eh(String(p.id))+'"'+dragStart+clickEdit+' title="'+eh(title)+'">'+
     '<span class="tt-c3"><span class="z1">'+eh(cl.label)+' · '+p.count+'人</span>'+
     '<span class="z2">'+_ttCC(p)+'</span>'+
@@ -4179,7 +4179,7 @@ function _ttMiniChip(p,mode,bad,src){
   const dr=(_ttCache.driftIds&&_ttCache.driftIds[String(p.id)])?' tt-drift':'';
   const title=p.course+(p.cls?' '+p.cls:'')+' @'+rm+(p.tc?' · '+p.tc:'')+(p.dept?' · 专业'+p.dept:'')+(cl.full?' · '+cl.full:'')+((bad&&bad[p.id]&&_ttBadWhy[p.id])?' ｜ ⚠ 为什么红：'+_ttBadWhy[p.id].join('；'):'')+(edit?' · 可单独拖这一节':'');
   const dragStart=edit?(' draggable="true" ondragstart="_ttDragStart(event,\''+jsq(String(p.id))+'\','+(src?'\''+jsq(src[0])+'\',\''+src[1]+'\'':'null,null')+')"'):'';
-  const clickEdit=edit?(' onclick="_ttEditCell(event,\''+jsq(String(p.id))+'\','+(src?'\''+jsq(src[0])+'\',\''+src[1]+'\'':'null,null')+')"'):'';
+  const clickEdit=edit?(' onmousedown="_ttChipDown(event)" onmouseup="_ttChipUp(event,\''+jsq(String(p.id))+'\','+(src?'\''+jsq(src[0])+'\',\''+src[1]+'\'':'null,null')+')"'):'';
   return '<span class="tt-chip'+bd+dr+(edit?' tt-drag':'')+'" style="'+_ttChipStyle(p)+'" data-tt-id="'+eh(String(p.id))+'"'+dragStart+clickEdit+' title="'+eh(title)+'"><span class="tt-c3"><span class="z1">'+z1+'</span><span class="z2">'+z2+'</span><span class="z3">'+z3+'</span></span></span>';
 }
 // 单一届别/老师的紧凑课表:行=星期(周一~周五,+周六若有 Capstone),列=上半上午/上半下午/下半上午/下半下午
@@ -4267,9 +4267,15 @@ function _ttEnsureCellModal(){
     +'<button class="btn btn-sm btn-p" onclick="_ttCellSave()">套用</button></div></div>';
   document.body.appendChild(m);return m;
 }
+let _ttDownXY=null;
+function _ttChipDown(ev){try{_ttDownXY=[ev.clientX,ev.clientY];}catch(e){_ttDownXY=null;}}
+function _ttChipUp(ev,id,day,slot){   // 用 mousedown→mouseup 位移区分「点击」与「拖拽」:移动 <6px 才算点击开弹窗(Aj. Tsai 2026-11-15)
+  if(!_ttDownXY)return;const dx=ev.clientX-_ttDownXY[0],dy=ev.clientY-_ttDownXY[1];_ttDownXY=null;
+  if(dx*dx+dy*dy>36)return;
+  _ttEditCell(ev,id,day,slot);
+}
 function _ttEditCell(ev,id,day,slot){
   if(ev&&ev.stopPropagation)ev.stopPropagation();
-  if(_ttDragging)return;   // 刚拖完,别把这次 click 当成「编辑这一节」(2026-11-15)
   if(!_ttCanEdit())return;
   _ttEnsureSol();const sol=_ttCache.sol;if(!sol)return;
   const p=(sol.placements||[]).find(function(x){return String(x.id)===String(id);});if(!p)return;
@@ -4292,7 +4298,9 @@ function _ttEditCell(ev,id,day,slot){
   const days=['周一','周二','周三','周四','周五'];if(curDay==='周六')days.push('周六');
   document.getElementById('ttcm-day').innerHTML=days.map(function(d){return '<option'+(d===curDay?' selected':'')+'>'+d+'</option>';}).join('');
   document.getElementById('ttcm-slot').value=curSlot;
-  document.getElementById('ttcm-note').textContent=p.isCap?'🎓 Capstone 预设周五上午+下午,可改。':'一门课两节,这里只改你点的这一节(另一节不动)。';
+  const _why=(_ttBadWhy&&_ttBadWhy[String(id)])||null,_noteEl=document.getElementById('ttcm-note');
+  if(_why&&_why.length)_noteEl.innerHTML='<b style="color:#e11d48">⚠ 这节标红：</b>'+_why.map(eh).join('；')+'（改教室/老师/时段来解冲突）';
+  else _noteEl.textContent=p.isCap?'🎓 Capstone 预设周五上午+下午,可改。':'一门课两节,这里只改你点的这一节(另一节不动)。';
   _ttEnsureCellModal().style.display='flex';
 }
 function _ttCellClose(){const m=document.getElementById('ttcell-modal');if(m)m.style.display='none';_ttEdit=null;}
