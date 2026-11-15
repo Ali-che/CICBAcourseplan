@@ -4082,7 +4082,8 @@ function _ttStateFromSol(sol,exceptId){
   return st;
 }
 function _ttCapTcOf(sol){const m={};(sol.placements||[]).concat(sol.unplaced||[]).forEach(function(c){if(c.isCap&&c.tc)_ttHs(c).forEach(function(h){m[h+'|'+c.tc]=1;});});return m;}   // 键=半|老师
-const TT_SOLVE_TRIES=40;   // 试几种先后顺序
+const TT_SOLVE_TRIES=40;   // 试几种先后顺序(依「抢人程度」:届别各有多忙+老师多忙+可用教室少)
+const TT_SOLVE_TRIES_COH=8; // 另外再试几种「届别数最多的先排」(Aj. Tsai 2026-11-15 提议;取最好的一版,加了不会变差)
 function _ttSolve(sem){
   const refs=_ttCache.refs||{rooms:[],cat:{}};
   const rooms=_ttRoomsSorted(),cat=refs.cat||{};
@@ -4111,13 +4112,16 @@ function _ttSolve(sem){
   list.forEach(function(c){
     c._cand=_ttCandRooms(c,rooms);c._days=_ttDaysFor(c,capTc);
     let deg=0;_ttHs(c).forEach(function(h){if(c.tc)deg+=tcN[h+'|'+c.tc]-1;c.cohorts.forEach(function(co){deg+=coN[h+'|'+co]-1;});});
-    c._pr=(c.note.room?100000:0)+(c.isCap?50000+(+c.count||0)*50:0)+(c._days.length===1?20000:0)+(12-Math.min(12,c._cand.length))*40+deg*10+(+c.count||0);   // Capstone 大班先排(周末机位有限,排不下时留小班)
+    c._pr=(c.note.room?100000:0)+(c.isCap?50000+(+c.count||0)*50:0)+(c._days.length===1?20000:0)+(12-Math.min(12,c._cand.length))*40+deg*10+(+c.count||0);
+    c._pr2=c._pr+c.cohorts.length*1000;   // 「届别数最多先排」用的排序值   // Capstone 大班先排(周末机位有限,排不下时留小班)
   });
   // 固定种子的乱数:同样的排课,每次按「一键自动排」结果都一样
   let seed=20261115;const rnd=function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};
   let best=null;
-  for(var run=0;run<TT_SOLVE_TRIES;run++){
-    list.forEach(function(c){c._k=c._pr+(run?rnd()*260:0);});
+  const TRIES=TT_SOLVE_TRIES+TT_SOLVE_TRIES_COH;
+  for(var run=0;run<TRIES;run++){
+    const coh=run>=TT_SOLVE_TRIES;   // 前 40 种照原本的排序;后 8 种改「届别数最多先排」(第 1 种不加乱数)
+    list.forEach(function(c){c._k=coh?(c._pr2+(run>TT_SOLVE_TRIES?rnd()*1500:0)):(c._pr+(run?rnd()*260:0));});
     const r=_ttRunOnce(list);
     if(!best||r.score<best.score)best={score:r.score,asg:list.map(function(c){return c.cells.map(function(cs){return cs.slice();});})};
     if(best.score<10)break;   // 已经全部排满且间隔理想,不用再试
@@ -4141,7 +4145,7 @@ function _ttSolve(sem){
     unplaced.push({id:c.id,course:c.course,cls:c.cls,tc:c.tc,count:c.count,half:c.half,cohorts:c.cohorts,dept:c.dept,credit:c.credit,isCap:c.isCap,note:c.note,reason:reason,nt:c.nt,hint:c.hint});
   });
   const t1=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();
-  return {sem:sem,rooms:rooms,placements:placements,unplaced:unplaced,manualNotes:manualNotes,interns:interns,warns:_ttWarns(placements,whole),whole:whole,tries:Math.min(run+1,TT_SOLVE_TRIES),ms:Math.round(t1-t0)};
+  return {sem:sem,rooms:rooms,placements:placements,unplaced:unplaced,manualNotes:manualNotes,interns:interns,warns:_ttWarns(placements,whole),whole:whole,tries:Math.min(run+1,TRIES),ms:Math.round(t1-t0)};
 }
 // 软约束提醒(不阻止,列侧栏):老师每半>4、届别学分>21、届别上下半门数不平衡(全学期跳过门数检查)
 function _ttWarns(pls,whole){
