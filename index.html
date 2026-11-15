@@ -3871,15 +3871,19 @@ function _ttMaxCap(rooms){return rooms.reduce((m,r)=>Math.max(m,r.cap||0),0);}
 // ── 备注解析(§5.5):捞 教室号 / 单一周几;模糊语气 → 待人工 ──
 function _ttParseNote(nt,rooms){
   const raw=String(nt||'').trim();
-  const out={raw:raw,room:'',roomMissing:'',days:[],fuzzy:false,manual:false};
+  const out={raw:raw,room:'',roomMissing:'',numHint:false,days:[],fuzzy:false,manual:false};
   if(!raw)return out;
   const codes=rooms.map(r=>String(r.code)).sort((a,b)=>b.length-a.length);
-  for(var i=0;i<codes.length;i++){if(raw.indexOf(codes[i])>=0){out.room=codes[i];break;}}   // 库里有的教室号
-  if(!out.room){const m=raw.match(/(?:lab|实验室|教室|room)\s*#?\s*(\d{3,5})/i)||raw.match(/(\d{3,5})/);if(m)out.roomMissing=m[1];}  // 像教室但不在库
+  // 2026-11-15 修:课码里的数字(LA161=LA131)与日期(1113、0624)不再被当成教室号
+  const kw=raw.match(/(?:lab|实验室|教室|room)\s*#?\s*(\d{3,5})/i);          // 明写「教室/lab NNN」
+  const bare=raw.replace(/[A-Za-z]+\d+/g,' ');                              // 去掉课码/届别码里的数字
+  if(kw&&codes.indexOf(kw[1])>=0)out.room=kw[1];
+  else for(var i=0;i<codes.length;i++){if(new RegExp('(^|\\D)'+codes[i]+'(\\D|$)').test(bare)){out.room=codes[i];break;}}   // 库里有的教室号(须是独立的数字)
+  if(!out.room){if(kw)out.roomMissing=kw[1];else if(/\d{3,5}/.test(bare))out.numHint=true;}   // 明写但不在库 / 只是有数字 → 不当教室,列入人工核对
   const DM={'一':'周一','二':'周二','三':'周三','四':'周四','五':'周五','六':'周六','日':'周日','天':'周日'};
   (raw.match(/(?:周|星期|礼拜)\s*([一二三四五六日天])/g)||[]).forEach(function(mm){const k=mm.slice(-1);if(DM[k]&&out.days.indexOf(DM[k])<0)out.days.push(DM[k]);});
   out.fuzzy=/或|也可以|尽量|连续|最好|如果|视情况|看情况|\bor\b/i.test(raw);
-  out.manual=out.fuzzy||!!out.roomMissing||out.days.length>1;   // 多天/模糊/库外教室 → 人工
+  out.manual=out.fuzzy||!!out.roomMissing||out.numHint||out.days.length>1;   // 多天/模糊/库外教室/含不明数字 → 人工
   return out;
 }
 // ── 上下半分配(§5.3):钉死照用;Capstone→下;待定→自动配平(届别门数 + 老师负载)+ LA/KH 层级 ──
@@ -3939,6 +3943,146 @@ function _ttFindSecond(sol,room,h,day,slot,c){
   });});});
   return best?[best[0],best[1],bestRoom]:null;
 }
+// ── 排课核心(2026-11-15 重写 — Aj. Tsai「一键自动排要更聪明」) ──
+// ① 两节各自挑(时段,教室):同一间优先,但不再「同一间有 2 个空档」才排
+// ② 教室挑「刚好够大」的,大教室留给大班(CD 课仍优先 321/322,其他课最后才用)
+// ③ 排不满 2 节时,试着挪走一门挡路的课再排(挪走的那门也要能重新排满,否则还原)
+// ④ 多试几种先后顺序(固定乱数种子 → 同样的排课每次结果一样),留「未排最少」的一版
+function _ttMkState(){return {occ:{up:{},dn:{}},tb:{up:{},dn:{}},cb:{up:{},dn:{}}};}
+function _ttHs(c){return c.half==='both'?['up','dn']:[c.half==='dn'?'dn':'up'];}
+function _ttStMark(st,c,cs,on){
+  const k=cs[0]+'|'+cs[1],id=String(c.id);
+  _ttHs(c).forEach(function(h){
+    const ok=cs[2]+'|'+k,tk=c.tc?(c.tc+'|'+k):null;
+    if(on){st.occ[h][ok]=id;if(tk)st.tb[h][tk]=id;(c.cohorts||[]).forEach(function(co){st.cb[h][co+'|'+k]=id;});}
+    else{if(st.occ[h][ok]===id)delete st.occ[h][ok];if(tk&&st.tb[h][tk]===id)delete st.tb[h][tk];(c.cohorts||[]).forEach(function(co){if(st.cb[h][co+'|'+k]===id)delete st.cb[h][co+'|'+k];});}
+  });
+}
+function _ttApply(st,c,cells){c.cells=cells;c.room=cells.length?cells[0][2]:'';cells.forEach(function(cs){_ttStMark(st,c,cs,true);});}
+function _ttUnapply(st,c){(c.cells||[]).forEach(function(cs){_ttStMark(st,c,cs,false);});c.cells=[];c.room='';}
+// 这门课能用的教室,依偏好排序:备注指定 > (CD 课:321/322 先;其他课:321/322 最后) > 容量小的先
+function _ttCandRooms(c,rooms){
+  const cand=(rooms||[]).filter(function(r){return _ttRoomFits(r.cap,c.count);});
+  if(c.note&&c.note.room)return cand.filter(function(r){return String(r.code)===c.note.room;});
+  const fit=function(a,b){return (+a.cap||0)-(+b.cap||0);};
+  const cd=cand.filter(function(r){return r.pref_dept==='CD';}).sort(fit),non=cand.filter(function(r){return r.pref_dept!=='CD';}).sort(fit);
+  return c.dept==='CD'?cd.concat(non):non.concat(cd);
+}
+// 这门课能排的星期:Capstone 周五/六/日;一般课周一~五(教 Capstone 的老师周五留给 Capstone);备注指定单一周几则只排那天
+function _ttDaysFor(c,capTc){
+  let days=(c.isCap?TT_CAP_DAYS:TT_WEEKDAYS).slice();
+  if(!c.isCap&&capTc&&c.tc&&_ttHs(c).some(function(h){return capTc[h+'|'+c.tc];}))days=days.filter(function(d){return d!=='周五';});   // 只在该老师有 Capstone 的那一半保留周五
+  const nd=c.note&&c.note.days;if(nd&&nd.length===1&&days.indexOf(nd[0])>=0)days=[nd[0]];
+  return days;
+}
+function _ttCellScore(c,A,B){return c.isCap?((A[0]===B[0]?100:0)+((A[0]==='周日'||B[0]==='周日')?20:0)):_ttPairScore(A,B);}
+// 找落位(不改状态):回传 {cells:[[周几,时段,教室]×2]};allowOne 时凑不到 2 节可回 1 节;都没有回 null
+function _ttFindSlots(st,c,cand,days,allowOne,only){
+  const hs=_ttHs(c),opts=[],cohs=c.cohorts||[],tcells=[];
+  if(only)only.forEach(function(x){if(days.indexOf(x[0])>=0)tcells.push([x[0],x[1]]);});   // only:只在指定的几个时段里找(换节用)
+  else days.forEach(function(d){tcells.push([d,'am']);tcells.push([d,'pm']);});
+  tcells.forEach(function(tc0){
+    const d=tc0[0],s=tc0[1],k=d+'|'+s;
+    for(var i=0;i<hs.length;i++){const h=hs[i];if(c.tc&&st.tb[h][c.tc+'|'+k])return;for(var j=0;j<cohs.length;j++)if(st.cb[h][cohs[j]+'|'+k])return;}
+    const rs=[];
+    for(var r=0;r<cand.length;r++){const code=String(cand[r].code);let ok=true;for(var q=0;q<hs.length;q++)if(st.occ[hs[q]][code+'|'+k]){ok=false;break;}if(ok)rs.push(code);}
+    if(rs.length)opts.push({d:d,s:s,rs:rs});
+  });
+  let best=null,bs=1e9;
+  for(var a=0;a<opts.length;a++)for(var b=a+1;b<opts.length;b++){
+    const A=opts[a],B=opts[b];
+    let sc=_ttCellScore(c,[A.d,A.s],[B.d,B.s]),common=null;
+    for(var x=0;x<A.rs.length;x++)if(B.rs.indexOf(A.rs[x])>=0){common=A.rs[x];break;}
+    if(!common)sc+=30;   // 两节不同教室:可以,但同一间优先
+    if(sc<bs){bs=sc;best=common?[[A.d,A.s,common],[B.d,B.s,common]]:[[A.d,A.s,A.rs[0]],[B.d,B.s,B.rs[0]]];}
+  }
+  if(best)return {cells:best,score:bs};
+  if(allowOne&&opts.length)return {cells:[[opts[0].d,opts[0].s,opts[0].rs[0]]],score:0};
+  return null;
+}
+// 排一遍:依 _k 由大到小(约束紧的先)→ 排不满的试「挪一门」→ 还不行才退而排 1 节
+function _ttRunOnce(list){
+  const st=_ttMkState();
+  list.forEach(function(c){c.cells=[];c.room='';});
+  const order=list.slice().sort(function(a,b){return b._k-a._k;}),fail=[];
+  order.forEach(function(c){const f=_ttFindSlots(st,c,c._cand,c._days,false);if(f)_ttApply(st,c,f.cells);else fail.push(c);});
+  const still=[];
+  fail.forEach(function(c){
+    const hs=_ttHs(c);let done=false;
+    for(var i=0;i<order.length&&!done;i++){
+      const b=order[i];
+      if(b===c||(b.cells||[]).length<2)continue;
+      if(!_ttHs(b).some(function(h){return hs.indexOf(h)>=0;}))continue;
+      const keep=b.cells;
+      _ttUnapply(st,b);
+      const fc=_ttFindSlots(st,c,c._cand,c._days,false);
+      if(fc){
+        _ttApply(st,c,fc.cells);
+        const fb=_ttFindSlots(st,b,b._cand,b._days,false);
+        if(fb){_ttApply(st,b,fb.cells);done=true;break;}
+        _ttUnapply(st,c);
+      }
+      _ttApply(st,b,keep);
+    }
+    if(!done)still.push(c);
+  });
+  still.forEach(function(c){const f=_ttFindSlots(st,c,c._cand,c._days,true);if(f)_ttApply(st,c,f.cells);});
+  // 改善间隔:两节落在同一天/连续两天的课,试着重排;不行就挪一门别的课,两门合计间隔变好才接受
+  for(var pass=0;pass<3;pass++)order.forEach(function(c){
+    if((c.cells||[]).length!==2)return;
+    const cur=_ttAsgScore(c);if(cur<60)return;
+    const hs=_ttHs(c),keep=c.cells;
+    _ttUnapply(st,c);
+    const f=_ttFindSlots(st,c,c._cand,c._days,false);
+    if(f&&f.score<cur){_ttApply(st,c,f.cells);return;}
+    // (a) 两门课各换一节:c 留一节、拿 b 的一节;b 留另一节、拿 c 让出的那节(届别 10 格全满时只有这样才拆得开同一天)
+    for(var w=0;w<order.length;w++){
+      const b=order[w];
+      if(b===c||(b.cells||[]).length!==2)continue;
+      if(!_ttHs(b).some(function(h){return hs.indexOf(h)>=0;}))continue;
+      const kb=b.cells,sb=_ttAsgScore(b);
+      _ttUnapply(st,b);
+      for(var ci=0;ci<2;ci++)for(var bi=0;bi<2;bi++){
+        const fc=_ttFindSlots(st,c,c._cand,c._days,false,[keep[ci],kb[bi]]);
+        if(!fc||fc.score>=cur)continue;
+        _ttApply(st,c,fc.cells);
+        const fb=_ttFindSlots(st,b,b._cand,b._days,false,[kb[1-bi],keep[1-ci]]);
+        if(fb&&fc.score+fb.score<cur+sb){_ttApply(st,b,fb.cells);return;}
+        _ttUnapply(st,c);
+      }
+      _ttApply(st,b,kb);
+    }
+    // (b) 整门挪:把 b 拿开让 c 先挑,b 再重排
+    for(var i=0;i<order.length;i++){
+      const b=order[i];
+      if(b===c||(b.cells||[]).length!==2)continue;
+      if(!_ttHs(b).some(function(h){return hs.indexOf(h)>=0;}))continue;
+      const kb=b.cells,sb=_ttAsgScore(b);
+      _ttUnapply(st,b);
+      const fc=_ttFindSlots(st,c,c._cand,c._days,false);
+      if(fc&&fc.score<cur){
+        _ttApply(st,c,fc.cells);
+        const fb=_ttFindSlots(st,b,b._cand,b._days,false);
+        if(fb&&fc.score+fb.score<cur+sb){_ttApply(st,b,fb.cells);return;}
+        _ttUnapply(st,c);
+      }
+      _ttApply(st,b,kb);
+    }
+    _ttApply(st,c,keep);
+  });
+  let score=0;   // 未排最重(大班没排更重),其次只排 1 节,再其次间隔不理想/两节不同教室
+  list.forEach(function(c){const n=(c.cells||[]).length;if(!n)score+=10000+(+c.count||0)*20;else if(n===1)score+=1000+(+c.count||0)*2;else score+=_ttAsgScore(c);});
+  return {st:st,score:score};
+}
+function _ttAsgScore(c){return _ttCellScore(c,c.cells[0],c.cells[1])+(c.cells[0][2]!==c.cells[1][2]?30:0);}
+// 由现有课表建占用状态(给「改半建议」等事后操作用);exceptId = 不计入的那门
+function _ttStateFromSol(sol,exceptId){
+  const st=_ttMkState();
+  (sol.placements||[]).forEach(function(p){if(exceptId!=null&&String(p.id)===String(exceptId))return;(p.cells||[]).forEach(function(cs){_ttStMark(st,p,[cs[0],cs[1],_ttCR(p,cs)],true);});});
+  return st;
+}
+function _ttCapTcOf(sol){const m={};(sol.placements||[]).concat(sol.unplaced||[]).forEach(function(c){if(c.isCap&&c.tc)_ttHs(c).forEach(function(h){m[h+'|'+c.tc]=1;});});return m;}   // 键=半|老师
+const TT_SOLVE_TRIES=40;   // 试几种先后顺序
 function _ttSolve(sem){
   const refs=_ttCache.refs||{rooms:[],cat:{}};
   const rooms=_ttRoomsSorted(),cat=refs.cat||{};
@@ -3959,50 +4103,45 @@ function _ttSolve(sem){
     else{c.half='';c.hFix=false;}
   });
   if(!whole)_ttAutoHalf(list);
-  const _capFriTc={};list.forEach(function(c){if(c.isCap&&c.tc)_capFriTc[c.tc]=1;});   // Capstone 老师:周五整天留给 Capstone,别课不排周五(Aj. Tsai 2026-11-15)
-  const occ={up:{},dn:{}},tb={up:{},dn:{}},cb={up:{},dn:{}};
-  function halves(c){return c.half==='both'?['up','dn']:[c.half];}
-  function free(h,rm,d,s,c){
-    if(occ[h][rm+'|'+d+'|'+s])return false;
-    if(c.tc&&tb[h][c.tc+'|'+d+'|'+s])return false;
-    for(var i=0;i<c.cohorts.length;i++)if(cb[h][c.cohorts[i]+'|'+d+'|'+s])return false;
-    return true;
-  }
-  function mark(h,rm,d,s,c){occ[h][rm+'|'+d+'|'+s]=c;if(c.tc)tb[h][c.tc+'|'+d+'|'+s]=true;c.cohorts.forEach(function(ch){cb[h][ch+'|'+d+'|'+s]=true;});}
-  const placements=[],unplaced=[];
-  // 排序:Capstone→备注指定教室→CD→人数大 先排(约束紧的先)
-  const ordered=list.slice().sort(function(a,b){const ap=a.isCap?0:(a.note.room?1:(a.dept==='CD'?2:3)),bp=b.isCap?0:(b.note.room?1:(b.dept==='CD'?2:3));return ap-bp||(b.count-a.count);});
-  ordered.forEach(function(c){
-    let cand=rooms.filter(rm=>_ttRoomFits(rm.cap,c.count));
-    if(c.note.room)cand=cand.filter(rm=>String(rm.code)===c.note.room);                       // 备注指定(库内)教室
-    else if(c.dept==='CD')cand=cand.filter(rm=>rm.pref_dept==='CD').concat(cand.filter(rm=>rm.pref_dept!=='CD'));  // CD 优先 321/322
-    else cand=cand.filter(rm=>rm.pref_dept!=='CD').concat(cand.filter(rm=>rm.pref_dept==='CD'));  // 非 CD:321/322 排最后(主要留给 CD,Aj. Tsai #6)
-    let placed=false;
-    // Capstone 当普通 2 节课排,但只排周末(周五/周六);一般课排周一~周五(Aj. Tsai 2026-11-15:匹配 aSc,Capstone=X412+KG133)
-    const hs=halves(c);
-    let days=c.isCap?TT_CAP_DAYS.slice():TT_WEEKDAYS.slice();
-    if(!c.isCap&&_capFriTc[c.tc])days=days.filter(function(d){return d!=='周五';});   // 该老师教 Capstone → 周五不排别的课(留给周末 Capstone)
-    if(c.note.days.length===1&&days.indexOf(c.note.days[0])>=0)days=[c.note.days[0]];   // 备注指定周几(在允许范围内)
-    let oneRoom=null,oneCell=null;   // 凑不到 2 节时的「至少 1 节」后备(不锁死 2 节 — Aj. Tsai)
-    // Capstone 先只试周五/周六(与 aSc 一致),排不下才把周日也算进来(Aj. Tsai 2026-11-15)
-    const _pref=days.filter(function(d){return d!=='周日';});
-    const daySets=(c.isCap&&_pref.length&&_pref.length<days.length)?[_pref,days]:[days];
-    for(var ds=0;ds<daySets.length&&!placed;ds++){
-      const dd=daySets[ds];
-      for(var r2=0;r2<cand.length&&!placed;r2++){
-        const rm=cand[r2].code,freeCells=[];
-        for(var di=0;di<dd.length;di++)for(var si=0;si<2;si++){const d=dd[di],s=['am','pm'][si];if(hs.every(h=>free(h,rm,d,s,c)))freeCells.push([d,s]);}
-        if(freeCells.length>=2){const pick=_ttPickSessions(freeCells,2);pick.forEach(function(cs){hs.forEach(function(h){mark(h,rm,cs[0],cs[1],c);});});c.room=rm;c.cells=pick;placements.push(c);placed=true;}
-        else if(freeCells.length===1&&!oneRoom&&ds===daySets.length-1){oneRoom=rm;oneCell=freeCells[0];}
-      }
-    }
-    if(!placed&&oneRoom){hs.forEach(function(h){mark(h,oneRoom,oneCell[0],oneCell[1],c);});c.room=oneRoom;c.cells=[oneCell];placements.push(c);placed=true;}  // 只排到 1 节也先排上(3h),可人工再补第二节
-    if(!placed){
-      const reason=c.count>_ttMaxCap(rooms)+TT_CAP_SLACK?('人数 '+c.count+' 超过最大教室容量（含 +5 宽容）'):(c.note.roomMissing?('备注要求教室 '+c.note.roomMissing+'（不在教室库）'):(c.note.room?('指定教室 '+c.note.room+' 排不下 2 个时段'):(c.note.days.length===1?('限定 '+c.note.days[0]+' 排不下 2 个时段'):'找不到同一教室的 2 个空时段（每周 6 小时/2 节）')));
-      unplaced.push({id:c.id,course:c.course,cls:c.cls,tc:c.tc,count:c.count,half:c.half,cohorts:c.cohorts,dept:c.dept,credit:c.credit,isCap:c.isCap,note:c.note,reason:reason,nt:c.nt});
-    }
+  const capTc={};list.forEach(function(c){if(c.isCap&&c.tc)_ttHs(c).forEach(function(h){capTc[h+'|'+c.tc]=1;});});   // Capstone 老师:在有 Capstone 的那一半,周五留给 Capstone、别课不排周五(键=半|老师)
+  const t0=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();
+  // 每门课:可用教室/可排星期/约束度(越紧越先排)
+  const tcN={},coN={};
+  list.forEach(function(c){_ttHs(c).forEach(function(h){if(c.tc)tcN[h+'|'+c.tc]=(tcN[h+'|'+c.tc]||0)+1;c.cohorts.forEach(function(co){coN[h+'|'+co]=(coN[h+'|'+co]||0)+1;});});});
+  list.forEach(function(c){
+    c._cand=_ttCandRooms(c,rooms);c._days=_ttDaysFor(c,capTc);
+    let deg=0;_ttHs(c).forEach(function(h){if(c.tc)deg+=tcN[h+'|'+c.tc]-1;c.cohorts.forEach(function(co){deg+=coN[h+'|'+co]-1;});});
+    c._pr=(c.note.room?100000:0)+(c.isCap?50000+(+c.count||0)*50:0)+(c._days.length===1?20000:0)+(12-Math.min(12,c._cand.length))*40+deg*10+(+c.count||0);   // Capstone 大班先排(周末机位有限,排不下时留小班)
   });
-  return {sem:sem,rooms:rooms,placements:placements,unplaced:unplaced,manualNotes:manualNotes,interns:interns,warns:_ttWarns(placements,whole),whole:whole};
+  // 固定种子的乱数:同样的排课,每次按「一键自动排」结果都一样
+  let seed=20261115;const rnd=function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};
+  let best=null;
+  for(var run=0;run<TT_SOLVE_TRIES;run++){
+    list.forEach(function(c){c._k=c._pr+(run?rnd()*260:0);});
+    const r=_ttRunOnce(list);
+    if(!best||r.score<best.score)best={score:r.score,asg:list.map(function(c){return c.cells.map(function(cs){return cs.slice();});})};
+    if(best.score<10)break;   // 已经全部排满且间隔理想,不用再试
+  }
+  // 套用最好的一版,并重建占用状态
+  const st=_ttMkState();
+  list.forEach(function(c,i){c.cells=[];c.room='';_ttApply(st,c,best.asg[i]);});
+  // 排课表写死上/下半、却排不满 2 节的课:算「改到另一半能不能排满」→ 只给建议,不擅自改(上下半归排课表管)
+  if(!whole)list.forEach(function(c){
+    if(c.isCap||c.cells.length>=2||!(c.rawHalf==='上半学期'||c.rawHalf==='下半学期'))return;
+    const old=c.half,keep=c.cells;
+    _ttUnapply(st,c);c.half=(old==='up'?'dn':'up');
+    const f=_ttFindSlots(st,c,c._cand,c._days,false);
+    c.half=old;_ttApply(st,c,keep);
+    if(f)c.hint={half:(old==='up'?'dn':'up'),cells:f.cells};
+  });
+  const placements=[],unplaced=[];
+  list.forEach(function(c){
+    if(c.cells.length){placements.push(c);return;}
+    const reason=c.count>_ttMaxCap(rooms)+TT_CAP_SLACK?('人数 '+c.count+' 超过最大教室容量（含 +5 宽容）'):(c.note.roomMissing?('备注要求教室 '+c.note.roomMissing+'（不在教室库）'):(c.note.room?('指定教室 '+c.note.room+' 排不下'):(c.note.days.length===1?('限定 '+c.note.days[0]+' 排不下'):'老师、届别、教室找不到同时有空的时段（挪一门别的课也排不进）')));
+    unplaced.push({id:c.id,course:c.course,cls:c.cls,tc:c.tc,count:c.count,half:c.half,cohorts:c.cohorts,dept:c.dept,credit:c.credit,isCap:c.isCap,note:c.note,reason:reason,nt:c.nt,hint:c.hint});
+  });
+  const t1=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();
+  return {sem:sem,rooms:rooms,placements:placements,unplaced:unplaced,manualNotes:manualNotes,interns:interns,warns:_ttWarns(placements,whole),whole:whole,tries:Math.min(run+1,TT_SOLVE_TRIES),ms:Math.round(t1-t0)};
 }
 // 软约束提醒(不阻止,列侧栏):老师每半>4、届别学分>21、届别上下半门数不平衡(全学期跳过门数检查)
 function _ttWarns(pls,whole){
@@ -4405,7 +4544,7 @@ function _ttSuggestFor(u,sol){
   if(u.note&&u.note.roomMissing)return '备注要求教室 '+u.note.roomMissing+' 不在教室库。建议：到「后台 › 教室库」加这间并设容量，或改备注换库内教室。';
   let cand=bigEnough;if(u.note&&u.note.room){cand=bigEnough.filter(function(r){return String(r.code)===u.note.room;});if(!cand.length)return '备注指定教室 '+u.note.room+' 容量不够装 '+u.count+' 人。建议：改备注换大教室，或加大该教室容量。';}
   const occ={},tb={},cb={};
-  (sol.placements||[]).forEach(function(p){(p.half==='both'?['up','dn']:[p.half]).forEach(function(h){(p.cells||[]).forEach(function(cs){occ[h+'|'+p.room+'|'+cs[0]+'|'+cs[1]]=p;if(p.tc)tb[h+'|'+p.tc+'|'+cs[0]+'|'+cs[1]]=p;(p.cohorts||[]).forEach(function(co){cb[h+'|'+co+'|'+cs[0]+'|'+cs[1]]=p;});});});});
+  (sol.placements||[]).forEach(function(p){(p.half==='both'?['up','dn']:[p.half]).forEach(function(h){(p.cells||[]).forEach(function(cs){occ[h+'|'+_ttCR(p,cs)+'|'+cs[0]+'|'+cs[1]]=p;if(p.tc)tb[h+'|'+p.tc+'|'+cs[0]+'|'+cs[1]]=p;(p.cohorts||[]).forEach(function(co){cb[h+'|'+co+'|'+cs[0]+'|'+cs[1]]=p;});});});});
   // Capstone:排周末 2 节(周五/周六优先,不够才周日),一间大教室(Aj. Tsai 2026-11-15)
   if(u.isCap){
     const cells=[['周五','am'],['周五','pm'],['周六','am'],['周六','pm'],['周日','am'],['周日','pm']];let best=null;   // 挑周末有 2 个空档的大教室
@@ -4455,17 +4594,44 @@ function _ttCanAck(){return ['director','admin','teacher'].indexOf(currentRole)>
 function _ttWarnAcked(sem){try{return JSON.parse(_lsGet('cic_tt_warnack_'+sem)||'{}')||{};}catch(e){return {};}}
 function _ttWarnAck(sem,txt,on){const m=_ttWarnAcked(sem);if(on)m[txt]=1;else delete m[txt];_lsSet('cic_tt_warnack_'+sem,JSON.stringify(m));renderTtPanel();}
 // 详情与建议:左=未排+建议,右=备注+提醒;实习课另放一条清楚的说明;提醒可勾「已核对」
+// 改半建议的文字 + 「照此改半」钮(排课表写死上/下半、排不满的课;只在求解当下算出,见 _ttSolve)
+function _ttCellTxt(cs){return cs[0]+(cs[1]==='am'?'上午':'下午')+'@'+cs[2];}
+function _ttHintHtml(x){
+  if(!x.hint||!x.hint.cells)return '';
+  const hn=x.hint.half==='dn'?'下半':'上半';
+  return '<br><span style="color:#1a6b2f">💡 改到<b>'+hn+'</b>就能排满 2 节：'+eh(x.hint.cells.map(_ttCellTxt).join('、'))+'</span>'+
+    (_ttCanEdit()?' <button class="btn btn-sm" style="padding:1px 8px;font-size:10.5px;color:#1a6b2f;border-color:#9ed4ae" onclick="event.stopPropagation();ttApplyHalfHint(\''+jsq(String(x.id))+'\')">↪ 照此改到'+hn+'</button>':'');
+}
+// 照建议把一门课改到另一半并排满 2 节(以当下课表重新找位;只改课表,要同步排课表再按「写回排课表」)
+function ttApplyHalfHint(id){
+  if(!_ttCanEdit())return;_ttEnsureSol();const sol=_ttCache.sol;if(!sol||sol.whole)return;
+  let p=sol.placements.find(function(x){return String(x.id)===String(id);}),ui=-1;
+  if(!p){ui=sol.unplaced.findIndex(function(x){return String(x.id)===String(id);});if(ui<0)return;const u=sol.unplaced[ui];p={id:String(u.id),course:u.course,cls:u.cls,tc:u.tc,count:u.count,cohorts:u.cohorts||[],dept:u.dept||'',credit:u.credit||0,isCap:!!u.isCap,half:u.half,room:'',cells:[],nt:u.nt||'',note:u.note||{raw:u.nt||''}};}
+  if(p.half!=='up'&&p.half!=='dn')return;
+  const old=p.half,nh=(old==='up'?'dn':'up'),hn=(nh==='dn'?'下半':'上半');
+  const st=_ttStateFromSol(sol,p.id);p.half=nh;
+  const f=_ttFindSlots(st,p,_ttCandRooms(p,sol.rooms||_ttRoomsSorted()),_ttDaysFor(p,_ttCapTcOf(sol)),false);
+  if(!f){p.half=old;alert('课表已经变动，现在'+hn+'也排不满 2 节了。');return;}
+  if(!confirm('把 '+p.course+(p.cls?'-'+p.cls:'')+' 改到'+hn+'，排在 '+f.cells.map(_ttCellTxt).join('、')+'？\n\n这只改课表；排课表里的上下半要再按「↩ 写回排课表」才会同步。')){p.half=old;return;}
+  p.cells=f.cells;p.room=f.cells[0][2];delete p.hint;
+  if(ui>=0){sol.placements.push(p);sol.unplaced.splice(ui,1);}
+  sol.warns=_ttWarns(sol.placements,sol.whole);
+  _ttCache.dirty=true;renderTtPanel();
+  setTimeout(function(){_ttJumpTo(String(p.id));},60);
+}
 function _ttFootDetails(sol){
   const sem=sol.sem||_ttCache.sem,acked=_ttWarnAcked(sem),canAck=_ttCanAck();
   let left='',right='';
-  if(sol.unplaced&&sol.unplaced.length)left+='<div style="font-size:12px;font-weight:700;color:#b42318;margin:4px 0 4px">未排进去 '+sol.unplaced.length+' 门 · 原因与建议</div>'+sol.unplaced.map(function(u){const sug=_ttSuggestFor(u,sol);return '<div class="tt-side-item jump" style="background:#fef2f2" onclick="_ttJumpTo(\''+jsq(String(u.id))+'\')"><b>'+_ttCC(u)+'</b> · '+u.count+'人'+(u.tc?' · '+eh(u.tc):'')+'<br><span style="color:#b42318">'+eh(u.reason)+'</span><br><span style="color:#1a6b2f">💡 '+eh(sug)+'</span>'+(u.nt?'<br><span style="color:#888">备注：'+eh(u.nt)+'</span>':'')+'</div>';}).join('');
+  if(sol.unplaced&&sol.unplaced.length)left+='<div style="font-size:12px;font-weight:700;color:#b42318;margin:4px 0 4px">未排进去 '+sol.unplaced.length+' 门 · 原因与建议</div>'+sol.unplaced.map(function(u){const sug=_ttSuggestFor(u,sol);return '<div class="tt-side-item jump" style="background:#fef2f2" onclick="_ttJumpTo(\''+jsq(String(u.id))+'\')"><b>'+_ttCC(u)+'</b> · '+u.count+'人'+(u.tc?' · '+eh(u.tc):'')+'<br><span style="color:#b42318">'+eh(u.reason)+'</span>'+(u.hint?_ttHintHtml(u):'<br><span style="color:#1a6b2f">💡 '+eh(sug)+'</span>')+(u.nt?'<br><span style="color:#888">备注：'+eh(u.nt)+'</span>':'')+'</div>';}).join('');
+  const partial=(sol.placements||[]).filter(function(p){return (p.cells||[]).length===1;});
+  if(partial.length)left+='<div style="font-size:12px;font-weight:700;color:#b45309;margin:10px 0 4px">只排到 1 节 '+partial.length+' 门 · 还差一节</div>'+partial.map(function(p){return '<div class="tt-side-item jump" style="background:#fffbeb" onclick="_ttJumpTo(\''+jsq(String(p.id))+'\')"><b>'+_ttCC(p)+'</b> · '+p.count+'人'+(p.tc?' · '+eh(p.tc):'')+'<br><span style="color:#b45309">已排 '+eh(_ttCellTxt([p.cells[0][0],p.cells[0][1],_ttCR(p,p.cells[0])]))+'，第二节找不到老师、届别、教室都空的时段</span>'+(p.hint?_ttHintHtml(p):'<br><span style="color:#888">可点课片 →「＋ 加一节」手动补</span>')+'</div>';}).join('');
   if(sol.manualNotes&&sol.manualNotes.length)right+='<div style="font-size:12px;font-weight:700;color:#92400e;margin:4px 0 4px">📝 备注待人工核对 '+sol.manualNotes.length+' 门<span style="font-weight:400;color:#aaa;font-size:10px"> · 点一下跳到课表</span></div>'+sol.manualNotes.map(function(c){return '<div class="tt-side-item jump" style="background:#fffbeb" onclick="_ttJumpTo(\''+jsq(String(c.id))+'\')"><b>'+_ttCC(c)+'</b>'+(c.room?' · 暂排 '+eh(c.room):'')+'<br><span style="color:#92400e">'+eh(c.nt||(c.note&&c.note.raw)||'')+'</span></div>';}).join('');
   if(sol.warns&&sol.warns.length){const open=sol.warns.filter(function(w){return !acked[w];}).length;right+='<div style="font-size:12px;font-weight:700;color:#9a3412;margin:10px 0 4px">提醒（软约束）'+open+'／'+sol.warns.length+(canAck?'<span style="font-weight:400;color:#aaa;font-size:10px"> · 勾选=已核对</span>':'')+'</div>'+sol.warns.map(function(wn){const ok=!!acked[wn];return '<div class="tt-side-item" style="background:'+(ok?'#f3f4f6':'#fff7ed')+';color:'+(ok?'#9ca3af':'#9a3412')+';display:flex;gap:7px;align-items:flex-start'+(ok?';text-decoration:line-through':'')+'">'+(canAck?'<input type="checkbox" '+(ok?'checked':'')+' onchange="_ttWarnAck(\''+jsq(sem)+'\',\''+jsq(wn)+'\',this.checked)" style="width:auto;margin-top:2px;cursor:pointer" title="标为已核对">':'')+'<span>'+eh(wn)+'</span></div>';}).join('');}
   if(!left&&!right&&!(sol.interns&&sol.interns.length))return '';
-  const n=(sol.unplaced?sol.unplaced.length:0);
+  const n=(sol.unplaced?sol.unplaced.length:0)+partial.length;
   const cols='<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px"><div style="flex:1;min-width:240px;max-height:320px;overflow:auto">'+(left||'<div style="color:#1b7a5a;font-size:12px;padding:6px">✅ 没有未排的课</div>')+'</div><div style="flex:1;min-width:240px;max-height:320px;overflow:auto">'+(right||'<div style="color:#999;font-size:12px;padding:6px">无备注／提醒</div>')+'</div></div>';
   const interns=(sol.interns&&sol.interns.length)?('<div style="margin-top:10px;padding:8px 11px;background:#F5F4FB;border:0.5px solid #E5E3F8;border-radius:8px;font-size:11.5px;color:#555;line-height:1.6"><b style="color:#3C3489">ℹ️ 实习课 '+sol.interns.length+' 门</b> —— 本来就不排进课表（实习不占教室时段）：'+sol.interns.map(function(i){return eh(i.course)+(i.cls?'-'+eh(i.cls):'');}).join('、')+'</div>'):'';
-  return '<div class="tt-foot"><details'+(n?' open':'')+'><summary>详情与建议（未排 '+n+' · 备注 '+(sol.manualNotes?sol.manualNotes.length:0)+' · 提醒 '+(sol.warns?sol.warns.length:0)+'）</summary>'+cols+interns+'</details></div>';
+  return '<div class="tt-foot"><details'+(n?' open':'')+'><summary>详情与建议（未排 '+(sol.unplaced?sol.unplaced.length:0)+' · 只排 1 节 '+partial.length+' · 备注 '+(sol.manualNotes?sol.manualNotes.length:0)+' · 提醒 '+(sol.warns?sol.warns.length:0)+'）</summary>'+cols+interns+'</details></div>';
 }
 // ── 漂移侦测:存档后别人改了排课 → 比对存档快照 vs 现在的 schD,标出受影响的课 ──
 function _ttDriftFields(p,r){
@@ -4502,7 +4668,7 @@ function _ttDriftBanner(drift){
 // 一般课:周一~周五 × 上午/下午 = 10 格(教 Capstone 的老师周五留给 Capstone → 8 格);Capstone:周五/周六/周日 = 6 格。每门课 2 节。
 function _ttCapWarn(sol){
   const all=(sol.placements||[]).concat(sol.unplaced||[]),coh={},tch={},capTc={};
-  all.forEach(function(c){if(c.isCap&&c.tc)capTc[c.tc]=1;});
+  all.forEach(function(c){if(c.isCap&&c.tc)(c.half==='both'?['up','dn']:[c.half||'up']).forEach(function(h){capTc[c.tc+'|'+h]=1;});});
   function add(map,key,c){map[key]=map[key]||{reg:[],cap:[]};(c.isCap?map[key].cap:map[key].reg).push(c.course+(c.cls?'-'+c.cls:''));}
   all.forEach(function(c){
     (c.half==='both'?['up','dn']:[c.half||'up']).forEach(function(h){
@@ -4513,8 +4679,8 @@ function _ttCapWarn(sol){
   const HN=sol.whole?{up:'全学期',dn:'全学期'}:{up:'上半',dn:'下半'},out=[];
   function chk(kind,map,isT){Object.keys(map).sort().forEach(function(k){
     const i=k.lastIndexOf('|'),name=k.slice(0,i),h=k.slice(i+1),v=map[k];
-    const avail=(isT&&capTc[name])?8:10,need=v.reg.length*2,needC=v.cap.length*2;
-    if(need>avail)out.push({who:kind+' '+name,half:HN[h],txt:v.reg.length+' 门一般课需 '+need+' 格，但周一~周五只有 '+avail+' 格'+((isT&&capTc[name])?'（周五留给 Capstone）':'')+' → 至少 '+Math.ceil((need-avail)/2)+' 门排不满',list:v.reg});
+    const fri=isT&&capTc[name+'|'+h],avail=fri?8:10,need=v.reg.length*2,needC=v.cap.length*2;
+    if(need>avail)out.push({who:kind+' '+name,half:HN[h],txt:v.reg.length+' 门一般课需 '+need+' 格，但周一~周五只有 '+avail+' 格'+(fri?'（周五留给 Capstone）':'')+' → 至少 '+Math.ceil((need-avail)/2)+' 门排不满',list:v.reg});
     if(needC>6)out.push({who:kind+' '+name,half:HN[h],txt:v.cap.length+' 门 Capstone 需 '+needC+' 格，但周五/周六/周日只有 6 格 → 至少 '+Math.ceil((needC-6)/2)+' 门排不满',list:v.cap});
   });}
   chk('届别',coh,false);chk('老师',tch,true);
@@ -4529,7 +4695,7 @@ function _ttBodyHtml(sol){
   const view=_ttCache.view||'room';
   const drift=(sol.fromSaved&&!_ttCache.dirty)?_ttDrift(sol.sem):null;
   _ttCache.driftIds={};if(drift){drift.del.forEach(function(p){_ttCache.driftIds[String(p.id)]=1;});drift.chg.forEach(function(it){_ttCache.driftIds[String(it.p.id)]=1;});}
-  const main=((view==='room'&&_ttCanEdit())?'<div style="font-size:11px;color:#888;margin:0 2px 6px">💡 拖动课片微调；也可把下方未排的胶囊拖进网格。撞堂／超容量即时标红，改完按 💾 存档。</div>':'')+_ttMainHtml(sol,view);
+  const main=((view==='room'&&_ttCanEdit())?'<div style="font-size:11px;color:#888;margin:0 2px 6px">💡 拖动课片微调；也可把下方未排的胶囊拖进网格。撞堂／超容量即时标红，改完按 💾 存档。'+(sol.tries?' · 🧠 自动排试了 '+sol.tries+' 种先后顺序，取未排最少的一版':'')+'</div>':'')+_ttMainHtml(sol,view);
   return _ttDriftBanner(drift)+_ttCapBanner(sol)+main+_ttPillsBar(sol,view)+_ttFootDetails(sol);   // 视图切换已移到 #tt-status(sticky)
 }
 function ttAutoSolve(){if(!_ttCanEdit())return;const sem=_ttCache.sem;if(!sem)return;_ttCache.sol=_ttSolve(sem);_ttCache.dirty=true;renderTtPanel();}
