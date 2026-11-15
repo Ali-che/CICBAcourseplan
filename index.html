@@ -2970,6 +2970,26 @@ function _auditRender(){
   var detailOf=function(x){
     if(x.tbl==='teachers'&&x.op==='UPDATE'){var ta=x.after||{},tb=x.before;  // 无 before = 003 手写的离职/复职行
       if(!tb||!!tb.resigned!==!!ta.resigned)return ta.resigned?'<span style="color:#a32d2d">离职存档</span>':'<span style="color:#1b7a5a">复职</span>';}
+    if(x.tbl==='timetable'){  // 课表存档:列出这次「挪动/排入/移出」哪些课(靠落位摘要 where,013 起才有)
+      var aw=(x.after&&x.after.where)||{},bw=(x.before&&x.before.where),na=Object.keys(aw).length;
+      if(x.op==='INSERT')return '<span style="color:#1b7a5a">＋ 首次存档</span> · '+na+' 门已落位'+(na?'：'+_ttWhereList(aw,8):'');
+      if(x.op==='UPDATE'){
+        if(!bw||!Object.keys(bw).length)  // 013 之前存的旧记录没存落位内容
+          return na?('<span style="color:#888">本次起记录落位内容</span> · '+na+' 门：'+_ttWhereList(aw,8))
+                   :('<span style="color:#888">重存 v'+((x.after&&x.after.version)||'')+'（旧记录无落位明细）</span>');
+        var keys={},mv=[],ad=[],rm=[];
+        Object.keys(bw).forEach(function(k){keys[k]=1;});Object.keys(aw).forEach(function(k){keys[k]=1;});
+        Object.keys(keys).sort().forEach(function(k){var b=bw[k],a=aw[k];
+          if(b===undefined)ad.push(eh(k)+' '+eh(a));
+          else if(a===undefined)rm.push(eh(k));
+          else if(b!==a)mv.push('<b style="color:#555">'+eh(k)+'</b> <span style="color:#a32d2d">'+eh(b)+'</span>→<span style="color:#1b7a5a">'+eh(a)+'</span>');});
+        var out=[];
+        if(mv.length)out.push('挪动 '+mv.length+'：'+mv.join('；'));
+        if(ad.length)out.push('<span style="color:#1b7a5a">＋排入 '+ad.length+'</span>：'+ad.join('、'));
+        if(rm.length)out.push('<span style="color:#a32d2d">－移出 '+rm.length+'</span>：'+rm.join('、'));
+        return out.length?('<span style="line-height:1.7">'+out.join('<span style="color:#bbb"> · </span>')+'</span>'):'<span style="color:#bbb">(位置无变化,仅重存)</span>';
+      }
+    }
     if(x.op==='UPDATE')return diffOf(x.before,x.after);
     if(!{schedule:1,special:1,exam_special:1,cohorts:1}[x.tbl]&&(x.op==='INSERT'||x.op==='DELETE')){  // 后台参考资料:列出栏位
       var j=(x.op==='INSERT'?x.after:x.before)||{},fs=[];
@@ -5383,12 +5403,23 @@ async function ttWriteHalfBack(){
   else alert('已写回 '+ok+' 门'+(fail?('、失败 '+fail):''));
   renderTtPanel();
 }
+// 落位摘要(给编辑记录看「哪门课排在哪」)：一门课 → 「上下半 · 教室 · 周几时段」短字串
+function _ttWhereLabel(p){
+  const hs=p.half==='up'?'上半 ':(p.half==='dn'?'下半 ':'');
+  const cells=(p.cells||[]);
+  if(!cells.length)return hs+'未排';
+  const rm=p.room||(cells[0]&&cells[0][2])||'';
+  const slots=cells.map(function(cs){return cs[0]+_ttSlotName(cs[1],p.isCap)+(cs[2]&&cs[2]!==rm?('@'+cs[2]):'');}).join('、');
+  return hs+(rm?rm+' · ':'')+slots;
+}
+function _ttWhereMap(pls){var m={};(pls||[]).forEach(function(p){var k=(p.course||'')+(p.cls?(' '+p.cls):'')+(p.half==='up'?'·上':(p.half==='dn'?'·下':''));m[k]=_ttWhereLabel(p);});return m;}
+function _ttWhereList(m,lim){var ks=Object.keys(m);if(!ks.length)return '';var s=ks.slice(0,lim).map(function(k){return eh(k)+' '+eh(m[k]);}).join('、');return s+(ks.length>lim?(' …等 '+ks.length+' 门'):'');}
 async function ttSave(){
   if(!_ttCanEdit())return;const sem=_ttCache.sem,sol=_ttCache.sol;
   if(!sem||!sol){alert('请先选学期并「一键自动排」');return;}
   const pls=sol.placements.map(function(p){return {id:p.id,course:p.course,cls:p.cls,tc:p.tc,count:p.count,cohorts:p.cohorts,dept:p.dept,credit:p.credit,isCap:p.isCap,members:p.members,half:p.half,room:p.room,cells:p.cells,nt:(p.note&&p.note.raw)||''};});
   if(!confirm('把当前课表存档给 '+sem+'？（覆盖上一版，'+pls.length+' 门已落位）'+(sol.unplaced.length?('\n还有 '+sol.unplaced.length+' 门未排进去。'):'')))return;
-  const r=await gasPost('saveTimetable',{sem:sem,placements:pls});
+  const r=await gasPost('saveTimetable',{sem:sem,placements:pls,where:_ttWhereMap(sol.placements)});
   if(r&&r.success){if(typeof showToast==='function')showToast('已存档 v'+r.version,{kind:'success'});_ttCache.tt={sem:sem,version:r.version,saved_by:r.saved_by,saved_at:new Date().toISOString(),placements:pls};_ttCache.sol=null;_ttCache.dirty=false;renderTtPanel();}
   else{alert('存档失败：'+_errText(r));}
 }
@@ -10289,7 +10320,7 @@ function syncTblHeight(){
     if(action==='goodbye')return srpc('presence_bye',{p_editor:(typeof currentEditor!=='undefined'?currentEditor:'')||''}).catch(function(){return{success:true};});
     if(action==='setBaseline')return srpc('sched_set_baseline',{p_pin:_pin,p_sem:body.sem,p_snapshot:body.snapshot||[],p_ver_code:body.ver_code||''});
     if(action==='ackRow')return srpc('sched_ack_row',{p_pin:_pin,p_sem:body.sem,p_row_id:String(body.row_id),p_row_code:body.row_code||'',p_on:!!body.on});
-    if(action==='saveTimetable')return srpc('timetable_save',{p_pin:_pin,p_sem:body.sem,p_placements:body.placements||[]});
+    if(action==='saveTimetable')return srpc('timetable_save',{p_pin:_pin,p_sem:body.sem,p_placements:body.placements||[],p_where:body.where||{}});
     if(action==='deleteTimetable')return srpc('timetable_delete',{p_pin:_pin,p_sem:body.sem});   // 仅管理员(migration 013)
     if(action==='setSemDates')return srpc('tt_set_sem_dates',{p_pin:_pin,p_sem:body.sem,p_us:body.us||'',p_ue:body.ue||'',p_ds:body.ds||'',p_de:body.de||''});
     // ⚙️ 后台操作 admin RPC(服务端 _admin 再验权限)
