@@ -4257,12 +4257,14 @@ function _ttEnsureCellModal(){
     +'<div style="display:grid;gap:10px">'
     +'<div><label style="font-size:12px;color:#555;display:block;margin-bottom:3px">授课老师</label><select id="ttcm-tc" style="width:100%;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px"></select></div>'
     +'<div><label style="font-size:12px;color:#555;display:block;margin-bottom:3px">教室</label><select id="ttcm-room" style="width:100%;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px"></select></div>'
-    +'<div style="display:flex;gap:8px"><div style="flex:1"><label style="font-size:12px;color:#555;display:block;margin-bottom:3px">周几</label><select id="ttcm-day" style="width:100%;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px"></select></div>'
+    +'<div style="display:flex;gap:8px"><div style="flex:1"><label style="font-size:12px;color:#555;display:block;margin-bottom:3px">上下半</label><select id="ttcm-half" style="width:100%;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px"></select></div>'
+    +'<div style="flex:1"><label style="font-size:12px;color:#555;display:block;margin-bottom:3px">周几</label><select id="ttcm-day" style="width:100%;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px"></select></div>'
     +'<div style="flex:1"><label style="font-size:12px;color:#555;display:block;margin-bottom:3px">时段</label><select id="ttcm-slot" style="width:100%;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px"><option value="am">上午</option><option value="pm">下午</option></select></div></div>'
     +'</div><div style="font-size:11px;color:#b45309;margin-top:10px" id="ttcm-note"></div>'
-    +'<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">'
-    +'<button class="btn btn-sm" onclick="_ttCellClose()">取消</button>'
-    +'<button class="btn btn-sm btn-p" onclick="_ttCellSave()">套用</button></div></div>';
+    +'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:14px">'
+    +'<button class="btn btn-sm" id="ttcm-addbtn" onclick="_ttAddSession()" style="color:#1b7a5a;border-color:#9ed4ae" title="这门课只排到 1 节时,补上第二节">＋ 加一节</button>'
+    +'<span style="display:flex;gap:8px"><button class="btn btn-sm" onclick="_ttCellClose()">取消</button>'
+    +'<button class="btn btn-sm btn-p" onclick="_ttCellSave()">套用</button></span></div></div>';
   document.body.appendChild(m);return m;
 }
 let _ttDownXY=null;
@@ -4293,9 +4295,13 @@ function _ttEditCell(ev,id,day,slot){
   document.getElementById('ttcm-tc').innerHTML=topt;
   const rs=_ttRoomsSorted();
   document.getElementById('ttcm-room').innerHTML='<option value="">— 待定 —</option>'+rs.map(function(r){const small=(+r.cap<+p.count);return '<option value="'+eh(String(r.code))+'"'+(String(r.code)===String(curRoom)?' selected':'')+'>'+eh(String(r.code))+' · 容量'+r.cap+(small?' ⚠不足':'')+(r.pref_dept?' · '+eh(r.pref_dept):'')+'</option>';}).join('');
-  const days=['周一','周二','周三','周四','周五'];if(curDay==='周六')days.push('周六');
+  const days=['周一','周二','周三','周四','周五','周六','周日'];
   document.getElementById('ttcm-day').innerHTML=days.map(function(d){return '<option'+(d===curDay?' selected':'')+'>'+d+'</option>';}).join('');
   document.getElementById('ttcm-slot').value=curSlot;
+  const halfSel=document.getElementById('ttcm-half');   // 上下半选择器:直接在弹窗把课移到另一半(Aj. Tsai 2026-11-15)
+  if(sol.whole){halfSel.innerHTML='<option value="both" selected>全学期</option>';halfSel.disabled=true;}
+  else{halfSel.disabled=false;halfSel.innerHTML='<option value="up"'+(p.half==='up'?' selected':'')+'>上半</option><option value="dn"'+(p.half==='dn'?' selected':'')+'>下半</option>'+(p.half==='both'?'<option value="both" selected>全学期(两半)</option>':'');}
+  const addBtn=document.getElementById('ttcm-addbtn');if(addBtn)addBtn.style.display=((p.cells||[]).length>=2)?'none':'';   // 已有 2 节就不显示「加一节」
   const _why=(_ttBadWhy&&_ttBadWhy[String(id)])||null,_noteEl=document.getElementById('ttcm-note');
   if(_why&&_why.length)_noteEl.innerHTML='<b style="color:#e11d48">⚠ 这节标红：</b>'+_why.map(eh).join('；')+'（改教室/老师/时段来解冲突）';
   else _noteEl.textContent=p.isCap?'🎓 Capstone 预设周五上午+下午,可改。':'一门课两节,这里只改你点的这一节(另一节不动)。';
@@ -4307,7 +4313,9 @@ function _ttCellSave(){
   const sol=_ttCache.sol;if(!sol){_ttCellClose();return;}
   const p=(sol.placements||[]).find(function(x){return String(x.id)===String(_ttEdit.id);});if(!p){_ttCellClose();return;}
   const tc=document.getElementById('ttcm-tc').value,room=document.getElementById('ttcm-room').value,day=document.getElementById('ttcm-day').value,slot=document.getElementById('ttcm-slot').value;
+  const half=(document.getElementById('ttcm-half')||{}).value;
   p.tc=tc;
+  if(!sol.whole&&(half==='up'||half==='dn'||half==='both'))p.half=half;   // 弹窗改上下半 → 整门课移到那一半
   if(!p.cells)p.cells=[];
   let ci=p.cells.findIndex(function(cs){return cs[0]===_ttEdit.day&&cs[1]===_ttEdit.slot;});
   if(ci<0){if(p.cells.length)ci=0;else{p.cells.push([day,slot,room]);ci=0;}}
@@ -4315,6 +4323,23 @@ function _ttCellSave(){
   p.room=_ttCR(p,p.cells[0]);
   sol.warns=_ttWarns(sol.placements,sol.whole);
   _ttCache.dirty=true;_ttCellClose();renderTtPanel();
+  setTimeout(function(){_ttJumpTo(String(p.id));},60);   // 滚到/闪一下,避免跨半移动后看不到
+}
+// 「＋ 加一节」:一门课只排到 1 节时补第二节(自动挑同教室的空档;Capstone 走周末)(Aj. Tsai 2026-11-15)
+function _ttAddSession(){
+  if(!_ttEdit)return;const sol=_ttCache.sol;if(!sol){_ttCellClose();return;}
+  const p=(sol.placements||[]).find(function(x){return String(x.id)===String(_ttEdit.id);});if(!p){_ttCellClose();return;}
+  if(!p.cells)p.cells=[];
+  if(p.cells.length>=2){alert('这门课已有 2 节。');return;}
+  const uh=(p.half==='both')?'up':(p.half||'up');
+  const first=p.cells[0]||[(p.isCap?'周五':'周一'),'am'];
+  const room=_ttCR(p,p.cells[0])||p.room||'';
+  const sec=_ttFindSecond(sol,room,uh,first[0],first[1],p);
+  p.cells.push(sec?sec:[first[0],(first[1]==='am'?'pm':'am'),room]);   // 没空档就先放一节(可能标红,让人再调)
+  p.room=_ttCR(p,p.cells[0]);
+  sol.warns=_ttWarns(sol.placements,sol.whole);
+  _ttCache.dirty=true;_ttCellClose();renderTtPanel();
+  setTimeout(function(){_ttJumpTo(String(p.id));},60);
 }
 // #4:点「详情与建议」的卡片 → 滚到课表里对应的课片并闪一下
 function _ttJumpTo(id){
