@@ -4063,7 +4063,7 @@ function _ttChipHtml(p,bad,src){
   const title=p.course+(p.cls?' '+p.cls:'')+' @'+rm+(p.tc?' · '+p.tc:'')+(p.dept?' · 专业'+p.dept:'')+(cl.full?' · 届别:'+cl.full:'')+(note?' · 备注:'+note:'')+(dr?' · ⚠存档后被改动':'')+((bad[p.id]&&_ttBadWhy[p.id])?' ｜ ⚠ 为什么红：'+_ttBadWhy[p.id].join('；'):'')+(edit?' · 可单独拖这一节':'');
   const dragStart=edit?(' draggable="true" ondragstart="_ttDragStart(event,\''+jsq(String(p.id))+'\','+(src?'\''+jsq(src[0])+'\',\''+src[1]+'\'':'null,null')+')"'):'';
   const clickEdit=edit?(' onmousedown="_ttChipDown(event)" onmouseup="_ttChipUp(event,\''+jsq(String(p.id))+'\','+(src?'\''+jsq(src[0])+'\',\''+src[1]+'\'':'null,null')+')"'):'';
-  return '<span class="tt-chip'+bd+dr+(edit?' tt-drag':'')+'" style="'+_ttChipStyle(p)+'" data-tt-id="'+eh(String(p.id))+'"'+dragStart+clickEdit+' title="'+eh(title)+'">'+
+  return '<span class="tt-chip'+bd+dr+(edit?' tt-drag':'')+'" style="'+_ttChipStyle(p)+'" data-tt-id="'+eh(String(p.id))+'"'+dragStart+clickEdit+' data-rm="'+eh(String(rm))+'">'+
     '<span class="tt-c3"><span class="z1">'+p.count+'人</span>'+
     '<span class="z2">'+_ttCC(p)+'</span>'+
     '<span class="z3">'+eh(p.tc||'待定')+'</span></span></span>';
@@ -4184,7 +4184,7 @@ function _ttMiniChip(p,mode,bad,src){
   const title=p.course+(p.cls?' '+p.cls:'')+' @'+rm+(p.tc?' · '+p.tc:'')+(p.dept?' · 专业'+p.dept:'')+(cl.full?' · '+cl.full:'')+((bad&&bad[p.id]&&_ttBadWhy[p.id])?' ｜ ⚠ 为什么红：'+_ttBadWhy[p.id].join('；'):'')+(edit?' · 可单独拖这一节':'');
   const dragStart=edit?(' draggable="true" ondragstart="_ttDragStart(event,\''+jsq(String(p.id))+'\','+(src?'\''+jsq(src[0])+'\',\''+src[1]+'\'':'null,null')+')"'):'';
   const clickEdit=edit?(' onmousedown="_ttChipDown(event)" onmouseup="_ttChipUp(event,\''+jsq(String(p.id))+'\','+(src?'\''+jsq(src[0])+'\',\''+src[1]+'\'':'null,null')+')"'):'';
-  return '<span class="tt-chip'+bd+dr+(edit?' tt-drag':'')+'" style="'+_ttChipStyle(p)+'" data-tt-id="'+eh(String(p.id))+'"'+dragStart+clickEdit+' title="'+eh(title)+'"><span class="tt-c3"><span class="z1">'+z1+'</span><span class="z2">'+z2+'</span><span class="z3">'+z3+'</span></span></span>';
+  return '<span class="tt-chip'+bd+dr+(edit?' tt-drag':'')+'" style="'+_ttChipStyle(p)+'" data-tt-id="'+eh(String(p.id))+'"'+dragStart+clickEdit+' data-rm="'+eh(String(rm))+'"><span class="tt-c3"><span class="z1">'+z1+'</span><span class="z2">'+z2+'</span><span class="z3">'+z3+'</span></span></span>';
 }
 // 单一届别/老师的紧凑课表:行=星期(周一~周五,+周六若有 Capstone),列=上半上午/上半下午/下半上午/下半下午
 // (照 Aj. Tsai 给的 aSc 参考:行=星期;上半蓝、下半橙两组上色)
@@ -4273,6 +4273,47 @@ function _ttEnsureCellModal(){
     +'<button class="btn btn-sm btn-p" onclick="_ttCellSave()">套用</button></span></div></div>';
   document.body.appendChild(m);return m;
 }
+// ── 课片浮出卡:鼠标一到就浮出「届别明细(各届人数)/老师/教室/备注/标红原因」,取代原生 title(Aj. Tsai 2026-11-15) ──
+// 三视图通用;只读角色点一下也会显示(触控没有 hover)。届别人数取自排课表 schD 的 cc。
+let _ttTipBound=false,_ttTipChip=null;
+function _ttTipEl(){let t=document.getElementById('tt-tip');if(!t){t=document.createElement('div');t.id='tt-tip';t.style.cssText='display:none;position:fixed;z-index:9000;max-width:320px;background:#fff;border:1px solid #D9D5F5;border-radius:10px;box-shadow:0 8px 28px rgba(60,52,137,.2);padding:9px 11px;font-size:11.5px;line-height:1.55;color:#333;pointer-events:none';document.body.appendChild(t);}return t;}
+function _ttTipHide(){_ttTipChip=null;const t=document.getElementById('tt-tip');if(t)t.style.display='none';}
+function _ttTipShow(chip){
+  const sol=_ttCache.sol||(_ttCache.tt?_ttSolutionFromSaved(_ttCache.sem,_ttCache.tt):null);if(!sol)return;
+  const id=String(chip.getAttribute('data-tt-id')||'');
+  const p=(sol.placements||[]).find(function(x){return String(x.id)===id;});if(!p)return;
+  const rm=chip.getAttribute('data-rm')||'',why=_ttBadWhy&&_ttBadWhy[id],note=(p.note&&p.note.raw)||p.nt||'';
+  const rec=(typeof schD!=='undefined'?schD:[]).find(function(r){return String(r.id)===id;});
+  const cc=(rec&&rec.cc&&rec.cc.length)?rec.cc.map(function(x){return {n:x.cohort,c:x.count};}):(p.cohorts||[]).map(function(n){return {n:n,c:null};});
+  const cohs=cc.filter(function(x){return x.n;}).map(function(x){return '<span style="display:inline-block;background:#F1EFFD;color:#3C3489;border-radius:5px;padding:0 6px;margin:2px 4px 0 0;white-space:nowrap">'+eh(x.n)+(x.c!=null&&x.c!==''?' <b>'+eh(String(x.c))+'</b>人':'')+'</span>';}).join('');
+  const t=_ttTipEl();
+  t.innerHTML='<div style="font-weight:700;color:#3C3489;font-size:12.5px">'+_ttCC(p)+' <span style="font-weight:400;color:#888">· 共 '+p.count+' 人'+(rm?' · @'+eh(rm):'')+'</span></div>'+
+    '<div style="color:#555">'+eh(p.tc||'老师待定')+(p.dept?' · 专业 '+eh(p.dept):'')+(p.isCap?' · 🎓 Capstone':'')+'</div>'+
+    (cohs?'<div style="margin-top:5px"><span style="color:#888">届别（'+cc.length+'）</span><div>'+cohs+'</div></div>':'')+
+    (note?'<div style="margin-top:5px;color:#8a6d3b">备注：'+eh(note)+'</div>':'')+
+    ((why&&why.length)?'<div style="margin-top:5px;color:#e11d48">⚠ '+why.map(eh).join('；')+'</div>':'')+
+    (_ttCanEdit()?'<div style="margin-top:5px;color:#aaa;font-size:10.5px">点一下编辑 · 拖动换时段</div>':'');
+  t.style.display='block';
+  const r=chip.getBoundingClientRect(),w=t.offsetWidth,h=t.offsetHeight;
+  let left=Math.min(Math.max(8,r.left),window.innerWidth-w-8),top=r.bottom+6;
+  if(top+h>window.innerHeight-8)top=Math.max(8,r.top-h-6);
+  t.style.left=left+'px';t.style.top=top+'px';
+}
+function _ttTipBind(){
+  if(_ttTipBound)return;_ttTipBound=true;
+  document.addEventListener('mouseover',function(e){
+    const c=(e.target&&e.target.closest)?e.target.closest('#tt-body .tt-chip'):null;
+    if(c){if(c!==_ttTipChip&&!_ttDragging){_ttTipChip=c;_ttTipShow(c);}}
+    else if(_ttTipChip)_ttTipHide();
+  });
+  document.addEventListener('click',function(e){   // 只读角色/触控:点课片也显示
+    if(_ttCanEdit())return;
+    const c=(e.target&&e.target.closest)?e.target.closest('#tt-body .tt-chip'):null;
+    if(c){_ttTipChip=c;_ttTipShow(c);}else _ttTipHide();
+  });
+  window.addEventListener('scroll',_ttTipHide,true);
+  document.addEventListener('dragstart',_ttTipHide);
+}
 let _ttDownXY=null;
 function _ttChipDown(ev){try{_ttDownXY=[ev.clientX,ev.clientY];}catch(e){_ttDownXY=null;}}
 function _ttChipUp(ev,id,day,slot){   // 用 mousedown→mouseup 位移区分「点击」与「拖拽」:移动 <6px 才算点击开弹窗(Aj. Tsai 2026-11-15)
@@ -4283,6 +4324,7 @@ function _ttChipUp(ev,id,day,slot){   // 用 mousedown→mouseup 位移区分「
 function _ttEditCell(ev,id,day,slot){
   if(ev&&ev.stopPropagation)ev.stopPropagation();
   if(!_ttCanEdit())return;
+  _ttTipHide();
   _ttEnsureSol();const sol=_ttCache.sol;if(!sol)return;
   const p=(sol.placements||[]).find(function(x){return String(x.id)===String(id);});if(!p)return;
   let cell=null;
@@ -4582,6 +4624,7 @@ async function renderTtPanel(force){
   _ttFillSemSel();
   try{document.documentElement.style.setProperty('--cic-stickybar-h',(((document.getElementById('sticky-bar')||{}).offsetHeight)||0)+'px');}catch(e){}   // 工具列 sticky 贴在全站 sticky 头下面(Aj. Tsai 2026-11-15)
   try{if(!_ttDEBound){document.addEventListener('dragend',_ttDragEnd);_ttDEBound=true;}}catch(e){}   // 拖拽结束统一清状态
+  try{_ttTipBind();}catch(e){}   // 课片浮出卡(届别明细)
   const sem=(document.getElementById('tt-sem')||{}).value||'';
   const st=document.getElementById('tt-status'),bd=document.getElementById('tt-body'),nn=document.getElementById('tt-n');
   if(!st||!bd)return;
