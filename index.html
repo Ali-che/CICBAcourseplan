@@ -490,6 +490,11 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 .tt-foot .tt-solo-fold{margin-top:8px}
 .tt-foot .tt-solo-fold>summary{font-size:12px;font-weight:700}
 .tt-delsave{color:#b42318;border-color:#f4a8a8;display:inline-flex;align-items:center;gap:3px}
+.tt-solo-f{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:4px 0 6px}
+.tt-solo-f .lab{font-size:11px;color:#666;font-weight:500;margin-right:2px}
+.tt-solo-fc{font-size:11px;font-weight:600;border-radius:999px;padding:2px 9px;cursor:pointer;background:#EEEDFE;color:#534AB7;border:1px solid rgba(0,0,0,.06);user-select:none}
+.tt-solo-fc.on{background:#534AB7;color:#fff}
+.tt-solo-dep{display:inline-block;font-size:10px;font-weight:700;border-radius:4px;padding:0 5px;margin-right:5px;vertical-align:1px}
 .tt-solo-row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .tt-solo-btns{display:flex;gap:4px;flex-shrink:0}
 .tt-solo-btns .btn{padding:1px 8px;font-size:10.5px;display:inline-flex;align-items:center;gap:3px}
@@ -4180,6 +4185,7 @@ function _ttLangRefresh(sem){
 const TT_SOLO_MAX=1,TT_SOLO_PEN=80;   // 扣分 80:比「两节间隔普通」(25)重,比「两节挤同一天」(100)轻
 let _ttRows={};
 // 开关(Aj. Tsai 2026-11-15):工具栏「个别学生不挡排课」可关掉,比较两种结果。记在本机(预设开);切换时会重排(可按还原退回)
+function ttSoloDept(d){_ttCache.soloDept=d||'';renderTtPanel();}   // 个别学生撞课清单的专业筛选(只影响这份清单的显示)
 function _ttSoloOn(){return _lsGet('cic_tt_solo')!=='0';}
 function ttSoloToggle(on){
   _lsSet('cic_tt_solo',on?'1':'0');
@@ -5291,11 +5297,19 @@ function _ttFootDetails(sol){
   if(other.length)right+='<details class="tt-iss-fold"'+_ttFoldAttr('notes')+'><summary>其他备注 '+other.length+' 条（已照办／变更记录，不用处理）</summary>'+other.map(function(o){const c=o.c;return '<div class="tt-side-item log jump" onclick="_ttJumpTo(\''+jsq(String(c.id))+'\')"><b>'+_ttCC(c)+'</b>：'+eh(o.n.raw||c.nt||'')+(o.kind==='done'?' <span class="ok">✓ 已照办</span>':'')+'</div>';}).join('')+'</details>';
   // 个别学生撞课:同一届别、同两门课的几个时段并成一条
   const soloG=[],soloK={};(_ttCache.solo||[]).forEach(function(x){const k=x.co+'\u0001'+[String(x.a.id),String(x.b.id)].sort().join('\u0001');if(!soloK[k]){soloK[k]={co:x.co,a:x.a,b:x.b,when:[]};soloG.push(soloK[k]);}soloK[k].when.push(_ttSoloWhen(x,sol.whole));});
+  // 照专业排序(专业 → 届别名),并可用专业筛选(Aj. Tsai 2026-11-16);专业的判法同全站(cohortDept)
+  soloG.forEach(function(x){x.dep=(typeof cohortDept==='function'&&cohortDept(x.co))||'其他';});
+  soloG.sort(function(a,b){return a.dep.localeCompare(b.dep)||a.co.localeCompare(b.co);});
   const solo=soloG;let soloHtml='';   // 放左栏(未排的下面):放右栏容易被备注、提醒埋住(Aj. Tsai 2026-11-15)
-  if(solo.length){const who={};solo.forEach(function(x){who[x.co]=1;});
-    soloHtml='<details class="tt-iss-fold tt-solo-fold"'+_ttFoldAttr('solo')+'><summary>👤 <span class="bad">个别学生撞课 '+solo.length+' 组</span>（涉及 '+Object.keys(who).length+' 个届别、各 1 人；不挡排课，请个别处理）</summary>'+solo.map(function(x){
-      const row=_ttSoloRow(x),rc=row&&_ttRows[row]?String(_ttRows[row].course||''):'';   // 该届别只占 1 人的那笔排课 → 「改排课」直接开它的编辑窗
-      return '<div class="tt-side-item note tt-solo-row"><div><b>'+eh(x.co)+'</b>：'+_ttCC(x.a)+' ↔ '+_ttCC(x.b)+'<br><span class="t">'+eh(x.when.join('、'))+'</span></div><span class="tt-solo-btns"><button class="btn btn-sm" onclick="_ttJumpTo(\''+jsq(String(x.a.id))+'\')" title="跳到课表里这门课">看课表</button>'+(rc?'<button class="btn btn-sm" onclick="startES(\''+jsq(row)+'\')" title="打开 '+eh(rc)+' 的排课编辑窗：把这位同学拿掉，或改到别的班">'+_ICO.edit+' 改 '+eh(rc)+'</button>':'')+'</span></div>';
+  if(solo.length){const who={},dc={},dl=[];solo.forEach(function(x){who[x.co]=1;if(!dc[x.dep]){dc[x.dep]=0;dl.push(x.dep);}dc[x.dep]++;});
+    let fd=_ttCache.soloDept||'';if(fd&&!dc[fd])fd=_ttCache.soloDept='';   // 筛选的专业现在没有撞课了 → 回到全部
+    const fchip=function(d,txt){const col=d?_ttDeptColor(d):null;return '<span class="tt-solo-fc'+(fd===d?' on':'')+'"'+(col&&fd!==d?' style="background:'+col.bg+';color:'+col.fg+'"':'')+' onclick="ttSoloDept(\''+jsq(d)+'\')">'+eh(txt)+'</span>';};
+    const shown=solo.filter(function(x){return !fd||x.dep===fd;});
+    soloHtml='<details class="tt-iss-fold tt-solo-fold"'+_ttFoldAttr('solo')+'><summary>👤 <span class="bad">个别学生撞课 '+solo.length+' 组</span>（涉及 '+Object.keys(who).length+' 个届别、各 1 人；不挡排课，请个别处理）</summary>'+
+      (dl.length>1?'<div class="tt-solo-f"><span class="lab">专业</span>'+fchip('','全部 '+solo.length)+dl.map(function(d){return fchip(d,d+' '+dc[d]);}).join('')+'</div>':'')+
+      shown.map(function(x){
+      const row=_ttSoloRow(x),rc=row&&_ttRows[row]?String(_ttRows[row].course||''):'',col=_ttDeptColor(x.dep);   // 该届别只占 1 人的那笔排课 → 「改排课」直接开它的编辑窗
+      return '<div class="tt-side-item note tt-solo-row" data-dep="'+eh(x.dep)+'"><div><span class="tt-solo-dep" style="background:'+col.bg+';color:'+col.fg+'">'+eh(x.dep)+'</span><b>'+eh(x.co)+'</b>：'+_ttCC(x.a)+' ↔ '+_ttCC(x.b)+'<br><span class="t">'+eh(x.when.join('、'))+'</span></div><span class="tt-solo-btns"><button class="btn btn-sm" onclick="_ttJumpTo(\''+jsq(String(x.a.id))+'\')" title="跳到课表里这门课">看课表</button>'+(rc?'<button class="btn btn-sm" onclick="startES(\''+jsq(row)+'\')" title="打开 '+eh(rc)+' 的排课编辑窗：把这位同学拿掉，或改到别的班">'+_ICO.edit+' 改 '+eh(rc)+'</button>':'')+'</span></div>';
     }).join('')+'<div class="tt-iss-tip">'+(_ttCanEdit()?'在排课编辑窗存好之后，回来按「⚡ 一键自动排」重排，这份清单才会更新。':'在排课编辑窗存好之后，要请 Head of Administration 或管理员重排并存档，这份清单才会更新（你这个账号不能重排课表）。')+'</div></details>';}
   const lg=_ttLang,lgCo=Object.keys(lg.ke||{}).filter(function(co){return lg.kh&&lg.kh[co];}).sort();
   if(lgCo.length){
