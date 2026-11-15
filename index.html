@@ -4450,12 +4450,39 @@ function _ttDriftBanner(drift){
   drift.add.forEach(function(r){items+='<div class="tt-side-item" style="background:#eef2ff"><b>'+eh(r.course)+'</b>'+(r.cls?' '+eh(r.cls):'')+' · <span style="color:#1e3a8a">新课，尚未排进课表</span></div>';});
   return '<div style="border:1px solid #F6C667;background:#FEF9ED;border-radius:8px;padding:10px 12px;margin:0 0 10px"><div style="font-size:12.5px;font-weight:700;color:#92400e">⚠ 存档 v'+drift.version+' 后，排课被改了 '+drift.n+' 处 —— 这张课表可能过时</div>'+(canEdit?'<div style="margin:6px 0"><button class="btn btn-sm" onclick="ttAutoSolve()">⚡ 用现在的排课重排</button> <span style="font-size:11px;color:#888">重排、核对无误后再 💾 存档</span></div>':'<div style="font-size:11px;color:#888;margin-top:3px">请 Head of Administration 或管理员重排。</div>')+'<details style="margin-top:4px"'+(drift.n<=8?' open':'')+'><summary style="cursor:pointer;font-size:12px;color:#92400e">看改了哪些（删 '+drift.del.length+' · 改 '+drift.chg.length+' · 新增 '+drift.add.length+'）</summary><div style="max-height:240px;overflow:auto;margin-top:6px">'+items+'</div></details></div>';
 }
+// ── 容量预检(Aj. Tsai 2026-11-15):先算「每届别/每老师在某半需要几格 vs 有几格」,超载就直接说哪个必排不下 ──
+// 一般课:周一~周五 × 上午/下午 = 10 格(教 Capstone 的老师周五留给 Capstone → 8 格);Capstone:周五/周六 = 4 格。每门课 2 节。
+function _ttCapWarn(sol){
+  const all=(sol.placements||[]).concat(sol.unplaced||[]),coh={},tch={},capTc={};
+  all.forEach(function(c){if(c.isCap&&c.tc)capTc[c.tc]=1;});
+  function add(map,key,c){map[key]=map[key]||{reg:[],cap:[]};(c.isCap?map[key].cap:map[key].reg).push(c.course+(c.cls?'-'+c.cls:''));}
+  all.forEach(function(c){
+    (c.half==='both'?['up','dn']:[c.half||'up']).forEach(function(h){
+      (c.cohorts||[]).forEach(function(co){add(coh,co+'|'+h,c);});
+      if(c.tc)add(tch,c.tc+'|'+h,c);
+    });
+  });
+  const HN=sol.whole?{up:'全学期',dn:'全学期'}:{up:'上半',dn:'下半'},out=[];
+  function chk(kind,map,isT){Object.keys(map).sort().forEach(function(k){
+    const i=k.lastIndexOf('|'),name=k.slice(0,i),h=k.slice(i+1),v=map[k];
+    const avail=(isT&&capTc[name])?8:10,need=v.reg.length*2,needC=v.cap.length*2;
+    if(need>avail)out.push({who:kind+' '+name,half:HN[h],txt:v.reg.length+' 门一般课需 '+need+' 格，但周一~周五只有 '+avail+' 格'+((isT&&capTc[name])?'（周五留给 Capstone）':'')+' → 至少 '+Math.ceil((need-avail)/2)+' 门排不满',list:v.reg});
+    if(needC>4)out.push({who:kind+' '+name,half:HN[h],txt:v.cap.length+' 门 Capstone 需 '+needC+' 格，但周五/周六只有 4 格 → 至少 '+Math.ceil((needC-4)/2)+' 门排不满',list:v.cap});
+  });}
+  chk('届别',coh,false);chk('老师',tch,true);
+  return out;
+}
+function _ttCapBanner(sol){
+  const w=_ttCapWarn(sol);if(!w.length)return '';
+  const rows=w.map(function(x){return '<div style="padding:3px 0;border-top:0.5px dashed #F3D9A4"><b>'+eh(x.who)+'</b> · '+eh(x.half)+'：'+eh(x.txt)+'<div style="color:#8a6d3b;font-size:10.5px">'+x.list.map(eh).join('、')+'</div></div>';}).join('');
+  return '<details class="tt-capbar" style="border:1px solid #F6C667;background:#FFFBF0;border-radius:8px;padding:8px 12px;margin:0 0 10px"'+(w.length<=4?' open':'')+'><summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:#92400e">📐 容量预检：'+w.length+' 处课太多、时段装不下（不管怎么排都排不满）</summary><div style="font-size:11.5px;color:#7a5b16;margin-top:6px;line-height:1.6">'+rows+'<div style="margin-top:6px;color:#8a6d3b">解法：到排课表把其中几门改到另一半、换老师，或拆届别。</div></div></details>';
+}
 function _ttBodyHtml(sol){
   const view=_ttCache.view||'room';
   const drift=(sol.fromSaved&&!_ttCache.dirty)?_ttDrift(sol.sem):null;
   _ttCache.driftIds={};if(drift){drift.del.forEach(function(p){_ttCache.driftIds[String(p.id)]=1;});drift.chg.forEach(function(it){_ttCache.driftIds[String(it.p.id)]=1;});}
   const main=((view==='room'&&_ttCanEdit())?'<div style="font-size:11px;color:#888;margin:0 2px 6px">💡 拖动课片微调；也可把下方未排的胶囊拖进网格。撞堂／超容量即时标红，改完按 💾 存档。</div>':'')+_ttMainHtml(sol,view);
-  return _ttDriftBanner(drift)+main+_ttPillsBar(sol,view)+_ttFootDetails(sol);   // 视图切换已移到 #tt-status(sticky)
+  return _ttDriftBanner(drift)+_ttCapBanner(sol)+main+_ttPillsBar(sol,view)+_ttFootDetails(sol);   // 视图切换已移到 #tt-status(sticky)
 }
 function ttAutoSolve(){if(!_ttCanEdit())return;const sem=_ttCache.sem;if(!sem)return;_ttCache.sol=_ttSolve(sem);_ttCache.dirty=true;renderTtPanel();}
 // #8:把课表里排定的上/下半写回排课表 schD(Head/Admin,需确认;改写官方排课)
