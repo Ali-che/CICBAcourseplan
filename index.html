@@ -5369,7 +5369,7 @@ async function ttSave(){
   if(r&&r.success){if(typeof showToast==='function')showToast('已存档 v'+r.version,{kind:'success'});_ttCache.tt={sem:sem,version:r.version,saved_by:r.saved_by,saved_at:new Date().toISOString(),placements:pls};_ttCache.sol=null;_ttCache.dirty=false;renderTtPanel();}
   else{alert('存档失败：'+_errText(r));}
 }
-// 删除某学期的课表存档(仅管理员;RPC timetable_delete = migration 012)。排课表不受影响;数据库不留旧版。
+// 删除某学期的课表存档(仅管理员;RPC timetable_delete = migration 013)。排课表不受影响;数据库不留旧版。
 async function ttDeleteSaved(){
   if(currentRole!=='admin')return;const sem=_ttCache.sem,tt=_ttCache.tt;
   if(!sem||!tt){alert('这个学期没有存档。');return;}
@@ -5378,7 +5378,7 @@ async function ttDeleteSaved(){
   if(r&&r.success){
     _ttCache.tt=null;if(!_ttCache.dirty)_ttCache.sol=null;   // 手上有还没存的改动就留着,否则回到「尚未排课」
     if(typeof showToast==='function')showToast('已删除 '+sem+' 的课表存档',{kind:'success'});renderTtPanel();
-  }else alert('删除失败：'+_errText(r)+'\n\n如果写的是找不到 timetable_delete：请先到 Supabase SQL Editor 跑 migrations/012_timetable_delete_2026-11-15.sql。');
+  }else alert('删除失败：'+_errText(r)+'\n\n如果写的是找不到 timetable_delete：请先到 Supabase SQL Editor 跑 migrations/013_timetable_delete_2026-11-15.sql。');
 }
 // ── 上/下半日期(⑤ 列印抬头;后台设定,存 tt_sem_dates(010))──
 function _ttFmtD(s){if(!s)return '—';const m=String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);return m?(m[1]+'/'+m[2]+'/'+m[3]):String(s);}
@@ -10231,7 +10231,7 @@ function syncTblHeight(){
     if(action==='setBaseline')return srpc('sched_set_baseline',{p_pin:_pin,p_sem:body.sem,p_snapshot:body.snapshot||[],p_ver_code:body.ver_code||''});
     if(action==='ackRow')return srpc('sched_ack_row',{p_pin:_pin,p_sem:body.sem,p_row_id:String(body.row_id),p_row_code:body.row_code||'',p_on:!!body.on});
     if(action==='saveTimetable')return srpc('timetable_save',{p_pin:_pin,p_sem:body.sem,p_placements:body.placements||[]});
-    if(action==='deleteTimetable')return srpc('timetable_delete',{p_pin:_pin,p_sem:body.sem});   // 仅管理员(migration 012)
+    if(action==='deleteTimetable')return srpc('timetable_delete',{p_pin:_pin,p_sem:body.sem});   // 仅管理员(migration 013)
     if(action==='setSemDates')return srpc('tt_set_sem_dates',{p_pin:_pin,p_sem:body.sem,p_us:body.us||'',p_ue:body.ue||'',p_ds:body.ds||'',p_de:body.de||''});
     // ⚙️ 后台操作 admin RPC(服务端 _admin 再验权限)
     if(action==='adminAddSemester')return srpc('admin_add_semester',{p_pin:_pin,p_sem:body.sem});
