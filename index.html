@@ -3936,6 +3936,8 @@ function _ttCohorts(r){return (r.cc||[]).map(c=>c.cohort).filter(Boolean);}
 function _ttDept(r,cat){const code=String(r.course||'').toUpperCase();if(/^(LA|MA)/.test(code))return 'GE';const c=cat[code];return (c&&c.dept)||'';}  // LA/MA 归 GE 通识(Aj. Tsai)
 function _ttCredit(r,cat){if(_ttIsCap(r))return 6;const c=cat[String(r.course||'').toUpperCase()];const v=c?parseFloat(c.credit):NaN;return isNaN(v)?0:v;}
 function _ttRoomsSorted(){const rs=((_ttCache.refs&&_ttCache.refs.rooms)||[]).slice();return rs.sort((a,b)=>((a.sort==null?9999:a.sort)-(b.sort==null?9999:b.sort))||String(a.code).localeCompare(String(b.code)));}
+// 画面上的教室顺序:照教室号码由小到大(Aj. Tsai 2026-11-15)。只管显示;自动排挑教室的先后不受影响(仍用 _ttRoomsSorted + 容量)
+function _ttRoomsByNo(rooms){return (rooms||[]).slice().sort(function(a,b){const x=parseInt(a.code,10),y=parseInt(b.code,10);return ((isNaN(x)?1e9:x)-(isNaN(y)?1e9:y))||String(a.code).localeCompare(String(b.code));});}
 function _ttRoomCap(code){const rm=((_ttCache.refs&&_ttCache.refs.rooms)||[]).find(r=>String(r.code)===String(code));return rm?rm.cap:0;}
 function _ttMaxCap(rooms){return rooms.reduce((m,r)=>Math.max(m,r.cap||0),0);}
 // ── 备注解析(§5.5):捞 教室号 / 单一周几;模糊语气 → 待人工 ──
@@ -4448,7 +4450,7 @@ function _ttChipHtml(p,bad,src){
     '<span class="z3">'+eh(p.tc||'待定')+'</span></span></span>';
 }
 function _ttGridHtml(h,sol){
-  const rooms=sol.rooms,bad=_ttConflicts(sol.placements),occ={};
+  const rooms=_ttRoomsByNo(sol.rooms),bad=_ttConflicts(sol.placements),occ={};
   function inH(p){return (p.half==='both')||(p.half===h);}
   let anySat=false,anySun=false;const evDay={};
   if(sol.placements.concat(sol.unplaced||[]).some(function(p){return p.isCap&&inH(p);})){anySat=true;evDay['周五']=1;evDay['周六']=1;}   // 这张表有 Capstone → 周五/周六多一栏「傍晚」(三个时段)
@@ -4782,7 +4784,7 @@ function _ttEditCell(ev,id,day,slot){
   Object.keys(bd).sort().forEach(function(d){topt+='<optgroup label="'+eh(d||'其他')+'">'+bd[d].map(function(t){return '<option'+(t.n===p.tc?' selected':'')+'>'+eh(t.n)+'</option>';}).join('')+'</optgroup>';});
   if(p.tc&&!tlist.some(function(t){return t.n===p.tc;}))topt+='<option selected>'+eh(p.tc)+'</option>';
   document.getElementById('ttcm-tc').innerHTML=topt;
-  const rs=_ttRoomsSorted();
+  const rs=_ttRoomsByNo(_ttRoomsSorted());
   document.getElementById('ttcm-room').innerHTML='<option value="">— 待定 —</option>'+rs.map(function(r){const small=(+r.cap<+p.count);return '<option value="'+eh(String(r.code))+'"'+(String(r.code)===String(curRoom)?' selected':'')+'>'+eh(String(r.code))+' · 容量'+r.cap+(small?' ⚠不足':'')+(r.pref_dept?' · '+eh(r.pref_dept):'')+'</option>';}).join('');
   const days=['周一','周二','周三','周四','周五','周六','周日'];
   document.getElementById('ttcm-day').innerHTML=days.map(function(d){return '<option'+(d===curDay?' selected':'')+'>'+d+'</option>';}).join('');
