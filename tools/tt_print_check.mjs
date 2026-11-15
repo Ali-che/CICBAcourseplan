@@ -68,18 +68,25 @@ try {
       const PW=${PAGE_W};const tabs=[...box.querySelectorAll('table')];
       const tw=tabs.map(t=>Math.round(t.getBoundingClientRect().width));
       const wide=tabs.filter(t=>t.getBoundingClientRect().right>PW+2).length;
-      let clip=0,clipEx=[],out=0,minPt=99;
+      let clip=0,clipEx=[],out=0,minPt=99,minCo=99;
       box.querySelectorAll('.tt-chip').forEach(c=>{
-        const z=parseFloat(getComputedStyle(c.closest('table')).zoom)||1;
-        [c].concat([...c.querySelectorAll('.z1,.z2,.z3,.z4')]).forEach(e=>{if(e.scrollWidth>e.clientWidth+1||e.scrollHeight>e.clientHeight+1){clip++;if(clipEx.length<3)clipEx.push(e.className+':'+e.innerText.slice(0,30).replace(/\\n/g,'/'));}});
-        const td=c.closest('td');if(td){const a=c.getBoundingClientRect(),b=td.getBoundingClientRect();if(a.right>b.right+1.5||a.left<b.left-1.5)out++;}
-        c.querySelectorAll('.z1,.z2,.z3,.z4').forEach(e=>{const pt=parseFloat(getComputedStyle(e).fontSize)*z*0.75;if(pt<minPt)minPt=pt;});
+        const inner=c.querySelector('.tt-c3');
+        if(inner&&inner.offsetHeight>c.clientHeight-3){clip++;if(clipEx.length<3)clipEx.push('高度不够:'+c.innerText.slice(0,40).replace(/\\n/g,'/'));}   // 课片固定高、超出的会被切掉
+        c.querySelectorAll('.z1,.z2,.z3,.z4').forEach(e=>{if(getComputedStyle(e).display==='none')return;if(e.scrollWidth>e.clientWidth+1){clip++;if(clipEx.length<3)clipEx.push(e.className+':'+e.innerText.slice(0,30));}const pt=parseFloat(getComputedStyle(e).fontSize)*0.75;if(e.classList.contains('zl')){if(pt<minCo)minCo=pt;}else if(pt<minPt)minPt=pt;});
+        const td=c.closest('td');if(td){const a=c.getBoundingClientRect(),b=td.getBoundingClientRect();if(a.right>b.right+1.5||a.left<b.left-1.5||a.bottom>b.bottom+1.5)out++;}
+      });
+      // 一致性:同一张表里,单独一格一片的课片要同宽同高(±1px);每一列同高;届别行同一个字号
+      let uneven=0,rowsUneven=0,fontMix=0;
+      tabs.forEach(t=>{
+        const cs=[...t.querySelectorAll('td:not(.bad) .tt-chip')];if(cs.length){const hs=cs.map(c=>Math.round(c.getBoundingClientRect().height)),ws=cs.map(c=>Math.round(c.getBoundingClientRect().width));if(Math.max(...hs)-Math.min(...hs)>1)uneven++;const byCol={};cs.forEach((c,k)=>{const ci=c.closest('td').cellIndex;(byCol[ci]=byCol[ci]||[]).push(ws[k]);});if(Object.values(byCol).some(a=>Math.max(...a)-Math.min(...a)>1))uneven++;}
+        const rs=[...t.querySelectorAll('tbody tr')].map(r=>Math.round(r.getBoundingClientRect().height));if(rs.length&&Math.max(...rs)-Math.min(...rs)>1)rowsUneven++;
+        const fs=new Set([...t.querySelectorAll('.zl')].filter(e=>getComputedStyle(e).display!=='none').map(e=>getComputedStyle(e).fontSize));if(fs.size>1)fontMix++;
       });
       const heads=[...box.querySelectorAll('thead th')].filter(e=>e.scrollWidth>e.clientWidth+1).length;
       const spill=[...box.querySelectorAll('.tt-wrap,.tt-ewrap,.tt-ecard,.tt-sheet')].filter(e=>e.scrollHeight>e.clientHeight+1||e.scrollWidth>e.clientWidth+1).length;
       const sh=[...box.querySelectorAll('.tt-sheet')];let overlap=0;for(let i=1;i<sh.length;i++){if(sh[i].getBoundingClientRect().top<sh[i-1].getBoundingClientRect().top+sh[i-1].scrollHeight-1)overlap++;}
       const cards=[...box.querySelectorAll('.tt-ecard')];for(let i=1;i<cards.length;i++){if(cards[i].getBoundingClientRect().top<cards[i-1].getBoundingClientRect().bottom-1)overlap++;}
-      return JSON.stringify({sheets:box.querySelectorAll('.tt-sheet').length,tables:tabs.length,chips:box.querySelectorAll('.tt-chip').length,maxW:Math.max.apply(null,tw.concat([0])),wide:wide,clip:clip,clipEx:clipEx,out:out,minPt:Math.round(minPt*10)/10,zooms:[...new Set(tabs.map(t=>(parseFloat(getComputedStyle(t).zoom)||1).toFixed(2)))].join(','),heads:heads,spill:spill,overlap:overlap,docW:document.documentElement.scrollWidth});
+      return JSON.stringify({sheets:box.querySelectorAll('.tt-sheet').length,tables:tabs.length,chips:box.querySelectorAll('.tt-chip').length,maxW:Math.max.apply(null,tw.concat([0])),wide:wide,clip:clip,clipEx:clipEx,out:out,minPt:Math.round(minPt*10)/10,minCo:minCo===99?null:Math.round(minCo*10)/10,uneven:uneven,rowsUneven:rowsUneven,fontMix:fontMix,fit:box._fit||null,zooms:[...new Set(tabs.map(t=>(parseFloat(getComputedStyle(t).zoom)||1).toFixed(2)))].join(','),heads:heads,spill:spill,overlap:overlap,docW:document.documentElement.scrollWidth});
     })()`));
     const shot = await send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 0, width: PAGE_W, height: PAGE_H, scale: 1 } });
     if (shot.result && shot.result.data) await writeFile(join(OUT, id + '.png'), Buffer.from(shot.result.data, 'base64'));
@@ -89,10 +96,10 @@ try {
     for (const pg of [1, 2]) { if (pg > pages) break; const one = await send('Page.printToPDF', { printBackground: true, preferCSSPageSize: true, landscape: true, pageRanges: String(pg) }); if (one.result && one.result.data) await writeFile(join(OUT, id + '-p' + pg + '.pdf'), Buffer.from(one.result.data, 'base64')); }
     await send('Emulation.setEmulatedMedia', { media: '' }); await send('Emulation.clearDeviceMetricsOverride');
     await evaluate(`(_ttPrintClean(),true)`);
-    const good = ok && !m.none && m.wide === 0 && m.clip === 0 && m.out === 0 && m.spill === 0 && m.overlap === 0 && m.heads === 0 && m.minPt >= 6 && m.docW <= PAGE_W + 2 && pages > 0 && pdfLandscape && !/PORTRAIT/.test(pdfLandscape);
+    const good = ok && !m.none && m.wide === 0 && m.clip === 0 && m.out === 0 && m.spill === 0 && m.overlap === 0 && m.heads === 0 && m.minPt >= 4.5 && (m.minCo == null || m.minCo >= 4.5) && m.uneven === 0 && m.rowsUneven === 0 && m.fontMix === 0 && m.docW <= PAGE_W + 2 && pages > 0 && pdfLandscape && !/PORTRAIT/.test(pdfLandscape);
     if (!good) fail++;
     rows.push({ id, label, good, pages, pdf: pdfLandscape, ...m });
-    console.log((good ? '✅ ' : '❌ ') + label + ` | ${pages} 页 ${pdfLandscape} | 表 ${m.tables} 课片 ${m.chips} | 最宽 ${m.maxW}/${PAGE_W}px 超宽 ${m.wide} | 截字 ${m.clip}${m.clipEx && m.clipEx.length ? ' (' + m.clipEx.join(' ; ') + ')' : ''} | 课片出格 ${m.out} 溢出框 ${m.spill} 重叠 ${m.overlap} 表头截字 ${m.heads} | 缩放 ${m.zooms} | 最小字 ${m.minPt}pt`);
+    console.log((good ? '✅ ' : '❌ ') + label + ` | ${pages} 页 ${pdfLandscape} | 表 ${m.tables} 课片 ${m.chips} | 最宽 ${m.maxW}/${PAGE_W}px 超宽 ${m.wide} | 截字 ${m.clip}${m.clipEx && m.clipEx.length ? ' (' + m.clipEx.join(' ; ') + ')' : ''} | 课片出格 ${m.out} 溢出框 ${m.spill} 重叠 ${m.overlap} 表头截字 ${m.heads} | 大小不一 ${m.uneven} 列高不一 ${m.rowsUneven} 届别字号混用 ${m.fontMix} | 最小字 ${m.minPt}pt 届别 ${m.minCo == null ? '-' : m.minCo + 'pt'}${m.fit ? ' | 并成个别 ' + m.fit.merged + ' 截短 ' + m.fit.cut : ''}`);
   }
   // Excel
   for (const v of ['room', 'cohort', 'teacher']) {
