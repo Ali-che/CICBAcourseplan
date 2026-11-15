@@ -52,13 +52,14 @@ try {
     ['room-all', '依教室号·全部', null, 'room'],
     ['cohort-all', '依届别·全部', null, 'cohort'],
     ['teacher-all', '依授课老师·全部', null, 'teacher'],
+    ['room-all-noco', '依教室号·全部·不印届别', null, 'room', false],
     ['room-23', '依教室号·只选一组(' + G.room[G.room.length > 6 ? 6 : 0] + ')', { [G.room[G.room.length > 6 ? 6 : 0]]: 1 }, 'room'],   // 有下半就选下半第一组(有傍晚栏,最宽);第三学期没有下半就选第一组
     ['room-2grp', '依教室号·选两组(' + G.room[0] + '＋' + G.room[2] + ')', { [G.room[0]]: 1, [G.room[2]]: 1 }, 'room'],
     ['cohort-1', '依届别·只选 ' + G.cohort.slice(0, 1).join(''), pick(G.cohort, 1), 'cohort'],
     ['teacher-2', '依授课老师·只选 ' + G.teacher.slice(0, 2).join('＋'), pick(G.teacher, 2), 'teacher'],
   ];
-  for (const [id, label, keys, view] of cases) {
-    const ok = await evaluate(`_ttPrintBuild(${JSON.stringify({ view, keys })})`);
+  for (const [id, label, keys, view, co] of cases) {
+    const ok = await evaluate(`_ttPrintBuild(${JSON.stringify({ view, keys, co: co !== false })})`);
     await send('Emulation.setEmulatedMedia', { media: 'print' });
     await send('Emulation.setDeviceMetricsOverride', { width: PAGE_W, height: PAGE_H, deviceScaleFactor: 2, mobile: false });
     await sleep(500);
@@ -70,9 +71,9 @@ try {
       let clip=0,clipEx=[],out=0,minPt=99;
       box.querySelectorAll('.tt-chip').forEach(c=>{
         const z=parseFloat(getComputedStyle(c.closest('table')).zoom)||1;
-        [c].concat([...c.querySelectorAll('.z1,.z2,.z3')]).forEach(e=>{if(e.scrollWidth>e.clientWidth+1||e.scrollHeight>e.clientHeight+1){clip++;if(clipEx.length<3)clipEx.push(e.className+':'+e.innerText.slice(0,30).replace(/\\n/g,'/'));}});
+        [c].concat([...c.querySelectorAll('.z1,.z2,.z3,.z4')]).forEach(e=>{if(e.scrollWidth>e.clientWidth+1||e.scrollHeight>e.clientHeight+1){clip++;if(clipEx.length<3)clipEx.push(e.className+':'+e.innerText.slice(0,30).replace(/\\n/g,'/'));}});
         const td=c.closest('td');if(td){const a=c.getBoundingClientRect(),b=td.getBoundingClientRect();if(a.right>b.right+1.5||a.left<b.left-1.5)out++;}
-        c.querySelectorAll('.z1,.z2,.z3').forEach(e=>{const pt=parseFloat(getComputedStyle(e).fontSize)*z*0.75;if(pt<minPt)minPt=pt;});
+        c.querySelectorAll('.z1,.z2,.z3,.z4').forEach(e=>{const pt=parseFloat(getComputedStyle(e).fontSize)*z*0.75;if(pt<minPt)minPt=pt;});
       });
       const heads=[...box.querySelectorAll('thead th')].filter(e=>e.scrollWidth>e.clientWidth+1).length;
       const spill=[...box.querySelectorAll('.tt-wrap,.tt-ewrap,.tt-ecard,.tt-sheet')].filter(e=>e.scrollHeight>e.clientHeight+1||e.scrollWidth>e.clientWidth+1).length;
