@@ -411,6 +411,8 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 .tt-pill-h.h-up{background:#6366f1}.tt-pill-h.h-dn{background:#d97706}.tt-pill-h.h-both{background:#0e7490}.tt-pill-h.h-na{background:#9ca3af}
 .tt-pill .n{color:#999;font-weight:400}
 .tt-pill:active{opacity:.6}
+/* 还原/重做钮:没有可还原的步骤时变淡 */
+.tt-undo:disabled{opacity:.4;cursor:default}
 #tt-status{position:sticky;top:var(--cic-stickybar-h,0px);z-index:30;background:#fff;padding-bottom:6px}
 .tt-foot{border:1px solid #E5E3F8;background:#FBFAFF;border-radius:8px;padding:2px 12px 6px;margin:0 0 10px}
 .tt-foot details{margin-top:4px}
@@ -4357,6 +4359,46 @@ function _ttMoveCell(id,src,room,day,slot,half){
   sol.warns=_ttWarns(sol.placements,sol.whole);
 }
 function _ttAllowDrop(ev){if(_ttCanEdit()){ev.preventDefault();try{ev.dataTransfer.dropEffect='move';}catch(e){}}}
+// ── 还原／重做(Aj. Tsai 2026-11-15):每次改动课表前先记下当时的课表;Ctrl/⌘+Z 还原,Shift+⌘+Z 或 Ctrl+Y 重做 ──
+// 只记这次打开页面期间的步骤(换学期/重新载入就清空);「存档」「写回排课表」是写进数据库的,还原不了。
+let _ttUndoSt=[],_ttRedoSt=[],_ttKeyBound=false;const TT_UNDO_MAX=50;
+function _ttSnap(){   // 课表快照(字串):求解用的暂存栏位(_开头)不记;manualNotes 只记 id,还原时再接回同一个物件
+  const sol=_ttCache.sol;
+  return JSON.stringify({dirty:!!_ttCache.dirty,sol:sol?Object.assign({},sol,{manualNotes:(sol.manualNotes||[]).map(function(c){return String(c.id);})}):null},function(k,v){return (k&&k.charAt(0)==='_')?undefined:v;});
+}
+function _ttRestore(str){
+  const o=JSON.parse(str),sol=o.sol;
+  if(sol){const by={};(sol.placements||[]).concat(sol.unplaced||[]).forEach(function(c){by[String(c.id)]=c;});sol.manualNotes=(sol.manualNotes||[]).map(function(id){return by[String(id)];}).filter(Boolean);}
+  _ttCache.sol=sol;_ttCache.dirty=!!o.dirty;
+}
+function _ttUndoPush(){   // 在每个会改课表的动作「开头」调用
+  if(!_ttCanEdit())return;const cur=_ttSnap();
+  if(_ttUndoSt.length&&_ttUndoSt[_ttUndoSt.length-1]===cur)return;   // 上一步其实没改到东西 → 不重复记
+  _ttUndoSt.push(cur);if(_ttUndoSt.length>TT_UNDO_MAX)_ttUndoSt.shift();_ttRedoSt=[];
+}
+function _ttUndoApply(str,msg){_ttRestore(str);_ttCellClose();_ttTipHide();renderTtPanel();if(typeof showToast==='function')showToast(msg,{kind:'success'});}
+function ttUndo(){
+  if(!_ttCanEdit())return;const cur=_ttSnap();let prev=null;
+  while(_ttUndoSt.length){const x=_ttUndoSt.pop();if(x!==cur){prev=x;break;}}   // 跳过没改到东西的步骤
+  if(prev==null){renderTtPanel();return;}
+  _ttRedoSt.push(cur);_ttUndoApply(prev,'已还原上一步');
+}
+function ttRedo(){
+  if(!_ttCanEdit()||!_ttRedoSt.length)return;
+  _ttUndoSt.push(_ttSnap());_ttUndoApply(_ttRedoSt.pop(),'已重做');
+}
+function _ttKeyBind(){
+  if(_ttKeyBound)return;_ttKeyBound=true;
+  document.addEventListener('keydown',function(e){
+    if(!(e.ctrlKey||e.metaKey)||e.altKey)return;const k=String(e.key||'').toLowerCase();if(k!=='z'&&k!=='y')return;
+    const pn=document.getElementById('panel-tt');if(!pn||!pn.classList.contains('active')||!_ttCanEdit())return;   // 只在「课表制作」分页
+    const t=e.target,tag=t&&t.tagName,ty=String((t&&t.type)||'').toLowerCase();
+    if(tag==='TEXTAREA'||(t&&t.isContentEditable)||(tag==='INPUT'&&['checkbox','radio','button','submit'].indexOf(ty)<0))return;   // 在输入框里打字 → 保留输入框自己的还原
+    const redo=(k==='y')||e.shiftKey;
+    if(redo?!_ttRedoSt.length:!_ttUndoSt.length)return;
+    e.preventDefault();if(redo)ttRedo();else ttUndo();
+  });
+}
 function _ttEnsureSol(){if(!_ttCache.sol){const tt=_ttCache.tt;_ttCache.sol=tt?_ttSolutionFromSaved(_ttCache.sem,tt):{sem:_ttCache.sem,rooms:_ttRoomsSorted(),placements:[],unplaced:[],manualNotes:[],interns:[],warns:[]};}}
 function _ttMove(id,room,day,slot,half){
   const sol=_ttCache.sol;if(!sol)return;
@@ -4374,7 +4416,7 @@ function _ttDrop(ev,room,day,slot,half){
   if(ev&&ev.preventDefault)ev.preventDefault();if(!_ttCanEdit())return;
   let id=_ttDragId;if(!id){try{id=ev.dataTransfer.getData('text/plain');}catch(e){}}
   const src=_ttDragSrc;_ttDragId=null;_ttDragSrc=null;if(!id)return;
-  _ttEnsureSol();
+  _ttUndoPush();_ttEnsureSol();
   const exist=_ttCache.sol.placements.find(function(x){return String(x.id)===String(id);});
   if(src&&exist)_ttMoveCell(String(id),src,room,day,slot,half);   // 拖网格里已排的「那一节」→ 只动它(含 Capstone)
   else _ttMove(String(id),room,day,slot,half);                                  // 拖未排胶囊 / Capstone → 整门(含凑 2 节)
@@ -4402,7 +4444,7 @@ function _ttDropEntity(ev,day,slot,htag){
   if(ev&&ev.preventDefault)ev.preventDefault();if(!_ttCanEdit())return;
   let id=_ttDragId;if(!id){try{id=ev.dataTransfer.getData('text/plain');}catch(e){}}
   const src=_ttDragSrc;_ttDragId=null;_ttDragSrc=null;if(!id)return;
-  _ttEnsureSol();
+  _ttUndoPush();_ttEnsureSol();
   const half=(htag==='下')?'dn':'up',exist=_ttCache.sol.placements.find(function(x){return String(x.id)===String(id);});
   if(src&&exist)_ttMoveCellAuto(String(id),src,day,slot,half);   // 只动被拖的那一节(自动挑教室,含 Capstone)
   else _ttMoveAuto(String(id),day,slot,half);
@@ -4621,7 +4663,7 @@ function _ttCellSave(){
   const p=(sol.placements||[]).find(function(x){return String(x.id)===String(_ttEdit.id);});if(!p){_ttCellClose();return;}
   const tc=document.getElementById('ttcm-tc').value,room=document.getElementById('ttcm-room').value,day=document.getElementById('ttcm-day').value,slot=document.getElementById('ttcm-slot').value;
   const half=(document.getElementById('ttcm-half')||{}).value;
-  p.tc=tc;
+  _ttUndoPush();p.tc=tc;
   if(!sol.whole&&(half==='up'||half==='dn'||half==='both'))p.half=half;   // 弹窗改上下半 → 整门课移到那一半
   if(!p.cells)p.cells=[];
   let ci=p.cells.findIndex(function(cs){return cs[0]===_ttEdit.day&&cs[1]===_ttEdit.slot;});
@@ -4638,6 +4680,7 @@ function _ttAddSession(){
   const p=(sol.placements||[]).find(function(x){return String(x.id)===String(_ttEdit.id);});if(!p){_ttCellClose();return;}
   if(!p.cells)p.cells=[];
   if(p.cells.length>=2){alert('这门课已有 2 节。');return;}
+  _ttUndoPush();
   const uh=(p.half==='both')?'up':(p.half||'up');
   const first=p.cells[0]||[(p.isCap?'周五':'周一'),'am'];
   const room=_ttCR(p,p.cells[0])||p.room||'';
@@ -4703,6 +4746,7 @@ function _ttUnDropAttr(){return _ttCanEdit()?' ondragover="_ttAllowDrop(event)" 
 function _ttUnplaceCourse(id){
   _ttEnsureSol();const sol=_ttCache.sol;if(!sol)return;
   const i=(sol.placements||[]).findIndex(function(x){return String(x.id)===String(id);});if(i<0)return;   // 本来就在未排区
+  _ttUndoPush();
   const p=sol.placements[i];sol.placements.splice(i,1);
   sol.unplaced.push({id:String(p.id),course:p.course,cls:p.cls,tc:p.tc,count:p.count,half:p.half,cohorts:p.cohorts||[],dept:p.dept||'',credit:p.credit||0,isCap:!!p.isCap,note:p.note||{raw:p.nt||''},reason:'手动移回未排区',nt:p.nt||''});
   sol.warns=_ttWarns(sol.placements,sol.whole);_ttCache.dirty=true;renderTtPanel();
@@ -4737,6 +4781,7 @@ function _ttCellTxt(cs){return cs[0]+(cs[1]==='am'?'上午':'下午')+'@'+cs[2];
 // 照建议把一门课改到另一半并排满 2 节(以当下课表重新找位;只改课表,要同步排课表再按「写回排课表」)
 function ttApplyHalfHint(id){
   if(!_ttCanEdit())return;_ttEnsureSol();const sol=_ttCache.sol;if(!sol||sol.whole)return;
+  _ttUndoPush();
   let p=sol.placements.find(function(x){return String(x.id)===String(id);}),ui=-1;
   if(!p){ui=sol.unplaced.findIndex(function(x){return String(x.id)===String(id);});if(ui<0)return;const u=sol.unplaced[ui];p={id:String(u.id),course:u.course,cls:u.cls,tc:u.tc,count:u.count,cohorts:u.cohorts||[],dept:u.dept||'',credit:u.credit||0,isCap:!!u.isCap,half:u.half,room:'',cells:[],nt:u.nt||'',note:u.note||{raw:u.nt||''}};}
   if(p.half!=='up'&&p.half!=='dn')return;
@@ -4817,7 +4862,8 @@ function _ttFootDetails(sol){
   if(left){const hp=[];if(un.length)hp.push('未排 '+un.length+' 门');if(partial.length)hp.push('只排到 1 节 '+partial.length+' 门');
     left='<div class="tt-iss-h bad">'+(hp.join(' · ')||'课太多、时段装不下')+'<span> · 按原因分组；鼠标移到课码看原因与建议，点一下跳到课表</span></div>'+left;}
   let right='';
-  const notes=(sol.manualNotes||[]).map(function(c){const n=_ttNoteOf(c,sol);return {c:c,n:n,kind:_ttNoteKind(c,n)};}),todo=notes.filter(function(o){return o.kind==='todo';}),other=notes.filter(function(o){return o.kind!=='todo';});
+  const curBy={};(sol.placements||[]).concat(un).forEach(function(c){curBy[String(c.id)]=c;});
+  const notes=(sol.manualNotes||[]).map(function(c){c=curBy[String(c.id)]||c;const n=_ttNoteOf(c,sol);return {c:c,n:n,kind:_ttNoteKind(c,n)};}),todo=notes.filter(function(o){return o.kind==='todo';}),other=notes.filter(function(o){return o.kind!=='todo';});
   if(todo.length)right+='<div class="tt-iss-h note">📝 备注待看 '+todo.length+' 门<span> · 点一下跳到课表</span></div>'+todo.map(function(o){const c=o.c;return '<div class="tt-side-item note jump" onclick="_ttJumpTo(\''+jsq(String(c.id))+'\')"><b>'+_ttCC(c)+'</b>'+(c.room?' · 暂排 '+eh(c.room):'')+'<br><span class="t">'+eh(o.n.raw||c.nt||'')+'</span>'+_ttNoteApplied(c,o.n)+'</div>';}).join('');
   if(other.length)right+='<details class="tt-iss-fold"'+_ttFoldAttr('notes')+'><summary>其他备注 '+other.length+' 条（已照办／变更记录，不用处理）</summary>'+other.map(function(o){const c=o.c;return '<div class="tt-side-item log jump" onclick="_ttJumpTo(\''+jsq(String(c.id))+'\')"><b>'+_ttCC(c)+'</b>：'+eh(o.n.raw||c.nt||'')+(o.kind==='done'?' <span class="ok">✓ 已照办</span>':'')+'</div>';}).join('')+'</details>';
   const lg=_ttLang,lgCo=Object.keys(lg.ke||{}).filter(function(co){return lg.kh&&lg.kh[co];}).sort();
@@ -4898,7 +4944,7 @@ function _ttBodyHtml(sol){
   const main=((view==='room'&&_ttCanEdit())?'<div style="font-size:11px;color:#888;margin:0 2px 6px">💡 拖动课片微调；也可把下方未排的胶囊拖进网格。撞堂／超容量即时标红，改完按 💾 存档。'+(sol.tries?' · 🧠 自动排试了 '+sol.tries+' 种先后顺序，取未排最少的一版':'')+'</div>':'')+_ttMainHtml(sol,view);
   return _ttDriftBanner(drift)+_ttFootDetails(sol)+_ttInternsBar(sol)+_ttLegendHtml()+main+_ttPillsBar(sol,view);   // 视图切换已移到 #tt-status(sticky)
 }
-function ttAutoSolve(){if(!_ttCanEdit())return;const sem=_ttCache.sem;if(!sem)return;_ttCache.sol=_ttSolve(sem);_ttCache.dirty=true;renderTtPanel();}
+function ttAutoSolve(){if(!_ttCanEdit())return;const sem=_ttCache.sem;if(!sem)return;_ttUndoPush();_ttCache.sol=_ttSolve(sem);_ttCache.dirty=true;renderTtPanel();}
 // #8:把课表里排定的上/下半写回排课表 schD(Head/Admin,需确认;改写官方排课)
 async function ttWriteHalfBack(){
   if(!_ttCanEdit())return;
@@ -4991,6 +5037,7 @@ async function renderTtPanel(force){
   try{document.documentElement.style.setProperty('--cic-stickybar-h',(((document.getElementById('sticky-bar')||{}).offsetHeight)||0)+'px');}catch(e){}   // 工具列 sticky 贴在全站 sticky 头下面(Aj. Tsai 2026-11-15)
   try{if(!_ttDEBound){document.addEventListener('dragend',_ttDragEnd);_ttDEBound=true;}}catch(e){}   // 拖拽结束统一清状态
   try{_ttTipBind();}catch(e){}   // 课片浮出卡(届别明细)
+  try{_ttKeyBind();}catch(e){}   // Ctrl/⌘+Z 还原、Shift+⌘+Z / Ctrl+Y 重做
   const sem=(document.getElementById('tt-sem')||{}).value||'';
   const st=document.getElementById('tt-status'),bd=document.getElementById('tt-body'),nn=document.getElementById('tt-n');
   if(!st||!bd)return;
@@ -4998,7 +5045,7 @@ async function renderTtPanel(force){
   if(!_ttCache.refs){try{const r=await gasGet({action:'ttRefs'});if(r&&r.success)_ttCache.refs={rooms:r.rooms||[],cat:r.cat||{}};}catch(e){}if(!_ttCache.refs)_ttCache.refs={rooms:[],cat:{}};}
   if(force||_ttCache.sem!==sem){
     st.innerHTML='<div style="color:#888;padding:10px">⏳ 载入中…</div>';bd.innerHTML='';
-    _ttCache.sem=sem;_ttCache.tt=null;_ttCache.sol=null;_ttCache.dirty=false;_ttCache.dates=null;
+    _ttCache.sem=sem;_ttCache.tt=null;_ttCache.sol=null;_ttCache.dirty=false;_ttCache.dates=null;_ttUndoSt=[];_ttRedoSt=[];   // 换学期/重新载入 → 还原记录清空
     try{const r=await gasGet({action:'timetable',sem:sem});if(r&&r.success){_ttCache.tt=r.tt||null;_ttCache.dates=r.dates||null;}}catch(e){}
   }
   const courses=_ttCourses(sem),n=courses.length,tt=_ttCache.tt,canEdit=_ttCanEdit();
@@ -5008,7 +5055,7 @@ async function renderTtPanel(force){
     st.innerHTML='<div style="padding:14px;background:#FEF9ED;border-radius:8px;color:#7a5b16">教室库是空的。请管理员先到「后台操作 › 教室库」加教室（或先在 Supabase 跑 migration 008）。</div>';bd.innerHTML='';return;
   }
   let tools='';
-  if(canEdit)tools='<button class="btn btn-p btn-sm" onclick="ttAutoSolve()" title="自动把本学期的课排进时段+教室">⚡ 一键自动排</button>'+((_ttCache.sol&&_ttCache.dirty)?' <button class="btn btn-sm" onclick="ttSave()" title="把当前排好的课表存档">💾 存档</button>':'');
+  if(canEdit)tools='<button class="btn btn-p btn-sm" onclick="ttAutoSolve()" title="自动把本学期的课排进时段+教室">⚡ 一键自动排</button>'+((_ttUndoSt.length||_ttRedoSt.length)?' <button class="btn btn-sm tt-undo" onclick="ttUndo()" title="还原上一步（Ctrl+Z／⌘Z）；可连续还原 '+_ttUndoSt.length+' 步"'+(_ttUndoSt.length?'':' disabled')+'>↶ 还原</button> <button class="btn btn-sm tt-undo" onclick="ttRedo()" title="重做（Ctrl+Y／⇧⌘Z）"'+(_ttRedoSt.length?'':' disabled')+'>↷ 重做</button>':'')+((_ttCache.sol&&_ttCache.dirty)?' <button class="btn btn-sm" onclick="ttSave()" title="把当前排好的课表存档">💾 存档</button>':'');
   if(sol)tools+=' <button class="btn btn-sm" onclick="ttPrint()" title="上/下半各印一张 A4（抬头带半学期日期）">🖨️ 列印</button>';
   if(canEdit&&sol)tools+=' <button class="btn btn-sm" onclick="ttWriteHalfBack()" title="把课表里排定的上/下半与老师更新回「排课表」（会修改排课表，需确认）" style="color:#854F0B;border-color:#FCD34D">↩ 写回排课表(上下半+老师)</button>';
   st.innerHTML='<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 12px;background:#F5F4FE;border-radius:8px">'+
