@@ -411,6 +411,11 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 .tt-pill:active{opacity:.6}
 .tt-internbar{border:1px solid #B9D4F5;background:#F2F7FE;border-radius:8px;padding:8px 12px;margin:0 0 10px;font-size:12.5px;color:#1e3a8a;line-height:1.6}
 .tt-internbar span{color:#33507f}
+/* 「跳到」下拉与分组标题 */
+.tt-jump-l{font-size:11px;color:#666;font-weight:500;margin:0 0 0 10px}
+.tt-jump{width:auto;max-width:220px;padding:3px 6px;font-size:12px}
+.tt-sechd{font-size:16px;font-weight:700;color:#3C3489;margin:16px 2px 7px;border-bottom:1.5px solid #D9D5F5;padding-bottom:4px}
+.tt-secflash{outline:3px solid #534AB7;outline-offset:-2px;background:#EEEDFE!important}
 /* 改半方案弹窗 */
 .ttplan-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9999;align-items:center;justify-content:center}
 .ttplan-card{background:#fff;border-radius:12px;padding:18px 20px;width:460px;max-width:92vw;max-height:86vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);font-size:12.5px;line-height:1.6;color:#333}
@@ -3944,6 +3949,28 @@ function _ttCredit(r,cat){if(_ttIsCap(r))return 6;const c=cat[String(r.course||'
 function _ttRoomsSorted(){const rs=((_ttCache.refs&&_ttCache.refs.rooms)||[]).slice();return rs.sort((a,b)=>((a.sort==null?9999:a.sort)-(b.sort==null?9999:b.sort))||String(a.code).localeCompare(String(b.code)));}
 // 画面上的教室顺序:照教室号码由小到大(Aj. Tsai 2026-11-15)。只管显示;自动排挑教室的先后不受影响(仍用 _ttRoomsSorted + 容量)
 function _ttRoomsByNo(rooms){return (rooms||[]).slice().sort(function(a,b){const x=parseInt(a.code,10),y=parseInt(b.code,10);return ((isNaN(x)?1e9:x)-(isNaN(y)?1e9:y))||String(a.code).localeCompare(String(b.code));});}
+// 教室分组(Aj. Tsai 2026-11-15):教室号去掉最后的「第几间」=栋+楼 → 231~236 是「23」一组、391/392 是「39」、51301~51305 是「513」
+function _ttRoomGroup(code){const m=String(code).match(/^\d+/);if(!m)return '其他';const d=m[0];return d.length>=5?d.slice(0,3):(d.length>=4?d.slice(0,2):(d.length>=3?d.slice(0,2):d));}
+// 「跳到」下拉:依教室=教室分组(分上/下半两张表)、依届别/依授课老师=专业;选了就捲到那一组并闪一下(不是筛选)
+function _ttJumpFill(){
+  const sel=document.getElementById('tt-jump');if(!sel)return;
+  const els=[...document.querySelectorAll('#tt-body [data-tt-sec]')];let h='<option value="">请选择</option>',og=null;
+  els.forEach(function(e){const g=e.getAttribute('data-tt-og')||'';if(g!==og){if(og)h+='</optgroup>';if(g)h+='<optgroup label="'+eh(g)+'">';og=g;}h+='<option value="'+eh(e.getAttribute('data-tt-sec'))+'">'+eh(e.getAttribute('data-tt-lab')||'')+'</option>';});
+  if(og)h+='</optgroup>';
+  sel.innerHTML=h;sel.disabled=!els.length;
+}
+function ttJumpSec(val){
+  const sel=document.getElementById('tt-jump');if(sel)sel.value='';if(!val)return;
+  const el=[...document.querySelectorAll('#tt-body [data-tt-sec]')].find(function(e){return e.getAttribute('data-tt-sec')===val;});if(!el)return;
+  const off=(((document.getElementById('sticky-bar')||{}).offsetHeight)||0)+(((document.getElementById('tt-status')||{}).offsetHeight)||0)+8;   // 两层固定在上方的工具列
+  const wrap=el.closest('.tt-wrap');let hl=[el];
+  if(wrap){   // 依教室:表格自己有卷轴 → 先在表内捲到那一组,再把整张表捲进画面
+    const th=wrap.querySelector('thead');wrap.scrollTop+=el.getBoundingClientRect().top-wrap.getBoundingClientRect().top-((th&&th.offsetHeight)||0);
+    window.scrollBy({top:wrap.getBoundingClientRect().top-off});
+    const g=el.getAttribute('data-tt-grp');hl=[...wrap.querySelectorAll('[data-tt-grp]')].filter(function(e){return e.getAttribute('data-tt-grp')===g;});
+  }else window.scrollBy({top:el.getBoundingClientRect().top-off});   // 直接跳(平滑捲动在长页面/背景分页会停在半路)
+  hl.forEach(function(e){e.classList.add('tt-secflash');});setTimeout(function(){hl.forEach(function(e){e.classList.remove('tt-secflash');});},1600);
+}
 function _ttRoomCap(code){const rm=((_ttCache.refs&&_ttCache.refs.rooms)||[]).find(r=>String(r.code)===String(code));return rm?rm.cap:0;}
 function _ttMaxCap(rooms){return rooms.reduce((m,r)=>Math.max(m,r.cap||0),0);}
 // ── 备注解析(§5.5):捞 教室号 / 单一周几;模糊语气 → 待人工 ──
@@ -4478,8 +4505,12 @@ function _ttGridHtml(h,sol){
   let th1='<th class="tt-rm">教室</th>',th2='<th class="tt-rm"></th>';
   days.forEach(function(d){th1+='<th class="ds" colspan="'+(evDay[d]?3:2)+'">'+eh(d)+'</th>';th2+='<th class="ds">上午</th><th'+(evDay[d]?' title="一般课 13:30–16:30；Capstone 12:00–15:00"':'')+'>下午</th>'+(evDay[d]?'<th title="Capstone 15:00–18:00">傍晚</th>':'');});
   let body='';
+  const grpOf={},grpCodes={};rooms.forEach(function(rm){const g=_ttRoomGroup(rm.code);grpOf[rm.code]=g;(grpCodes[g]=grpCodes[g]||[]).push(String(rm.code).match(/^\d+/)?String(rm.code).match(/^\d+/)[0]:String(rm.code));});
+  const seenGrp={},ogName=sol.whole?'':(h==='dn'?'下半学期':'上半学期');
   rooms.forEach(function(rm){
-    let row='<td class="tt-rm">'+eh(rm.code)+' <small>·'+rm.cap+(rm.pref_dept?'·'+eh(rm.pref_dept):'')+'</small></td>';
+    const g=grpOf[rm.code],first=!seenGrp[g];seenGrp[g]=1;const gc=grpCodes[g];
+    const secAttr=' data-tt-grp="'+h+'|'+eh(g)+'"'+(first?' data-tt-sec="room|'+h+'|'+eh(g)+'" data-tt-og="'+ogName+'" data-tt-lab="'+eh(g)+' 开头（'+eh(gc.length>1?gc[0]+'～'+gc[gc.length-1]:gc[0])+'）"':'');
+    let row='<td class="tt-rm"'+secAttr+'>'+eh(rm.code)+' <small>·'+rm.cap+(rm.pref_dept?'·'+eh(rm.pref_dept):'')+'</small></td>';
     cols.forEach(function(c){
       const d=c[0],s=c[1],arr=occ[rm.code+'|'+d+'|'+s]||[],sat=(d==='周六')?' sat':'';
       const drop=_ttCanEdit()?(' ondragover="_ttAllowDrop(event)" ondrop="_ttDrop(event,\''+jsq(rm.code)+'\',\''+jsq(d)+'\',\''+s+'\',\''+h+'\')"'):'';
@@ -4608,7 +4639,8 @@ function _ttMoveCellAuto(id,src,day,slot,half){
 }
 // ── 检视/列印三种方式:依教室号(网格) / 依届别 / 依老师 ──
 function _ttHalfTags(p){return p.half==='both'?['上','下']:(p.half==='up'?['上']:['下']);}
-function _ttTeacherDept(tc,sol){const cnt={};(sol.placements||[]).forEach(function(p){if(p.tc===tc&&p.dept){cnt[p.dept]=(cnt[p.dept]||0)+1;}});let best='其他',m=0;Object.keys(cnt).forEach(function(d){if(cnt[d]>m){m=cnt[d];best=d;}});return best;}
+function _ttTeacherDept(tc,sol){const tt0=(typeof T!=='undefined'?T:[]).find(function(x){return x.n===tc;});if(tt0&&tt0.d)return tt0.d;   // 老师所属专业以老师库为准(全站一致);老师库查不到才看他教的课
+  const cnt={};(sol.placements||[]).forEach(function(p){if(p.tc===tc&&p.dept){cnt[p.dept]=(cnt[p.dept]||0)+1;}});let best='其他',m=0;Object.keys(cnt).forEach(function(d){if(cnt[d]>m){m=cnt[d];best=d;}});return best;}
 // 依届别:左上 @教室、中间 课程-班级(粗)、右下 老师。依老师:左上 课程-班级(粗)、中间 届别·人数、右下 @教室。按专业上色、可拖
 function _ttMiniChip(p,mode,bad,src){
   const bd=(bad&&bad[p.id])?' bad':'',cl=_ttCohLabel(p.cohorts),edit=_ttCanEdit(),rm=src?_ttCR(p,src):(p.room||'?');
@@ -4669,7 +4701,7 @@ function _ttEntityCards(sol,mode){   // mode:'cohort'|'teacher'
   if(!Object.keys(byDept).length)return '<div style="color:#888;padding:10px">没有可显示的'+(mode==='cohort'?'届别':'老师')+'。</div>';
   let h='';
   Object.keys(byDept).sort().forEach(function(dep){
-    h+='<div style="font-size:16px;font-weight:700;color:#3C3489;margin:16px 2px 7px;border-bottom:1.5px solid #D9D5F5;padding-bottom:4px">专业 '+eh(dep)+'</div>';
+    h+='<div class="tt-sechd" data-tt-sec="dep|'+eh(dep)+'" data-tt-lab="'+eh(dep)+'（'+byDept[dep].length+(mode==='cohort'?' 个届别':' 位老师')+'）">专业 '+eh(dep)+'</div>';
     byDept[dep].sort().forEach(function(key){const e=grp[key];h+='<div class="tt-ecard"><div class="tt-ehdr">'+(mode==='cohort'?'届别 ':'授课老师 ')+eh(key)+'</div>'+_ttEntityTable(e.map,e.hasSat,e.hasSun,sol.whole,e.ev)+(e.unplaced.length?('<div class="tt-pillbar"'+_ttUnDropAttr()+' style="margin-top:6px">'+'<span style="font-size:11px;color:#b42318;font-weight:700;margin-right:2px">⚠ 未排'+(_ttCanEdit()?'（拖进上面课表）':'')+'：</span>'+e.unplaced.map(_ttPillHtml).join('')+'</div>'):'')+'</div>';});
   });
   return h;
@@ -4684,7 +4716,7 @@ function _ttMainHtml(sol,view){
 function _ttViewToggle(){
   const v=_ttCache.view||'room';
   const b=function(id,label){return '<button class="btn btn-sm'+(v===id?' btn-p':'')+'" onclick="_ttSetView(\''+id+'\')">'+label+'</button>';};
-  return '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:2px 2px 8px"><span style="font-size:11.5px;color:#888">检视／列印方式：</span>'+b('room','依教室号')+b('cohort','依届别')+b('teacher','依授课老师')+'</div>';
+  return '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:2px 2px 8px"><span style="font-size:11.5px;color:#888">检视／列印方式：</span>'+b('room','依教室号')+b('cohort','依届别')+b('teacher','依授课老师')+'<label class="tt-jump-l" for="tt-jump">'+(v==='room'?'跳到教室区':'跳到专业')+'</label><select id="tt-jump" class="tt-jump" onchange="ttJumpSec(this.value)" title="选了就捲到那一组（不是筛选）"><option value="">请选择</option></select></div>';
 }
 function _ttSetView(v){_ttCache.view=v;renderTtPanel();}
 // ① 点课片 → 弹「编辑这一节」:改 授课老师 / 教室 / 周几·时段(Aj. Tsai 2026-11-15)
@@ -5351,6 +5383,7 @@ async function renderTtPanel(force){
     bd.innerHTML='<div style="padding:18px;background:#FEF9ED;border-radius:8px;color:#7a5b16;line-height:1.7">本学期共 <b>'+n+'</b> 门课待排。'+(canEdit?'点 <b>⚡ 一键自动排</b> 自动排进时段+教室（排不下的会标红留空、列到右侧「待处理」；🖨️ 列印在下一阶段加入）。':'尚未排课（等 Head of Administration 或管理员排）。')+'</div>';return;
   }
   bd.innerHTML=_ttBodyHtml(sol);
+  _ttJumpFill();   // 依现在画面上的分组填「跳到」下拉
 }
 
 function trackDelete(type,id){
