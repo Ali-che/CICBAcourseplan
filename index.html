@@ -3942,6 +3942,7 @@ function _ttSolve(sem){
     else{c.half='';c.hFix=false;}
   });
   if(!whole)_ttAutoHalf(list);
+  const _capFriTc={};list.forEach(function(c){if(c.isCap&&c.tc)_capFriTc[c.tc]=1;});   // Capstone 老师:周五整天留给 Capstone,别课不排周五(Aj. Tsai 2026-11-15)
   const occ={up:{},dn:{}},tb={up:{},dn:{}},cb={up:{},dn:{}};
   function halves(c){return c.half==='both'?['up','dn']:[c.half];}
   function free(h,rm,d,s,c){
@@ -3966,6 +3967,7 @@ function _ttSolve(sem){
     }else{
       // 每门课一周 2 个时段 = 6 小时(Aj. Tsai);找同一间教室里 2 个老师/届别都空的时段(优先不同天、同一时段)
       const hs=halves(c);let days=(hs.indexOf('dn')>=0?TT_DN_DAYS:TT_UP_DAYS).filter(d=>d!=='周六');
+      if(_capFriTc[c.tc])days=days.filter(function(d){return d!=='周五';});   // 该老师教 Capstone → 周五不排别的课(整天留给 Capstone)
       if(c.note.days.length===1&&c.note.days[0]!=='周六'&&c.note.days[0]!=='周日')days=days.filter(d=>d===c.note.days[0]);
       let oneRoom=null,oneCell=null;   // 凑不到 2 节时的「至少 1 节」后备(不锁死 2 节 — Aj. Tsai)
       for(var r2=0;r2<cand.length&&!placed;r2++){
@@ -4405,12 +4407,19 @@ async function ttWriteHalfBack(){
   if(!sem||!sol){alert('请先选学期并排课');return;}
   const M={up:'上半学期',dn:'下半学期',both:'全学期'};
   const live={};(typeof schD!=='undefined'?schD:[]).filter(function(r){return r.sem===sem;}).forEach(function(r){live[String(r.id)]=r;});
-  const changes=[];
-  sol.placements.forEach(function(p){const r=live[String(p.id)];if(!r)return;const want=M[p.half];if(!want)return;if((r.half||'')!==want)changes.push({id:String(p.id),course:p.course,from:(r.half||'待定'),to:want});});
-  if(!changes.length){alert('课表的上下半与排课表已一致，无需写回。');return;}
-  if(!confirm('确定把课表制作里的上下半「写回排课表」？\n这会修改排课表里这 '+changes.length+' 门课的上下半：\n\n'+changes.slice(0,12).map(function(c){return c.course+'：'+c.from+' → '+c.to;}).join('\n')+(changes.length>12?('\n…等 '+changes.length+' 门'):'')+'\n\n（排课表由主任维护，写回后秘书处对账/漂移也会反映。）'))return;
+  const changes=[];   // 把课表的「上下半 + 老师」差异一起写回(Aj. Tsai 2026-11-15)
+  sol.placements.forEach(function(p){
+    const r=live[String(p.id)];if(!r)return;
+    const fields={},desc=[],want=M[p.half];
+    if(want&&(r.half||'')!==want){fields.half=want;desc.push('上下半 '+(r.half||'待定')+'→'+want);}
+    const wtc=(p.tc||'');
+    if((r.tc||'')!==wtc){fields.tc=wtc;desc.push('老师 '+(r.tc||'待定')+'→'+(wtc||'待定'));}
+    if(Object.keys(fields).length)changes.push({id:String(p.id),course:p.course,fields:fields,desc:desc.join('、')});
+  });
+  if(!changes.length){alert('课表的上下半与老师都与排课表一致，无需写回。');return;}
+  if(!confirm('把课表制作里的「上下半 + 老师」写回排课表？\n这会修改排课表里这 '+changes.length+' 门课：\n\n'+changes.slice(0,12).map(function(c){return c.course+'：'+c.desc;}).join('\n')+(changes.length>12?('\n…等 '+changes.length+' 门'):'')+'\n\n（排课表由主任维护，写回后秘书处对账/漂移也会反映。）'))return;
   let ok=0,fail=0;
-  for(const c of changes){const r=await gasPost('updateRecord',{type:'schedule',id:c.id,fields:{half:c.to}});if(r&&r.success){ok++;const lr=live[c.id];if(lr)lr.half=c.to;}else fail++;}
+  for(const c of changes){const r=await gasPost('updateRecord',{type:'schedule',id:c.id,fields:c.fields});if(r&&r.success){ok++;const lr=live[c.id];if(lr){if(c.fields.half!=null)lr.half=c.fields.half;if(c.fields.tc!=null)lr.tc=c.fields.tc;}}else fail++;}
   try{if(typeof _tabDirty!=='undefined')_tabDirty.sch=true;}catch(e){}
   if(typeof showToast==='function')showToast('已写回排课表 '+ok+' 门'+(fail?('、失败 '+fail):''),{kind:fail?'error':'success'});
   else alert('已写回 '+ok+' 门'+(fail?('、失败 '+fail):''));
@@ -4499,7 +4508,7 @@ async function renderTtPanel(force){
   let tools='';
   if(canEdit)tools='<button class="btn btn-p btn-sm" onclick="ttAutoSolve()" title="自动把本学期的课排进时段+教室">⚡ 一键自动排</button>'+((_ttCache.sol&&_ttCache.dirty)?' <button class="btn btn-sm" onclick="ttSave()" title="把当前排好的课表存档">💾 存档</button>':'');
   if(sol)tools+=' <button class="btn btn-sm" onclick="ttPrint()" title="上/下半各印一张 A4（抬头带半学期日期）">🖨️ 列印</button>';
-  if(canEdit&&sol)tools+=' <button class="btn btn-sm" onclick="ttWriteHalfBack()" title="把课表里排定的上/下半更新回「排课表」（会修改排课表，需确认）" style="color:#854F0B;border-color:#FCD34D">↩ 上下半写回排课表</button>';
+  if(canEdit&&sol)tools+=' <button class="btn btn-sm" onclick="ttWriteHalfBack()" title="把课表里排定的上/下半与老师更新回「排课表」（会修改排课表，需确认）" style="color:#854F0B;border-color:#FCD34D">↩ 写回排课表(上下半+老师)</button>';
   st.innerHTML='<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 12px;background:#F5F4FE;border-radius:8px">'+
     '<span style="font-size:12.5px;color:#3C3489">'+(tt?('已存档 <b>v'+tt.version+'</b> · '+eh(tt.saved_by||'')+' · '+_recoFmtTime(tt.saved_at)+' · '+(tt.placements?tt.placements.length:0)+' 门'):'<b>尚未存档</b>')+((_ttCache.sol&&_ttCache.dirty)?' · <span style="color:#b45309">有未存档改动</span>':'')+'</span>'+
     '<span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="font-size:12px;color:'+(canEdit?'#1b7a5a':'#999')+'">'+(canEdit?'你可排/存':'只读')+'</span>'+tools+'</span></div>'+
