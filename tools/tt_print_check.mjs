@@ -78,7 +78,7 @@ try {
       // 一致性:同一张表里,单独一格一片的课片要同宽同高(±1px);每一列同高;届别行同一个字号
       let uneven=0,rowsUneven=0,fontMix=0;
       tabs.forEach(t=>{
-        const cs=[...t.querySelectorAll('td:not(.bad) .tt-chip')];if(cs.length){const hs=cs.map(c=>Math.round(c.getBoundingClientRect().height)),ws=cs.map(c=>Math.round(c.getBoundingClientRect().width));if(Math.max(...hs)-Math.min(...hs)>1)uneven++;const byCol={};cs.forEach((c,k)=>{const ci=c.closest('td').cellIndex;(byCol[ci]=byCol[ci]||[]).push(ws[k]);});if(Object.values(byCol).some(a=>Math.max(...a)-Math.min(...a)>1))uneven++;}
+        const cs=[...t.querySelectorAll('td:not(.multi) .tt-chip')];if(cs.length){const hs=cs.map(c=>Math.round(c.getBoundingClientRect().height)),ws=cs.map(c=>Math.round(c.getBoundingClientRect().width));if(Math.max(...hs)-Math.min(...hs)>1)uneven++;const byCol={};cs.forEach((c,k)=>{const ci=c.closest('td').cellIndex;(byCol[ci]=byCol[ci]||[]).push(ws[k]);});if(Object.values(byCol).some(a=>Math.max(...a)-Math.min(...a)>1))uneven++;}
         const rs=[...t.querySelectorAll('tbody tr')].map(r=>Math.round(r.getBoundingClientRect().height));if(rs.length&&Math.max(...rs)-Math.min(...rs)>1)rowsUneven++;
         const fs=new Set([...t.querySelectorAll('.zl')].filter(e=>getComputedStyle(e).display!=='none').map(e=>getComputedStyle(e).fontSize));if(fs.size>1)fontMix++;
       });

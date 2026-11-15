@@ -355,6 +355,9 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 .tt-chip.cd{background:#FDF2F8;border:1px solid #FBCFE8;color:#9d174d}
 .tt-chip.cap{background:#FEF9E7;border:1px solid #FDE68A;color:#92400e}
 .tt-chip.bad{outline:2px solid #e11d48;outline-offset:-1px}
+/* 同一时段有多门课、要人工确认的格子:整格红框+淡红底+右上角标(Aj. Tsai 2026-11-16 要显眼) */
+.tt-cell.bad{position:relative;background:#FFF1F2!important;box-shadow:inset 0 0 0 3px #e11d48;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.tt-cell.bad::after{content:'⚠ 同时段 ' attr(data-n) ' 门';position:absolute;top:0;right:0;font-size:9.5px;font-weight:700;line-height:1.5;color:#fff;background:#e11d48;border-radius:0 0 0 6px;padding:0 6px;pointer-events:none;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .tt-chip.tt-flash{outline:3px solid #534AB7;outline-offset:-1px;box-shadow:0 0 0 4px rgba(83,74,183,.28)}
 .tt-chip.tt-drag{cursor:pointer;user-select:none;-webkit-user-select:none}
 .tt-chip.tt-drag:hover{outline:2px solid #AFA9EC;outline-offset:-1px}
@@ -543,9 +546,10 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 #tt-print .tt-grid thead th{font-size:8pt;padding:3pt 2pt;white-space:normal}
 #tt-print .tt-grid tbody tr{break-inside:avoid;page-break-inside:avoid}
 #tt-print .tt-chip{display:flex!important;flex-direction:column;justify-content:center;box-sizing:border-box;width:100%;height:calc(var(--tt-rowh) - 4px)!important;min-height:0!important;margin:0!important;padding:2px 3px!important;overflow:hidden!important;font-size:7pt;box-shadow:none;break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-#tt-print td.bad{white-space:nowrap;font-size:0}                                  /* 同一格两门(撞堂/个别学生撞课):左右并排、各占一半宽,高度不变 */
-#tt-print td.bad .tt-chip{display:inline-flex!important;width:calc(50% - 3px);vertical-align:top;white-space:normal}
-#tt-print td.bad .tt-chip+.tt-chip{margin-left:2px!important}
+#tt-print td.multi{white-space:nowrap;font-size:0}                                  /* 同一格两门(撞堂/个别学生撞课):左右并排、各占一半宽,高度不变 */
+#tt-print td.multi .tt-chip{display:inline-flex!important;width:calc(50% - 3px);vertical-align:top;white-space:normal}
+#tt-print td.multi .tt-chip+.tt-chip{margin-left:2px!important}
+#tt-print .tt-cell.bad::after{font-size:5.5pt;line-height:1.3;padding:0 3pt}
 #tt-print.noco .tt-chip{padding:1px 3px!important}
 #tt-print.noco .tt-grid tbody .tt-rm{font-size:6pt;line-height:1.05;padding:0 2pt;overflow:hidden}
 #tt-print.noco .tt-grid tbody .tt-rm small{font-size:5.5pt}   /* 「426 Computer Lab」这种长教室名不能把列撑高 */
@@ -4622,7 +4626,7 @@ function _ttGridHtml(h,sol,only){   // only={教室分组:1}=只出这些教室(
       const drop=_ttCanEdit()?(' ondragover="_ttAllowDrop(event)" ondrop="_ttDrop(event,\''+jsq(rm.code)+'\',\''+jsq(d)+'\',\''+s+'\',\''+h+'\')"'):'';
       // Capstone 照常一格一格显示(周五/周六 的 上午/下午),不合并整天(Aj. Tsai #3)
       const inner=arr.map(function(o){return _ttChipHtml(o.p,bad,o.cs);}).join('');
-      row+='<td class="tt-cell'+sat+(c[2]?' ds':'')+(arr.length>1?' bad':'')+'"'+drop+'>'+inner+'</td>';
+      row+='<td class="tt-cell'+sat+(c[2]?' ds':'')+(arr.length>1?' multi bad" data-n="'+arr.length+'" title="这间教室这个时段同时排了 '+arr.length+' 门课，请人工确认':'')+'"'+drop+'>'+inner+'</td>';
     });
     body+='<tr>'+row+'</tr>';
   });
@@ -4762,7 +4766,7 @@ function _ttMiniChip(p,mode,bad,src){
 }
 // 单一届别/老师的紧凑课表:行=星期(周一~周五,+周六若有 Capstone),列=上半上午/上半下午/下半上午/下半下午
 // (照 Aj. Tsai 给的 aSc 参考:行=星期;上半蓝、下半橙两组上色)
-function _ttEntityTable(cellMap,hasSat,hasSun,whole,ev){
+function _ttEntityTable(cellMap,hasSat,hasSun,whole,ev,flag){   // flag[格]='bad'=同时段多门、要人工确认 → 红框;'ok'=KE/KH 放行
   const days=['周一','周二','周三','周四','周五'].concat(hasSat?['周六']:[]).concat(hasSun?['周日']:[]);
   ev=ev||{};const su=ev['上']?TT_CAP_SLOTS:TT_SLOTS,sd=ev['下']?TT_CAP_SLOTS:TT_SLOTS;   // 有 Capstone 傍晚段的那一半才多一栏
   const ths=function(sl,cls){return sl.map(function(s){return '<th class="'+cls+'">'+_ttSlotName(s)+'</th>';}).join('');};
@@ -4778,7 +4782,9 @@ function _ttEntityTable(cellMap,hasSat,hasSun,whole,ev){
   const canDrop=_ttCanEdit();
   days.forEach(function(d){
     h+='<tr><td class="tt-rm">'+eh(d)+'</td>';
-    cols.forEach(function(c){const arr=cellMap[c[0]+'|'+d+'|'+c[1]]||[];const cls=whole?'tt-all':(c[0]==='上'?'tt-up':'tt-dn');const drop=canDrop?(' ondragover="_ttAllowDrop(event)" ondrop="_ttDropEntity(event,\''+jsq(d)+'\',\''+c[1]+'\',\''+c[0]+'\')"'):'';h+='<td class="tt-cell '+cls+(arr.length>1?' bad':'')+'"'+drop+'>'+arr.join('')+'</td>';});
+    cols.forEach(function(c){const k=c[0]+'|'+d+'|'+c[1],arr=cellMap[k]||[];const cls=whole?'tt-all':(c[0]==='上'?'tt-up':'tt-dn');const drop=canDrop?(' ondragover="_ttAllowDrop(event)" ondrop="_ttDropEntity(event,\''+jsq(d)+'\',\''+c[1]+'\',\''+c[0]+'\')"'):'';
+      const bad=arr.length>1&&!(flag&&flag[k]==='ok');
+      h+='<td class="tt-cell '+cls+(arr.length>1?' multi':'')+(bad?' bad" data-n="'+arr.length+'" title="这个时段同时有 '+arr.length+' 门课，请人工确认':'')+'"'+drop+'>'+arr.join('')+'</td>';});
     h+='</tr>';
   });
   return '<div class="tt-ewrap">'+h+'</tbody></table></div>';
@@ -4804,6 +4810,11 @@ function _ttEntityData(sol,mode){
     });
   });
   (sol.unplaced||[]).forEach(function(u){const keys=mode==='cohort'?(u.cohorts||[]):[u.tc||'（待定老师）'];keys.forEach(function(key){const dept=mode==='cohort'?((typeof cohortDept==='function'&&cohortDept(key))||'其他'):(u.dept||'其他');ensure(key,dept).unplaced.push(u);});});
+  // 同一时段有 2 门以上:要不要标红(要人工确认)。依届别时,该届 KE 与 KH 放行同时段的那种不算;其余(撞堂、个别学生撞课)都标
+  Object.keys(grp).forEach(function(key){const e=grp[key];e.flag={};Object.keys(e.raw).forEach(function(k){const a=e.raw[k];if(a.length<2)return;
+    let ok=(mode==='cohort'&&!!_ttLang.ok[key]);
+    if(ok)for(var i=0;i<a.length&&ok;i++)for(var j=i+1;j<a.length;j++){const ta=_ttTrack(a[i].p),tb=_ttTrack(a[j].p);if(!(ta&&tb&&ta!==tb)){ok=false;break;}}
+    e.flag[k]=ok?'ok':'bad';});});
   const byDept={};Object.keys(grp).forEach(function(k){(byDept[grp[k].dept]=byDept[grp[k].dept]||[]).push(k);});
   Object.keys(byDept).forEach(function(d){byDept[d].sort();});
   return {grp:grp,byDept:byDept};
@@ -4814,7 +4825,7 @@ function _ttEntityCards(sol,mode,only){   // mode:'cohort'|'teacher';only={专�
   let h='';
   deps.forEach(function(dep){
     h+='<div class="tt-sechd" data-tt-sec="dep|'+eh(dep)+'" data-tt-lab="'+eh(dep)+'（'+byDept[dep].length+(mode==='cohort'?' 个届别':' 位老师')+'）">专业 '+eh(dep)+'</div>';
-    byDept[dep].forEach(function(key){const e=grp[key];h+='<div class="tt-ecard"><div class="tt-ehdr">'+(mode==='cohort'?'届别 ':'授课老师 ')+eh(key)+'</div>'+_ttEntityTable(e.map,e.hasSat,e.hasSun,sol.whole,e.ev)+(e.unplaced.length?('<div class="tt-pillbar"'+_ttUnDropAttr()+' style="margin-top:6px">'+'<span style="font-size:11px;color:#b42318;font-weight:700;margin-right:2px">⚠ 未排'+(_ttCanEdit()?'（拖进上面课表）':'')+'：</span>'+e.unplaced.map(_ttPillHtml).join('')+'</div>'):'')+'</div>';});
+    byDept[dep].forEach(function(key){const e=grp[key];h+='<div class="tt-ecard"><div class="tt-ehdr">'+(mode==='cohort'?'届别 ':'授课老师 ')+eh(key)+'</div>'+_ttEntityTable(e.map,e.hasSat,e.hasSun,sol.whole,e.ev,e.flag)+(e.unplaced.length?('<div class="tt-pillbar"'+_ttUnDropAttr()+' style="margin-top:6px">'+'<span style="font-size:11px;color:#b42318;font-weight:700;margin-right:2px">⚠ 未排'+(_ttCanEdit()?'（拖进上面课表）':'')+'：</span>'+e.unplaced.map(_ttPillHtml).join('')+'</div>'):'')+'</div>';});
   });
   return h;
 }
@@ -5474,7 +5485,7 @@ function _ttPrintFitText(box){
   try{
     box.querySelectorAll('table').forEach(function(tb){
       const chips=[...tb.querySelectorAll('.tt-chip')];if(!chips.length)return;
-      tb.querySelectorAll('td.bad').forEach(function(td){const k=td.querySelectorAll('.tt-chip').length;if(k>2)td.querySelectorAll('.tt-chip').forEach(function(c){c.style.width='calc('+(100/k).toFixed(3)+'% - 2px)';});});
+      tb.querySelectorAll('td.multi').forEach(function(td){const k=td.querySelectorAll('.tt-chip').length;if(k>2)td.querySelectorAll('.tt-chip').forEach(function(c){c.style.width='calc('+(100/k).toFixed(3)+'% - 2px)';});});
       const L=function(c){const e=c.querySelector('.zl');return (e&&getComputedStyle(e).display!=='none')?e:null;};
       const longs=chips.filter(L);
       if(longs.length){   // ① 同一张表的届别行用同一个字号
