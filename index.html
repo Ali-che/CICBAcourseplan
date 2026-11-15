@@ -3967,6 +3967,7 @@ function ttJumpSec(val){
   if(wrap){   // 依教室:表格自己有卷轴 → 先在表内捲到那一组,再把整张表捲进画面
     const th=wrap.querySelector('thead');wrap.scrollTop+=el.getBoundingClientRect().top-wrap.getBoundingClientRect().top-((th&&th.offsetHeight)||0);
     window.scrollBy({top:wrap.getBoundingClientRect().top-off});
+    const rb=el.getBoundingClientRect();if(rb.bottom>window.innerHeight-8)window.scrollBy({top:rb.bottom-window.innerHeight+16});   // 最后几间教室在表格底部:表格比画面高时再往下捲一点,确保看得到
     const g=el.getAttribute('data-tt-grp');hl=[...wrap.querySelectorAll('[data-tt-grp]')].filter(function(e){return e.getAttribute('data-tt-grp')===g;});
   }else window.scrollBy({top:el.getBoundingClientRect().top-off});   // 直接跳(平滑捲动在长页面/背景分页会停在半路)
   hl.forEach(function(e){e.classList.add('tt-secflash');});setTimeout(function(){hl.forEach(function(e){e.classList.remove('tt-secflash');});},1600);
