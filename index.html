@@ -5250,13 +5250,15 @@ function _ttJumpTo(id){
   els.forEach(function(e){e.classList.add('tt-flash');});
   setTimeout(function(){els.forEach(function(e){e.classList.remove('tt-flash');});},1600);
 }
+// 拆班建议(Aj. Tsai 2026-11-16):人数超过教室容量时,算拆成几班、每班约几人就装得下。usable=容量+宽容
+function _ttSplitSuggest(count,cap){const c=Math.max(1,+cap||0);const n=Math.max(2,Math.ceil(count/c));return {n:n,per:Math.ceil(count/n)};}
 // 未排进去的课 → 诊断式建议(遵守该课本身的硬约束:Capstone 周五六、备注指定教室/周几)
 function _ttSuggestFor(u,sol){
   const rooms=sol.rooms||_ttRoomsSorted(),maxCap=_ttMaxCap(rooms);
   const bigEnough=rooms.filter(function(r){return _ttRoomFits(r.cap,u.count);});
-  if(!bigEnough.length)return '需要容量 ≥'+(u.count-TT_CAP_SLACK)+' 的教室（现有最大 '+maxCap+'，已含 +5 宽容）。建议：拆班减少人数，或在后台教室库加大教室。';
+  if(!bigEnough.length){const sp=_ttSplitSuggest(u.count,maxCap);return '人数 '+u.count+' 超过最大教室（容 '+maxCap+'，含 +'+TT_CAP_SLACK+' 宽容）。建议：拆成 '+sp.n+' 班（各约 '+sp.per+' 人）→ 每班就装得下；或在后台教室库加更大的教室。';}
   if(u.note&&u.note.roomMissing)return '备注要求教室 '+u.note.roomMissing+' 不在教室库。建议：到「后台 › 教室库」加这间并设容量，或改备注换库内教室。';
-  let cand=bigEnough;if(u.note&&u.note.room){cand=bigEnough.filter(function(r){return String(r.code)===u.note.room;});if(!cand.length)return '备注指定教室 '+u.note.room+' 容量不够装 '+u.count+' 人。建议：改备注换大教室，或加大该教室容量。';}
+  let cand=bigEnough;if(u.note&&u.note.room){cand=bigEnough.filter(function(r){return String(r.code)===u.note.room;});if(!cand.length){const rc=((rooms.filter(function(r){return String(r.code)===u.note.room;})[0]||{}).cap)||0;const sp=_ttSplitSuggest(u.count,rc);return '备注指定教室 '+u.note.room+'（容 '+rc+'）装不下 '+u.count+' 人。建议：拆成 '+sp.n+' 班（各约 '+sp.per+' 人，分不同时段用同一间）→ 每班就装得下；或改备注换大教室、加大该教室容量。';}}
   const B=_ttBusy(sol),occ=B.occ,tb=B.tb,cb=B.cb;
   // Capstone:排周末 2 节(周五/周六优先,不够才周日),一间大教室(Aj. Tsai 2026-11-15)
   if(u.isCap){
