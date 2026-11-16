@@ -1396,6 +1396,34 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   </div>
 </div>
 
+<div id="ttguide-modal" style="display:none;position:fixed;inset:0;z-index:10000;align-items:center;justify-content:center">
+  <div onclick="ttGuideClose()" style="position:absolute;inset:0;background:rgba(0,0,0,.45);cursor:pointer"></div>
+  <div style="position:relative;background:#fff;border-radius:12px;max-width:680px;width:92%;max-height:90vh;overflow:auto;padding:24px 28px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:inherit">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+      <div>
+        <h3 style="margin:0;font-size:16px;color:#333;font-weight:600">🧭 课表制作 · 使用引导</h3>
+        <div style="font-size:12px;color:#888;margin-top:3px">从选学期到存档、列印，一步步怎么做</div>
+      </div>
+      <button onclick="ttGuideClose()" style="background:transparent;border:0;font-size:20px;color:#888;cursor:pointer;line-height:1;padding:4px 8px;font-family:inherit">×</button>
+    </div>
+    <div style="font-size:12px;color:#444;line-height:1.5">
+      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">1</span><div><b>选学年学期</b><div style="color:#666;margin-top:2px">上方「学年学期」下拉选要排的学期。标「（已归档）」的照样排得动。</div></div></div>
+      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">2</span><div><b>⚡ 一键自动排</b>　<span style="color:#999;font-size:11px">（能排课的人）</span><div style="color:#666;margin-top:2px">系统自动把本学期的课排进「周几 · 时段 · 教室」，画成上/下半两张课表。想知道它<b>按什么规则排</b> → 看旁边的「ℹ️ 排课规则」。</div></div></div>
+      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">3</span><div><b>看「待处理一览」</b><div style="color:#666;margin-top:2px">排不上的、只排到 1 节、要看的备注、软提醒都列在这里。<b>每门未排课下面有 💡 建议</b>（改到哪半 / 换教室 / 拆成几班）。撞堂、超容量的课片会<b style="color:#b42318">标红</b>。</div></div></div>
+      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">4</span><div><b>手动微调</b>　<span style="color:#999;font-size:11px">（能排课的人）</span><div style="color:#666;margin-top:2px">拖课片换时段/教室；点课片改老师/时段、或移回未排；课排不满时用「🔀 改半方案」找最少改几门；按错了用「↶ 还原」（⌘Z）。</div></div></div>
+      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">5</span><div><b>💾 存档</b>　<span style="color:#999;font-size:11px">（Head / 管理员）</span><div style="color:#666;margin-top:2px">把排好的课表存起来。每学期只留一版、会盖掉旧的（旧版只在每天备份里）。</div></div></div>
+      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">6</span><div><b>📤 导出 / 列印</b><div style="color:#666;margin-top:2px">选检视（依教室号 / 届别 / 授课老师）与要的分组，导出 Excel 或列印 / 存 PDF（A4 横向）。</div></div></div>
+      <div style="display:flex;gap:10px;padding:10px 0"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#B45309;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">7</span><div><b>排课表之后又改了？</b><div style="color:#666;margin-top:2px">课表制作<b>不会自动更新</b>；顶部会出现橘色「可能过时」提示。由 Head / 管理员二选一：<b>🅰</b> 保留现有排法、只补改动的课，或 <b>🅱</b> 一键重排（不保留手动摆位）。细节见「ℹ️ 排课规则」末尾。</div></div></div>
+    </div>
+    <div style="background:#F5F4FE;border-radius:8px;padding:10px 12px;margin-top:12px;font-size:11.5px;color:#3C3489;line-height:1.7">
+      <b>谁能做什么</b>：<b>排 / 存 / 列印</b> = Head of Administration（秘书处）与管理员；<b>其他人（含主任）</b>只读看 + 列印。主任改排课要透过撞课清单的「✎ 改 课码」。
+    </div>
+    <div style="text-align:right;margin-top:14px">
+      <button onclick="ttGuideClose()" class="btn">知道了</button>
+    </div>
+  </div>
+</div>
+
 <div id="panel-btec" class="panel">
   <div class="sechdr" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:.6rem">
     <span id="btec-hint" class="ct" style="margin:0;font-size:12px;color:#888;font-weight:400"></span>
@@ -3897,6 +3925,13 @@ window.ttRulesOpen=ttRulesOpen;
 window.ttRulesClose=ttRulesClose;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.getElementById('ttrules-modal');if(m&&m.style.display==='flex')ttRulesClose();}});
 
+// ── 🧭 课表制作 · 使用引导 modal ──────────
+function ttGuideOpen(){const m=document.getElementById('ttguide-modal');if(m){m.style.display='flex';document.body.style.overflow='hidden';}}
+function ttGuideClose(){const m=document.getElementById('ttguide-modal');if(m){m.style.display='none';document.body.style.overflow='';}}
+window.ttGuideOpen=ttGuideOpen;
+window.ttGuideClose=ttGuideClose;
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.getElementById('ttguide-modal');if(m&&m.style.display==='flex')ttGuideClose();}});
+
 // v2 权重 — 按课程人数分档（正常/英文）或按人数 ÷ 上限封顶 1.0（CD-实习/实习）
 // v8.13: Capstone 区分 CD vs 其他系
 //   CD Capstone（学生届别前缀=CD）: 3 门 × 0.5 = 1.5
@@ -5976,7 +6011,7 @@ async function renderTtPanel(force){
   if((_ttCache.refs.rooms||[]).length===0){
     st.innerHTML='<div style="padding:14px;background:#FEF9ED;border-radius:8px;color:#7a5b16">教室库是空的。请管理员先到「后台操作 › 教室库」加教室（或先在 Supabase 跑 migration 008）。</div>';bd.innerHTML='';return;
   }
-  let tools='<button class="btn btn-sm no-print" onclick="ttRulesOpen()" style="color:#534AB7;border-color:#AFA9EC" title="「一键自动排」遵守的排课规则（硬约束/软优先/特殊规则）">ℹ️ 排课规则</button>';
+  let tools='<button class="btn btn-sm no-print" onclick="ttGuideOpen()" style="color:#1b6b4a;border-color:#9ed4ae" title="课表制作怎么用:选学期→一键自动排→微调→存档→列印">🧭 使用引导</button> <button class="btn btn-sm no-print" onclick="ttRulesOpen()" style="color:#534AB7;border-color:#AFA9EC" title="「一键自动排」遵守的排课规则（硬约束/软优先/特殊规则）">ℹ️ 排课规则</button>';
   if(canEdit)tools+=' <button class="btn btn-p btn-sm" onclick="ttAutoSolve()" title="自动把本学期的课排进时段+教室">⚡ 一键自动排</button>'+(_ttWholeSem(sem)?'':' <button class="btn btn-sm" onclick="ttHalfPlan()" title="有课排不上时，找出最少改哪几门课的上下半就能多排上；先看方案，按「套用」才改">🔀 改半方案</button>')+' <label class="tt-solo-sw" title="打开：一门课里某届别只有 1 人时，这个人撞课不挡整门课，撞到的列在「待处理一览」。关掉：1 人的届别也算撞堂（会有更多课排不上）。切换后会重排，可按「↶ 还原」退回。"><input type="checkbox"'+(_ttSoloOn()?' checked':'')+' onchange="ttSoloToggle(this.checked)">个别学生不挡排课</label>'+' <label class="tt-solo-sw" title="同一门课的两节排在同一天（上午＋下午）时，多试两招把它拆到不同天：① 把挡路的一两门课一起挪开；② 把两个时段的课整批对调。只在有同天课时才多花时间（最多约 6 秒）；不保证都拆得开，拆不开的照样用橙框标出来。切换后会重排，可按「↶ 还原」退回。"><input type="checkbox"'+(_ttDeepOn()?' checked':'')+' onchange="ttDeepToggle(this.checked)">拆开两节同天</label>'+((_ttUndoSt.length||_ttRedoSt.length)?' <button class="btn btn-sm tt-undo" onclick="ttUndo()" title="还原上一步（Ctrl+Z／⌘Z）；可连续还原 '+_ttUndoSt.length+' 步"'+(_ttUndoSt.length?'':' disabled')+'>↶ 还原</button> <button class="btn btn-sm tt-undo" onclick="ttRedo()" title="重做（Ctrl+Y／⇧⌘Z）"'+(_ttRedoSt.length?'':' disabled')+'>↷ 重做</button>':'')+((_ttCache.sol&&_ttCache.dirty)?' <button class="btn btn-sm" onclick="ttSave()" title="把当前排好的课表存档">💾 存档</button>':'');
   if(currentRole==='admin'&&tt)tools+=' <button class="btn btn-sm tt-delsave" onclick="ttDeleteSaved()" title="删除这个学期的课表存档（只有管理员；排课表不受影响）">'+_ICO.del+' 删除存档</button>';
   if(sol)tools+=' <button class="btn btn-sm" onclick="ttExpOpen()" title="选检视方式与要的分组（教室区／专业），导出 Excel 或列印／存 PDF（A4 横向）">📤 导出／列印</button>';
