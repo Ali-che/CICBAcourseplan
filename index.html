@@ -1327,15 +1327,21 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <button onclick="ttRulesClose()" style="background:transparent;border:0;font-size:20px;color:#888;cursor:pointer;line-height:1;padding:4px 8px;font-family:inherit">×</button>
     </div>
     <div style="background:#FDECEC;border:0.5px solid #F5C6C6;border-radius:8px;padding:12px 14px;margin-bottom:12px">
-      <div style="font-size:12.5px;font-weight:600;color:#B3261E;margin-bottom:8px">🔴 硬约束　<span style="font-weight:400;color:#999">违反会标红，系统不硬塞</span></div>
+      <div style="font-size:12.5px;font-weight:600;color:#B3261E;margin-bottom:8px">🔴 硬约束　<span style="font-weight:400;color:#999">违反会标红，必须解决（不能放行）</span></div>
       <ul style="margin:0;padding-left:18px;font-size:12px;color:#555;line-height:1.95">
         <li>教室容量 ≥ 上课人数</li>
         <li>同一时段、一间教室只排一门课</li>
         <li>老师不撞堂（同一时段不排两门）</li>
         <li>届别不撞堂（同一时段不排两门；例外见下方「个别学生」）</li>
+      </ul>
+    </div>
+    <div style="background:#FFF4E5;border:0.5px solid #FAD9A8;border-radius:8px;padding:12px 14px;margin-bottom:12px">
+      <div style="font-size:12.5px;font-weight:600;color:#B45309;margin-bottom:8px">🟠 软提醒　<span style="font-weight:400;color:#c08a4a">尽量满足；真的排不下，在「待处理一览」勾「已核对」就放行</span></div>
+      <ul style="margin:0;padding-left:18px;font-size:12px;color:#7c5410;line-height:1.95">
         <li>老师每半学期最多 <b>4</b> 门</li>
         <li>每个届别上/下半 <b>4+3</b> 或 <b>3+4</b> 门；有 Capstone 的届别总数 ≤ 6</li>
-        <li>每个届别一学期总学分 ≤ <b>21</b>（Capstone 算 6 学分）</li>
+        <li>每个届别一学期总学分 ≤ <b>21</b>（Capstone 算 6 学分）—— 不少届别本来就 24/27 学分，排不下时勾「已核对」放行</li>
+        <li>同一门课两节尽量<b>不同天</b>（同天会橙框；可用「🔀 改半方案」或工具栏「拆开两节同天」）</li>
       </ul>
     </div>
     <div style="background:#FAEEDA;border-radius:8px;padding:12px 14px;margin-bottom:12px">
@@ -1365,7 +1371,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <div style="font-size:12px;color:#3730a3;line-height:1.85">
         课表制作是依「<b>排课表</b>」排出来、再存档的结果。排课表改了（例如主任调动课程/人数/老师/届别）<b>不会自动更新</b>——课表制作顶部会出现橘色「<b>可能过时</b>」提示，列出改了哪几门。要更新，由 <b>Head of Administration（秘书处）或管理员</b> 到课表制作选该学期，二选一：
         <div style="margin-top:8px;padding-left:2px">
-          <div style="margin-bottom:6px"><b>🅰 保留现有排法，只补这几门</b>（推荐，只动一两门时）：点橘色提示清单里的课 → 跳到课表，拖到合适的教室/时段；「新课」在「待处理一览」拖进来。改完 💾 存档。</div>
+          <div style="margin-bottom:6px"><b>🅰 保留现有排法，只补这几门</b>（推荐，只动一两门时）：点橘色提示清单里<b>改动/删除</b>的课 → 跳到课表，拖到合适的教室/时段。改完 💾 存档。<span style="color:#6366f1">（排课表<b>新增</b>的课不在「待处理一览」、拖不到，要用 🅱 重排才会排进来。）</span></div>
           <div><b>🅱 整张重排</b>：按「⚡ 用现在的排课重排」，以最新排课表重算整张，<b>不保留</b>手动微调过的教室/时段。核对无误后 💾 存档。</div>
         </div>
         <div style="margin-top:8px;color:#6366f1">主任自己是只读，<b>不能重排或存档</b>，改完排课表要请秘书处或管理员更新。存档每学期只留一版、会盖掉旧版。</div>
@@ -5644,8 +5650,8 @@ function _ttDriftBanner(drift){
   let items='';
   drift.del.forEach(function(p){items+='<div class="tt-side-item jump" style="background:#fff2f2" onclick="_ttJumpTo(\''+jsq(String(p.id))+'\')"><b>'+eh(p.course)+'</b>'+(p.cls?' '+eh(p.cls):'')+' · <span style="color:#b42318">已删除 —— 它占的 '+eh(p.room||'?')+' 时段应释放</span></div>';});
   drift.chg.forEach(function(it){items+='<div class="tt-side-item jump" style="background:#fffbeb" onclick="_ttJumpTo(\''+jsq(String(it.p.id))+'\')"><b>'+eh(it.p.course)+'</b> · '+it.fields.map(function(f){return '<span style="color:#92400e">'+eh(f.t)+' '+eh(String(f.a))+'→'+eh(String(f.b))+'</span>';}).join('、')+' <span style="color:#999">（复查教室容量/撞堂）</span></div>';});
-  drift.add.forEach(function(r){items+='<div class="tt-side-item" style="background:#eef2ff"><b>'+eh(r.course)+'</b>'+(r.cls?' '+eh(r.cls):'')+' · <span style="color:#1e3a8a">新课，尚未排进课表 —— 在「待处理一览」拖进来</span></div>';});
-  return '<div style="border:1px solid #F6C667;background:#FEF9ED;border-radius:8px;padding:10px 12px;margin:0 0 10px"><div style="font-size:12.5px;font-weight:700;color:#92400e">⚠ 存档 v'+drift.version+' 后，排课被改了 '+drift.n+' 处 —— 这张课表可能过时</div>'+(canEdit?'<div style="font-size:11.5px;color:#92400e;margin:6px 0 2px;font-weight:600">更新方式二选一（详见 ℹ️ 排课规则）：</div><div style="font-size:11.5px;color:#6b5114;line-height:1.75;margin-bottom:6px"><b>🅰 保留现有排法，只补这几门</b>（推荐，只动一两门时）：点下方清单里的课跳到课表，拖到合适的教室/时段；「新课」在「待处理一览」拖进来。改完 💾 存档。</div><div style="margin-bottom:2px"><button class="btn btn-sm" onclick="ttAutoSolve()" title="整张重排，不保留手动调过的教室/时段">⚡ 用现在的排课重排</button> <span style="font-size:11px;color:#b45309"><b>🅱</b> 整张重排，<b>不保留</b>手动微调的教室/时段；核对无误后再 💾 存档</span></div>':'<div style="font-size:11px;color:#888;margin-top:3px">请 Head of Administration 或管理员更新（🅰 只补改动的课，或 🅱 整张重排；详见 ℹ️ 排课规则）。</div>')+'<details style="margin-top:4px"'+(drift.n<=8?' open':'')+'><summary style="cursor:pointer;font-size:12px;color:#92400e">看改了哪些（删 '+drift.del.length+' · 改 '+drift.chg.length+' · 新增 '+drift.add.length+'）</summary><div style="max-height:240px;overflow:auto;margin-top:6px">'+items+'</div></details></div>';
+  drift.add.forEach(function(r){items+='<div class="tt-side-item" style="background:#eef2ff"><b>'+eh(r.course)+'</b>'+(r.cls?' '+eh(r.cls):'')+' · <span style="color:#1e3a8a">新课，尚未排进课表 —— 要按「⚡ 重排」才会排进来（拖不到）</span></div>';});
+  return '<div style="border:1px solid #F6C667;background:#FEF9ED;border-radius:8px;padding:10px 12px;margin:0 0 10px"><div style="font-size:12.5px;font-weight:700;color:#92400e">⚠ 存档 v'+drift.version+' 后，排课被改了 '+drift.n+' 处 —— 这张课表可能过时</div>'+(canEdit?'<div style="font-size:11.5px;color:#92400e;margin:6px 0 2px;font-weight:600">更新方式二选一（详见 ℹ️ 排课规则）：</div><div style="font-size:11.5px;color:#6b5114;line-height:1.75;margin-bottom:6px"><b>🅰 保留现有排法，只补这几门</b>（推荐，只动一两门时）：点下方清单里<b>改动/删除</b>的课跳到课表，拖到合适的教室/时段。改完 💾 存档。</div><div style="margin-bottom:2px"><button class="btn btn-sm" onclick="ttAutoSolve()" title="整张重排，不保留手动调过的教室/时段">⚡ 用现在的排课重排</button> <span style="font-size:11px;color:#b45309"><b>🅱</b> 整张重排，<b>不保留</b>手动微调的教室/时段；核对无误后再 💾 存档</span></div>':'<div style="font-size:11px;color:#888;margin-top:3px">请 Head of Administration 或管理员更新（🅰 只补改动的课，或 🅱 整张重排；详见 ℹ️ 排课规则）。</div>')+'<details style="margin-top:4px"'+(drift.n<=8?' open':'')+'><summary style="cursor:pointer;font-size:12px;color:#92400e">看改了哪些（删 '+drift.del.length+' · 改 '+drift.chg.length+' · 新增 '+drift.add.length+'）</summary><div style="max-height:240px;overflow:auto;margin-top:6px">'+items+'</div></details></div>';
 }
 // ── 容量预检(Aj. Tsai 2026-11-15):先算「每届别/每老师在某半需要几格 vs 有几格」,超载就直接说哪个必排不下 ──
 // 一般课:周一~周五 × 上午/下午 = 10 格(教 Capstone 的老师周五留给 Capstone → 8 格);Capstone:周五/周六/周日 = 6 格。每门课 2 节。
