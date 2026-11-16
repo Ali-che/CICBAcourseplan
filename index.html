@@ -5684,9 +5684,12 @@ function _ttPrintFit(box){   // A4 横向。课表的表格在列印样式里是
 // 顺序:① 整张表的届别字号统一缩小(6→4.5pt,同一张表同一个字号)② 还放不下的那几片:把只有 1 人的届别并成「个别 N 人」
 //       ③ 再不行就截短并注明共几个届别 ④ 没有届别行的课片(课码/老师太长)缩课码与老师的字
 const TT_PRINT_W=1047;
+// 量字时把纸宽当成窄 24px(约 6mm)来排:原本照整张纸宽量、一点余量都没有,纸面窄 3px 就有课片的字被截(2026-11-16 实测 2569-2)。
+// 留余量后,印表机边界、浏览器、字体宽度有一点出入也不会截字。
+const TT_PRINT_SAFE=24;
 function _ttPrintFitText(box){
   const keep=box.getAttribute('style')||'';
-  box.setAttribute('style','display:block!important;position:absolute;left:-99999px;top:0;width:'+TT_PRINT_W+'px;visibility:hidden');
+  box.setAttribute('style','display:block!important;position:absolute;left:-99999px;top:0;width:'+(TT_PRINT_W-TT_PRINT_SAFE)+'px;visibility:hidden');
   const over=function(c){const i=c.querySelector('.tt-c3');return !!i&&i.offsetHeight>c.clientHeight-3.5;};   // 课片上下各留 2px
   const stat={shrunk:0,merged:0,cut:0};
   try{
