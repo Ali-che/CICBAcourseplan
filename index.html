@@ -434,6 +434,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 .tt-pill:active{opacity:.6}
 .tt-internbar{border:1px solid #B9D4F5;background:#F2F7FE;border-radius:8px;padding:8px 12px;margin:0 0 10px;font-size:12.5px;color:#1e3a8a;line-height:1.6}
 .tt-internbar span{color:#33507f}
+.tt-archbar{border:1px solid #f6ad55;background:#fffaf0;border-radius:8px;padding:7px 12px;margin:8px 0 0;font-size:12.5px;color:#8a5a12;line-height:1.6}
 /* 「跳到」下拉与分组标题 */
 .tt-jump-l{font-size:11px;color:#666;font-weight:500;margin:0 0 0 10px}
 .tt-jump{width:auto;max-width:220px;padding:3px 6px;font-size:12px}
@@ -4067,13 +4068,15 @@ function _ttBusy(sol,exceptId){
 function _ttHit(map,pre,d,c,s){const at=_ttAtoms(c,s);for(var i=0;i<at.length;i++){const o=map[pre+'|'+d+'|'+at[i]];if(o)return o;}return null;}   // 这门课排在 d·s 会撞到 map 里的谁
 const TT_FULLWEEK=['周一','周二','周三','周四','周五','周六','周日'];
 function _ttCanEdit(){return _TT_EDIT_ROLES.indexOf(currentRole)>=0;}
-// 该学期待排的课(排课表 schD,排除已归档)
-function _ttCourses(sem){return _filtArch([...(typeof schD!=='undefined'?schD:[])]).filter(r=>r.sem===sem);}
+// 该学期待排的课(排课表 schD)。已归档的学期照样读(Aj. Tsai 2026-11-16):归档只是排课表/学期总表不显示,
+// 这里若也滤掉 → 归档学期显示 0 门课、有存档的还会误报「排课被改了很多处」。归档的学期在状态列下标一句 _ttArchNote。
+function _ttCourses(sem){return (typeof schD!=='undefined'?schD:[]).filter(r=>r.sem===sem);}
+function _ttArchNote(sem){return _isArch(sem,'sch')?'<div class="tt-archbar"><b>🗄 这学期已归档</b> —— 排课表、IS/SG、学期总表默认不显示这学期的课；课表制作照样读得到，课表可以照常看和列印。</div>':'';}
 function _ttFillSemSel(){
   const sel=document.getElementById('tt-sem');if(!sel)return;
-  const cur=sel.value;const ss={};_filtArch([...(typeof schD!=='undefined'?schD:[])]).forEach(r=>{if(r.sem)ss[r.sem]=1;});(typeof SEMS!=='undefined'?SEMS:[]).forEach(s=>{if(s)ss[s]=1;});
+  const cur=sel.value;const ss={};(typeof schD!=='undefined'?schD:[]).forEach(r=>{if(r.sem)ss[r.sem]=1;});(typeof SEMS!=='undefined'?SEMS:[]).forEach(s=>{if(s)ss[s]=1;});
   const xs=Object.keys(ss).sort();const byYr={};xs.forEach(s=>{const y=String(s).substring(0,4);(byYr[y]=byYr[y]||[]).push(s);});
-  let want='<option value="">请选择</option>';Object.keys(byYr).sort().forEach(y=>{want+='<optgroup label="─ '+y+' ─">'+byYr[y].map(s=>'<option'+(s===cur?' selected':'')+'>'+eh(s)+'</option>').join('')+'</optgroup>';});
+  let want='<option value="">请选择</option>';Object.keys(byYr).sort().forEach(y=>{want+='<optgroup label="─ '+y+' ─">'+byYr[y].map(s=>'<option value="'+eh(s)+'"'+(s===cur?' selected':'')+'>'+eh(s)+(_isArch(s,'sch')?'（已归档）':'')+'</option>').join('')+'</optgroup>';});
   if(sel.innerHTML!==want)sel.innerHTML=want;
 }
 // ── 课的属性 ──
@@ -5879,7 +5882,7 @@ async function renderTtPanel(force){
   st.innerHTML='<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 12px;background:#F5F4FE;border-radius:8px">'+
     '<span style="font-size:12.5px;color:#3C3489">'+(tt?('已存档 <b>v'+tt.version+'</b> · '+eh(tt.saved_by||'')+' · '+_recoFmtTime(tt.saved_at)+' · '+(tt.placements?tt.placements.length:0)+' 门'):'<b>尚未存档</b>')+((_ttCache.sol&&_ttCache.dirty)?' · <span style="color:#b45309">有未存档改动</span>':'')+'</span>'+
     '<span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="font-size:12px;color:'+(canEdit?'#1b7a5a':'#999')+'">'+(canEdit?'你可排/存':'只读')+'</span>'+tools+'</span></div>'+
-    _ttDatesHtml(sem)+(sol?_ttViewToggle():'');   // 视图切换挪进 sticky 工具列,滚动不消失(Aj. Tsai 2026-11-15)
+    _ttArchNote(sem)+_ttDatesHtml(sem)+(sol?_ttViewToggle():'');   // 视图切换挪进 sticky 工具列,滚动不消失(Aj. Tsai 2026-11-15)
   if(!sol){
     const it=_ttInternList(sem);   // 还没存档、还没自动排的画面也列实习课(Aj. Tsai 2026-11-16);「待排」的门数不含实习课(本来就不排)
     bd.innerHTML=_ttInternsBar({interns:it})+'<div style="padding:18px;background:#FEF9ED;border-radius:8px;color:#7a5b16;line-height:1.7">本学期共 <b>'+(n-it.length)+'</b> 门课待排。'+(canEdit?'点 <b>⚡ 一键自动排</b> 自动排进时段+教室（排不下的会标红留空、列到右侧「待处理」；🖨️ 列印在下一阶段加入）。':'尚未排课（等 Head of Administration 或管理员排）。')+'</div>';return;
