@@ -495,6 +495,8 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 .tt-iss-g.part{background:#fffbeb}
 .tt-iss-g.part .tt-iss-why{color:#b45309}
 .tt-iss-pills{display:flex;flex-wrap:wrap;align-items:center;gap:2px;margin-top:3px}
+.tt-iss-sug{margin-top:4px;font-size:11px;line-height:1.6;color:#1a6b2f;border-left:2px solid #9ed4ae;padding-left:7px}
+.tt-iss-sug b{color:#14532d}
 .tt-iss-rest{color:#8a6d3b;font-size:10.5px;margin-left:4px}
 .tt-iss-rest b{color:#b42318}
 .tt-pill.part{border-color:#fcd34d;color:#b45309}
@@ -5557,6 +5559,16 @@ function ttPlanApply(){
 // ── 待处理一览(2026-11-15 合并原「容量预检」+「详情与建议」两个面板) ──
 // 左:未排/只排 1 节,按原因分组,每门课只一个胶囊(逐门原因与建议在浮出卡);
 // 右:备注只列要人看的(已照办/变更记录收起)+ KE/KH + 软提醒按类型汇总(点开才列,可勾「已核对」)
+// 未排/只排1节 的一句话建议(与浮出卡同逻辑),直接显示在课码下面,不靠鼠标悬停(Aj. Tsai 2026-11-16:hover 有时接不到)
+function _ttSugText(x,sol,kind){
+  if(kind==='part'){const hn=(x.hint&&x.hint.cells)?(x.hint.half==='dn'?'下半':'上半'):'';return hn?('改到'+hn+'就能排满 2 节（按课码旁「↪ 改到'+hn+'」）'):'点课片 →「＋ 加一节」手动补第二节';}
+  if(x.hint&&x.hint.cells){const hn=x.hint.half==='dn'?'下半':'上半';return '改到'+hn+'就能排满 2 节：'+x.hint.cells.map(_ttCellTxt).join('、')+'（按课码旁「↪ 改到'+hn+'」）';}
+  return _ttSuggestFor(x,sol);
+}
+function _ttSugBlock(items,sol){
+  if(!items||!items.length)return '';
+  return '<div class="tt-iss-sug">'+items.map(function(q){return '💡 <b>'+eh(_ttCC(q.x))+'</b>：'+eh(_ttSugText(q.x,sol,q.kind));}).join('<br>')+'</div>';
+}
 function _ttFootDetails(sol){
   const sem=sol.sem||_ttCache.sem,acked=_ttWarnAcked(sem),canAck=_ttCanAck();
   const key=_ttName;
@@ -5568,16 +5580,16 @@ function _ttFootDetails(sol){
     const mine=probs.filter(function(q){return !shown[q.x.id]&&g.list.indexOf(q.k)>=0;}),mk={};
     mine.forEach(function(q){shown[q.x.id]=1;mk[q.k]=1;});
     const rest=g.list.filter(function(n){return !mk[n];});
-    left+='<div class="tt-iss-g cap"><div class="tt-iss-why"><b>'+eh(g.kind+' '+g.names.join('、'))+' · '+eh(g.half)+'</b>：'+eh(g.txt)+'</div><div class="tt-iss-pills">'+mine.map(function(q){return _ttIssuePill(q.x,q.kind);}).join('')+(rest.length?'<span class="tt-iss-rest">'+(mine.length?'同组其他：':'同组：')+rest.map(function(n){return isProb[n]?'<b>'+eh(n)+'</b>':eh(n);}).join('、')+'</span>':'')+'</div></div>';
+    left+='<div class="tt-iss-g cap"><div class="tt-iss-why"><b>'+eh(g.kind+' '+g.names.join('、'))+' · '+eh(g.half)+'</b>：'+eh(g.txt)+'</div><div class="tt-iss-pills">'+mine.map(function(q){return _ttIssuePill(q.x,q.kind);}).join('')+(rest.length?'<span class="tt-iss-rest">'+(mine.length?'同组其他：':'同组：')+rest.map(function(n){return isProb[n]?'<b>'+eh(n)+'</b>':eh(n);}).join('、')+'</span>':'')+'</div>'+_ttSugBlock(mine,sol)+'</div>';
   });
   const lab=function(u){const r=u.reason||'';return /超过最大教室容量/.test(r)?'人数超过最大教室容量（拆班，或在后台教室库加大教室）':/不在教室库/.test(r)?'备注要求的教室不在教室库':/^指定教室/.test(r)?'备注指定的教室排不下':/^限定/.test(r)?'备注限定的周几排不下':/手动移回/.test(r)?'手动移回未排区':'老师、届别、教室找不到同时有空的时段';};
   const byR={},ord=[];
   probs.filter(function(q){return q.kind==='un'&&!shown[q.x.id];}).forEach(function(q){const l=lab(q.x);if(!byR[l]){byR[l]=[];ord.push(l);}byR[l].push(q);});
-  ord.forEach(function(l){left+='<div class="tt-iss-g"><div class="tt-iss-why"><b>'+eh(l)+'</b></div><div class="tt-iss-pills">'+byR[l].map(function(q){return _ttIssuePill(q.x,'un');}).join('')+'</div></div>';});
+  ord.forEach(function(l){left+='<div class="tt-iss-g"><div class="tt-iss-why"><b>'+eh(l)+'</b></div><div class="tt-iss-pills">'+byR[l].map(function(q){return _ttIssuePill(q.x,'un');}).join('')+'</div>'+_ttSugBlock(byR[l],sol)+'</div>';});
   const pr=probs.filter(function(q){return q.kind==='part'&&!shown[q.x.id];});
-  if(pr.length)left+='<div class="tt-iss-g part"><div class="tt-iss-why"><b>只排到 1 节</b>：第二节找不到老师、届别、教室都空的时段'+(_ttCanEdit()?'（点课片 →「＋ 加一节」手动补）':'')+'</div><div class="tt-iss-pills">'+pr.map(function(q){return _ttIssuePill(q.x,'part');}).join('')+'</div></div>';
+  if(pr.length)left+='<div class="tt-iss-g part"><div class="tt-iss-why"><b>只排到 1 节</b>：第二节找不到老师、届别、教室都空的时段'+(_ttCanEdit()?'（点课片 →「＋ 加一节」手动补）':'')+'</div><div class="tt-iss-pills">'+pr.map(function(q){return _ttIssuePill(q.x,'part');}).join('')+'</div>'+_ttSugBlock(pr,sol)+'</div>';
   if(left){const hp=[];if(un.length)hp.push('未排 '+un.length+' 门');if(partial.length)hp.push('只排到 1 节 '+partial.length+' 门');
-    left='<div class="tt-iss-h bad">'+(hp.join(' · ')||'课太多、时段装不下')+'<span> · 按原因分组；鼠标移到课码看原因与建议，点一下跳到课表</span></div>'+left;}
+    left='<div class="tt-iss-h bad">'+(hp.join(' · ')||'课太多、时段装不下')+'<span> · 按原因分组；每门课下面是原因与建议，点课码跳到课表</span></div>'+left;}
   let rTodo='',rOther='',rLang='',rWarn='';   // 右栏分四块,最后照「备注待看 → 提醒 → 其他备注 → KE／KH」接起来(Aj. Tsai 2026-11-15:提醒放上面,默认收合的两块接在下面)
   const curBy={};(sol.placements||[]).concat(un).forEach(function(c){curBy[String(c.id)]=c;});
   const notes=(sol.manualNotes||[]).map(function(c){c=curBy[String(c.id)]||c;const n=_ttNoteOf(c,sol);return {c:c,n:n,kind:_ttNoteKind(c,n)};}),todo=notes.filter(function(o){return o.kind==='todo';}),other=notes.filter(function(o){return o.kind!=='todo';});
