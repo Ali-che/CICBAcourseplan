@@ -295,6 +295,12 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   body.print-sta .acc-wrap{-webkit-print-color-adjust:exact;print-color-adjust:exact;page-break-inside:avoid}
   body.print-sta .acc-sec{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   body.print-sta tr.sta-trow{page-break-inside:avoid}
+  /* 2026-11-16: ① 明细一律三栏(第一/二/三学期各占一栏,没课的学期也留空卡片),不随宽度自动并栏
+     ② 老师那一行(与专业标题行)要跟着下面的明细,不准留在上一页页尾 */
+  body.print-sta .acc-wrap{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  body.print-sta .acc-sec.empty{display:flex!important;padding:4pt 7pt!important;min-height:0!important}   /* 全站列印会藏 .empty(空状态提示),这里的空学期卡片要印出来占位 */
+  body.print-sta .acc-sec.empty .acc-empty{font-size:7.5pt!important}
+  body.print-sta tr.sta-trow,body.print-sta #sta-tb tr.dh{break-after:avoid!important;page-break-after:avoid!important}
   /* ── 班级总表:按专业·届别分组列印 ── */
   body.print-sco #panel-sum > *{display:none!important}
   body.print-sco #sco-print{display:block!important}
