@@ -1316,6 +1316,56 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
   </div>
 </div>
 
+<div id="ttrules-modal" style="display:none;position:fixed;inset:0;z-index:10000;align-items:center;justify-content:center">
+  <div onclick="ttRulesClose()" style="position:absolute;inset:0;background:rgba(0,0,0,.45);cursor:pointer"></div>
+  <div style="position:relative;background:#fff;border-radius:12px;max-width:680px;width:92%;max-height:90vh;overflow:auto;padding:24px 28px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:inherit">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+      <div>
+        <h3 style="margin:0;font-size:16px;color:#333;font-weight:600">📅 排课规则 · 「一键自动排」怎么排</h3>
+        <div style="font-size:12px;color:#888;margin-top:3px">系统按这些规则把本学期的课排进「周几 · 时段 · 教室」</div>
+      </div>
+      <button onclick="ttRulesClose()" style="background:transparent;border:0;font-size:20px;color:#888;cursor:pointer;line-height:1;padding:4px 8px;font-family:inherit">×</button>
+    </div>
+    <div style="background:#FDECEC;border:0.5px solid #F5C6C6;border-radius:8px;padding:12px 14px;margin-bottom:12px">
+      <div style="font-size:12.5px;font-weight:600;color:#B3261E;margin-bottom:8px">🔴 硬约束　<span style="font-weight:400;color:#999">违反会标红，系统不硬塞</span></div>
+      <ul style="margin:0;padding-left:18px;font-size:12px;color:#555;line-height:1.95">
+        <li>教室容量 ≥ 上课人数</li>
+        <li>同一时段、一间教室只排一门课</li>
+        <li>老师不撞堂（同一时段不排两门）</li>
+        <li>届别不撞堂（同一时段不排两门；例外见下方「个别学生」）</li>
+        <li>老师每半学期最多 <b>4</b> 门</li>
+        <li>每个届别上/下半 <b>4+3</b> 或 <b>3+4</b> 门；有 Capstone 的届别总数 ≤ 6</li>
+        <li>每个届别一学期总学分 ≤ <b>21</b>（Capstone 算 6 学分）</li>
+      </ul>
+    </div>
+    <div style="background:#FAEEDA;border-radius:8px;padding:12px 14px;margin-bottom:12px">
+      <div style="font-size:12.5px;font-weight:600;color:#854F0B;margin-bottom:8px">🟡 软优先　<span style="font-weight:400;color:#b08a4a">尽量满足，冲突时可让</span></div>
+      <ul style="margin:0;padding-left:18px;font-size:12px;color:#6b5114;line-height:1.95">
+        <li><b>321 / 322</b> 优先给 CD（创意设计）专业课</li>
+        <li>LA / KH 连续两级 → 低级排上半、高级排下半（先修低的）</li>
+        <li>教室挑刚好够大的，大教室留给大班</li>
+      </ul>
+    </div>
+    <div style="background:#F5F4FE;border-radius:8px;padding:12px 14px;margin-bottom:12px">
+      <div style="font-size:12.5px;font-weight:600;color:#3C3489;margin-bottom:8px">⚙️ 特殊规则</div>
+      <ul style="margin:0;padding-left:18px;font-size:12px;color:#534AB7;line-height:1.95">
+        <li><b>时段</b>：周一~周五　上午 09:00–12:00、下午 13:30–16:30；每门课一周 2 节、各 3 小时，尽量分散到不同天</li>
+        <li><b>Capstone</b>：排周末（周五/周六，不够才周日），一天三段 09–12 / 12–15 / 15–18；同一位老师固定一间教室（233~236）</li>
+        <li><b>合班</b>：备注写「合班」且上下半相同的课，当一门排</li>
+        <li><b>个别学生</b>：某届别在一门课只有 1 人 → 不挡排课，撞到的另列「个别学生撞课」清单</li>
+        <li><b>专用教室</b>：备注写 Computer Lab／电脑室 → 指定那间</li>
+        <li><b>备注当约束</b>：固定周几、指定教室、连续两天等照办；看不懂的列「备注待人工」</li>
+      </ul>
+    </div>
+    <div style="background:#EAF6F0;border-radius:8px;padding:10px 12px;font-size:11.5px;color:#1b6b4a;line-height:1.65">
+      ⓘ 排不下的课<b>不会硬塞</b>，而是留空标红、列进「<b>待处理一览</b>」，由人手动拖动，或用「🔀 改半方案」调上下半。
+    </div>
+    <div style="text-align:right;margin-top:14px">
+      <button onclick="ttRulesClose()" class="btn">关闭</button>
+    </div>
+  </div>
+</div>
+
 <div id="panel-btec" class="panel">
   <div class="sechdr" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:.6rem">
     <span id="btec-hint" class="ct" style="margin:0;font-size:12px;color:#888;font-weight:400"></span>
@@ -3810,6 +3860,13 @@ window.closeFormulaModal=closeFormulaModal;
 // ESC 关 modal
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.getElementById('formula-modal');if(m&&m.style.display==='flex')closeFormulaModal();}});
 
+// ── 📅 课表制作 · 排课规则说明 modal ──────────
+function ttRulesOpen(){const m=document.getElementById('ttrules-modal');if(m){m.style.display='flex';document.body.style.overflow='hidden';}}
+function ttRulesClose(){const m=document.getElementById('ttrules-modal');if(m){m.style.display='none';document.body.style.overflow='';}}
+window.ttRulesOpen=ttRulesOpen;
+window.ttRulesClose=ttRulesClose;
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.getElementById('ttrules-modal');if(m&&m.style.display==='flex')ttRulesClose();}});
+
 // v2 权重 — 按课程人数分档（正常/英文）或按人数 ÷ 上限封顶 1.0（CD-实习/实习）
 // v8.13: Capstone 区分 CD vs 其他系
 //   CD Capstone（学生届别前缀=CD）: 3 门 × 0.5 = 1.5
@@ -5877,8 +5934,8 @@ async function renderTtPanel(force){
   if((_ttCache.refs.rooms||[]).length===0){
     st.innerHTML='<div style="padding:14px;background:#FEF9ED;border-radius:8px;color:#7a5b16">教室库是空的。请管理员先到「后台操作 › 教室库」加教室（或先在 Supabase 跑 migration 008）。</div>';bd.innerHTML='';return;
   }
-  let tools='';
-  if(canEdit)tools='<button class="btn btn-p btn-sm" onclick="ttAutoSolve()" title="自动把本学期的课排进时段+教室">⚡ 一键自动排</button>'+(_ttWholeSem(sem)?'':' <button class="btn btn-sm" onclick="ttHalfPlan()" title="有课排不上时，找出最少改哪几门课的上下半就能多排上；先看方案，按「套用」才改">🔀 改半方案</button>')+' <label class="tt-solo-sw" title="打开：一门课里某届别只有 1 人时，这个人撞课不挡整门课，撞到的列在「待处理一览」。关掉：1 人的届别也算撞堂（会有更多课排不上）。切换后会重排，可按「↶ 还原」退回。"><input type="checkbox"'+(_ttSoloOn()?' checked':'')+' onchange="ttSoloToggle(this.checked)">个别学生不挡排课</label>'+' <label class="tt-solo-sw" title="同一门课的两节排在同一天（上午＋下午）时，多试两招把它拆到不同天：① 把挡路的一两门课一起挪开；② 把两个时段的课整批对调。只在有同天课时才多花时间（最多约 6 秒）；不保证都拆得开，拆不开的照样用橙框标出来。切换后会重排，可按「↶ 还原」退回。"><input type="checkbox"'+(_ttDeepOn()?' checked':'')+' onchange="ttDeepToggle(this.checked)">拆开两节同天</label>'+((_ttUndoSt.length||_ttRedoSt.length)?' <button class="btn btn-sm tt-undo" onclick="ttUndo()" title="还原上一步（Ctrl+Z／⌘Z）；可连续还原 '+_ttUndoSt.length+' 步"'+(_ttUndoSt.length?'':' disabled')+'>↶ 还原</button> <button class="btn btn-sm tt-undo" onclick="ttRedo()" title="重做（Ctrl+Y／⇧⌘Z）"'+(_ttRedoSt.length?'':' disabled')+'>↷ 重做</button>':'')+((_ttCache.sol&&_ttCache.dirty)?' <button class="btn btn-sm" onclick="ttSave()" title="把当前排好的课表存档">💾 存档</button>':'');
+  let tools='<button class="btn btn-sm no-print" onclick="ttRulesOpen()" style="color:#534AB7;border-color:#AFA9EC" title="「一键自动排」遵守的排课规则（硬约束/软优先/特殊规则）">ℹ️ 排课规则</button>';
+  if(canEdit)tools+=' <button class="btn btn-p btn-sm" onclick="ttAutoSolve()" title="自动把本学期的课排进时段+教室">⚡ 一键自动排</button>'+(_ttWholeSem(sem)?'':' <button class="btn btn-sm" onclick="ttHalfPlan()" title="有课排不上时，找出最少改哪几门课的上下半就能多排上；先看方案，按「套用」才改">🔀 改半方案</button>')+' <label class="tt-solo-sw" title="打开：一门课里某届别只有 1 人时，这个人撞课不挡整门课，撞到的列在「待处理一览」。关掉：1 人的届别也算撞堂（会有更多课排不上）。切换后会重排，可按「↶ 还原」退回。"><input type="checkbox"'+(_ttSoloOn()?' checked':'')+' onchange="ttSoloToggle(this.checked)">个别学生不挡排课</label>'+' <label class="tt-solo-sw" title="同一门课的两节排在同一天（上午＋下午）时，多试两招把它拆到不同天：① 把挡路的一两门课一起挪开；② 把两个时段的课整批对调。只在有同天课时才多花时间（最多约 6 秒）；不保证都拆得开，拆不开的照样用橙框标出来。切换后会重排，可按「↶ 还原」退回。"><input type="checkbox"'+(_ttDeepOn()?' checked':'')+' onchange="ttDeepToggle(this.checked)">拆开两节同天</label>'+((_ttUndoSt.length||_ttRedoSt.length)?' <button class="btn btn-sm tt-undo" onclick="ttUndo()" title="还原上一步（Ctrl+Z／⌘Z）；可连续还原 '+_ttUndoSt.length+' 步"'+(_ttUndoSt.length?'':' disabled')+'>↶ 还原</button> <button class="btn btn-sm tt-undo" onclick="ttRedo()" title="重做（Ctrl+Y／⇧⌘Z）"'+(_ttRedoSt.length?'':' disabled')+'>↷ 重做</button>':'')+((_ttCache.sol&&_ttCache.dirty)?' <button class="btn btn-sm" onclick="ttSave()" title="把当前排好的课表存档">💾 存档</button>':'');
   if(currentRole==='admin'&&tt)tools+=' <button class="btn btn-sm tt-delsave" onclick="ttDeleteSaved()" title="删除这个学期的课表存档（只有管理员；排课表不受影响）">'+_ICO.del+' 删除存档</button>';
   if(sol)tools+=' <button class="btn btn-sm" onclick="ttExpOpen()" title="选检视方式与要的分组（教室区／专业），导出 Excel 或列印／存 PDF（A4 横向）">📤 导出／列印</button>';
   if(canEdit&&sol)tools+=' <button class="btn btn-sm" onclick="ttWriteHalfBack()" title="把课表里排定的上/下半与老师更新回「排课表」（会修改排课表，需确认）" style="color:#854F0B;border-color:#FCD34D">↩ 写回排课表(上下半+老师)</button>';
