@@ -4430,6 +4430,102 @@ function _ttRunOnce(list,capPlan){
 // 两节同一天:一般课的两节排在同一天(上午+下午)。Capstone 不算(一天三段,同一天连两段本来就可以)
 function _ttIsSameDay(p){return !p.isCap&&(p.cells||[]).length===2&&p.cells[0][0]===p.cells[1][0];}
 const TT_SD_TIP='这门课的两节排在同一天（上午＋下午），建议把其中一节挪到别天';
+// ── 同天课加深搜寻(Aj. Tsai 2026-11-16;工具栏开关,记在本机 cic_tt_deep,默认开) ──
+// 只针对「排完还剩两节同一天」的一般课(平常没有同天课时不花时间)。第一招:挪开挡路的一两门课:
+//   c 想去的别天时段常常同时被两门课挡着(各占不同的届别)→ 把挡路的一门或两门一起拿开,c 先挑不同天的两格,挡路的课再重排。
+//   全部都排满 2 节、都不同一天、合计扣分变少才接受;否则全部放回原位。
+const TT_DEEP_MS=6000;   // 一次求解最多花这么久(毫秒)在加深搜寻;超过就停,已拆开的保留
+function _ttDeepOn(){return _lsGet('cic_tt_deep')!=='0';}
+function ttDeepToggle(on){
+  _lsSet('cic_tt_deep',on?'1':'0');
+  if(_ttCanEdit()&&_ttCache.sol&&_ttCache.sem){ttAutoSolve();if(typeof showToast==='function')showToast((on?'已打开':'已关掉')+'「拆开两节同天」并重排；要回到刚才的课表按「↶ 还原」',{kind:'success'});}
+  else renderTtPanel();
+}
+function _ttDeepOne(st,list,c,dl){
+  const now=function(){return (typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();};
+  const share=function(x,hh){return _ttHs(x).some(function(h){return hh.indexOf(h)>=0;});};
+  const movable=function(b){return b!==c&&!b.isCap&&(b.cells||[]).length===2;};
+  const diffDay=function(f){return !!f&&f.cells.length===2&&f.cells[0][0]!==f.cells[1][0];};
+  const find=function(x){return _ttFindSlots(st,x,x._cand,x._days,false);};
+  const hs=_ttHs(c),keepC=c.cells,cur=_ttAsgScore(c),day0=keepC[0][0];
+  const others=list.filter(function(b){return movable(b)&&share(b,hs);});
+  // 拿开 S(一门或两门挡路的课)→ c 先挑不同天的两格 → S 逐门重排(两种先后都试);全部排满、都不同天、合计扣分变少才接受
+  const trySet=function(S){
+    const old=S.map(function(b){return b.cells;}),sOld=S.reduce(function(t,b){return t+_ttAsgScore(b);},0);
+    S.forEach(function(b){_ttUnapply(st,b);});
+    const fc=find(c);
+    if(diffDay(fc)){
+      _ttApply(st,c,fc.cells);
+      const orders=S.length>1?[S,[S[1],S[0]]]:[S];
+      for(var o=0;o<orders.length;o++){
+        const done=[];let tot=fc.score,ok=true;
+        for(var k=0;k<orders[o].length;k++){const b=orders[o][k],f=find(b);if(!diffDay(f)){ok=false;break;}_ttApply(st,b,f.cells);done.push(b);tot+=f.score;}
+        if(ok&&tot<cur+sOld)return true;
+        done.forEach(function(b){_ttUnapply(st,b);});
+      }
+      _ttUnapply(st,c);
+    }
+    S.forEach(function(b,k){_ttApply(st,b,old[k]);});
+    return false;
+  };
+  _ttUnapply(st,c);
+  // 一个一个别天的时段看:谁占着那个时段(同一半、时间重叠)→ 先试挪一门,再试两门一起挪
+  const days=(c._days||[]).filter(function(d){return d!==day0;}),sl=_ttSlotsFor(c);
+  for(var size=1;size<=2;size++)for(var di=0;di<days.length;di++)for(var si=0;si<sl.length;si++){
+    const d=days[di],at=_ttAtoms(c,sl[si]);
+    const occ=others.filter(function(b){return b.cells.some(function(cs){return cs[0]===d&&_ttAtoms(b,cs[1]).some(function(a){return at.indexOf(a)>=0;});});});
+    if(size===1){for(var x=0;x<occ.length;x++){if(now()>dl){_ttApply(st,c,keepC);return null;}if(trySet([occ[x]]))return [occ[x]];}}
+    else for(var x2=0;x2<occ.length;x2++)for(var y=x2+1;y<occ.length;y++){if(now()>dl){_ttApply(st,c,keepC);return null;}if(trySet([occ[x2],occ[y]]))return [occ[x2],occ[y]];}
+  }
+  _ttApply(st,c,keepC);return null;
+}
+// 第二招:整个时段对调。把「同天课的其中一节所在的时段」跟别天的一个时段,连同里面所有的课整批对调(同一半学期)。
+//   同一时段里的课本来就互不相撞,整批搬过去也不会撞;只要每门课都能去那一天(Capstone 不动、Capstone 老师的课不进周五、备注限定周几)、教室也排得开就成立。
+//   对调后全体合计扣分变少才接受(挑最好的一种)。两门同天课互相卡住时(都在周五上午、下午),只有这样才拆得开。
+function _ttDeepSwap(st,list,c,dl){
+  const now=function(){return (typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();};
+  const hs=_ttHs(c),D=c.cells[0][0],sl=_ttSlotsFor(c);
+  const total=function(){let t=_ttSoloClashes(list).length*TT_SOLO_PEN;list.forEach(function(x){const n=(x.cells||[]).length;t+=n===2?_ttAsgScore(x):(n===1?1000:10000);});return t;};
+  const base=total();let best=null;
+  const days=TT_WEEKDAYS.filter(function(d){return d!==D;});
+  for(var a=0;a<sl.length;a++)for(var di=0;di<days.length;di++)for(var b=0;b<sl.length;b++){
+    if(now()>dl)break;
+    const sA=sl[a],dB=days[di],sB=sl[b];
+    const mv=list.filter(function(x){return !x.isCap&&(x.cells||[]).length&&_ttHs(x).some(function(h){return hs.indexOf(h)>=0;})&&x.cells.some(function(cs){return (cs[0]===D&&cs[1]===sA)||(cs[0]===dB&&cs[1]===sB);});});
+    const old=mv.map(function(x){return x.cells;}),done=[];let ok=true;
+    mv.forEach(function(x){_ttUnapply(st,x);});
+    for(var k=0;k<mv.length&&ok;k++){
+      const x=mv[k],nc=old[k].map(function(cs){return (cs[0]===D&&cs[1]===sA)?[dB,sB,cs[2]]:((cs[0]===dB&&cs[1]===sB)?[D,sA,cs[2]]:[cs[0],cs[1],cs[2]]);});
+      const opts=_ttSlotOpts(st,x,x._cand,x._days,nc),om={};opts.forEach(function(o){om[o.d+'|'+o.s]=o;});
+      if(nc.some(function(cs){return !om[cs[0]+'|'+cs[1]];})){ok=false;break;}   // 有一节去不了(那天不能排、或老师/届别/教室被没搬的课占着)
+      let cells=null;
+      if(nc.every(function(cs){return om[cs[0]+'|'+cs[1]].rs.indexOf(String(cs[2]))>=0;}))cells=nc;   // 教室照旧
+      else if(nc.length===2){const f=_ttFindSlots(st,x,x._cand,x._days,false,nc);if(f&&f.cells.length===2)cells=f.cells;}
+      else cells=[[nc[0][0],nc[0][1],om[nc[0][0]+'|'+nc[0][1]].rs[0]]];
+      if(!cells){ok=false;break;}
+      _ttApply(st,x,cells);done.push(x);
+    }
+    if(ok){const t=total();if(t<base&&(!best||t<best.t))best={t:t,mv:mv,cells:mv.map(function(x){return x.cells;}),how:D+_ttSlotName(sA)+' ↔ '+dB+_ttSlotName(sB)};}
+    done.forEach(function(x){_ttUnapply(st,x);});
+    mv.forEach(function(x,k2){_ttApply(st,x,old[k2]);});
+  }
+  if(!best)return null;
+  best.mv.forEach(function(x){_ttUnapply(st,x);});
+  best.mv.forEach(function(x,k3){_ttApply(st,x,best.cells[k3]);});
+  return {how:(hs.length>1?'':(hs[0]==='dn'?'下半 ':'上半 '))+best.how,n:best.mv.length};
+}
+function _ttDeepFix(st,list){
+  const now=function(){return (typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();},t0=now(),dl=t0+TT_DEEP_MS,sd=list.filter(_ttIsSameDay),out={fixed:[],left:[],steps:[],ms:0};   // fixed/left=拆开了/还拆不开的课名;steps=做了哪些挪动
+  sd.forEach(function(c){
+    if(!_ttIsSameDay(c))return;   // 前一门拆的时候顺便拆开了
+    const mv=_ttDeepOne(st,list,c,dl);
+    if(mv){out.steps.push('挪开 '+mv.map(_ttName).join('、')+' 让位给 '+_ttName(c));return;}
+    const sw=_ttDeepSwap(st,list,c,dl);
+    if(sw)out.steps.push(sw.how+' 整个时段对调（'+sw.n+' 门课跟着换）');
+  });
+  sd.forEach(function(c){(_ttIsSameDay(c)?out.left:out.fixed).push(_ttName(c));});
+  out.ms=Math.round(now()-t0);return out;
+}
 function _ttAsgScore(c){return _ttCellScore(c,c.cells[0],c.cells[1])+(c.cells[0][2]!==c.cells[1][2]?30:0);}
 // 由现有课表建占用状态(给「改半建议」等事后操作用);exceptId = 不计入的那门
 function _ttStateFromSol(sol,exceptId){
@@ -4495,6 +4591,7 @@ function _ttSolve(sem,opts){
   // 套用最好的一版,并重建占用状态
   const st=_ttMkState();
   list.forEach(function(c,i){c.cells=[];c.room='';_ttApply(st,c,best.asg[i]);});
+  const deep=(opts.deep!==false&&_ttDeepOn())?_ttDeepFix(st,list):null;   // 还剩两节同一天的课 → 加深搜寻(连挪两门)试着拆开
   // 排课表写死上/下半、却排不满 2 节的课:算「改到另一半能不能排满」→ 只给建议,不擅自改(上下半归排课表管)
   if(!whole)list.forEach(function(c){
     if(c.isCap||c.cells.length>=2||!(c.rawHalf==='上半学期'||c.rawHalf==='下半学期')||(opts.halfOv&&opts.halfOv[String(c.id)]))return;   // 改半方案已经动过的课不再给单门建议
@@ -4511,7 +4608,7 @@ function _ttSolve(sem,opts){
     unplaced.push({id:c.id,course:c.course,cls:c.cls,tc:c.tc,count:c.count,half:c.half,cohorts:c.cohorts,dept:c.dept,credit:c.credit,isCap:c.isCap,members:c.members,note:c.note,reason:reason,nt:c.nt,hint:c.hint});
   });
   const t1=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();
-  return {sem:sem,rooms:rooms,placements:placements,unplaced:unplaced,manualNotes:manualNotes,interns:interns,warns:_ttWarns(placements,whole),whole:whole,tries:Math.min(run+1,TRIES),ms:Math.round(t1-t0)};
+  return {sem:sem,rooms:rooms,placements:placements,unplaced:unplaced,manualNotes:manualNotes,interns:interns,warns:_ttWarns(placements,whole),whole:whole,tries:Math.min(run+1,TRIES),ms:Math.round(t1-t0),deep:deep};
 }
 // 软约束提醒(不阻止,列侧栏):老师每半>4、届别学分>21、届别上下半门数不平衡(全学期跳过门数检查)
 function _ttWarns(pls,whole){
@@ -5143,7 +5240,8 @@ function _ttCheckData(sol){
 function _ttCheckBar(sol){
   if(!(sol.placements||[]).length)return '';
   const D=_ttCheckData(sol),nM=D.nCo+D.nTc+D.nRm,nS=D.sd.length,nH=D.hard.length;
-  if(!nM&&!nS&&!nH)return '<div class="tt-chk ok"><b>✅ 课表检查</b>：没有撞堂、没有同时段多门、没有同一门课两节排同一天。</div>';
+  const dfx=(sol.deep&&sol.deep.fixed.length)?'<div class="tt-chk-r"><span class="sub">「拆开两节同天」这次拆开了 '+sol.deep.fixed.length+' 门（'+sol.deep.fixed.map(eh).join('、')+'）：'+sol.deep.steps.map(eh).join('；')+'</span></div>':'';
+  if(!nM&&!nS&&!nH)return '<div class="tt-chk ok"><b>✅ 课表检查</b>：没有撞堂、没有同时段多门、没有同一门课两节排同一天。'+dfx+'</div>';
   const num=function(n,cls,t){return n?'<b class="'+cls+'">'+t+'</b>':'<span class="z">'+t+'</span>';};
   let h='<div class="tt-chk"><div class="tt-chk-h"><b>🔎 课表检查</b>：不符合排课要求的地方 —— '+num(nH,'r','撞堂／超容量 '+nH+' 门')+' · '+num(nM,'r','同时段多门 '+nM+' 格')+' · '+num(nS,'o','两节同一天 '+nS+' 门')+'<span class="hint"> · 点名称跳到课表</span></div>';
   const half=function(p){return sol.whole?'':(p.half==='up'?'上半 ':(p.half==='dn'?'下半 ':''));};
@@ -5154,8 +5252,8 @@ function _ttCheckBar(sol){
       (D.multi.room.length?'<span class="sub">教室 '+D.nRm+' 格：</span>'+D.multi.room.map(function(x){return '<span class="tt-chk-p" title="切到「依教室号」看这一格" onclick="ttCheckGo(\'room\',\''+jsq(x.id)+'\')">'+eh(x.key)+' <small>'+eh(x.when)+'</small></span>';}).join(''):'')+
       '<span class="sub">格子有红框'+((_ttCache.solo||[]).length?'；届别的多半是个别学生撞课，明细在下面「待处理一览」':'')+'</span></div>';
   }
-  if(nS)h+='<div class="tt-chk-r o"><span class="lab">两节同一天</span>'+D.sd.map(function(p){return '<span class="tt-chk-p" title="'+eh(TT_SD_TIP)+'" onclick="_ttJumpTo(\''+jsq(String(p.id))+'\')">'+_ttCC(p)+' <small>'+eh(half(p)+p.cells[0][0])+'</small></span>';}).join('')+'<span class="sub">格子有橙框；其他天排不下才会这样</span></div>';
-  return h+'</div>';
+  if(nS)h+='<div class="tt-chk-r o"><span class="lab">两节同一天</span>'+D.sd.map(function(p){return '<span class="tt-chk-p" title="'+eh(TT_SD_TIP)+'" onclick="_ttJumpTo(\''+jsq(String(p.id))+'\')">'+_ttCC(p)+' <small>'+eh(half(p)+p.cells[0][0])+'</small></span>';}).join('')+'<span class="sub">格子有橙框；'+(sol.fromSaved?'这是存档当时的排法，重排才会套用新规则':(sol.deep?'已试过挪开挡路的课、整个时段对调，仍拆不开':'其他天排不下才会这样'+(_ttCanEdit()&&!_ttDeepOn()?'；可打勾「拆开两节同天」再试':'')))+'</span></div>';
+  return h+dfx+'</div>';
 }
 // 点课表检查里的届别/老师/教室 → 切到那种检视,捲到那张课表(教室:捲到那门课)
 function ttCheckGo(mode,key){
@@ -5304,7 +5402,7 @@ async function ttHalfPlan(){
   let moves=[],tried=0,base=null,start=null;
   try{
     // 同时保留 2 条路线(只走一条容易第一步挑错就卡住):每条路线把相关的课逐门快算,再对最好的几门完整重排,留下最好的 2 条往下找
-    const root={ov:{},moves:[],sol:_ttSolve(sem,{})};root.miss=_ttMiss(root.sol);
+    const root={ov:{},moves:[],sol:_ttSolve(sem,{deep:false})};root.miss=_ttMiss(root.sol);
     base=root.sol;start=_ttPlanCounts(base);
     let states=[root],bestSt=root,stale=0;const seen={};
     const share=function(q,c){return (q.cohorts||[]).some(function(co){return !_ttSolo(q)[co]&&!_ttSolo(c)[co]&&(c.cohorts||[]).indexOf(co)>=0;});};
@@ -5320,7 +5418,7 @@ async function ttHalfPlan(){
         const scored=[];
         for(let i=0;i<cand.length;i++){
           const c=cand[i],ov2=Object.assign({},S.ov);ov2[String(c.id)]=(c.half==='up'?'dn':'up');
-          scored.push({c:c,ov:ov2,m:_ttMiss(_ttSolve(sem,{halfOv:ov2,tries:TT_PLAN_QUICK}))});tried++;
+          scored.push({c:c,ov:ov2,m:_ttMiss(_ttSolve(sem,{halfOv:ov2,tries:TT_PLAN_QUICK,deep:false}))});tried++;
           _ttPlanShow('<div class="ttplan-wait">⏳ 第 '+(depth+1)+' 轮'+(states.length>1?'（路线 '+(si+1)+'／'+states.length+'）':'')+'：试改第 '+(i+1)+'／'+cand.length+' 门…'+(bestSt.moves.length?'<br>目前最好：改 '+bestSt.moves.map(function(mv){return eh(mv.name);}).join('、'):'')+'</div>',cancelBtn);
           await tick();if(!_ttPlanBusy)return;   // 按了取消
         }
@@ -5328,7 +5426,7 @@ async function ttHalfPlan(){
         const top=scored.slice(0,depth===0?3:2);
         for(let j=0;j<top.length;j++){
           const x=top[j],key=Object.keys(x.ov).sort().join(',');if(seen[key])continue;seen[key]=1;
-          const sol2=_ttSolve(sem,{halfOv:x.ov});
+          const sol2=_ttSolve(sem,{halfOv:x.ov,deep:false});
           kids.push({ov:x.ov,sol:sol2,miss:_ttMiss(sol2),moves:S.moves.concat([{id:String(x.c.id),name:_ttName(x.c),from:x.c.half,to:x.ov[String(x.c.id)]}])});
           await tick();if(!_ttPlanBusy)return;
         }
@@ -5341,10 +5439,11 @@ async function ttHalfPlan(){
     // 去掉多余的:逐门试着「不改它」,结果没有变差就不改(改越少越好)
     for(let k=bestSt.moves.length-1;k>=0&&bestSt.moves.length>1;k--){
       _ttPlanShow('<div class="ttplan-wait">⏳ 检查有没有多改的…</div>',cancelBtn);await tick();if(!_ttPlanBusy)return;
-      const ov2=Object.assign({},bestSt.ov);delete ov2[bestSt.moves[k].id];const s2=_ttSolve(sem,{halfOv:ov2});
+      const ov2=Object.assign({},bestSt.ov);delete ov2[bestSt.moves[k].id];const s2=_ttSolve(sem,{halfOv:ov2,deep:false});
       if(_ttMiss(s2)<=bestSt.miss)bestSt={ov:ov2,sol:s2,miss:_ttMiss(s2),moves:bestSt.moves.filter(function(_,i){return i!==k;})};
     }
     base=bestSt.sol;moves=bestSt.moves;
+    if(_ttDeepOn()&&moves.length&&base.placements.some(_ttIsSameDay))base=_ttSolve(sem,{halfOv:bestSt.ov});   // 定案的那一版再跑一次、带加深搜寻(找方案时为了快没跑)
   }catch(e){_ttPlanBusy=false;_ttPlanShow('<div class="ttplan-bad">找方案时出错：'+eh(String(e&&e.message||e))+'</div>','<button class="btn btn-sm" onclick="ttPlanClose()">关闭</button>');return;}
   _ttPlanBusy=false;
   const end=_ttPlanCounts(base),HN={up:'上半',dn:'下半'},closeBtn='<button class="btn btn-sm" onclick="ttPlanClose()">关闭</button>';
@@ -5773,7 +5872,7 @@ async function renderTtPanel(force){
     st.innerHTML='<div style="padding:14px;background:#FEF9ED;border-radius:8px;color:#7a5b16">教室库是空的。请管理员先到「后台操作 › 教室库」加教室（或先在 Supabase 跑 migration 008）。</div>';bd.innerHTML='';return;
   }
   let tools='';
-  if(canEdit)tools='<button class="btn btn-p btn-sm" onclick="ttAutoSolve()" title="自动把本学期的课排进时段+教室">⚡ 一键自动排</button>'+(_ttWholeSem(sem)?'':' <button class="btn btn-sm" onclick="ttHalfPlan()" title="有课排不上时，找出最少改哪几门课的上下半就能多排上；先看方案，按「套用」才改">🔀 改半方案</button>')+' <label class="tt-solo-sw" title="打开：一门课里某届别只有 1 人时，这个人撞课不挡整门课，撞到的列在「待处理一览」。关掉：1 人的届别也算撞堂（会有更多课排不上）。切换后会重排，可按「↶ 还原」退回。"><input type="checkbox"'+(_ttSoloOn()?' checked':'')+' onchange="ttSoloToggle(this.checked)">个别学生不挡排课</label>'+((_ttUndoSt.length||_ttRedoSt.length)?' <button class="btn btn-sm tt-undo" onclick="ttUndo()" title="还原上一步（Ctrl+Z／⌘Z）；可连续还原 '+_ttUndoSt.length+' 步"'+(_ttUndoSt.length?'':' disabled')+'>↶ 还原</button> <button class="btn btn-sm tt-undo" onclick="ttRedo()" title="重做（Ctrl+Y／⇧⌘Z）"'+(_ttRedoSt.length?'':' disabled')+'>↷ 重做</button>':'')+((_ttCache.sol&&_ttCache.dirty)?' <button class="btn btn-sm" onclick="ttSave()" title="把当前排好的课表存档">💾 存档</button>':'');
+  if(canEdit)tools='<button class="btn btn-p btn-sm" onclick="ttAutoSolve()" title="自动把本学期的课排进时段+教室">⚡ 一键自动排</button>'+(_ttWholeSem(sem)?'':' <button class="btn btn-sm" onclick="ttHalfPlan()" title="有课排不上时，找出最少改哪几门课的上下半就能多排上；先看方案，按「套用」才改">🔀 改半方案</button>')+' <label class="tt-solo-sw" title="打开：一门课里某届别只有 1 人时，这个人撞课不挡整门课，撞到的列在「待处理一览」。关掉：1 人的届别也算撞堂（会有更多课排不上）。切换后会重排，可按「↶ 还原」退回。"><input type="checkbox"'+(_ttSoloOn()?' checked':'')+' onchange="ttSoloToggle(this.checked)">个别学生不挡排课</label>'+' <label class="tt-solo-sw" title="同一门课的两节排在同一天（上午＋下午）时，多试两招把它拆到不同天：① 把挡路的一两门课一起挪开；② 把两个时段的课整批对调。只在有同天课时才多花时间（最多约 6 秒）；不保证都拆得开，拆不开的照样用橙框标出来。切换后会重排，可按「↶ 还原」退回。"><input type="checkbox"'+(_ttDeepOn()?' checked':'')+' onchange="ttDeepToggle(this.checked)">拆开两节同天</label>'+((_ttUndoSt.length||_ttRedoSt.length)?' <button class="btn btn-sm tt-undo" onclick="ttUndo()" title="还原上一步（Ctrl+Z／⌘Z）；可连续还原 '+_ttUndoSt.length+' 步"'+(_ttUndoSt.length?'':' disabled')+'>↶ 还原</button> <button class="btn btn-sm tt-undo" onclick="ttRedo()" title="重做（Ctrl+Y／⇧⌘Z）"'+(_ttRedoSt.length?'':' disabled')+'>↷ 重做</button>':'')+((_ttCache.sol&&_ttCache.dirty)?' <button class="btn btn-sm" onclick="ttSave()" title="把当前排好的课表存档">💾 存档</button>':'');
   if(currentRole==='admin'&&tt)tools+=' <button class="btn btn-sm tt-delsave" onclick="ttDeleteSaved()" title="删除这个学期的课表存档（只有管理员；排课表不受影响）">'+_ICO.del+' 删除存档</button>';
   if(sol)tools+=' <button class="btn btn-sm" onclick="ttExpOpen()" title="选检视方式与要的分组（教室区／专业），导出 Excel 或列印／存 PDF（A4 横向）">📤 导出／列印</button>';
   if(canEdit&&sol)tools+=' <button class="btn btn-sm" onclick="ttWriteHalfBack()" title="把课表里排定的上/下半与老师更新回「排课表」（会修改排课表，需确认）" style="color:#854F0B;border-color:#FCD34D">↩ 写回排课表(上下半+老师)</button>';
