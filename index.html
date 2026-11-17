@@ -6831,6 +6831,24 @@ function ttExpExcel(){
   a.href=URL.createObjectURL(blob);a.download=window._ttExpLast.name;a.click();URL.revokeObjectURL(a.href);
   ttExpClose();
 }
+// 重画课表时保留卷动位置(同一学期、同一种检视才保留;换学期／换检视从头开始):
+//   ① 每张表格自己的卷轴(.tt-wrap 上下、左右)照原样放回去;
+//   ② 课表在画面上的位置不动——上方多出或少掉提示条(未存档、课表检查、橘色框…)时,把页面卷回差的那一段。
+function _ttScrollKeep(bd){
+  try{
+    const ws=[].slice.call(bd.querySelectorAll('.tt-wrap'));if(!ws.length)return null;
+    return {key:_ttCache.sem+'|'+(_ttCache.view||'room'),pos:ws.map(function(w){return [w.scrollTop,w.scrollLeft];}),top:ws[0].getBoundingClientRect().top};
+  }catch(e){return null;}
+}
+function _ttScrollBack(bd,k){
+  try{
+    if(!k||k.key!==_ttCache.sem+'|'+(_ttCache.view||'room'))return;
+    const ws=[].slice.call(bd.querySelectorAll('.tt-wrap'));if(!ws.length)return;
+    if(ws.length===k.pos.length)ws.forEach(function(w,i){w.scrollTop=k.pos[i][0];w.scrollLeft=k.pos[i][1];});
+    const d=ws[0].getBoundingClientRect().top-k.top;
+    if(Math.abs(d)>1)window.scrollBy(0,d);
+  }catch(e){}
+}
 // 渲染「课表制作」分页(阶段③/④/⑤)
 async function renderTtPanel(force){
   _ttFillSemSel();
@@ -6855,6 +6873,7 @@ async function renderTtPanel(force){
   if((_ttCache.refs.rooms||[]).length===0){
     st.innerHTML='<div style="padding:14px;background:#FEF9ED;border-radius:8px;color:#7a5b16">教室库是空的。请 Head of Administration 或管理员先到「后台操作 › 教室库」加教室（或先在 Supabase 跑 migration 008）。</div>';bd.innerHTML='';return;
   }
+  const _keep=_ttScrollKeep(bd);   // 重画前记下卷动位置(拖一下就跳回左上角很难用;Aj. Tsai 2026-11-18)
   let tools='';
   // 主操作
   if(canEdit){const nKeep=_ttKeepTodo(sol);const shut="this.closest('details').open=false;";   // 「⚡ 一键自动排 ▾」:三种排法收在 ▾ 里;有课可以只补排时 ▾ 上亮一个橘点
@@ -6901,6 +6920,7 @@ async function renderTtPanel(force){
     bd.innerHTML=_ttInternsBar({interns:it})+'<div style="padding:18px;background:#FEF9ED;border-radius:8px;color:#7a5b16;line-height:1.7">本学期共 <b>'+(n-it.length)+'</b> 门课待排。'+(canEdit?'点 <b>⚡ 一键自动排</b> 自动排进时段+教室（排不下的会标红留空、列到右侧「待处理」；🖨️ 列印在下一阶段加入）。':'尚未排课（等 Head of Administration 或管理员排）。')+'</div>';return;
   }
   bd.innerHTML=_ttBodyHtml(sol);
+  _ttScrollBack(bd,_keep);
   _ttJumpFill();   // 依现在画面上的分组填「跳到」下拉
 }
 
