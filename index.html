@@ -1395,8 +1395,6 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <div style="font-size:12.5px;font-weight:600;color:#B45309;margin-bottom:8px">🟠 软提醒　<span style="font-weight:400;opacity:.7">排不下可勾「已核对」放行</span></div>
       <ul style="margin:0;padding-left:18px;font-size:12px;color:#7c5410;line-height:1.95">
         <li>老师每半最多 <b>4</b> 门</li>
-        <li>届别上／下半 <b>4+3</b> 或 <b>3+4</b> 门；有 Capstone 总数 ≤ 6</li>
-        <li>届别一学期 ≤ <b>21</b> 学分（Capstone 算 6）</li>
         <li>同一门课两节<b>不同天</b>（同天标橙框）</li>
       </ul>
     </div>
@@ -5257,20 +5255,16 @@ function _ttSolve(sem,opts){
   }
   return {keep:keepInfo,sem:sem,rooms:rooms,placements:placements,unplaced:unplaced,manualNotes:manualNotes,interns:interns,warns:_ttWarns(placements,whole),whole:whole,tries:Math.min(run+1,TRIES),ms:Math.round(t1-t0),deep:deep,pick:best?{run:best.run,nUn:best.nUn,n1:best.n1,soft:best.soft}:null};
 }
-// 软约束提醒(不阻止,列侧栏):老师每半>4、届别学分>21、届别上下半门数不平衡(全学期跳过门数检查)
+// 软约束提醒(不阻止,列在「待处理一览 › 提醒」,可勾已核对):老师每半 >4 门(全学期制的学期跳过)
 function _ttWarns(pls,whole){
-  const w=[],th={},chh={},cred={};
+  // 只剩「老师单半超过 4 门」一条(Aj. Tsai 2026-11-18)。拿掉的两条:
+  //   · 届别学期学分 > 21 —— 很多届别本来就 24/27 学分,永远在响,没人会去处理;
+  //   · 届别上/下半门数不平衡(4+3 或 3+4)—— 真正的限制是每半 5 门(格子满),排课表填课时已经有「放哪一半比较排得上」「格子不够」两个提示。
+  const w=[],th={};
   pls.forEach(function(p){
-    (p.half==='both'?['up','dn']:[p.half]).forEach(function(h){
-      if(p.tc)th[p.tc+'|'+h]=(th[p.tc+'|'+h]||0)+1;
-      (p.cohorts||[]).forEach(function(co){chh[co+'|'+h]=(chh[co+'|'+h]||0)+1;});
-    });
-    (_ttMem(p)||[p]).forEach(function(m){(m.cohorts||[]).forEach(function(co){cred[co]=(cred[co]||0)+(+m.credit||0);});});   // 跟班组:各门学分分别算到各自的届别
+    (p.half==='both'?['up','dn']:[p.half]).forEach(function(h){if(p.tc)th[p.tc+'|'+h]=(th[p.tc+'|'+h]||0)+1;});
   });
   if(!whole)Object.keys(th).forEach(function(k){if(th[k]>4){const a=k.split('|');w.push('老师 '+a[0]+' 在'+(a[1]==='up'?'上半':'下半')+'有 '+th[k]+' 门（>4）');}});
-  Object.keys(cred).forEach(function(co){if(cred[co]>21)w.push('届别 '+co+' 本学期学分 '+cred[co]+'（>21）');});
-  if(!whole){const byc={};Object.keys(chh).forEach(function(k){const a=k.split('|');byc[a[0]]=byc[a[0]]||{up:0,dn:0};byc[a[0]][a[1]]=chh[k];});
-  Object.keys(byc).forEach(function(co){const u=byc[co].up,d=byc[co].dn;if(u+d>=6&&Math.abs(u-d)>1)w.push('届别 '+co+' 上/下半门数 '+u+'+'+d+'（建议 4+3 或 3+4）');});}
   return w;
 }
 // 对最终落位再查一次硬约束(主要抓「存档后排课改了」造成的冲突)→ 标红
@@ -6008,9 +6002,7 @@ function _ttCapGroups(sol){
 }
 // 软提醒按类型汇总(文字仍由 _ttWarns 产生;「已核对」照原文记)
 const TT_WARN_KINDS=[
-  {k:'tch',re:/^老师 (.+) 在(上半|下半)有 (\d+) 门/,name:'老师单半超过 4 门',fmt:function(m){return m[1]+' · '+m[2]+' '+m[3]+' 门';}},
-  {k:'cred',re:/^届别 (.+) 本学期学分 (\d+)/,name:'届别本学期学分超过 21',fmt:function(m){return m[1]+' · '+m[2]+' 学分';}},
-  {k:'bal',re:/^届别 (.+) 上\/下半门数 (\d+)\+(\d+)/,name:'届别上／下半门数不平衡（建议 4+3 或 3+4）',fmt:function(m){return m[1]+' · '+m[2]+'+'+m[3];}}
+  {k:'tch',re:/^老师 (.+) 在(上半|下半)有 (\d+) 门/,name:'老师单半超过 4 门',fmt:function(m){return m[1]+' · '+m[2]+' '+m[3]+' 门';}}
 ];
 // 面板里的课码胶囊:点=跳到课表,悬停=浮出原因与建议(_ttTipShow);有改半建议的旁边带「↪ 改到X半」钮
 function _ttIssuePill(x,kind){
