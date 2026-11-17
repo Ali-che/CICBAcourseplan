@@ -1379,79 +1379,81 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <button onclick="ttRulesClose()" style="background:transparent;border:0;font-size:20px;color:#888;cursor:pointer;line-height:1;padding:4px 8px;font-family:inherit">×</button>
     </div>
     <div style="background:#FDECEC;border:0.5px solid #F5C6C6;border-radius:8px;padding:12px 14px;margin-bottom:12px">
-      <div style="font-size:12.5px;font-weight:600;color:#B3261E;margin-bottom:8px">🔴 硬约束　<span style="font-weight:400;color:#999">违反会标红，必须解决（不能放行）</span></div>
+      <div style="font-size:12.5px;font-weight:600;color:#B3261E;margin-bottom:8px">🔴 硬约束　<span style="font-weight:400;opacity:.7">标红，必须解决</span></div>
       <ul style="margin:0;padding-left:18px;font-size:12px;color:#555;line-height:1.95">
         <li>教室容量 ≥ 上课人数</li>
-        <li>同一时段、一间教室只排一门课</li>
-        <li>老师不撞堂（同一时段不排两门）</li>
-        <li>届别不撞堂（同一时段不排两门；例外见下方「个别学生」）</li>
+        <li>一间教室同时段只排一门</li>
+        <li>老师不撞堂</li>
+        <li>届别不撞堂（个别学生例外）</li>
       </ul>
     </div>
     <div style="background:#FFF4E5;border:0.5px solid #FAD9A8;border-radius:8px;padding:12px 14px;margin-bottom:12px">
-      <div style="font-size:12.5px;font-weight:600;color:#B45309;margin-bottom:8px">🟠 软提醒　<span style="font-weight:400;color:#c08a4a">尽量满足；真的排不下，在「待处理一览」勾「已核对」就放行</span></div>
+      <div style="font-size:12.5px;font-weight:600;color:#B45309;margin-bottom:8px">🟠 软提醒　<span style="font-weight:400;opacity:.7">排不下可勾「已核对」放行</span></div>
       <ul style="margin:0;padding-left:18px;font-size:12px;color:#7c5410;line-height:1.95">
-        <li>老师每半学期最多 <b>4</b> 门</li>
-        <li>每个届别上/下半 <b>4+3</b> 或 <b>3+4</b> 门；有 Capstone 的届别总数 ≤ 6</li>
-        <li>每个届别一学期总学分 ≤ <b>21</b>（Capstone 算 6 学分）—— 不少届别本来就 24/27 学分，排不下时勾「已核对」放行</li>
-        <li>同一门课两节尽量<b>不同天</b>（同天会橙框；可用「🔀 改半方案」或工具栏「拆开两节同天」）</li>
+        <li>老师每半最多 <b>4</b> 门</li>
+        <li>届别上／下半 <b>4+3</b> 或 <b>3+4</b> 门；有 Capstone 总数 ≤ 6</li>
+        <li>届别一学期 ≤ <b>21</b> 学分（Capstone 算 6）</li>
+        <li>同一门课两节<b>不同天</b>（同天标橙框）</li>
       </ul>
     </div>
     <div style="background:#FAEEDA;border-radius:8px;padding:12px 14px;margin-bottom:12px">
-      <div style="font-size:12.5px;font-weight:600;color:#854F0B;margin-bottom:8px">🟡 软优先　<span style="font-weight:400;color:#b08a4a">尽量满足，冲突时可让</span></div>
+      <div style="font-size:12.5px;font-weight:600;color:#854F0B;margin-bottom:8px">🟡 软优先　<span style="font-weight:400;opacity:.7">冲突时可让</span></div>
       <ul style="margin:0;padding-left:18px;font-size:12px;color:#6b5114;line-height:1.95">
-        <li><b>321 / 322</b> 优先给 CD（创意设计）专业课</li>
-        <li>LA / KH 连续两级 → 低级排上半、高级排下半（先修低的）</li>
-        <li>教室挑刚好够大的，大教室留给大班</li>
+        <li><b>321 / 322</b> 优先给 CD 专业课</li>
+        <li>LA / KH 连续两级：低级上半、高级下半</li>
+        <li>教室挑刚好够大的</li>
       </ul>
     </div>
     <div style="background:#F5F4FE;border-radius:8px;padding:12px 14px;margin-bottom:12px">
       <div style="font-size:12.5px;font-weight:600;color:#3C3489;margin-bottom:8px">⚙️ 特殊规则</div>
       <ul style="margin:0;padding-left:18px;font-size:12px;color:#534AB7;line-height:1.95">
-        <li><b>时段</b>：周一~周五　上午 09:00–12:00、下午 13:30–16:30；每门课一周 2 节、各 3 小时，尽量分散到不同天</li>
-        <li><b>Capstone</b>：排周末（周五/周六，不够才周日），一天三段 09–12 / 12–15 / 15–18；同一位老师固定一间教室（233~236）</li>
-        <li><b>合班</b>：备注写「合班」且上下半相同的课，当一门排</li>
-        <li><b>个别学生</b>：某届别在一门课只有 1 人 → 不挡排课，撞到的另列「个别学生撞课」清单</li>
-        <li><b>专用教室</b>：备注写 Computer Lab／电脑室 → 指定那间</li>
-        <li><b>排课要求</b>：在排课表新增／编辑课程时填「排课要求」（指定教室、限定星期、两节连续两天），自动排照办。<b>合班</b>照旧在备注里写「合班」两个字（同老师、同上下半的合班课当一门排）。旧备注里用文字写的（如 Computer Lab）仍会照办；看不懂的列「备注待人工」</li>
+        <li><b>时段</b>：周一~周五，上午 09:00–12:00、下午 13:30–16:30；每门课一周 2 节</li>
+        <li><b>Capstone</b>：周五／周六（不够才周日），09–12 / 12–15 / 15–18；同老师固定一间（233~236）</li>
+        <li><b>合班</b>：备注写「合班」＋同老师＋同上下半 → 当一门排</li>
+        <li><b>个别学生</b>：届别在一门课只有 1 人 → 不挡排课，撞课另列清单</li>
+        <li><b>排课要求</b>：排课表填指定教室／限定星期／连续两天 → 照办</li>
+        <li><b>旧备注</b>：写 Computer Lab／电脑室仍照办；看不懂的列「备注待人工」</li>
       </ul>
     </div>
     <div style="background:#EAF2FB;border:0.5px solid #BBD6F2;border-radius:8px;padding:12px 14px;margin-bottom:12px">
-      <div style="font-size:12.5px;font-weight:600;color:#185FA5;margin-bottom:8px">📋 排课先后（哪种课先排）</div>
-      <div style="font-size:12px;color:#1e4e79;line-height:1.85">
-        自动排会试多种先后顺序（固定种子 → 同样的排课每次结果一样），取最好的一版——<b>先比没排上的门数，再比只排到 1 节的门数，都一样才比</b>两节间隔、同一天、个别学生撞课这些扣分。原则是<b>越难安排的越先排</b>：
-        <ul style="margin:6px 0 0;padding-left:18px;line-height:1.95">
-          <li>涉及<b>届别越多</b>的课先排（占位最难）</li>
-          <li>越<b>抢手</b>的课先排（该届别／老师在那半还有很多别的课、可用教室又少）</li>
-          <li><b>Capstone 大班先排</b>（周末机位有限，排不下时留小班）</li>
-        </ul>
-      </div>
+      <div style="font-size:12.5px;font-weight:600;color:#185FA5;margin-bottom:8px">📋 排课先后　<span style="font-weight:400;opacity:.7">越难排的越先排</span></div>
+      <ul style="margin:0;padding-left:18px;font-size:12px;color:#1e4e79;line-height:1.95">
+        <li><b>届别多</b>的课先排</li>
+        <li><b>抢手</b>的课先排（届别／老师那半课多、可用教室少）</li>
+        <li><b>Capstone 大班</b>先排</li>
+        <li>试多种顺序取最好：先比<b>没排上</b>门数 → 再比<b>只排 1 节</b>门数 → 再比其余扣分</li>
+        <li>同样的排课，每次结果一样</li>
+      </ul>
     </div>
     <div id="ttrules-multi" style="background:#FFF8E6;border:0.5px solid #F2D58A;border-radius:8px;padding:12px 14px;margin-bottom:12px">
-      <div style="font-size:12.5px;font-weight:600;color:#854F0B;margin-bottom:8px">🧮 多届别的课，放哪一半比较排得上？</div>
-      <div style="font-size:12px;color:#6b4a12;line-height:1.85">
-        一门课有几个届别<b>没有上限</b>；会不会卡，看的是<b>这些届别在那一半已经有几门课</b>。每个届别一周只有 10 格（周一~周五 × 上午／下午），一门课占 2 格，而且同一门课的届别要<b>同时有空</b>。
-        <ul style="margin:6px 0 0;padding-left:18px;line-height:1.95">
-          <li>届别在那一半<b>已有 4 门</b>，再加这门就是第 5 门、10 格全满 → 多届别的课几乎排不上</li>
-          <li><b>已有 3 门</b>（加这门共 4 门）→ 大多排得上，偶尔还是对不齐</li>
-          <li><b>已有 1～2 门</b> → 都排得上</li>
-        </ul>
-        <div style="margin-top:6px"><b>做法</b>：届别多的课，放在那些届别<b>课比较少的那一半</b>；连这门算进去，每个届别在那一半<b>不超过 4 门</b>。上半少一门、下半就多一门，所以改之前先看另一半会不会变成 5 门。挪<b>一门很多届别共上的课</b>，可以一次让好几个届别都松开——「🔀 改半方案」找的就是这种课。</div>
-        <div style="margin-top:6px;color:#9a6b1a">只有 1 人的个别学生届别不算在内（不挡排课）。上面的比例是拿 2569-2 上半试排得到的大概数字，有指定老师、指定教室的课会再紧一些。在排课表新增／编辑课程时，格子不够会直接出黄色提醒。</div>
-      </div>
+      <div style="font-size:12.5px;font-weight:600;color:#854F0B;margin-bottom:8px">🧮 多届别的课，放哪一半？</div>
+      <ul style="margin:0;padding-left:18px;font-size:12px;color:#6b4a12;line-height:1.95">
+        <li>届别数<b>没有上限</b>；看的是各届别在那一半<b>已有几门课</b></li>
+        <li>已有 <b>4 门</b> → 几乎排不上</li>
+        <li>已有 <b>3 门</b> → 大多排得上</li>
+        <li>已有 <b>1～2 门</b> → 排得上</li>
+        <li><b>原则</b>：连这门算进去，每个届别每半<b>不超过 4 门</b></li>
+        <li>改半前，先看另一半会不会变 5 门</li>
+        <li>只有 1 人的届别不算</li>
+      </ul>
     </div>
-    <div style="background:#EAF6F0;border-radius:8px;padding:10px 12px;font-size:11.5px;color:#1b6b4a;line-height:1.65">
-      ⓘ 排不下的课<b>不会硬塞</b>，而是留空标红、列进「<b>待处理一览</b>」，由人手动拖动，或用「🔀 改半方案」调上下半。
+    <div style="background:#EAF6F0;border-radius:8px;padding:12px 14px;margin-bottom:12px">
+      <div style="font-size:12.5px;font-weight:600;color:#1b6b4a;margin-bottom:8px">ⓘ 排不下的课</div>
+      <ul style="margin:0;padding-left:18px;font-size:12px;color:#1b6b4a;line-height:1.95">
+        <li><b>不硬塞</b>：留空标红，列进「待处理一览」</li>
+        <li>处理：手动拖动，或用「🔀 改半方案」</li>
+      </ul>
     </div>
-    <div style="background:#EEF2FF;border:0.5px solid #C7D2FE;border-radius:8px;padding:12px 14px;margin-top:12px">
-      <div style="font-size:12.5px;font-weight:600;color:#1e3a8a;margin-bottom:8px">📌 排课表改了，课表制作怎么更新？</div>
-      <div style="font-size:12px;color:#3730a3;line-height:1.85">
-        课表制作是依「<b>排课表</b>」排出来、再存档的结果。排课表改了（例如主任调动课程/人数/老师/届别）<b>不会自动更新</b>——只要课表跟排课表有任何不一样（课程／老师／届别／人数／上下半／备注，或新增、删除），课表制作顶部就会出现橘色提示，逐门列出「课表 ／ 排课表」各是什么。要更新，由 <b>Head of Administration（秘书处）或管理员</b> 到课表制作选该学期，二选一：
-        <div style="margin-top:8px;padding-left:2px">
-          <div style="margin-bottom:6px"><b>🅰 只补排</b>（推荐）：按「🧩 只补排改动的课」。已排好的课<b>留在原位</b>（手动调过的教室/时段也保留），只排<b>新增</b>的、原本没排上的、以及排课表改了老师/届别/人数后<b>原位放不下</b>的课；排课表删掉的课会从课表拿掉。排完上方绿色框列出动了哪几门，核对后 💾 存档。也可以不按钮、自己把改动的课拖到位。<br><b>老师、上下半</b>两边都能改，系统不替你决定：橘色框里那一门右边选「<b>← 照排课表</b>」（课表改成排课表的；上下半不同会到那一半重新排位）或「<b>写回排课表 →</b>」（把课表上的写进排课表）。</div>
-          <div><b>🅱 整张重排</b>：按「⚡ 整张重排」，以最新排课表重算整张，<b>不保留</b>手动微调过的教室/时段。核对无误后 💾 存档。</div>
-        </div>
-        <div style="margin-top:8px;color:#6366f1">主任自己是只读，<b>不能重排或存档</b>，改完排课表要请秘书处或管理员更新。存档每学期只留一版、会盖掉旧版。</div>
-      </div>
+    <div style="background:#EEF2FF;border:0.5px solid #C7D2FE;border-radius:8px;padding:12px 14px;margin-bottom:12px">
+      <div style="font-size:12.5px;font-weight:600;color:#1e3a8a;margin-bottom:8px">📌 排课表改了，课表怎么更新？</div>
+      <ul style="margin:0;padding-left:18px;font-size:12px;color:#3730a3;line-height:1.95">
+        <li><b>不会自动更新</b>；有不同时顶部出橘色提示，逐门列出差异</li>
+        <li>由<b>秘书处或管理员</b>更新；主任只读，不能重排或存档</li>
+        <li><b>🅰 只补排</b>（推荐）：已排好的留原位，只排新增／没排上／原位放不下的课；排课表删掉的会拿掉</li>
+        <li><b>🅱 整张重排</b>：全部重算，<b>不保留</b>手动调整</li>
+        <li><b>老师、上下半</b>不同：逐门选「← 照排课表」或「写回排课表 →」</li>
+        <li>更新后要 💾 存档；每学期只留一版，会盖掉旧版</li>
+      </ul>
     </div>
     <div style="text-align:right;margin-top:14px">
       <button onclick="ttRulesClose()" class="btn">关闭</button>
