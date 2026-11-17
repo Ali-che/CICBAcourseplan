@@ -5723,7 +5723,7 @@ function _ttSuggestFor(u,sol){
   if(best&&best.bl.length&&!sol.whole&&u.half!=='both'){
     const oh=(u.half==='dn')?'up':'dn',odays=(oh==='dn'?TT_DN_DAYS:TT_UP_DAYS).filter(function(d){return d!=='周六';});let ob=null;
     odays.forEach(function(d){['am','pm'].forEach(function(s){cand.forEach(function(r){if(ob)return;const o=_ttHit(occ,oh+'|'+r.code,d,u,s);const t=u.tc&&_ttHit(tb,oh+'|'+u.tc,d,u,s);let coc=false;_ttCoToks(u).r.forEach(function(co){if(_ttHit(cb,oh+'|'+co,d,u,s))coc=true;});if(!o&&!t&&!coc)ob={d:d,s:s,room:r.code};});});});
-    if(ob)return '建议调整：本'+(u.half==='dn'?'下':'上')+'半没空位；建议改到'+(oh==='dn'?'下':'上')+'半或在本半先挪走 '+best.bl.slice(0,2).join('、')+'。';
+    if(ob)return '建议调整：本'+(u.half==='dn'?'下':'上')+'半没空位；建议改到'+(oh==='dn'?'下':'上')+'半'+(_ttCanEdit()?'（'+ob.d+_ttSlotName(ob.s)+'，教室 '+ob.room+' 是空的）':'')+'或在本半先挪走 '+best.bl.slice(0,2).join('、')+'。';   // 具体时段与教室只给能排课的人看(秘书处／管理员);主任等只读角色看简短版(Aj. Tsai 2026-11-17)
   }
   if(best)return '建议调整：'+best.d+_ttSlotName(best.s)+'，教室 '+best.room+'。但要先解决 '+best.bl.slice(0,2).join('、')+'（把其中一门挪到别的时段）。';
   return '容量够的教室在每个时段都满了。建议：挪动其他课腾一个时段，或加教室。';
