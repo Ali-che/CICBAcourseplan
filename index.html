@@ -5563,7 +5563,7 @@ function _ttTipShow(chip){
     const key=_ttName(un),cw=_ttCapWarn(sol).filter(function(w){return w.list.indexOf(key)>=0;})[0];
     const reason=cw?(cw.who+' · '+cw.half+'：'+cw.txt):(un.reason||'老师、届别、教室找不到同时有空的时段');
     const sug=(un.hint&&un.hint.cells)?('改到'+(un.hint.half==='dn'?'下半':'上半')+'就能排满 2 节：'+un.hint.cells.map(_ttCellTxt).join('、')+'（按上方「待处理一览」里这门课旁的「↪ 改到'+(un.hint.half==='dn'?'下半':'上半')+'」）'):_ttSuggestFor(un,sol);
-    unHtml='<div style="margin-top:6px;color:#b42318"><b>为什么没排上：</b>'+eh(reason)+'</div><div style="margin-top:4px;color:#1a6b2f"><b>💡 建议：</b>'+eh(sug)+'</div>';
+    unHtml='<div style="margin-top:6px;color:#b42318"><b>为什么没排上：</b>'+eh(reason)+'</div><div style="margin-top:4px;color:#1a6b2f"><b>💡 建议：</b>'+eh(String(sug).replace(/^建议调整：/,''))+'</div>';   // 标题已经写「建议」,内文开头的「建议调整：」在浮出卡里省略(Aj. Tsai 2026-11-17)
   }
   if(!un&&(p.cells||[]).length===1){   // 只排到 1 节:说明 + 建议(面板不再逐门列)
     const hn=(p.hint&&p.hint.cells)?(p.hint.half==='dn'?'下半':'上半'):'';
