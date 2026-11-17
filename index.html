@@ -445,6 +445,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 .tt-internbar span{color:#33507f}
 .tt-fin{display:inline-block;border-radius:999px;padding:0 8px;font-size:11.5px;font-weight:600;line-height:1.7}.tt-fin.ok{background:#E3F4EA;color:#1a6b2f}.tt-fin.dr{background:#FDEBD0;color:#9a5b00}
 .tt-finbar{border-radius:8px;padding:7px 12px;margin:8px 0 0;font-size:12.5px;line-height:1.6}.tt-finbar span{font-size:11.5px;opacity:.85}.tt-finbar.ok{border:1px solid #A7D7C5;background:#F0FAF5;color:#1b4d3a}.tt-finbar.dr{border:1px solid #f6ad55;background:#fffaf0;color:#8a5a12}
+.tt-prevbar{border:1.5px dashed #7F77DD;background:#F5F4FE;border-radius:8px;padding:8px 12px;margin:8px 0 0;font-size:12.5px;color:#3C3489;line-height:1.6;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .tt-archbar{border:1px solid #f6ad55;background:#fffaf0;border-radius:8px;padding:7px 12px;margin:8px 0 0;font-size:12.5px;color:#8a5a12;line-height:1.6}
 /* 「跳到」下拉与分组标题 */
 .tt-jump-l{font-size:11px;color:#666;font-weight:500;margin:0 0 0 10px}
@@ -5206,7 +5207,7 @@ function ttKeepSolve(follow){
 function _ttKeepBar(sol){
   const k=sol&&sol.keep;if(!k)return '';
   const row=function(lab,arr,col){return arr&&arr.length?'<div style="margin-top:3px"><b style="color:'+col+'">'+lab+' '+arr.length+' 门</b>：'+arr.map(eh).join('、')+'</div>':'';};
-  return '<div class="tt-keepbar" style="border:1px solid #A7D7C5;background:#F0FAF5;border-radius:8px;padding:9px 12px;margin:0 0 10px;font-size:12px;color:#1b4d3a;line-height:1.6"><b>🧩 只补排</b>：'+k.kept+' 门留在原位没动。'
+  return '<div class="tt-keepbar" style="border:1px solid #A7D7C5;background:#F0FAF5;border-radius:8px;padding:9px 12px;margin:0 0 10px;font-size:12px;color:#1b4d3a;line-height:1.6"><b>'+(_ttCache.preview?'🔍 试排预览的结果':'🧩 只补排')+'</b>：'+k.kept+' 门留在原位没动。'
     +row('新排进来',k.added,'#1b6b4a')+row('排课表改了、原位放不下而换位',k.moved,'#92400e')+row('仍没排上（见待处理一览）',k.fail,'#b42318')+row('排课表已删、从课表拿掉',k.gone,'#666')
     +row('老师改成排课表的',k.tcBack,'#92400e')+row('上下半改成排课表的、已重排',k.halfBack,'#92400e')
     +row('老师跟排课表不一样（没动，见上方橘色框逐门决定）',k.tcDiff,'#92400e')+row('上下半跟排课表不一样（没动，见上方橘色框逐门决定）',k.halfDiff,'#92400e')+'</div>';
@@ -6384,8 +6385,8 @@ function _ttDriftBanner(drift){
     items+='<div class="tt-side-item" style="background:#eef2ff;color:#1e3a8a"><b>不在课表上 '+drift.add.length+' 门</b>（存档时没排上，或存档后排课表才新增）<div style="margin:4px 0;display:flex;flex-wrap:wrap;gap:4px;align-items:center">'+names+'</div>'+(mu.length?'<span style="font-size:11.5px"><b>未排上原因</b>：列在下方「<b>待处理一览</b>」（鼠标移到课码上也会浮出）。</span> ':'')+(canEdit?'<span style="font-size:11.5px;color:#555">按「🧩 只补排」自动排进来，或从未排区拖进课表。</span>':'')+'</div>';
   }
   const act=canEdit
-    ? '<div style="margin:6px 0 2px">'+(struct?'<button class="btn btn-p btn-sm" onclick="ttKeepSolve()" title="已排好的课留在原位（含手动调过的），只排新增的、改动后原位放不下的；老师／上下半不一样的不动">🧩 只补排改动的课</button> ':'')+'<button class="btn btn-sm" onclick="ttAutoSolve()" title="整张重排，全部照排课表，不保留手动调过的教室/时段">⚡ 整张重排</button>'+(both?' <span style="font-size:11px;color:#6b5114">老师／上下半不一样的 '+both+' 门：两边都能改，请逐门选「← 照排课表」或「写回排课表 →」</span>':'')+'</div>'
-    : '<div style="font-size:11px;color:#888;margin-top:3px">请 Head of Administration 或管理员更新（详见「ℹ️ 说明 › 排课规则」）。</div>';
+    ? '<div style="margin:6px 0 2px">'+(struct?'<button class="btn btn-p btn-sm" onclick="ttKeepSolve()" title="已排好的课留在原位（含手动调过的），只排新增的、改动后原位放不下的；老师／上下半不一样的不动">🧩 只补排改动的课</button> ':'')+'<button class="btn btn-sm" onclick="ttAutoSolve()" title="整张重排，全部照排课表，不保留手动调过的教室/时段">⚡ 整张重排</button>'+(both?' <button class="btn btn-sm" onclick="ttKeepSolve(\'all\')" title="已排好的课留在原位；新增／放不下的重排；老师、上下半不一样的全部改成排课表的（上下半不同会到那一半重新排位）。跟主任「试排预览」看到的结果一样">← 全部照排课表</button>':'')+(both?' <span style="font-size:11px;color:#6b5114">老师／上下半不一样的 '+both+' 门：两边都能改，请逐门选「← 照排课表」或「写回排课表 →」</span>':'')+'</div>'
+    : '<div style="margin:6px 0 2px">'+((_ttCache.tt&&!_ttCache.preview)?'<button class="btn btn-p btn-sm" onclick="ttPreview()" title="照现在的排课表，用「只补排」的方式试排一次，看排不排得下。只是预览，不会存档、同事看不到">🔍 试排预览</button> ':'')+'<span style="font-size:11px;color:#888">'+(_ttCache.preview?'这是试排预览里还剩下的差异。':'先看这样改排不排得下；')+'要真的更新课表，请 Head of Administration 或管理员处理（详见「ℹ️ 说明 › 排课规则」）。</span></div>';
   const title=drift.version!=null?('⚠ 存档 v'+drift.version+' 后，课表与排课表有 '+drift.n+' 处不一样 —— 这张课表可能过时'):('⚠ 课表与排课表有 '+drift.n+' 处不一样');
   return '<div class="tt-driftbar" style="border:1px solid #F6C667;background:#FEF9ED;border-radius:8px;padding:10px 12px;margin:0 0 10px"><div style="font-size:12.5px;font-weight:700;color:#92400e">'+title+'</div>'+act+'<details style="margin-top:4px"'+(drift.n<=8?' open':'')+'><summary style="cursor:pointer;font-size:12px;color:#92400e">看哪些不一样（排课表已删 '+drift.del.length+' · 内容不同 '+drift.chg.length+' · 不在课表上 '+drift.add.length+'）</summary><div style="max-height:240px;overflow:auto;margin-top:6px">'+items+'</div></details></div>';
 }
@@ -6478,6 +6479,7 @@ function _ttFinalNote(tt){
     +(tt.final_version!=null?'<span> 上一次定版是 v'+eh(String(tt.final_version))+'（'+eh(tt.final_by||'')+' · '+_recoFmtTime(tt.final_at)+'）。</span>':'')+'</div>';
 }
 function _ttPrintFinal(){   // 列印抬头:草稿要印出来,免得纸本被当成正式版
+  if(_ttCache.preview)return '（试排预览，未存档）';
   if(!_ttCache.finalOK)return '';const tt=_ttCache.tt;
   return (!tt||_ttCache.dirty||_ttFinalState(tt)!=='final')?'（草稿，未定版）':'（定版 v'+tt.version+'）';
 }
@@ -6523,6 +6525,27 @@ function ttHistLoad(i){
   _ttCache.sol=sol;_ttCache.dirty=true;_ttHist=[];ttPlanClose();renderTtPanel();
   if(typeof showToast==='function')showToast('已载入旧版 v'+(x.version==null?'?':x.version)+'（还没存档）。确认后按「💾 存档」才会盖掉现在的；不要就按「↶ 还原」',{kind:'success'});
 }
+// ── 试排预览(Aj. Tsai 2026-11-18:主任改完排课表,自己先看整张课表排不排得下)──
+// 给不能排课的角色用:拿存档的课表 + 现在的排课表,在自己的浏览器里跑一次「只补排」,把结果放到画面上看。
+// 不存档、不送出任何东西、同事看不到;拖动／存档／定版照旧都不能做(那些都看 _ttCanEdit)。按「结束预览」或换学期／重新载入就回到存档。
+// 老师、上下半一律照排课表(_ttSolve 的 follow:'all')。秘书处要得到一样的结果:橘色框按「← 全部照排课表」(= ttKeepSolve('all'));前提是两个选项「拆开两节同天」「课排满优先」都是默认的打勾。
+function ttPreview(){
+  const sem=_ttCache.sem,tt=_ttCache.tt;if(!sem||!tt)return;
+  if(_ttCanEdit()){ttKeepSolve();return;}   // 能排课的人直接用只补排(有还原)
+  let sol=null;try{sol=_ttSolve(sem,{keep:_ttSolutionFromSaved(sem,tt),follow:'all'});}catch(e){sol=null;}   // follow:'all' = 老师、上下半也照排课表(主任改的就是排课表,预览要把这些改动都算进去)
+  if(!sol){if(typeof showToast==='function')showToast('试排预览没有算出来，请重新载入再试一次',{kind:'error'});return;}
+  _ttCache.sol=sol;_ttCache.dirty=false;_ttCache.preview=true;renderTtPanel();
+  const k=sol.keep||{};
+  if(typeof showToast==='function')showToast('试排预览：'+(k.kept||0)+' 门留在原位 · 新排进 '+(k.added||[]).length+' 门'+((k.moved||[]).length?' · 换位 '+k.moved.length+' 门':'')+((k.fail||[]).length?' · 排不上 '+k.fail.length+' 门':'')+'（没有存档）',{kind:(k.fail||[]).length?'':'success'});
+}
+function ttPreviewEnd(){if(!_ttCache.preview)return;_ttCache.sol=null;_ttCache.dirty=false;_ttCache.preview=false;renderTtPanel();}
+function _ttPreviewNote(tt){
+  if(!_ttCache.preview)return '';
+  const k=(_ttCache.sol&&_ttCache.sol.keep)||{},fail=(k.fail||[]).length;
+  return '<div class="tt-prevbar"><span>🔍 <b>这是试排预览，不是正式课表</b> —— 照现在的排课表（老师、上下半也照排课表）试排的结果：'+(fail?'<b style="color:#b42318">还有 '+fail+' 门排不上</b>（看下方「待处理一览」）':'<b style="color:#1a6b2f">全部排得下</b>')+'。没有存档，同事看到的还是'+(tt?' v'+eh(String(tt.version)):'原来的课表')+'；要真的更新，请秘书处在课表制作的橘色框按「← 全部照排课表」→ 存档 → 定版。</span>'
+    +'<span style="white-space:nowrap"><button class="btn btn-sm" onclick="ttPreview0()" title="排课表又改了的话，再试一次">↻ 重新试排</button> <button class="btn btn-sm" onclick="ttPreviewEnd()">结束预览</button></span></div>';
+}
+function ttPreview0(){_ttCache.sol=null;_ttCache.preview=false;ttPreview();}
 // 删除某学期的课表存档(仅管理员;RPC timetable_delete = migration 013)。排课表不受影响;数据库不留旧版。
 async function ttDeleteSaved(){
   if(currentRole!=='admin')return;const sem=_ttCache.sem,tt=_ttCache.tt;
@@ -6737,7 +6760,7 @@ async function renderTtPanel(force){
   if(!_ttCache.refs){try{const r=await gasGet({action:'ttRefs'});if(r&&r.success)_ttCache.refs={rooms:r.rooms||[],cat:r.cat||{}};}catch(e){}if(!_ttCache.refs)_ttCache.refs={rooms:[],cat:{}};}
   if(force||_ttCache.sem!==sem){
     st.innerHTML='<div style="color:#888;padding:10px">⏳ 载入中…</div>';bd.innerHTML='';
-    _ttCache.sem=sem;_ttCache.tt=null;_ttCache.sol=null;_ttCache.dirty=false;_ttCache.dates=null;_ttUndoSt=[];_ttRedoSt=[];   // 换学期/重新载入 → 还原记录清空
+    _ttCache.sem=sem;_ttCache.tt=null;_ttCache.sol=null;_ttCache.dirty=false;_ttCache.preview=false;_ttCache.dates=null;_ttUndoSt=[];_ttRedoSt=[];   // 换学期/重新载入 → 还原记录清空
     try{const r=await gasGet({action:'timetable',sem:sem});if(r&&r.success){_ttCache.tt=r.tt||null;_ttCache.dates=r.dates||null;_ttCache.finalOK=!!r.finalOK;_ttSoloAdopt();}}catch(e){}
   }
   const courses=_ttCourses(sem),n=courses.length,tt=_ttCache.tt,canEdit=_ttCanEdit();
@@ -6786,7 +6809,7 @@ async function renderTtPanel(force){
   st.innerHTML='<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 12px;background:#F5F4FE;border-radius:8px">'+
     '<span style="font-size:12.5px;color:#3C3489">'+(tt?('已存档 <b>v'+tt.version+'</b> · '+eh(tt.saved_by||'')+' · '+_recoFmtTime(tt.saved_at)+' · '+(tt.placements?tt.placements.length:0)+' 门'+_ttFinalBadge(tt)):'<b>尚未存档</b>')+((_ttCache.sol&&_ttCache.dirty)?' · <span style="color:#b45309">有未存档改动</span>':'')+'</span>'+
     '<span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="font-size:12px;color:'+(canEdit?'#1b7a5a':'#999')+'">'+(canEdit?'你可排/存':'只读')+'</span>'+tools+'</span></div>'+
-    _ttArchNote(sem)+_ttFinalNote(tt)+_ttDatesHtml(sem)+(sol?_ttViewToggle():'');   // 视图切换挪进 sticky 工具列,滚动不消失(Aj. Tsai 2026-11-15)
+    _ttArchNote(sem)+_ttPreviewNote(tt)+_ttFinalNote(tt)+_ttDatesHtml(sem)+(sol?_ttViewToggle():'');   // 视图切换挪进 sticky 工具列,滚动不消失(Aj. Tsai 2026-11-15)
   if(!sol){
     const it=_ttInternList(sem);   // 还没存档、还没自动排的画面也列实习课(Aj. Tsai 2026-11-16);「待排」的门数不含实习课(本来就不排)
     bd.innerHTML=_ttInternsBar({interns:it})+'<div style="padding:18px;background:#FEF9ED;border-radius:8px;color:#7a5b16;line-height:1.7">本学期共 <b>'+(n-it.length)+'</b> 门课待排。'+(canEdit?'点 <b>⚡ 一键自动排</b> 自动排进时段+教室（排不下的会标红留空、列到右侧「待处理」；🖨️ 列印在下一阶段加入）。':'尚未排课（等 Head of Administration 或管理员排）。')+'</div>';return;
