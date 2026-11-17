@@ -531,8 +531,10 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 .tt-dt-tbl{width:100%;border-collapse:collapse;font-size:11.5px;table-layout:fixed}
 .tt-dt-tbl th{background:#534AB7;color:#fff;padding:6px 8px;text-align:left;font-weight:600;position:sticky;top:0}
 .tt-dt-tbl td{padding:6px 8px;border-bottom:0.5px solid #eee;vertical-align:top;word-break:break-word;overflow-wrap:anywhere}
-.tt-dt-tbl th:nth-child(1){width:23%}.tt-dt-tbl th:nth-child(2){width:15%}.tt-dt-tbl th:nth-child(3){width:17%}.tt-dt-tbl th:nth-child(4){width:37%}.tt-dt-tbl th:nth-child(5){width:8%}
-.tt-dt-tbl td.ds{color:#555;line-height:1.75}
+.tt-dt-tbl th:nth-child(1){width:19%}.tt-dt-tbl th:nth-child(2){width:18%}.tt-dt-tbl th:nth-child(3){width:13%}.tt-dt-tbl th:nth-child(4){width:42%}.tt-dt-tbl th:nth-child(5){width:8%}
+.tt-dt-tbl td.ds{color:#555;line-height:1.7}
+.tt-dt-tbl td.co{color:#555;font-size:11px;line-height:1.55}
+.tt-dt-tbl td.ds .leg{margin-bottom:5px}.tt-dt-tbl td.ds .leg:last-child{margin-bottom:0}.tt-dt-tbl td.ds .leg b{color:#3C3489}
 .tt-dt-tbl td.nd{white-space:nowrap;color:#1b6b4a;text-align:center}
 .tt-dt-tbl .hf{font-size:10px;color:#6366f1;background:#EEF2FF;border-radius:4px;padding:0 4px;margin-left:3px}
 @media print{
@@ -4045,16 +4047,28 @@ function _ttCourseDateRows(sol){   // 每门课 → {name,tc,half,legs:[{wd,slot
     flat.sort(function(a,b){return a.d-b.d;}).splice(TT_SESSIONS);
     const keep={};flat.forEach(function(x){(keep[x.li]=keep[x.li]||[]).push(x.d);});
     legs.forEach(function(l,li){l.dates=keep[li]||[];});
-    return {name:_ttCodes(p)+(p.cls?'-'+p.cls:''),tc:p.tc||'待定',half:({up:'上半',dn:'下半',both:'全学期'}[p.half]||''),legs:legs,total:flat.length};
+    return {name:_ttCodes(p)+(p.cls?'-'+p.cls:''),cohorts:(p.cohorts||[]),tc:p.tc||'待定',half:({up:'上半',dn:'下半',both:'全学期'}[p.half]||''),halfKey:p.half||'',legs:legs,total:flat.length};
   });
 }
+let _ttDatesSort='name';   // 上课日期表排序:按课程 / 按上下半
+function ttDatesSort(m){_ttDatesSort=m;const sol=_ttCache.sol||(_ttCache.tt?_ttSolutionFromSaved(_ttCache.sem,_ttCache.tt):null);const b=document.getElementById('ttdates-body');if(b)b.innerHTML=_ttDatesReportHtml(sol);}
+window.ttDatesSort=ttDatesSort;
 function _ttDatesReportHtml(sol){
-  const rows=_ttCourseDateRows(sol);
+  let rows=_ttCourseDateRows(sol);
   if(rows===null)return '<div style="background:#FEF9ED;border-radius:8px;padding:14px;color:#7a5b16;font-size:12.5px">还没设定上下半日期 —— 请管理员到「后台操作 › 课表日期」设定，才能算出每门课的上课日期。</div>';
   if(!rows.length)return '<div style="color:#888;padding:10px">这学期还没有排好的课。</div>';
+  const sort=_ttDatesSort||'name',rk={up:0,dn:1,both:2};
+  rows=rows.slice().sort(function(a,b){if(sort==='half'){const d=(rk[a.halfKey]==null?9:rk[a.halfKey])-(rk[b.halfKey]==null?9:rk[b.halfKey]);if(d)return d;}return a.name.localeCompare(b.name);});
+  const sb=function(m,t){return '<button class="btn btn-sm'+(sort===m?' btn-p':'')+'" onclick="ttDatesSort(\''+m+'\')">'+t+'</button>';};
   return '<div style="font-size:11.5px;color:#888;margin-bottom:8px">每门课按「周几 × 上/下半区间」取<b>前 '+TT_SESSIONS+' 个上课日</b>（＝该门上课次数）。<b style="color:#b45309">假日（春节/国定假）尚未扣</b>——若其中某天放假，实际会顺延；之后在后台设「本学期假日」自动处理。</div>'
-    +'<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="tt-dt-tbl" data-gsort="off"><thead><tr><th>课程</th><th>老师</th><th>时段 · 教室</th><th>上课日期</th><th>共</th></tr></thead><tbody>'
-    +rows.map(function(r){return '<tr><td><b>'+eh(r.name)+'</b>'+(r.half?' <span class="hf">'+eh(r.half)+'</span>':'')+'</td><td>'+eh(r.tc)+'</td><td>'+r.legs.map(function(l){return eh(l.wd+l.slot+(l.room?'@'+l.room:''));}).join('<br>')+'</td><td class="ds">'+r.legs.map(function(l){return l.dates.map(_ttFmtMD).join('、')||'<span style="color:#ccc">—</span>';}).join('<br>')+'</td><td class="nd"><b>'+r.total+'</b> 天</td></tr>';}).join('')
+    +'<div class="no-print" style="margin-bottom:8px;display:flex;gap:6px;align-items:center;font-size:11.5px;color:#888">排序：'+sb('name','按课程')+sb('half','按上/下半')+'</div>'
+    +'<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="tt-dt-tbl" data-gsort="off"><thead><tr><th>课程</th><th>届别</th><th>老师</th><th>上课日期（周几 · 时段 · 教室）</th><th>共</th></tr></thead><tbody>'
+    +rows.map(function(r){return '<tr>'
+      +'<td><b>'+eh(r.name)+'</b>'+(r.half?' <span class="hf">'+eh(r.half)+'</span>':'')+'</td>'
+      +'<td class="co">'+(r.cohorts.length?r.cohorts.map(eh).join('、'):'<span style="color:#ccc">—</span>')+'</td>'
+      +'<td>'+eh(r.tc)+'</td>'
+      +'<td class="ds">'+r.legs.map(function(l){return '<div class="leg"><b>'+eh(l.wd+l.slot+(l.room?' @'+l.room:''))+'</b>　'+(l.dates.map(_ttFmtMD).join('、')||'<span style="color:#ccc">—</span>')+'</div>';}).join('')+'</td>'
+      +'<td class="nd"><b>'+r.total+'</b> 天</td></tr>';}).join('')
     +'</tbody></table></div>';
 }
 function ttDatesOpen(){const sol=_ttCache.sol||(_ttCache.tt?_ttSolutionFromSaved(_ttCache.sem,_ttCache.tt):null);const b=document.getElementById('ttdates-body');if(b)b.innerHTML=_ttDatesReportHtml(sol);const m=document.getElementById('ttdates-modal');if(m){m.style.display='flex';document.body.style.overflow='hidden';}}
@@ -4064,8 +4078,8 @@ function ttDatesExcel(){
   const sol=_ttCache.sol||(_ttCache.tt?_ttSolutionFromSaved(_ttCache.sem,_ttCache.tt):null),rows=sol?_ttCourseDateRows(sol):null,sem=_ttCache.sem;
   if(!rows||!rows.length){alert('没有可导出的上课日期（先设定课表日期并排课）。');return;}
   function X(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-  let body='<tr><td colspan="5" style="font-weight:bold;font-size:13pt">'+X(sem)+' · 上课日期表（假日未扣）</td></tr><tr style="background:#534AB7;color:#fff;font-weight:bold"><td>课程</td><td>老师</td><td>时段·教室</td><td>上课日期</td><td>共几天</td></tr>';
-  rows.forEach(function(r){body+='<tr><td>'+X(r.name)+(r.half?'（'+X(r.half)+'）':'')+'</td><td>'+X(r.tc)+'</td><td>'+r.legs.map(function(l){return X(l.wd+l.slot+(l.room?'@'+l.room:''));}).join(' / ')+'</td><td>'+r.legs.map(function(l){return X(r.legs.length>1?l.wd+'：':'')+l.dates.map(_ttFmtMD).join('、');}).join('　')+'</td><td>'+r.total+'</td></tr>';});
+  let body='<tr><td colspan="6" style="font-weight:bold;font-size:13pt">'+X(sem)+' · 上课日期表（假日未扣）</td></tr><tr style="background:#534AB7;color:#fff;font-weight:bold"><td>课程</td><td>届别</td><td>老师</td><td>时段·教室</td><td>上课日期</td><td>共几天</td></tr>';
+  rows.forEach(function(r){body+='<tr><td>'+X(r.name)+(r.half?'（'+X(r.half)+'）':'')+'</td><td>'+X(r.cohorts.join('、'))+'</td><td>'+X(r.tc)+'</td><td>'+r.legs.map(function(l){return X(l.wd+l.slot+(l.room?'@'+l.room:''));}).join(' / ')+'</td><td>'+r.legs.map(function(l){return X(r.legs.length>1?l.wd+'：':'')+l.dates.map(_ttFmtMD).join('、');}).join('　')+'</td><td>'+r.total+'</td></tr>';});
   const html='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body><table border="1" style="border-collapse:collapse;font-size:10pt;font-family:Arial">'+body+'</table></body></html>';
   const blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'}),a=document.createElement('a');
   a.href=URL.createObjectURL(blob);a.download='上课日期_'+sem+'_'+new Date().toISOString().slice(0,10)+'.xls';a.click();URL.revokeObjectURL(a.href);
