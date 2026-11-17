@@ -880,6 +880,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <div class="fg"><label>备注</label><input id="s-nt" placeholder="选填"></div>
       </div>
       <div class="fg rq-row" style="margin:8px 0 2px" onmouseenter="_rqRoomOpts('s')" onfocusin="_rqRoomOpts('s')"><label>排课要求 <span style="font-weight:400;color:#888">（课表制作自动排会照办；没有就都留空）</span></label><div style="display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center"><select id="s-rq-room" style="max-width:190px" onchange="_rqTouch('s')"><option value="">教室：不指定</option></select><select id="s-rq-day" style="max-width:130px" onchange="_rqTouch('s')"><option value="">星期：不限</option><option>周一</option><option>周二</option><option>周三</option><option>周四</option><option>周五</option></select><label style="display:inline-flex;align-items:center;gap:4px;font-weight:400;cursor:pointer"><input type="checkbox" id="s-rq-consec" onchange="_rqTouch('s')"> 两节排连续两天</label><label style="display:inline-flex;align-items:center;gap:4px;font-weight:400;cursor:pointer" title="同一位老师、同上下半、都勾了合班的课，当成一门课一起排"><input type="checkbox" id="s-rq-merge" onchange="_rqTouch('s')"> 合班</label></div><div id="s-rq-hint" style="display:none;font-size:11px;color:#92400e;margin-top:3px"></div></div>
+      <div id="s-cap-hint" class="cap-hint" style="display:none;margin:6px 0 2px;padding:8px 10px;background:#FEF9ED;border:1px solid #F6C667;border-radius:8px;font-size:11.5px;color:#7a4b06;line-height:1.6"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:6px 10px;border:0.5px solid #ddd;border-radius:8px;background:#fafafa">
           <input type="checkbox" id="s-btec" style="width:auto;cursor:pointer">
@@ -1739,6 +1740,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       </div>
       <div class="fg" style="margin-bottom:12px"><label>备注</label><input id="m-nt" placeholder="选填（给人看的说明；排课要求请用下面的栏位）"></div>
       <div class="fg rq-row" style="margin-bottom:12px" onmouseenter="_rqRoomOpts('m')" onfocusin="_rqRoomOpts('m')"><label>排课要求 <span style="font-weight:400;color:#888">（课表制作自动排会照办；没有就都留空）</span></label><div style="display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center"><select id="m-rq-room" style="max-width:190px" onchange="_rqTouch('m')"><option value="">教室：不指定</option></select><select id="m-rq-day" style="max-width:130px" onchange="_rqTouch('m')"><option value="">星期：不限</option><option>周一</option><option>周二</option><option>周三</option><option>周四</option><option>周五</option></select><label style="display:inline-flex;align-items:center;gap:4px;font-weight:400;cursor:pointer"><input type="checkbox" id="m-rq-consec" onchange="_rqTouch('m')"> 两节排连续两天</label><label style="display:inline-flex;align-items:center;gap:4px;font-weight:400;cursor:pointer" title="同一位老师、同上下半、都勾了合班的课，当成一门课一起排"><input type="checkbox" id="m-rq-merge" onchange="_rqTouch('m')"> 合班</label></div><div id="m-rq-hint" style="display:none;font-size:11px;color:#92400e;margin-top:3px"></div></div>
+      <div id="m-cap-hint" class="cap-hint" style="display:none;margin:-4px 0 12px;padding:8px 10px;background:#FEF9ED;border:1px solid #F6C667;border-radius:8px;font-size:11.5px;color:#7a4b06;line-height:1.6"></div>
       <div class="modal-sec">届别 · 各届人数</div>
       <div class="modal-coh">
         <div class="modal-coh-chips" id="m-dept-chips"></div>
@@ -4486,6 +4488,60 @@ function _rqNote(pre){   // 表单 → 要存的备注
   if(!(o.room||o.day||o.consec||o.merge)){const lg=_rqFromLegacy(rest);if(lg.room||lg.day||lg.consec||lg.merge)o.forceNone=true;}   // 栏位都清空、但文字里读得出要求 → 写「无」,否则清了等于没清
   return _rqCompose(o,rest);
 }
+// ── 排课表的「格子够不够」提醒(Aj. Tsai 2026-11-17:容量预检前移到排课表)──
+// 主任在排课表新增／编辑一门课时就算:这门课的届别、老师在那一半的课,需要的格子有没有超过一周的格子(一般课一周 10 格、每门 2 节)。
+// 算法跟课表制作「待处理一览」的容量预检是同一个(_ttCapWarn);这里只是把表单上还没存的这门课也算进去,只列跟这门课有关的。
+// 只提醒、不挡储存;格子够不代表一定排得上(多届别要凑共同空档时还是可能排不上)。出错就不显示,不能弄坏排课表。
+function _capFormVals(pre){
+  const v=function(id){const e=document.getElementById(pre+'-'+id);return e?e.value:'';};
+  let cc=[];try{cc=pre==='m'?mCollectCoh():getEG();}catch(e){}
+  return {id:pre==='m'?String(_mId||''):'__new__',course:String(v('co')||'').trim().toUpperCase(),sem:v('sem'),half:v('half'),type:v('tp')||'正常',cls:v('cls'),tc:v('tc'),cc:cc||[],nt:(function(){try{return _rqNote(pre);}catch(e){return v('nt');}})()};
+}
+function _capCheck(f){   // 回传跟这门课有关的超载 [{who,half,txt,list,other}];没有回 []
+  if(!f||!f.sem||!f.course||!f.cc.length)return [];
+  const sem=f.sem,rooms=_ttRoomsSorted(),cat=(_ttCache.refs&&_ttCache.refs.cat)||{},whole=_ttWholeSem(sem);
+  const rows=[];let found=false;
+  _ttCourses(sem).forEach(function(r){if(String(r.id)===f.id){found=true;rows.push(Object.assign({},r,f));}else rows.push(r);});
+  if(!found)rows.push(Object.assign({en:''},f));
+  try{
+    _ttLangRefresh(sem);_ttRows[f.id]=rows.filter(function(r){return String(r.id)===f.id;})[0];   // 个别学生(1 人的届别)照表单上的人数算
+    const raw=[];
+    rows.forEach(function(r){if(_ttIsIntern(r))return;raw.push({id:String(r.id),course:String(r.course||''),cls:r.cls||'',tc:r.tc||'',cohorts:_ttCohorts(r),count:_ttCount(r),dept:_ttDept(r,cat),credit:_ttCredit(r,cat),isCap:_ttIsCap(r),nt:r.nt||'',note:_ttParseNote(r.nt,rooms),rawHalf:r.half||'',_cc:r.cc||[]});});
+    const list=_ttMergeGroups(raw,rooms);
+    list.forEach(function(c){   // 上下半:同 _ttSolve
+      if(c.isCap){c.half=whole?'up':'dn';c.hFix=true;}else if(whole){c.half='up';c.hFix=true;}
+      else if(c.rawHalf==='上半学期'){c.half='up';c.hFix=true;}else if(c.rawHalf==='下半学期'){c.half='dn';c.hFix=true;}else if(c.rawHalf==='全学期'){c.half='both';c.hFix=true;}else{c.half='';c.hFix=false;}
+    });
+    if(!whole)_ttAutoHalf(list);
+    const me=list.filter(function(c){return (_ttMem(c)||[c]).some(function(m){return String(m.id)===f.id;});})[0];
+    if(!me)return [];
+    const name=_ttName(me),HN={up:'上半',dn:'下半'};
+    const cnt=function(kind,who,h){return list.filter(function(c){if(c.isCap||!(c.half==='both'||c.half===h))return false;return kind==='老师'?c.tc===who:((c.cohorts||[]).indexOf(who)>=0&&!_ttSolo(c)[who]);}).length;};
+    return _ttCapWarn({placements:[],unplaced:list,whole:whole}).filter(function(w){return w.list.indexOf(name)>=0;}).map(function(w){
+      const i=w.who.indexOf(' '),kind=w.who.slice(0,i),who=w.who.slice(i+1),h=w.half==='上半'?'up':(w.half==='下半'?'dn':'');
+      const oh=h==='up'?'dn':(h==='dn'?'up':''),isCapW=/Capstone/.test(w.txt);
+      return {who:w.who,half:w.half,txt:w.txt,list:w.list,other:(oh&&!isCapW)?{name:HN[oh],n:cnt(kind,who,oh)}:null,auto:!me.hFix};
+    });
+  }finally{try{_ttLangRefresh(sem);}catch(e){}}
+}
+let _capT={};
+function _capHintLater(pre,ms){clearTimeout(_capT[pre]);_capT[pre]=setTimeout(function(){_capHint(pre);},ms||200);}
+function _capHint(pre){
+  const box=document.getElementById(pre+'-cap-hint');if(!box)return;
+  let ws=[];try{ws=_capCheck(_capFormVals(pre));}catch(e){ws=[];}
+  if(!ws.length){box.style.display='none';box.innerHTML='';return;}
+  box.innerHTML='<b>⚠ 格子不够提醒</b><span style="color:#92400e">（只是提醒，照样可以储存）</span>'+ws.map(function(w){
+    return '<div style="margin-top:4px"><b>'+eh(w.who)+' · '+eh(w.half)+'</b>：'+eh(w.txt)+'。<br><span style="color:#555">这一半的课：'+w.list.map(eh).join('、')+'</span>'
+      +(w.other?'<br><span style="color:#1a6b2f">💡 '+eh(w.other.name)+'目前 '+w.other.n+' 门'+(w.other.n<5?'，可以把其中一门改到'+eh(w.other.name):'，也满了；要减课、或把课排到别的学期')+'。</span>':'')
+      +(w.auto?'<br><span style="color:#888">这门课没写上下半，这里先照系统会分的那一半算。</span>':'')+'</div>';
+  }).join('');
+  box.style.display='';
+}
+// 表单里任何一格改了(课程／学期／上下半／类型／老师／届别／人数)就重算
+document.addEventListener('change',function(ev){try{const t=ev.target;if(!t||!t.closest)return;if(t.closest('#add-sch-body'))_capHintLater('s');else{const m=document.getElementById('m-co');const b=m&&m.closest('.modal-body');if(b&&b.contains(t))_capHintLater('m');}}catch(e){}},true);
+// 届别是点药丸选的(程序直接改勾选、不一定有 change 事件)→ 表单里任何点击也重算一次
+document.addEventListener('click',function(ev){try{const t=ev.target;if(!t||!t.closest)return;if(t.closest('#add-sch-body'))_capHintLater('s',300);else{const m=document.getElementById('m-co');const bd=m&&m.closest('.modal-body');if(bd&&bd.contains(t))_capHintLater('m',300);}}catch(e){}},true);
+document.addEventListener('input',function(ev){try{const t=ev.target;if(!t||!t.closest)return;if(t.closest('#add-sch-body'))_capHintLater('s',400);else{const m=document.getElementById('m-co');const b=m&&m.closest('.modal-body');if(b&&b.contains(t))_capHintLater('m',400);}}catch(e){}},true);
 function _ttParseNote(nt,rooms){
   const raw=String(nt||'').trim();
   const out={raw:raw,room:'',roomMissing:'',numHint:false,days:[],fuzzy:false,manual:false};
@@ -7034,6 +7090,7 @@ function startES(id){
   document.getElementById('m-half').value=r.half||'';
   document.getElementById('m-cls').value=r.cls;
   _rqFill('m',r.nt||'');   // 备注开头的【排课要求：…】拆到下面的栏位,备注框只留给人看的文字
+  _capHintLater('m',400);   // 格子够不够的提醒(等届别勾选画好再算)
   document.getElementById('m-btec').checked=!!(r.btec===true||r.btec==='TRUE'||r.btec==='true');
 
   // 老师下拉
@@ -7926,7 +7983,7 @@ function clearSchF(){
   document.getElementById('s-co').value='';document.getElementById('s-en').value='';
   document.getElementById('s-tp').value='正常';document.getElementById('s-sem').selectedIndex=0;
   document.getElementById('s-half').value='';document.getElementById('s-cls').value='';
-  document.getElementById('s-tc').value='';_rqFill('s','');
+  document.getElementById('s-tc').value='';_rqFill('s','');_capHintLater('s');
   const btecCb=document.getElementById('s-btec');if(btecCb)btecCb.checked=false;
   selDpts.clear();buildDeptChips();buildEG('s-eg',null);
 }
