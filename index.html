@@ -1392,10 +1392,11 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       </ul>
     </div>
     <div style="background:#FFF4E5;border:0.5px solid #FAD9A8;border-radius:8px;padding:12px 14px;margin-bottom:12px">
-      <div style="font-size:12.5px;font-weight:600;color:#B45309;margin-bottom:8px">🟠 软提醒　<span style="font-weight:400;opacity:.7">排不下可勾「已核对」放行</span></div>
+      <div style="font-size:12.5px;font-weight:600;color:#B45309;margin-bottom:8px">🟠 尽量做到　<span style="font-weight:400;opacity:.7">做不到也照排</span></div>
       <ul style="margin:0;padding-left:18px;font-size:12px;color:#7c5410;line-height:1.95">
-        <li>老师每半最多 <b>4</b> 门</li>
         <li>同一门课两节<b>不同天</b>（同天标橙框）</li>
+        <li>两节用<b>同一间教室</b></li>
+        <li>少让<b>个别学生</b>撞课</li>
       </ul>
     </div>
     <!-- 🟡 软优先(321/322 给 CD、LA/KH 层级、教室挑刚好够大)与 Capstone 固定教室、Capstone 老师周五:规则照旧在跑,只是不在这里列(Aj. Tsai 2026-11-18:成立,但不用呈现)。完整版在 docs/课表制作_排课规则说明.md -->
@@ -4578,7 +4579,7 @@ function _capHalvesHtml(H){
   const row=function(h){
     const s=H[h],lv=_CAPLV[s.lv],top=s.coh.slice(0,4).map(function(x){return eh(x.name)+' 已 '+x.n+' 门';}).join('、')+(s.coh.length>4?' 等 '+s.coh.length+' 个届别':'');
     const tags=(H.cur===h||H.cur==='both'?' <span style="color:#534AB7;font-weight:600">← 现在选的</span>':'')+((!H.cur&&H.auto===h)?' <span style="color:#888">← 没选的话系统会分到这一半</span>':'')+(H.rec===h&&H.cur!==h?' <b style="color:#1a6b2f">← 建议</b>':'');
-    return '<div style="margin-top:3px"><b>'+HN[h]+'</b>　<span style="color:'+lv.c+';font-weight:600">'+lv.ic+' '+lv.t+'</span>'+tags+'<br><span style="color:#555">'+(top||'（没有要算的届别）')+(H.tcName?'；老师 已 '+s.tc+' 门'+(s.tc>=4?'（每半建议不超过 4 门）':''):'')+'</span></div>';
+    return '<div style="margin-top:3px"><b>'+HN[h]+'</b>　<span style="color:'+lv.c+';font-weight:600">'+lv.ic+' '+lv.t+'</span>'+tags+'<br><span style="color:#555">'+(top||'（没有要算的届别）')+(H.tcName?'；老师 已 '+s.tc+' 门'+(s.tc>=4?'（再加这门就 '+(s.tc+1)+' 门；老师一周只有 10 格、最多 5 门）':''):'')+'</span></div>';
   };
   const worse=H.cur&&H.cur!=='both'&&H.rec&&H.rec!==H.cur&&H[H.cur].lv>=2;
   return '<b>📊 这门课放哪一半比较排得上</b><span style="color:#888">（数的是这些届别、老师在那一半已有的别的课）</span>'+row('up')+row('dn')
@@ -5248,18 +5249,12 @@ function _ttSolve(sem,opts){
   }
   return {keep:keepInfo,sem:sem,rooms:rooms,placements:placements,unplaced:unplaced,manualNotes:manualNotes,interns:interns,warns:_ttWarns(placements,whole),whole:whole,tries:Math.min(run+1,TRIES),ms:Math.round(t1-t0),deep:deep,pick:best?{run:best.run,nUn:best.nUn,n1:best.n1,soft:best.soft}:null};
 }
-// 软约束提醒(不阻止,列在「待处理一览 › 提醒」,可勾已核对):老师每半 >4 门(全学期制的学期跳过)
-function _ttWarns(pls,whole){
-  // 只剩「老师单半超过 4 门」一条(Aj. Tsai 2026-11-18)。拿掉的两条:
-  //   · 届别学期学分 > 21 —— 很多届别本来就 24/27 学分,永远在响,没人会去处理;
-  //   · 届别上/下半门数不平衡(4+3 或 3+4)—— 真正的限制是每半 5 门(格子满),排课表填课时已经有「放哪一半比较排得上」「格子不够」两个提示。
-  const w=[],th={};
-  pls.forEach(function(p){
-    (p.half==='both'?['up','dn']:[p.half]).forEach(function(h){if(p.tc)th[p.tc+'|'+h]=(th[p.tc+'|'+h]||0)+1;});
-  });
-  if(!whole)Object.keys(th).forEach(function(k){if(th[k]>4){const a=k.split('|');w.push('老师 '+a[0]+' 在'+(a[1]==='up'?'上半':'下半')+'有 '+th[k]+' 门（>4）');}});
-  return w;
-}
+// 软提醒:2026-11-18 起一条都没有了(Aj. Tsai 定)——
+//   · 届别学期学分 > 21:很多届别本来就 24/27 学分,永远在响;
+//   · 届别上/下半 4+3 或 3+4:真正的限制是每半 5 门,排课表填课时已有「放哪一半比较排得上」「格子不够」两个提示;
+//   · 老师每半 > 4 门:这个数字是当初估的,不是学校规定;老师真正的上限(一周 10 格 = 5 门)由容量预检管。
+// 回空阵列 → 「待处理一览」里「提醒（软约束）」与「已核对」勾选整块不出现(那段画面的代码留着,以后真要加提醒,在这里产生文字即可)。
+function _ttWarns(pls,whole){return [];}
 // 对最终落位再查一次硬约束(主要抓「存档后排课改了」造成的冲突)→ 标红
 // 每一节(cell)可有自己的教室:cell=[周几,时段,教室?];没第三格就用 p.room。两节可分开移动(Aj. Tsai)
 function _ttCR(p,c){return (c&&c[2])||p.room;}
@@ -6207,7 +6202,7 @@ function _ttFootDetails(sol){
   }
   const right=rTodo+rWarn+rOther+rLang;
   if(!left&&!right&&!soloHtml)return '';
-  return '<div class="tt-foot"><details'+_ttFoldAttr('foot')+'><summary>'+((un.length+partial.length)?'⚠ ':'')+'待处理一览（未排 '+un.length+' · 只排 1 节 '+partial.length+' · 备注待看 '+todo.length+(solo.length?' · 个别学生撞课 '+solo.length:'')+' · 提醒未核对 '+openW+'）<span class="hint"> · 点一下展开／收合</span></summary><div class="tt-iss-cols"><div>'+(left||'<div class="tt-iss-none ok">✅ 没有未排的课</div>')+soloHtml+'</div><div>'+(right||'<div class="tt-iss-none">无备注／提醒</div>')+'</div></div></details></div>';
+  return '<div class="tt-foot"><details'+_ttFoldAttr('foot')+'><summary>'+((un.length+partial.length)?'⚠ ':'')+'待处理一览（未排 '+un.length+' · 只排 1 节 '+partial.length+' · 备注待看 '+todo.length+(solo.length?' · 个别学生撞课 '+solo.length:'')+(warns.length?' · 提醒未核对 '+openW:'')+'）<span class="hint"> · 点一下展开／收合</span></summary><div class="tt-iss-cols"><div>'+(left||'<div class="tt-iss-none ok">✅ 没有未排的课</div>')+soloHtml+'</div><div>'+(right||'<div class="tt-iss-none">无备注／提醒</div>')+'</div></div></details></div>';
 }
 // ── 漂移侦测:存档后别人改了排课 → 比对存档快照 vs 现在的 schD,标出受影响的课 ──
 function _ttDriftFields(p,r){
