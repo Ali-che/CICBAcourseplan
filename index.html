@@ -1401,7 +1401,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     <div style="background:#EAF2FB;border:0.5px solid #BBD6F2;border-radius:8px;padding:12px 14px;margin-bottom:12px">
       <div style="font-size:12.5px;font-weight:600;color:#185FA5;margin-bottom:8px">📋 排课先后（哪种课先排）</div>
       <div style="font-size:12px;color:#1e4e79;line-height:1.85">
-        自动排会试多种先后顺序（固定种子 → 同样的排课每次结果一样），取<b>未排最少</b>的一版。原则是<b>越难安排的越先排</b>：
+        自动排会试多种先后顺序（固定种子 → 同样的排课每次结果一样），取最好的一版——<b>先比没排上的门数，再比只排到 1 节的门数，都一样才比</b>两节间隔、同一天、个别学生撞课这些扣分。原则是<b>越难安排的越先排</b>：
         <ul style="margin:6px 0 0;padding-left:18px;line-height:1.95">
           <li>涉及<b>届别越多</b>的课先排（占位最难）</li>
           <li>越<b>抢手</b>的课先排（该届别／老师在那半还有很多别的课、可用教室又少）</li>
@@ -4689,10 +4689,13 @@ function _ttRunOnce(list,capPlan){
     }
     _ttApply(st,c,keep);
   });
-  let score=0;   // 未排最重(大班没排更重),其次只排 1 节,再其次间隔不理想/两节不同教室
-  list.forEach(function(c){const n=(c.cells||[]).length;if(!n)score+=10000+(+c.count||0)*20;else if(n===1)score+=1000+(+c.count||0)*2;else score+=_ttAsgScore(c);});
-  score+=_ttSoloClashes(list).length*TT_SOLO_PEN;   // 个别学生撞课越少越好
-  return {st:st,score:score};
+  // 评分(越低越好)。分层比较(Aj. Tsai 2026-11-16):先比「没排上几门」→ 再比「只排到 1 节几门」→ 都一样才比其余扣分
+  //   (没排上/只排 1 节的人数、两节间隔、不同教室、个别学生撞课)。上一层少一门,下面扣再多也赢。
+  // flat = 旧算法(全部加成一个总分:只排 1 节约 1000、同一天 600、个别学生撞课每组 80 → 撞课多 13 组会输给少排一节),留着做对照。
+  let nUn=0,n1=0,soft=0,flat=0;
+  list.forEach(function(c){const n=(c.cells||[]).length,k=+c.count||0;if(!n){nUn++;soft+=k*20;flat+=10000+k*20;}else if(n===1){n1++;soft+=k*2;flat+=1000+k*2;}else{const a=_ttAsgScore(c);soft+=a;flat+=a;}});
+  const solo=_ttSoloClashes(list).length*TT_SOLO_PEN;soft+=solo;flat+=solo;   // 个别学生撞课越少越好
+  return {st:st,score:nUn*TT_TIER_UN+n1*TT_TIER_ONE+soft,flat:flat,nUn:nUn,n1:n1,soft:soft,key:nUn+'|'+n1+'|'+(solo/TT_SOLO_PEN)+'|'+list.filter(_ttIsSameDay).length+'|'+list.filter(function(c){return (c.cells||[]).length<2;}).map(function(c){return c.id;}).join(',')};   // key:人看得出差别的几个数字(前三名用它去掉「看起来一样」的)
 }
 // 两节同一天:一般课的两节排在同一天(上午+下午)。Capstone 不算(一天三段,同一天连两段本来就可以)
 function _ttIsSameDay(p){return !p.isCap&&(p.cells||[]).length===2&&p.cells[0][0]===p.cells[1][0];}
@@ -4859,6 +4862,52 @@ function _ttKeepBar(sol){
     +row('老师改成排课表的',k.tcBack,'#92400e')+row('上下半改成排课表的、已重排',k.halfBack,'#92400e')
     +row('老师跟排课表不一样（没动，见上方橘色框逐门决定）',k.tcDiff,'#92400e')+row('上下半跟排课表不一样（没动，见上方橘色框逐门决定）',k.halfDiff,'#92400e')+'</div>';
 }
+// 选项「课排满优先」(Aj. Tsai 2026-11-17 要能自己选;记在本机 cic_tt_tier,默认开):开=分层比较;关=全部扣分加总(旧算法)。切换会重排,可按还原退回
+// ── 前三名(Aj. Tsai 2026-11-17:「把前三名课表列出来,我选我可以的」)──
+// 自动排试的 48 种里,取数字上看得出差别的前 3 种,各自完整排完(含拆开两节同天),并排列出让人挑。跟「一键自动排」一样照排课表整张重排。
+let _ttTop=[];
+function _ttTopStat(S){const pl=S.placements||[];return {un:(S.unplaced||[]).map(_ttName),one:pl.filter(function(p){return (p.cells||[]).length===1;}).map(_ttName),sd:pl.filter(_ttIsSameDay).map(_ttName),solo:_ttSoloClashes(pl).length,dr:pl.filter(function(p){return (p.cells||[]).length===2&&_ttCR(p,p.cells[0])!==_ttCR(p,p.cells[1]);}).length};}
+async function ttTop3(){
+  if(!_ttCanEdit()||_ttPlanBusy)return;const sem=_ttCache.sem;if(!sem)return;
+  _ttPlanBusy=true;_ttTop=[];
+  _ttPlanShow('<div class="ttplan-title">🏅 前三名课表</div><div class="ttplan-wait">⏳ 正在排出前三名…<br><span>大约几秒钟。</span></div>','<button class="btn btn-sm" onclick="ttPlanClose()">取消</button>');
+  const tick=function(){return new Promise(function(r){try{const ch=new MessageChannel();ch.port1.onmessage=function(){r();};ch.port2.postMessage(0);}catch(e){setTimeout(r,0);}});};
+  const out=[],sigs={};
+  for(let k=0;k<3;k++){
+    await tick();if(!_ttPlanBusy)return;
+    const S=k?_ttSolve(sem,{rank:k}):_ttSolve(sem);if(!S)break;
+    const st=_ttTopStat(S),sg=JSON.stringify([st.un,st.one,st.sd,st.solo]);if(sigs[sg])continue;sigs[sg]=1;   // 排完后数字跟前面某一种一样的不重复列
+    out.push({sol:S,st:st});
+  }
+  if(!_ttPlanBusy||_ttCache.sem!==sem)return;
+  _ttPlanBusy=false;_ttTop=out;
+  const best=function(f){return Math.min.apply(null,out.map(f));};
+  const cols=[['没排上',function(o){return o.st.un.length;}],['只排 1 节',function(o){return o.st.one.length;}],['两节同一天',function(o){return o.st.sd.length;}],['个别学生撞课',function(o){return o.st.solo;}],['两节不同教室',function(o){return o.st.dr;}]];
+  const mins=cols.map(function(c){return best(c[1]);});
+  let h='<div class="ttplan-title">🏅 前三名课表</div>';
+  if(out.length<2)h+='<div class="ttplan-ok">这学期试出来的课表，在「没排上／只排 1 节／两节同一天／个别学生撞课」这几项上都一样，没有别的可选。</div>';
+  else h+='<div class="ttplan-sum">数字都是越少越好；<b style="color:#1a6b2f">绿色</b>＝那一项最少。挑一个按「用这个」。</div>';
+  out.forEach(function(o,i){   // 一个方案一张卡(数字一格一格会自己换行,手机宽度放得下)
+    const det=[];if(o.st.un.length)det.push('没排上：'+o.st.un.map(eh).join('、'));if(o.st.one.length)det.push('只排 1 节：'+o.st.one.map(eh).join('、'));if(o.st.sd.length)det.push('两节同一天：'+o.st.sd.map(eh).join('、'));
+    h+='<div class="tt-top3" style="border:1px solid #E5E3F8;border-radius:8px;padding:8px 10px;margin:6px 0;background:'+(i===0?'#FAFAFF':'#fff')+'"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><b style="color:#3C3489">方案 '+(i+1)+(i===0?' <span style="font-weight:400;font-size:11px;color:#888">（一键自动排给的这张）</span>':'')+'</b><button class="btn btn-p btn-sm" onclick="ttTop3Use('+i+')">用这个</button></div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:4px">'+cols.map(function(c,j){const v=c[1](o);return '<span style="white-space:nowrap">'+c[0]+' <b style="'+(out.length>1&&v===mins[j]?'color:#1a6b2f':'color:#333')+'">'+v+'</b>'+(j===3?' 组':' 门')+'</span>';}).join('')+'</div>'
+      +(det.length?'<div style="font-size:11px;color:#666;margin-top:3px">'+det.join('　｜　')+'</div>':'')+'</div>';
+  });
+  h+='<div class="ttplan-note">照现在的排课表整张重排（跟「一键自动排」一样，手动拖过的位置不保留）。选了之后可按「↶ 还原」退回，再开一次挑别的。个别学生撞课的名单在选用后的「待处理一览」。</div>';
+  _ttPlanShow(h,'<button class="btn btn-sm" onclick="ttPlanClose()">关闭</button>');
+}
+function ttTop3Use(i){
+  const o=_ttTop[i];if(!o||!_ttCanEdit())return;
+  _ttUndoPush();_ttCache.sol=o.sol;_ttCache.dirty=true;_ttTop=[];ttPlanClose();renderTtPanel();
+  if(typeof showToast==='function')showToast('已换成方案 '+(i+1)+'；要回到刚才的课表按「↶ 还原」',{kind:'success'});
+}
+function _ttTierOn(){return _lsGet('cic_tt_tier')!=='0';}
+function ttTierToggle(on){
+  _lsSet('cic_tt_tier',on?'1':'0');
+  if(_ttCanEdit()&&_ttCache.sol&&_ttCache.sem){ttAutoSolve();if(typeof showToast==='function')showToast((on?'已打开':'已关掉')+'「课排满优先」并重排；要回到刚才的课表按「↶ 还原」',{kind:'success'});}
+  else renderTtPanel();
+}
+const TT_TIER_UN=1e10,TT_TIER_ONE=1e7;   // 分层评分的层距:其余扣分全部加起来远小于 1e7(一门课最多几百分),所以下层永远盖不过上层
 const TT_SOLVE_TRIES=40;   // 试几种先后顺序(依「抢人程度」:届别各有多忙+老师多忙+可用教室少)
 const TT_SOLVE_TRIES_COH=8; // 另外再试几种「届别数最多的先排」(Aj. Tsai 2026-11-15 提议;取最好的一版,加了不会变差)
 function _ttSolve(sem,opts){
@@ -4905,14 +4954,22 @@ function _ttSolve(sem,opts){
   // 固定种子的乱数:同样的排课,每次按「一键自动排」结果都一样
   let seed=20261115;const rnd=function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};
   const capPlan=opts.keep?null:_ttCapPlan(list.filter(function(c){return c.isCap;}));   // 只补排时不用(它不知道哪些时段已被锁住的课占着)   // Capstone 先用穷举排好(排不出来是 null,照一般流程排)
-  let best=null;
+  let best=null;const cands=[];
   const TRIES=opts.tries?Math.min(opts.tries,TT_SOLVE_TRIES+TT_SOLVE_TRIES_COH):(TT_SOLVE_TRIES+TT_SOLVE_TRIES_COH);
   for(var run=0;run<TRIES;run++){
     const coh=run>=TT_SOLVE_TRIES;   // 前 40 种照原本的排序;后 8 种改「届别数最多先排」(第 1 种不加乱数)
     list.forEach(function(c){c._k=coh?(c._pr2+(run>TT_SOLVE_TRIES?rnd()*1500:0)):(c._pr+(run?rnd()*260:0));});
     const r=_ttRunOnce(list,capPlan);
-    if(!best||r.score<best.score)best={score:r.score,asg:list.map(function(c){return c.cells.map(function(cs){return cs.slice();});})};
-    if(best.score<10)break;   // 已经全部排满且间隔理想,不用再试
+    const sc=(opts.flatScore!=null?opts.flatScore:!_ttTierOn())?r.flat:r.score;   // 选项「课排满优先」关掉 = 旧的总分制;opts.flatScore 可强制指定(对照测试用)
+    if(opts.rank)cands.push({score:sc,run:run,key:r.key,nUn:r.nUn,n1:r.n1,soft:r.soft,asg:list.map(function(c){return c.cells.map(function(cs){return cs.slice();});})});
+    if(!best||sc<best.score)best={score:sc,run:run,nUn:r.nUn,n1:r.n1,soft:r.soft,asg:list.map(function(c){return c.cells.map(function(cs){return cs.slice();});})};
+    if(!opts.rank&&best.score<10)break;   // 已经全部排满且间隔理想,不用再试
+  }
+  if(opts.rank){   // 前三名:48 版照评分排(同分的先试到的在前),把「没排上／只排 1 节／个别学生撞课／两节同天」都一样的算同一种,取第 rank+1 种;没有就回 null
+    cands.sort(function(a,b){return a.score-b.score||a.run-b.run;});
+    const seen={},uniq=[];cands.forEach(function(x){if(!seen[x.key]){seen[x.key]=1;uniq.push(x);}});
+    if(!uniq[opts.rank])return null;
+    best=uniq[opts.rank];
   }
   // 套用最好的一版,并重建占用状态
   const st=_ttMkState();
@@ -4942,7 +4999,7 @@ function _ttSolve(sem,opts){
       else(c.cells.length===2?keepInfo.added:keepInfo.fail).push(nm+(c.cells.length===1?'（只排到 1 节）':''));
     });
   }
-  return {keep:keepInfo,sem:sem,rooms:rooms,placements:placements,unplaced:unplaced,manualNotes:manualNotes,interns:interns,warns:_ttWarns(placements,whole),whole:whole,tries:Math.min(run+1,TRIES),ms:Math.round(t1-t0),deep:deep};
+  return {keep:keepInfo,sem:sem,rooms:rooms,placements:placements,unplaced:unplaced,manualNotes:manualNotes,interns:interns,warns:_ttWarns(placements,whole),whole:whole,tries:Math.min(run+1,TRIES),ms:Math.round(t1-t0),deep:deep,pick:best?{run:best.run,nUn:best.nUn,n1:best.n1,soft:best.soft}:null};
 }
 // 软约束提醒(不阻止,列侧栏):老师每半>4、届别学分>21、届别上下半门数不平衡(全学期跳过门数检查)
 function _ttWarns(pls,whole){
@@ -4989,7 +5046,29 @@ function _ttConflicts(pls){
 function _ttSolutionFromSaved(sem,tt){
   const pls=((tt&&tt.placements)||[]).map(function(p){return {id:String(p.id),course:p.course||'',cls:p.cls||'',tc:p.tc||'',count:+p.count||0,cohorts:p.cohorts||[],dept:p.dept||'',credit:+p.credit||0,isCap:!!p.isCap,members:p.members,half:p.half||'up',room:p.room||'',cells:p.cells||(p.day?[[p.day,p.slot]]:[]),nt:p.nt||'',note:{raw:p.nt||''}};});
   const whole=_ttWholeSem(sem);
-  return {sem:sem,rooms:_ttRoomsSorted(),placements:pls,unplaced:[],manualNotes:pls.filter(p=>p.nt),interns:_ttInternList(sem),warns:_ttWarns(pls,whole),whole:whole,fromSaved:true};
+  const sol={sem:sem,rooms:_ttRoomsSorted(),placements:pls,unplaced:[],manualNotes:pls.filter(p=>p.nt),interns:_ttInternList(sem),warns:_ttWarns(pls,whole),whole:whole,fromSaved:true};
+  sol.unplaced=_ttNotOnSaved(sem,sol);
+  return sol;
+}
+// 看存档时:排课表里有、但存档课表上没有的课(存档当时没排上,或存档后排课表才新增)→ 当成「未排」列出来,
+// 这样只读角色(主任)在「待处理一览」也看得到每门的原因与建议,可编辑角色能从未排区把它拖进课表(Aj. Tsai 2026-11-17)。
+// 存档里没有记当时为什么没排上 → 原因、建议都是拿「存档的课表 + 排课表现在的资料」现算的。出错就当作没有,不能弄坏课表。
+function _ttNotOnSaved(sem,sol){
+  try{
+    const have={};(sol.placements||[]).forEach(function(p){(_ttMem(p)||[p]).forEach(function(m){have[String(m.id)]=1;});});
+    const rooms=sol.rooms||[],cat=(_ttCache.refs&&_ttCache.refs.cat)||{},whole=sol.whole,out=[];
+    try{_ttLangRefresh(sem);}catch(e){}
+    _ttCourses(sem).forEach(function(r){
+      if(_ttIsIntern(r)||have[String(r.id)])return;
+      const cap=_ttIsCap(r),rh=r.half||'',fix=whole||cap||rh==='上半学期'||rh==='下半学期'||rh==='全学期';
+      const u={id:String(r.id),course:String(r.course||''),cls:r.cls||'',tc:r.tc||'',cohorts:_ttCohorts(r),count:_ttCount(r),dept:_ttDept(r,cat),credit:_ttCredit(r,cat),isCap:cap,nt:r.nt||'',note:_ttParseNote(r.nt,rooms),_cc:r.cc||[],notOnSaved:true,
+        half:whole?'up':(cap?'dn':(rh==='下半学期'?'dn':(rh==='全学期'?'both':'up')))};
+      let sug='';try{sug=_ttSuggestFor(u,sol);if(!fix&&!/^可排/.test(sug)){u.half='dn';const s2=_ttSuggestFor(u,sol);if(/^可排/.test(s2))sug=s2;else u.half='up';}}catch(e){}   // 排课表没写上下半:上半没空位就看下半
+      u.reason=u.count>_ttMaxCap(rooms)+TT_CAP_SLACK?('人数 '+u.count+' 超过最大教室容量（含 +5 宽容）'):(u.note.roomMissing?('备注要求教室 '+u.note.roomMissing+'（不在教室库）'):(/^可排/.test(sug)?'还没排进课表（有空位）':((u.note.room&&/装不下/.test(sug))?('指定教室 '+u.note.room+' 排不下'):'老师、届别、教室找不到同时有空的时段')));
+      out.push(u);
+    });
+    return out;
+  }catch(e){return [];}
 }
 // ── 网格渲染 ──
 // 届别直接全列出(Aj. Tsai:别折叠,要直接看到);完整名单也放 tooltip
@@ -5828,7 +5907,7 @@ function _ttFootDetails(sol){
     const rest=g.list.filter(function(n){return !mk[n];});
     left+='<div class="tt-iss-g cap"><div class="tt-iss-why"><b>'+eh(g.kind+' '+g.names.join('、'))+' · '+eh(g.half)+'</b>：'+eh(g.txt)+'</div><div class="tt-iss-pills">'+mine.map(function(q){return _ttIssuePill(q.x,q.kind);}).join('')+(rest.length?'<span class="tt-iss-rest">'+(mine.length?'同组其他：':'同组：')+rest.map(function(n){return isProb[n]?'<b>'+eh(n)+'</b>':eh(n);}).join('、')+'</span>':'')+'</div>'+_ttSugBlock(mine,sol)+'</div>';
   });
-  const lab=function(u){const r=u.reason||'';return /超过最大教室容量/.test(r)?'人数超过最大教室容量（拆班，或在后台教室库加大教室）':/不在教室库/.test(r)?'备注要求的教室不在教室库':/^指定教室/.test(r)?'备注指定的教室排不下':/^限定/.test(r)?'备注限定的周几排不下':/手动移回/.test(r)?'手动移回未排区':'老师、届别、教室找不到同时有空的时段';};
+  const lab=function(u){const r=u.reason||'';return /超过最大教室容量/.test(r)?'人数超过最大教室容量（拆班，或在后台教室库加大教室）':/不在教室库/.test(r)?'备注要求的教室不在教室库':/^指定教室/.test(r)?'备注指定的教室排不下':/^限定/.test(r)?'备注限定的周几排不下':/手动移回/.test(r)?'手动移回未排区':/还没排进课表/.test(r)?'还没排进课表（存档后排课表才新增，或还没处理）—— 课表上有空位':'老师、届别、教室找不到同时有空的时段';};
   const byR={},ord=[];
   probs.filter(function(q){return q.kind==='un'&&!shown[q.x.id];}).forEach(function(q){const l=lab(q.x);if(!byR[l]){byR[l]=[];ord.push(l);}byR[l].push(q);});
   ord.forEach(function(l){left+='<div class="tt-iss-g"><div class="tt-iss-why"><b>'+eh(l)+'</b></div><div class="tt-iss-pills">'+byR[l].map(function(q){return _ttIssuePill(q.x,'un');}).join('')+'</div>'+_ttSugBlock(byR[l],sol)+'</div>';});
@@ -5910,7 +5989,8 @@ function _ttDrift(sem,sol){
   const tt=_ttCache.tt;
   if(!sol)sol=tt?{placements:tt.placements||[],unplaced:[]}:null;
   if(!sol)return null;
-  const placed=sol.placements||[],known=placed.concat(sol.unplaced||[]);
+  const viewSaved=!!(sol.fromSaved&&!_ttCache.dirty),miss=viewSaved?(sol.unplaced||[]).filter(function(u){return u.notOnSaved;}):[];
+  const placed=sol.placements||[],known=placed.concat((sol.unplaced||[]).filter(function(u){return miss.indexOf(u)<0;}));
   if(!known.length)return null;
   const live=_ttCourses(sem).filter(function(r){return !_ttIsIntern(r);});
   const liveById={};live.forEach(function(r){liveById[String(r.id)]=r;});
@@ -5921,7 +6001,7 @@ function _ttDrift(sem,sol){
   flat.forEach(function(x){const p=x.p,r=liveById[x.mid];if(!r){del.push(p);return;}const f=_ttDriftFields(p,r);if(f.length)chg.push({p:p,r:r,fields:f,mid:x.mid,on:x.on});});
   live.forEach(function(r){if(!savedById[String(r.id)])add.push(r);});
   const n=del.length+chg.length+add.length,saved=!!(sol.fromSaved&&!_ttCache.dirty&&tt);
-  return n?{del:del,chg:chg,add:add,n:n,version:saved?tt.version:null}:null;
+  return n?{del:del,chg:chg,add:add,miss:miss,n:n,version:saved?tt.version:null}:null;
 }
 // ── 排课表那一页的提示(Aj. Tsai 2026-11-16):所选学期有课表存档、而且跟排课表不一样 → 横幅告诉改排课表的人「课表制作还没跟上」──
 // 所有角色都看得到;没选学期、没有存档、完全一致时不显示。存档每 2 分钟重读一次(这次打开课表制作读到/存过的优先用)。任何错误都只是不显示,不能弄坏排课表。
@@ -5961,12 +6041,16 @@ function _ttDriftBanner(drift){
     const btn=(two&&canEdit)?'<span style="float:right;white-space:nowrap;margin-left:8px"><button class="btn btn-sm" style="padding:1px 7px;font-size:11px" onclick="event.stopPropagation();ttSyncPull(\''+jsq(it.mid)+'\')" title="这门课的老师／上下半改成排课表的（上下半不同会到那一半重新排位），其余课不动">← 照排课表</button>'+(it.on?' <button class="btn btn-sm" style="padding:1px 7px;font-size:11px;color:#854F0B;border-color:#FCD34D" onclick="event.stopPropagation();ttWriteHalfBack(\''+jsq(String(it.p.id))+'\')" title="把课表上这门课的老师／上下半写进排课表（会修改排课表，需确认）">写回排课表 →</button>':'')+'</span>':'';
     items+='<div class="tt-side-item jump" style="background:#fffbeb;overflow:hidden" onclick="_ttJumpTo(\''+jsq(String(it.p.id))+'\')">'+btn+'<b>'+eh(it.p.course)+'</b>'+(it.p.cls?'-'+eh(it.p.cls):'')+' · '+it.fields.map(function(f){return '<span style="color:#92400e">'+eh(f.t)+'：课表 '+eh(String(f.a))+' ／ 排课表 '+eh(String(f.b))+'</span>';}).join('、')+'</div>';
   });
-  if(drift.add.length)items+='<div class="tt-side-item" style="background:#eef2ff;color:#1e3a8a"><b>排课表新增 '+drift.add.length+' 门</b>（'+drift.add.map(function(r){return eh(r.course);}).join('、')+'）—— 按「🧩 只补排」或「⚡ 整张重排」才会进来（拖不到）</div>';
+  if(drift.add.length){   // 不在课表上的课:看存档时每门是一个胶囊(鼠标移上去浮出原因与建议、点了跳到未排区),完整的原因与建议在下方「待处理一览」
+    const mu=drift.miss||[],byId={};mu.forEach(function(u){byId[String(u.id)]=u;});
+    const names=drift.add.map(function(r){const u=byId[String(r.id)];return u?_ttIssuePill(u,'un'):'<b>'+eh(r.course)+'</b>';}).join(mu.length?' ':'、');
+    items+='<div class="tt-side-item" style="background:#eef2ff;color:#1e3a8a"><b>不在课表上 '+drift.add.length+' 门</b>（存档时没排上，或存档后排课表才新增）<div style="margin:4px 0;display:flex;flex-wrap:wrap;gap:4px;align-items:center">'+names+'</div>'+(mu.length?'<span style="font-size:11.5px">👇 每门<b>为什么没排上、可以怎么调</b>，列在下方「<b>待处理一览</b>」（鼠标移到课码上也会浮出）。</span> ':'')+(canEdit?'<span style="font-size:11.5px;color:#555">按「🧩 只补排」自动排进来，或从未排区拖进课表。</span>':'')+'</div>';
+  }
   const act=canEdit
     ? '<div style="margin:6px 0 2px">'+(struct?'<button class="btn btn-p btn-sm" onclick="ttKeepSolve()" title="已排好的课留在原位（含手动调过的），只排新增的、改动后原位放不下的；老师／上下半不一样的不动">🧩 只补排改动的课</button> ':'')+'<button class="btn btn-sm" onclick="ttAutoSolve()" title="整张重排，全部照排课表，不保留手动调过的教室/时段">⚡ 整张重排</button>'+(both?' <span style="font-size:11px;color:#6b5114">老师／上下半不一样的 '+both+' 门：两边都能改，请逐门选「← 照排课表」或「写回排课表 →」</span>':'')+'</div>'
     : '<div style="font-size:11px;color:#888;margin-top:3px">请 Head of Administration 或管理员更新（详见「ℹ️ 说明 › 排课规则」）。</div>';
   const title=drift.version!=null?('⚠ 存档 v'+drift.version+' 后，课表与排课表有 '+drift.n+' 处不一样 —— 这张课表可能过时'):('⚠ 课表与排课表有 '+drift.n+' 处不一样');
-  return '<div class="tt-driftbar" style="border:1px solid #F6C667;background:#FEF9ED;border-radius:8px;padding:10px 12px;margin:0 0 10px"><div style="font-size:12.5px;font-weight:700;color:#92400e">'+title+'</div>'+act+'<details style="margin-top:4px"'+(drift.n<=8?' open':'')+'><summary style="cursor:pointer;font-size:12px;color:#92400e">看哪些不一样（排课表已删 '+drift.del.length+' · 内容不同 '+drift.chg.length+' · 排课表新增 '+drift.add.length+'）</summary><div style="max-height:240px;overflow:auto;margin-top:6px">'+items+'</div></details></div>';
+  return '<div class="tt-driftbar" style="border:1px solid #F6C667;background:#FEF9ED;border-radius:8px;padding:10px 12px;margin:0 0 10px"><div style="font-size:12.5px;font-weight:700;color:#92400e">'+title+'</div>'+act+'<details style="margin-top:4px"'+(drift.n<=8?' open':'')+'><summary style="cursor:pointer;font-size:12px;color:#92400e">看哪些不一样（排课表已删 '+drift.del.length+' · 内容不同 '+drift.chg.length+' · 不在课表上 '+drift.add.length+'）</summary><div style="max-height:240px;overflow:auto;margin-top:6px">'+items+'</div></details></div>';
 }
 // ── 容量预检(Aj. Tsai 2026-11-15):先算「每届别/每老师在某半需要几格 vs 有几格」,超载就直接说哪个必排不下 ──
 // 一般课:周一~周五 × 上午/下午 = 10 格(教 Capstone 的老师周五留给 Capstone → 8 格);Capstone:周五/周六/周日 = 6 格。每门课 2 节。
@@ -6269,6 +6353,7 @@ async function renderTtPanel(force){
   let tools='';
   // 主操作
   if(canEdit){tools+='<button class="btn btn-p btn-sm" onclick="ttAutoSolve()" title="自动把本学期的课排进时段+教室">⚡ 一键自动排</button>';
+    tools+=' <button class="btn btn-sm" onclick="ttTop3()" title="自动排试的几十种排法里，列出前三名的数字（没排上／只排 1 节／两节同一天／个别学生撞课），自己挑一个">🏅 前三名</button>';
     if(_ttKeepTodo(sol))tools+=' <button class="btn btn-sm" onclick="ttKeepSolve()" title="已排好的课留在原位（含手动调过的），只把没排上的、新增的课排进空位">🧩 只补排</button>';
     if(!_ttWholeSem(sem))tools+=' <button class="btn btn-sm" onclick="ttHalfPlan()" title="有课排不上时，找出最少改哪几门课的上下半就能多排上；先看方案，按「套用」才改">🔀 改半方案</button>';
     if(_ttUndoSt.length||_ttRedoSt.length)tools+=' <button class="btn btn-sm tt-undo" onclick="ttUndo()" title="还原上一步（Ctrl+Z／⌘Z）；可连续还原 '+_ttUndoSt.length+' 步"'+(_ttUndoSt.length?'':' disabled')+'>↶ 还原</button> <button class="btn btn-sm tt-undo" onclick="ttRedo()" title="重做（Ctrl+Y／⇧⌘Z）"'+(_ttRedoSt.length?'':' disabled')+'>↷ 重做</button>';
@@ -6281,6 +6366,7 @@ async function renderTtPanel(force){
   if(canEdit)tools+=' <details class="tt-menu"><summary class="btn btn-sm no-print">⚙️ 选项 ▾</summary><div class="tt-menu-pop">'
     +'<label><input type="checkbox"'+(_ttSoloOn()?' checked':'')+' onchange="ttSoloToggle(this.checked)"><span>个别学生不挡排课<span class="mi-sub">某届别在一门课只有 1 人 → 不挡排课，撞到的列「待处理一览」</span></span></label>'
     +'<label><input type="checkbox"'+(_ttDeepOn()?' checked':'')+' onchange="ttDeepToggle(this.checked)"><span>拆开两节同天<span class="mi-sub">同一门课两节同天时，多试把它拆到不同天（最多约 6 秒）</span></span></label>'
+    +'<label><input type="checkbox"'+(_ttTierOn()?' checked':'')+' onchange="ttTierToggle(this.checked)"><span>课排满优先<span class="mi-sub">打勾：宁可多几门两节同天／多几位学生撞课，也要把每门课的两节排进去。不打勾：把所有缺点加总比较，可能留一门课只排到 1 节</span></span></label>'
     +'</div></details>';
   // 🗑 删除存档(管理员)
   if(currentRole==='admin'&&tt)tools+=' <button class="btn btn-sm tt-delsave" onclick="ttDeleteSaved()" title="删除这个学期的课表存档（只有管理员；排课表不受影响）">'+_ICO.del+' 删除存档</button>';
