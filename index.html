@@ -342,19 +342,19 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 .tt-cell{min-width:96px;max-width:230px;background:#fff;padding:2px}
 .tt-cell.sat{background:#FFFBEB}
 /* 依届别/依老师:固定格高 + 课片同大小(美感、比例一致 — Aj. Tsai) */
-.tt-etable tbody td{height:72px}
+.tt-etable tbody td{height:calc(var(--eh,66px) + 6px)}   /* --eh:这张表的课片高度,_ttEFit 依内容最多的一片定(最少 66px) */
 .tt-etable .tt-cell{min-width:120px;max-width:200px}
-.tt-etable .tt-chip{height:66px;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column;justify-content:center}
+.tt-etable .tt-chip{height:var(--eh,66px);box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column;justify-content:center}
 .tt-etable .tt-chip .tt-c3{width:100%;justify-content:center}
-.tt-etable .tt-c3 .z2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal}
+.tt-etable .tt-c3 .z2{white-space:normal}
 .tt-chip{display:block;border-radius:7px;padding:3px 6px;font-size:10px;line-height:1.25;margin:1px;text-align:left;box-shadow:0 1px 2px rgba(60,52,137,.06);transition:outline .15s,box-shadow .15s}
 .tt-chip .c{font-weight:700}
 .tt-chip .m{color:#b45309}
 .tt-c3{display:flex;flex-direction:column;min-width:0}
 .tt-c3 .z1{font-size:9px;color:#6b7280;font-family:ui-monospace,monospace;text-align:left;line-height:1.2;white-space:normal}
 .tt-c3 .z2{font-weight:700;font-size:11px;text-align:center;margin:1px 0;word-break:break-word;white-space:normal;overflow-wrap:anywhere}   /* 跟班组的课码很长(BA103+DI325-Capstone-971),要能在格内换行 */
-/* 教室号课表:届别完整显示(不截);依届别/依老师:才截成 2 行并框统一 */
-.tt-etable .tt-c3 .z1,.tt-etable .tt-c3 .z2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* 依届别/依老师:内容完整显示(不截);同一张表的课片同宽(撑满格子)同高(_ttEFit);届别清单字小一点(Aj. Tsai 2026-11-18) */
+.tt-etable .tt-c3 .z2.zl{font-size:10px;font-weight:600;line-height:1.25}
 .tt-etable{table-layout:fixed;width:760px;max-width:100%}
 .tt-etable .tt-rm{width:68px}
 .tt-c3 .z4{display:none}
@@ -406,9 +406,9 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 .tt-side-item{font-size:11.5px;padding:4px 6px;border-radius:6px;margin-bottom:4px;line-height:1.4}
 .tt-ecard{border:0.5px solid #E5E3F8;border-radius:8px;padding:8px;margin-bottom:10px;background:#fff}
 .tt-ehdr{font-size:14.5px;font-weight:700;color:#3C3489;margin-bottom:6px}
-.tt-etable{width:100%}
+.tt-etable{width:100%;min-width:700px}   /* 窄屏:表格不压扁,在 .tt-ewrap 里左右卷 */
 .tt-etable .tt-cell{min-width:72px}
-.tt-etable .tt-chip{display:inline-block;margin:1px 0;cursor:default}
+.tt-etable .tt-chip{display:flex;width:100%;margin:1px 0;cursor:default}   /* 依届别／依老师:课片撑满格子 → 同宽;高度见 --eh */
 .tt-ewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 /* 上/下半配色(依届别/依老师表的列组) */
 .tt-cell.tt-up{background:#F2F6FF}
@@ -6856,6 +6856,13 @@ function _ttScrollKeep(bd){
     return {key:_ttCache.sem+'|'+(_ttCache.view||'room'),pos:ws.map(function(w){return [w.scrollTop,w.scrollLeft];}),top:ws[0].getBoundingClientRect().top};
   }catch(e){return null;}
 }
+function _ttEFit(bd){   /* 依届别／依老师:每张表的课片同高 = 那张表里内容最多的一片(最少 66px),内容不截 */
+  try{(bd||document).querySelectorAll('.tt-etable').forEach(function(t){
+    t.style.setProperty('--eh','66px');let m=66;
+    t.querySelectorAll('.tt-chip .tt-c3').forEach(function(i){const h=i.scrollHeight+8;if(h>m)m=h;});
+    if(m>66)t.style.setProperty('--eh',m+'px');
+  });}catch(e){}
+}
 function _ttScrollBack(bd,k){
   try{
     if(!k||k.key!==_ttCache.sem+'|'+(_ttCache.view||'room'))return;
@@ -6936,6 +6943,7 @@ async function renderTtPanel(force){
     bd.innerHTML=_ttInternsBar({interns:it})+'<div style="padding:18px;background:#FEF9ED;border-radius:8px;color:#7a5b16;line-height:1.7">本学期共 <b>'+(n-it.length)+'</b> 门课待排。'+(canEdit?'点 <b>⚡ 一键自动排</b> 自动排进时段+教室（排不下的会标红留空、列到右侧「待处理」；🖨️ 列印在下一阶段加入）。':'尚未排课（等 Head of Administration 或管理员排）。')+'</div>';return;
   }
   bd.innerHTML=_ttBodyHtml(sol);
+  _ttEFit(bd);
   _ttScrollBack(bd,_keep);
   _ttJumpFill();   // 依现在画面上的分组填「跳到」下拉
 }
