@@ -4402,6 +4402,8 @@ const TT_WEEKDAYS=['周一','周二','周三','周四','周五'];
 //    Capstone 一天三段 09:00–12:00(am)/12:00–15:00(pm,画面叫「中午」,排在「下午」栏)/15:00–18:00(ev,傍晚)。
 //    占用以时间块算:一般课的下午(13:30–16:30)横跨 Capstone 的 12–15 与 15–18 → 一般课 pm 同时占 pm、ev 两块;其余各占自己那块。
 const TT_SLOTS=['am','pm'],TT_CAP_SLOTS=['am','pm','ev'],TT_CAP_TIME={am:'09–12',pm:'12–15',ev:'15–18'};
+let _ttKeep231=true;   // 231 留给小班(超过 20 人的课最后才用);留了反而有课排不满时,_ttSolve 会关掉重排
+const TT_SMALL_ROOM='231',TT_SMALL_MAX=20;   // 20 人以下的课优先排 231
 const TT_CAP_ROOMS=['233','234','235','236'];   // Capstone 优先用这一排(同栋同层);同一位老师固定一间
 const TT_TIME={am:'09:00–12:00',pm:'13:30–16:30'},TT_CAP_TIME_FULL={am:'09:00–12:00',pm:'12:00–15:00',ev:'15:00–18:00'};   // 表头用的完整时间(Aj. Tsai 2026-11-17)
 // 课表表头一格:时段名 + 小字时间。表头只写一般上课时间;Capstone 的时间写在课片上(_ttCapTm),学生不用认符号(Aj. Tsai 2026-11-17 方案 A)
@@ -4915,7 +4917,10 @@ function _ttCandRooms(c,rooms){
   const fit=function(a,b){return (+a.cap||0)-(+b.cap||0);};
   const sp=cand.filter(function(r){return _ttRoomSpecial(r.code);}).sort(fit),gen=cand.filter(function(r){return !_ttRoomSpecial(r.code);});
   const cd=gen.filter(function(r){return r.pref_dept==='CD';}).sort(fit),non=gen.filter(function(r){return r.pref_dept!=='CD';}).sort(fit);
-  return (c.dept==='CD'?cd.concat(non):non.concat(cd)).concat(sp);   // 专用教室(电脑室等)留给备注指定的课,其他课最后才用
+  const out=(c.dept==='CD'?cd.concat(non):non.concat(cd)).concat(sp);   // 专用教室(电脑室等)留给备注指定的课,其他课最后才用
+  const i=out.findIndex(function(r){return String(r.code)===TT_SMALL_ROOM;});   // 231 留给小班(Aj. Tsai 2026-11-18):20 人以下的课先排 231;超过 20 人的课,别间都没空才用 231
+  if(i>=0){const r231=out.splice(i,1)[0];if((+c.count||0)<=TT_SMALL_MAX)out.unshift(r231);else if(_ttKeep231)out.push(r231);else out.splice(i,0,r231);}   // _ttKeep231 关掉时,大班照原本的顺序用 231
+  return out;
 }
 // 这门课能排的星期:Capstone 周五/六/日;一般课周一~五(教 Capstone 的老师周五留给 Capstone);备注指定单一周几则只排那天
 function _ttDaysFor(c,capTc){
@@ -4978,7 +4983,7 @@ function _ttCapPlan(caps){
   //   「留一节」:人数少的几门只留 1 节在周五六(plan.__half),另一节等一般课排完再找(周一~周四 → 周日);每门课周五六至少有一节
   //   「整门移出」:人数少的几门两节都不在周五六(plan.__late)
   // 回传方案阵列(可能是空阵列=照一般流程排)。
-  const order=caps.slice().sort(function(a,b){return b._pr-a._pr;}),small=caps.slice().sort(function(a,b){return (a.count-b.count)||(a._pr-b._pr);});
+  const order=caps.slice().sort(function(a,b){return b._pr-a._pr;}),small=caps.slice().sort(function(a,b){return ((a.cohorts||[]).length-(b.cohorts||[]).length)||(a.count-b.count)||(a._pr-b._pr);});   // 让出周五六的先后:届别数最少的先让,一样多再看人数(Aj. Tsai 2026-11-18)
   const SL=TT_CAP_MAIN.length*TT_CAP_SLOTS.length,MAIN=function(c){return c._days.filter(function(d){return TT_CAP_MAIN.indexOf(d)>=0;});};
   let total=0;
   const tryCfg=function(set,half){   // set:被挑出来的课;half=true 留一节,false 整门移出
@@ -4999,7 +5004,7 @@ function _ttCapPlan(caps){
     ord.forEach(function(c){plan[String(c.id)]=c.cells.map(function(cs){return cs.slice();});});
     return plan;
   };
-  const search=function(half){   // 被挑出来的课由少到多、人数少的先
+  const search=function(half){   // 被挑出来的课由少到多、届别数少的先
     let found=null;const lim=total+TT_CAP_BT_MAX*10;
     const comb=function(k,from,set){
       if(total>lim)return false;
@@ -5325,6 +5330,17 @@ const TT_TIER_UN=1e10,TT_TIER_ONE=1e7;   // 分层评分的层距:其余扣分�
 const TT_SOLVE_TRIES=40;   // 试几种先后顺序(依「抢人程度」:届别各有多忙+老师多忙+可用教室少)
 const TT_SOLVE_TRIES_COH=8; // 另外再试几种「届别数最多的先排」(Aj. Tsai 2026-11-15 提议;取最好的一版,加了不会变差)
 function _ttSolve(sem,opts){
+  // 231 留给小班:先照「留」排;有课没排上／只排 1 节 → 再照「不留」排一次,比较 没排上 → 只排 1 节,不留比较好才用不留
+  opts=opts||{};
+  const bad=function(S){return S?[S.unplaced.length,S.placements.filter(function(p){return (p.cells||[]).length===1;}).length]:[1e9,1e9];};
+  _ttKeep231=true;const A=_ttSolveCore(sem,opts);
+  if(!A)return A;
+  const a=bad(A);if(!a[0]&&!a[1])return A;
+  _ttKeep231=false;const B=_ttSolveCore(sem,opts),b=bad(B);
+  if(B&&(b[0]<a[0]||(b[0]===a[0]&&b[1]<a[1]))){B.keep231=false;return B;}
+  _ttKeep231=true;return _ttSolveCore(sem,opts);   // 重排一次,让课程物件上的资料回到「留」的那一版
+}
+function _ttSolveCore(sem,opts){
   opts=opts||{};_ttLangRefresh(sem);
   const refs=_ttCache.refs||{rooms:[],cat:{}};
   const rooms=_ttRoomsSorted(),cat=refs.cat||{};
