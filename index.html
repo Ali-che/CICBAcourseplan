@@ -1475,7 +1475,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <div style="display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">4</span><div><b>手动微调</b>　<span style="color:#999;font-size:11px">（秘书处／管理员）</span><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>拖课片：换时段／教室</li><li>点课片：改老师／时段，或移回未排</li><li>排不满：用「更多 › 🔀 改半方案」</li><li>按错：「↶ 还原」（⌘Z）</li></ul></div></div>
       <div style="display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">5</span><div><b>💾 存档 → ✅ 定版</b>　<span style="color:#999;font-size:11px">（秘书处／管理员）</span><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>存档＝<b>草稿</b>（同事看到会标「草稿」）</li><li>全部排好后按「<b>✅ 定版</b>」＝正式课表</li><li>定版后再存档 → 变回草稿，要重新定版</li><li>被盖掉的旧版留最近 5 个：「⚙️ 选项 › 🕘 旧版」</li></ul></div></div>
       <div style="display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">6</span><div><b>📤 导出／列印</b><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>选检视：依教室号／届别／授课老师</li><li>导出 Excel，或列印／存 PDF（A4 横向）</li><li>还没定版的，抬头会印「草稿，未定版」</li><li>每门课哪几天上课：「更多 › 📅 上课日期」</li></ul></div></div>
-      <div style="display:flex;gap:10px;padding:10px 0"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#B45309;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">7</span><div><b>排课表之后又改了？</b><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>课表<b>不会自动更新</b>，顶部出橘色提示</li><li><b>🅰 只补排</b>：已排好的留原位，只排新增／放不下的课</li><li><b>🅱 整张重排</b>：不保留手动调整</li><li>老师／上下半不一样：逐门选「← 照排课表」或「写回排课表 →」</li><li>细节见「ℹ️ 排课规则」</li></ul></div></div>
+      <div style="display:flex;gap:10px;padding:10px 0"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#B45309;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">7</span><div><b>排课表之后又改了？</b><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>课表<b>不会自动更新</b>，顶部出橘色提示</li><li><b>🅰 只补排</b>：已排好的留原位，只排新增／放不下的课</li><li><b>🅱 整张重排</b>：不保留手动调整</li><li>老师／上下半不一样：逐门选「← 照排课表」或「写回排课表 →」；全部照排课表按「← 全部照排课表」</li><li>细节见「ℹ️ 排课规则」</li></ul></div></div>
     </div>
     <div style="background:#F5F4FE;border-radius:8px;padding:10px 12px;margin-top:12px;font-size:11.5px;color:#3C3489;line-height:1.7">
       <b>谁能做什么</b>
@@ -1483,7 +1483,8 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <li><b>秘书处（Head of Administration）、管理员</b>：排、存、定版、列印</li>
         <li><b>其他人（含主任）</b>：只读、列印</li>
         <li><b>主任改排课</b>：用撞课清单的「✎ 改 课码」</li>
-        <li><b>主任在排课表填课时</b>：表单会提示「放哪一半比较排得上」「格子够不够」</li>
+        <li><b>主任改课三步</b>：① 排课表表单的「🗓 照现在的课表试排」逐门看排不排得进 → ② 课表制作橘色框「🔍 试排预览」看整张（不存档） → ③「✉ 通知秘书处」</li>
+        <li><b>几个人同时用</b>：别人存了新版或定版，上方会出「🔔 …载入最新」；存档前系统会先看有没有人存过；还没存档的改动只有自己看得到</li>
       </ul>
     </div>
     <div style="text-align:right;margin-top:14px">
@@ -5790,7 +5791,7 @@ function _ttTipShow(chip){
   }
   if(!un&&(p.cells||[]).length===1){   // 只排到 1 节:说明 + 建议(面板不再逐门列)
     const hn=(p.hint&&p.hint.cells)?(p.hint.half==='dn'?'下半':'上半'):'';
-    unHtml='<div style="margin-top:6px;color:#b45309"><b>只排到 1 节：</b>第二节找不到老师、届别、教室都空的时段</div><div style="margin-top:4px;color:#1a6b2f"><b>💡 建议：</b>'+eh(hn?('改到'+hn+'就能排满 2 节：'+p.hint.cells.map(_ttCellTxt).join('、')+'（按上方「待处理一览」里这门课旁的「↪ 改到'+hn+'」）'):'点课片 →「＋ 加一节」手动补第二节')+'</div>';
+    unHtml='<div style="margin-top:6px;color:#b45309"><b>只排到 1 节：</b>第二节找不到老师、届别、教室都空的时段</div><div style="margin-top:4px;color:#1a6b2f"><b>💡 建议：</b>'+eh(hn?('改到'+hn+'就能排满 2 节：'+p.hint.cells.map(_ttCellTxt).join('、')+(_ttCanEdit()?'（按上方「待处理一览」里这门课旁的「↪ 改到'+hn+'」）':'')):(_ttCanEdit()?'点课片 →「＋ 加一节」手动补第二节':'第二节还没有位置（要挪开别的课，或改上下半）'))+'</div>';
   }
   const rm=chip.getAttribute('data-rm')||'',why=_ttBadWhy&&_ttBadWhy[id],note=(p.note&&p.note.raw)||p.nt||'';
   const mem=_ttMem(p),cc=_ttCohCounts(p);
@@ -5945,7 +5946,7 @@ function _ttSuggestFor(u,sol){
     });
     if(!best||bl.length<best.bl.length)best={d:d,s:s,room:r.code,bl:bl};
   });});});
-  if(best&&!best.bl.length)return '可排：'+best.d+' '+_ttSlotName(best.s)+' · 教室 '+best.room+'（空着，拖过去即可）。';
+  if(best&&!best.bl.length)return '可排在 '+best.d+_ttSlotName(best.s)+'，教室 '+best.room+'（空着）。';   // 2026-11-18 用字改中性:主任也会看到,不写「拖过去即可」
   // 本半排不下 → 看换到另一半有没有空位(Aj. Tsai:改到下半也是个选择)
   if(best&&best.bl.length&&!sol.whole&&u.half!=='both'){
     const oh=(u.half==='dn')?'up':'dn',odays=(oh==='dn'?TT_DN_DAYS:TT_UP_DAYS).filter(function(d){return d!=='周六';});let ob=null;
@@ -6224,8 +6225,8 @@ function ttPlanApply(){
 // 右:备注只列要人看的(已照办/变更记录收起)+ KE/KH + 软提醒按类型汇总(点开才列,可勾「已核对」)
 // 未排/只排1节 的一句话建议(与浮出卡同逻辑),直接显示在课码下面,不靠鼠标悬停(Aj. Tsai 2026-11-16:hover 有时接不到)
 function _ttSugText(x,sol,kind){
-  if(kind==='part'){const hn=(x.hint&&x.hint.cells)?(x.hint.half==='dn'?'下半':'上半'):'';return hn?('改到'+hn+'就能排满 2 节（按课码旁「↪ 改到'+hn+'」）'):'点课片 →「＋ 加一节」手动补第二节';}
-  if(x.hint&&x.hint.cells){const hn=x.hint.half==='dn'?'下半':'上半';return '改到'+hn+'就能排满 2 节：'+x.hint.cells.map(_ttCellTxt).join('、')+'（按课码旁「↪ 改到'+hn+'」）';}
+  if(kind==='part'){const hn=(x.hint&&x.hint.cells)?(x.hint.half==='dn'?'下半':'上半'):'';return hn?('改到'+hn+'就能排满 2 节'+(_ttCanEdit()?'（按课码旁「↪ 改到'+hn+'」）':'')):(_ttCanEdit()?'点课片 →「＋ 加一节」手动补第二节':'第二节还没有位置（要挪开别的课，或改上下半）');}
+  if(x.hint&&x.hint.cells){const hn=x.hint.half==='dn'?'下半':'上半';return '改到'+hn+'就能排满 2 节：'+x.hint.cells.map(_ttCellTxt).join('、')+(_ttCanEdit()?'（按课码旁「↪ 改到'+hn+'」）':'');}
   return _ttSuggestFor(x,sol);
 }
 function _ttSugBlock(items,sol){
@@ -6461,6 +6462,11 @@ async function ttSave(){
   if(!_ttCanEdit())return;const sem=_ttCache.sem,sol=_ttCache.sol;
   if(!sem||!sol){alert('请先选学期并「一键自动排」');return;}
   const pls=sol.placements.map(function(p){return {id:p.id,course:p.course,cls:p.cls,tc:p.tc,count:p.count,cohorts:p.cohorts,dept:p.dept,credit:p.credit,isCap:p.isCap,members:p.members,half:p.half,room:p.room,cells:p.cells,nt:(p.note&&p.note.raw)||'',so:_ttSoloOn()?1:0};});
+  {let rv;try{rv=await _ttVerCheck();}catch(e){}   // 存档前先看别人有没有存过(读不到就照旧存)
+    const dv=rv===undefined?null:_ttVerDiff(_ttCache.tt,rv);
+    if(dv&&(dv.kind==='ver'||dv.kind==='new')){
+      if(!confirm((dv.row.saved_by||'有人')+' 在 '+_recoFmtTime(dv.row.saved_at)+' 已经存了 v'+dv.row.version+'；你是从'+(_ttCache.tt?' v'+_ttCache.tt.version:'「还没有存档」')+' 开始改的。\n\n继续存档会盖掉他的版本（他的那一版会留在「⚙️ 选项 › 🕘 旧版」）。\n要先看他的版本：按「取消」，再按上方的「载入最新」。\n\n确定要继续存档吗？')){_ttCache.newver=dv;const el=document.getElementById('tt-newver');if(el)el.innerHTML=_ttNewVerHtml();return;}
+    }}
   const fs0=_ttFinalState(_ttCache.tt);
   if(!confirm('把当前课表存档给 '+sem+'？（覆盖上一版，'+pls.length+' 门已落位）'+(sol.unplaced.length?('\n还有 '+sol.unplaced.length+' 门未排进去。'):'')+(fs0==='final'?'\n\n现在这学期是「已定版」。存档后会变回草稿，要重新按「✅ 定版」。':(_ttCache.finalOK?'\n\n存下来的是草稿；排好后按「✅ 定版」才是正式版。':''))))return;
   const r=await gasPost('saveTimetable',{sem:sem,placements:pls,where:_ttWhereMap(sol.placements)});
@@ -6487,6 +6493,9 @@ async function ttFinalize(on){
   if(!_ttCanEdit())return;const sem=_ttCache.sem,tt=_ttCache.tt;
   if(!sem||!tt){alert('这个学期还没有存档。');return;}
   if(on&&_ttCache.dirty){alert('画面上有还没存档的改动。请先按「💾 存档」，再定版。');return;}
+  {let rv;try{rv=await _ttVerCheck();}catch(e){}
+    const dv=rv===undefined?null:_ttVerDiff(tt,rv);
+    if(dv&&(dv.kind==='ver'||dv.kind==='gone')){_ttCache.newver=dv;const el=document.getElementById('tt-newver');if(el)el.innerHTML=_ttNewVerHtml();alert(dv.kind==='gone'?'这学期的课表存档已经被删除了。请先按「载入最新」。':((dv.row.saved_by||'有人')+' 已经存了 v'+dv.row.version+'，你画面上是 v'+tt.version+'。\n请先按上方的「载入最新」，看过再'+(on?'定版':'取消定版')+'。'));return;}}
   let msg='取消 '+sem+' 课表 v'+tt.version+' 的定版，改回草稿？';
   if(on){
     let un=0,ch=0;try{const sol=_ttSolutionFromSaved(sem,tt),d=_ttDrift(sem,sol);un=(sol.unplaced||[]).length;ch=d?d.chg.length+d.del.length:0;}catch(e){}
@@ -6524,6 +6533,45 @@ function ttHistLoad(i){
   const sol=_ttSolutionFromSaved(sem,{placements:Array.isArray(x.placements)?x.placements:[]});delete sol.fromSaved;
   _ttCache.sol=sol;_ttCache.dirty=true;_ttHist=[];ttPlanClose();renderTtPanel();
   if(typeof showToast==='function')showToast('已载入旧版 v'+(x.version==null?'?':x.version)+'（还没存档）。确认后按「💾 存档」才会盖掉现在的；不要就按「↶ 还原」',{kind:'success'});
+}
+// ── 多人同时使用(Aj. Tsai 2026-11-18)──
+// ① 有新版本提示:停在课表制作时,每 90 秒只读一次版本号;别人存了新版／定版／取消定版／删了存档 → 上方出一行,按「载入最新」才换(不自动换,免得打断正在看或正在改的人)。
+// ② 存档／定版前先看一次版本:别人已经存过就提醒(ttSave、ttFinalize 里)。检查与存档之间有极短的空档,两人同一秒按存档仍可能互盖——被盖掉的会在「旧版」。
+// ③ 未存档说明条:能排课的人手上有还没存的改动时,写明「同事看到的是 vN」。
+const TT_VER_MS=90000;let _ttVerTimer=null;
+function _ttVerDiff(tt,row){   // 画面上的存档 vs 数据库现在的:一样回 null
+  if(!tt&&!row)return null;if(!tt)return {kind:'new',row:row};if(!row)return {kind:'gone'};
+  if(+row.version!==+tt.version)return {kind:'ver',row:row};
+  if(_ttCache.finalOK&&('final_version' in row)){const f1=row.final_version==null?null:+row.final_version,f0=tt.final_version==null?null:+tt.final_version;if(f1!==f0)return {kind:(f1!=null&&f1===+row.version)?'final':'unfinal',row:row};}
+  return null;
+}
+async function _ttVerCheck(){   // 回数据库现在那一行(没有存档=null);读不到回 undefined
+  const sem=_ttCache.sem;if(!sem)return undefined;
+  let r=null;try{r=await gasGet({action:'timetableVer',sem:sem});}catch(e){}
+  if(!r||!r.success||_ttCache.sem!==sem)return undefined;return r.row||null;
+}
+async function _ttVerTick(){
+  try{
+    const p=document.getElementById('panel-tt');if(!p||!p.classList.contains('active')||document.hidden||!_ttCache.sem)return;
+    const row=await _ttVerCheck();if(row===undefined)return;
+    _ttCache.newver=_ttVerDiff(_ttCache.tt,row);
+    const el=document.getElementById('tt-newver');if(el)el.innerHTML=_ttNewVerHtml();
+  }catch(e){}
+}
+function _ttNewVerHtml(){
+  const d=_ttCache.newver;if(!d)return '';const r=d.row||{};
+  const t=d.kind==='gone'?'这学期的课表存档已经被删除了':(d.kind==='new'?('<b>'+eh(r.saved_by||'有人')+'</b> 在 '+_recoFmtTime(r.saved_at)+' 存了课表 <b>v'+eh(String(r.version))+'</b>'):
+    (d.kind==='ver'?('<b>'+eh(r.saved_by||'有人')+'</b> 在 '+_recoFmtTime(r.saved_at)+' 存了新版 <b>v'+eh(String(r.version))+'</b>（你画面上是 v'+eh(String((_ttCache.tt||{}).version))+'）'):
+    (d.kind==='final'?('<b>'+eh(r.final_by||'有人')+'</b> 在 '+_recoFmtTime(r.final_at)+' 把 v'+eh(String(r.version))+' <b>定版</b>了'):('v'+eh(String(r.version))+' 的定版被取消了，现在是草稿'))));
+  return '<div class="tt-prevbar" style="border-style:solid;border-color:#7F77DD"><span>🔔 '+t+'。'+((_ttCache.dirty&&_ttCache.sol)?'<span style="color:#b42318"> 你有还没存档的改动，载入会丢掉它们。</span>':'')+'</span><span style="white-space:nowrap"><button class="btn btn-p btn-sm" onclick="ttVerLoad()">载入最新</button></span></div>';
+}
+function ttVerLoad(){
+  if(_ttCache.dirty&&_ttCache.sol&&!confirm('画面上有还没存档的改动，载入最新版会丢掉它们。要载入吗？'))return;
+  _ttCache.newver=null;renderTtPanel(true);
+}
+function _ttDirtyNote(tt){
+  if(!(_ttCache.sol&&_ttCache.dirty&&!_ttCache.preview&&_ttCanEdit()))return '';
+  return '<div class="tt-prevbar" style="border-color:#f6ad55;background:#fffaf0;color:#8a5a12"><span>✏️ <b>你正在看还没存档的版本</b> —— 同事看到的'+(tt?'还是 v'+eh(String(tt.version)):'是「尚未存档」')+'。改好按「💾 存档」；不要这些改动，按右上角「↻ 重新载入」。</span></div>';
 }
 // ── 试排预览(Aj. Tsai 2026-11-18:主任改完排课表,自己先看整张课表排不排得下)──
 // 给不能排课的角色用:拿存档的课表 + 现在的排课表,在自己的浏览器里跑一次「只补排」,把结果放到画面上看。
@@ -6789,7 +6837,8 @@ async function renderTtPanel(force){
   try{document.documentElement.style.setProperty('--cic-stickybar-h',(((document.getElementById('sticky-bar')||{}).offsetHeight)||0)+'px');}catch(e){}   // 工具列 sticky 贴在全站 sticky 头下面(Aj. Tsai 2026-11-15)
   try{if(!_ttDEBound){document.addEventListener('dragend',_ttDragEnd);_ttDEBound=true;}}catch(e){}   // 拖拽结束统一清状态
   try{_ttTipBind();}catch(e){}   // 课片浮出卡(届别明细)
-  try{_ttKeyBind();}catch(e){}   // Ctrl/⌘+Z 还原、Shift+⌘+Z / Ctrl+Y 重做
+  try{_ttKeyBind();}catch(e){}
+  if(!_ttVerTimer)_ttVerTimer=setInterval(function(){_ttVerTick();},TT_VER_MS);   // 每 90 秒看一次有没有人存了新版／定版   // Ctrl/⌘+Z 还原、Shift+⌘+Z / Ctrl+Y 重做
   const sem=(document.getElementById('tt-sem')||{}).value||'';
   const st=document.getElementById('tt-status'),bd=document.getElementById('tt-body'),nn=document.getElementById('tt-n');
   if(!st||!bd)return;
@@ -6798,7 +6847,7 @@ async function renderTtPanel(force){
   if(force||_ttCache.sem!==sem){
     st.innerHTML='<div style="color:#888;padding:10px">⏳ 载入中…</div>';bd.innerHTML='';
     _ttCache.sem=sem;_ttCache.tt=null;_ttCache.sol=null;_ttCache.dirty=false;_ttCache.preview=false;_ttCache.dates=null;_ttUndoSt=[];_ttRedoSt=[];   // 换学期/重新载入 → 还原记录清空
-    try{const r=await gasGet({action:'timetable',sem:sem});if(r&&r.success){_ttCache.tt=r.tt||null;_ttCache.dates=r.dates||null;_ttCache.finalOK=!!r.finalOK;_ttSoloAdopt();}}catch(e){}
+    try{const r=await gasGet({action:'timetable',sem:sem});if(r&&r.success){_ttCache.tt=r.tt||null;_ttCache.dates=r.dates||null;_ttCache.finalOK=!!r.finalOK;_ttCache.newver=null;_ttSoloAdopt();}}catch(e){}
   }
   const courses=_ttCourses(sem),n=courses.length,tt=_ttCache.tt,canEdit=_ttCanEdit();
   if(nn)nn.textContent=n?('· '+n+' 门课'):'';
@@ -6846,7 +6895,7 @@ async function renderTtPanel(force){
   st.innerHTML='<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 12px;background:#F5F4FE;border-radius:8px">'+
     '<span style="font-size:12.5px;color:#3C3489">'+(tt?('已存档 <b>v'+tt.version+'</b> · '+eh(tt.saved_by||'')+' · '+_recoFmtTime(tt.saved_at)+' · '+(tt.placements?tt.placements.length:0)+' 门'+_ttFinalBadge(tt)):'<b>尚未存档</b>')+((_ttCache.sol&&_ttCache.dirty)?' · <span style="color:#b45309">有未存档改动</span>':'')+'</span>'+
     '<span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="font-size:12px;color:'+(canEdit?'#1b7a5a':'#999')+'">'+(canEdit?'你可排/存':'只读')+'</span>'+tools+'</span></div>'+
-    _ttArchNote(sem)+_ttPreviewNote(tt)+_ttFinalNote(tt)+_ttDatesHtml(sem)+(sol?_ttViewToggle():'');   // 视图切换挪进 sticky 工具列,滚动不消失(Aj. Tsai 2026-11-15)
+    '<div id="tt-newver">'+_ttNewVerHtml()+'</div>'+_ttArchNote(sem)+_ttPreviewNote(tt)+_ttDirtyNote(tt)+_ttFinalNote(tt)+_ttDatesHtml(sem)+(sol?_ttViewToggle():'');   // 视图切换挪进 sticky 工具列,滚动不消失(Aj. Tsai 2026-11-15)
   if(!sol){
     const it=_ttInternList(sem);   // 还没存档、还没自动排的画面也列实习课(Aj. Tsai 2026-11-16);「待排」的门数不含实习课(本来就不排)
     bd.innerHTML=_ttInternsBar({interns:it})+'<div style="padding:18px;background:#FEF9ED;border-radius:8px;color:#7a5b16;line-height:1.7">本学期共 <b>'+(n-it.length)+'</b> 门课待排。'+(canEdit?'点 <b>⚡ 一键自动排</b> 自动排进时段+教室（排不下的会标红留空、列到右侧「待处理」；🖨️ 列印在下一阶段加入）。':'尚未排课（等 Head of Administration 或管理员排）。')+'</div>';return;
@@ -11473,6 +11522,7 @@ function syncTblHeight(){
     if(a==='noticeData'){const r=await sget('notice?select=*&order=sort,id').catch(function(){return [];});return{success:true,rows:r||[]};}
     if(a==='schedLock'){const sm=encodeURIComponent(params.sem||'');const[lk,ak]=await Promise.all([sget('sched_lock?sem=eq.'+sm+'&select=*').catch(function(){return [];}),sget('sched_lock_ack?sem=eq.'+sm+'&select=row_id,row_code,acked_by,acked_at').catch(function(){return [];})]);return{success:true,lock:(lk&&lk[0])||null,acks:ak||[]};}
     if(a==='timetable'){const sm=encodeURIComponent(params.sem||'');const[tt,dt,fo]=await Promise.all([sget('timetable?sem=eq.'+sm+'&select=*').catch(function(){return [];}),sget('tt_sem_dates?sem=eq.'+sm+'&select=*').catch(function(){return [];}),sget('timetable?select=final_version&limit=1').then(function(x){return Array.isArray(x);}).catch(function(){return false;})]);return{success:true,tt:(Array.isArray(tt)&&tt[0])||null,dates:(Array.isArray(dt)&&dt[0])||null,finalOK:!!fo};}   // finalOK:数据库有没有定版栏位(migration 016);没有时回的是错误物件不是阵列
+    if(a==='timetableVer'){const sm=encodeURIComponent(params.sem||'');let rows=await sget('timetable?sem=eq.'+sm+'&select=sem,version,saved_by,saved_at,final_version,final_by,final_at').catch(function(){return null;});if(!Array.isArray(rows))rows=await sget('timetable?sem=eq.'+sm+'&select=sem,version,saved_by,saved_at').catch(function(){return null;});return Array.isArray(rows)?{success:true,row:rows[0]||null}:{success:false};}   // 只读版本号(不读整包课表):给「有新版本」提示与存档前检查用;没跑 016 的数据库退回不含 final 栏位
     if(a==='timetableHist'){const sm=encodeURIComponent(params.sem||'');const rows=await sget('timetable_hist?sem=eq.'+sm+'&select=*&order=archived_at.desc,id.desc&limit=5').catch(function(){return [];});return{success:true,rows:Array.isArray(rows)?rows:[]};}
     if(a==='ttRefs'){
       const[ro,ca]=await Promise.all([
