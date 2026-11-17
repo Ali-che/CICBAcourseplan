@@ -4675,7 +4675,12 @@ function _ttRoomsOf(p){const a=[];(p.cells||[]).forEach(function(cs){const r=Str
 function ttSoloDept(d){_ttCache.soloDept=d||'';renderTtPanel();}
 function ttWarnDept(d){_ttCache.warnDept=d||'';renderTtPanel();}   // 提醒(软约束)的专业筛选
 function _ttDepTag(dep){const col=_ttDeptColor(dep);return '<span class="tt-solo-dep" style="background:'+col.bg+';color:'+col.fg+'">'+eh(dep)+'</span>';}   // 专业色小标签(撞课清单/备注/提醒/KE-KH 共用)   // 个别学生撞课清单的专业筛选(只影响这份清单的显示)
-function _ttSoloOn(){return _lsGet('cic_tt_solo')!=='0';}
+// 开关跟着存档走(Aj. Tsai 2026-11-17:两位同事看同一份存档、建议却不一样 → 原因是这个开关只记在各自浏览器):
+//   存档时每门课带 so(1=开、0=关);载入存档时把本机开关对齐成存档的(_ttSoloAdopt);
+//   只读角色没有这个开关可按 → 一律照存档的,旧存档没记就当默认(开)。
+function _ttSavedSolo(){const p=((_ttCache.tt&&_ttCache.tt.placements)||[])[0];return (p&&p.so!=null)?(+p.so!==0):null;}
+function _ttSoloAdopt(){const s=_ttSavedSolo();if(s!=null)_lsSet('cic_tt_solo',s?'1':'0');}
+function _ttSoloOn(){if(!_ttCanEdit()){const s=_ttSavedSolo();return s==null?true:s;}return _lsGet('cic_tt_solo')!=='0';}
 function ttSoloToggle(on){
   _lsSet('cic_tt_solo',on?'1':'0');
   if(_ttCanEdit()&&_ttCache.sol&&_ttCache.sem){ttAutoSolve();if(typeof showToast==='function')showToast((on?'已打开':'已关掉')+'「个别学生不挡排课」并重排；要回到刚才的课表按「↶ 还原」',{kind:'success'});}
@@ -6301,7 +6306,7 @@ function _ttWhereList(m,lim){var ks=Object.keys(m);if(!ks.length)return '';var s
 async function ttSave(){
   if(!_ttCanEdit())return;const sem=_ttCache.sem,sol=_ttCache.sol;
   if(!sem||!sol){alert('请先选学期并「一键自动排」');return;}
-  const pls=sol.placements.map(function(p){return {id:p.id,course:p.course,cls:p.cls,tc:p.tc,count:p.count,cohorts:p.cohorts,dept:p.dept,credit:p.credit,isCap:p.isCap,members:p.members,half:p.half,room:p.room,cells:p.cells,nt:(p.note&&p.note.raw)||''};});
+  const pls=sol.placements.map(function(p){return {id:p.id,course:p.course,cls:p.cls,tc:p.tc,count:p.count,cohorts:p.cohorts,dept:p.dept,credit:p.credit,isCap:p.isCap,members:p.members,half:p.half,room:p.room,cells:p.cells,nt:(p.note&&p.note.raw)||'',so:_ttSoloOn()?1:0};});
   if(!confirm('把当前课表存档给 '+sem+'？（覆盖上一版，'+pls.length+' 门已落位）'+(sol.unplaced.length?('\n还有 '+sol.unplaced.length+' 门未排进去。'):'')))return;
   const r=await gasPost('saveTimetable',{sem:sem,placements:pls,where:_ttWhereMap(sol.placements)});
   if(r&&r.success){if(typeof showToast==='function')showToast('已存档 v'+r.version,{kind:'success'});_ttCache.tt={sem:sem,version:r.version,saved_by:r.saved_by,saved_at:new Date().toISOString(),placements:pls};_ttCache.sol=null;_ttCache.dirty=false;renderTtPanel();}
@@ -6522,7 +6527,7 @@ async function renderTtPanel(force){
   if(force||_ttCache.sem!==sem){
     st.innerHTML='<div style="color:#888;padding:10px">⏳ 载入中…</div>';bd.innerHTML='';
     _ttCache.sem=sem;_ttCache.tt=null;_ttCache.sol=null;_ttCache.dirty=false;_ttCache.dates=null;_ttUndoSt=[];_ttRedoSt=[];   // 换学期/重新载入 → 还原记录清空
-    try{const r=await gasGet({action:'timetable',sem:sem});if(r&&r.success){_ttCache.tt=r.tt||null;_ttCache.dates=r.dates||null;}}catch(e){}
+    try{const r=await gasGet({action:'timetable',sem:sem});if(r&&r.success){_ttCache.tt=r.tt||null;_ttCache.dates=r.dates||null;_ttSoloAdopt();}}catch(e){}
   }
   const courses=_ttCourses(sem),n=courses.length,tt=_ttCache.tt,canEdit=_ttCanEdit();
   if(nn)nn.textContent=n?('· '+n+' 门课'):'';
@@ -6548,7 +6553,7 @@ async function renderTtPanel(force){
   if(canEdit&&sol)tools+=' <button class="btn btn-sm" onclick="ttWriteHalfBack()" title="把课表里排定的上/下半与老师更新回「排课表」（会修改排课表，需确认）" style="color:#854F0B;border-color:#FCD34D">↩ 写回排课表</button>';
   // ⚙️ 选项菜单(两个勾选收进来)
   if(canEdit)tools+=' <details class="tt-menu"><summary class="btn btn-sm no-print">⚙️ 选项 ▾</summary><div class="tt-menu-pop">'
-    +'<label><input type="checkbox"'+(_ttSoloOn()?' checked':'')+' onchange="ttSoloToggle(this.checked)"><span>个别学生不挡排课<span class="mi-sub">某届别在一门课只有 1 人 → 不挡排课，撞到的列「待处理一览」</span></span></label>'
+    +'<label><input type="checkbox"'+(_ttSoloOn()?' checked':'')+' onchange="ttSoloToggle(this.checked)"><span>个别学生不挡排课<span class="mi-sub">某届别在一门课只有 1 人 → 不挡排课，撞到的列「待处理一览」；存档会记住这个设定，大家看存档时都照它</span></span></label>'
     +'<label><input type="checkbox"'+(_ttDeepOn()?' checked':'')+' onchange="ttDeepToggle(this.checked)"><span>拆开两节同天<span class="mi-sub">同一门课两节同天时，多试把它拆到不同天（最多约 6 秒）</span></span></label>'
     +'<label><input type="checkbox"'+(_ttTierOn()?' checked':'')+' onchange="ttTierToggle(this.checked)"><span>课排满优先<span class="mi-sub">打勾：宁可多几门两节同天／多几位学生撞课，也要把每门课的两节排进去。不打勾：把所有缺点加总比较，可能留一门课只排到 1 节</span></span></label>'
     +'</div></details>';
