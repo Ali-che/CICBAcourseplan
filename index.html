@@ -872,6 +872,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <div class="fg"><label>授课老师</label><select id="s-tc"><option value="">请选择</option></select></div>
         <div class="fg"><label>备注</label><input id="s-nt" placeholder="选填"></div>
       </div>
+      <div class="fg rq-row" style="margin:8px 0 2px" onmouseenter="_rqRoomOpts('s')" onfocusin="_rqRoomOpts('s')"><label>排课要求 <span style="font-weight:400;color:#888">（课表制作自动排会照办；没有就都留空）</span></label><div style="display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center"><select id="s-rq-room" style="max-width:190px" onchange="_rqTouch('s')"><option value="">教室：不指定</option></select><select id="s-rq-day" style="max-width:130px" onchange="_rqTouch('s')"><option value="">星期：不限</option><option>周一</option><option>周二</option><option>周三</option><option>周四</option><option>周五</option></select><label style="display:inline-flex;align-items:center;gap:4px;font-weight:400;cursor:pointer"><input type="checkbox" id="s-rq-consec" onchange="_rqTouch('s')"> 两节排连续两天</label><label style="display:inline-flex;align-items:center;gap:4px;font-weight:400;cursor:pointer" title="同一位老师、同上下半、都勾了合班的课，当成一门课一起排"><input type="checkbox" id="s-rq-merge" onchange="_rqTouch('s')"> 合班</label></div><div id="s-rq-hint" style="display:none;font-size:11px;color:#92400e;margin-top:3px"></div></div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:6px 10px;border:0.5px solid #ddd;border-radius:8px;background:#fafafa">
           <input type="checkbox" id="s-btec" style="width:auto;cursor:pointer">
@@ -1403,7 +1404,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <li><b>合班</b>：备注写「合班」且上下半相同的课，当一门排</li>
         <li><b>个别学生</b>：某届别在一门课只有 1 人 → 不挡排课，撞到的另列「个别学生撞课」清单</li>
         <li><b>专用教室</b>：备注写 Computer Lab／电脑室 → 指定那间</li>
-        <li><b>备注当约束</b>：固定周几、指定教室、连续两天等照办；看不懂的列「备注待人工」</li>
+        <li><b>排课要求</b>：在排课表新增／编辑课程时填「排课要求」（指定教室、限定星期、两节连续两天、合班），自动排照办。旧备注里用文字写的（如 Computer Lab、合班）仍会照办；看不懂的列「备注待人工」</li>
       </ul>
     </div>
     <div style="background:#EAF2FB;border:0.5px solid #BBD6F2;border-radius:8px;padding:12px 14px;margin-bottom:12px">
@@ -1729,7 +1730,8 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         </div>
         <div class="fg"><label>授课老师</label><select id="m-tc"><option value="">请选择</option></select></div>
       </div>
-      <div class="fg" style="margin-bottom:12px"><label>备注</label><input id="m-nt" placeholder="选填"></div>
+      <div class="fg" style="margin-bottom:12px"><label>备注</label><input id="m-nt" placeholder="选填（给人看的说明；排课要求请用下面的栏位）"></div>
+      <div class="fg rq-row" style="margin-bottom:12px" onmouseenter="_rqRoomOpts('m')" onfocusin="_rqRoomOpts('m')"><label>排课要求 <span style="font-weight:400;color:#888">（课表制作自动排会照办；没有就都留空）</span></label><div style="display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center"><select id="m-rq-room" style="max-width:190px" onchange="_rqTouch('m')"><option value="">教室：不指定</option></select><select id="m-rq-day" style="max-width:130px" onchange="_rqTouch('m')"><option value="">星期：不限</option><option>周一</option><option>周二</option><option>周三</option><option>周四</option><option>周五</option></select><label style="display:inline-flex;align-items:center;gap:4px;font-weight:400;cursor:pointer"><input type="checkbox" id="m-rq-consec" onchange="_rqTouch('m')"> 两节排连续两天</label><label style="display:inline-flex;align-items:center;gap:4px;font-weight:400;cursor:pointer" title="同一位老师、同上下半、都勾了合班的课，当成一门课一起排"><input type="checkbox" id="m-rq-merge" onchange="_rqTouch('m')"> 合班</label></div><div id="m-rq-hint" style="display:none;font-size:11px;color:#92400e;margin-top:3px"></div></div>
       <div class="modal-sec">届别 · 各届人数</div>
       <div class="modal-coh">
         <div class="modal-coh-chips" id="m-dept-chips"></div>
@@ -4420,11 +4422,81 @@ function _ttRoomCap(code){const rm=((_ttCache.refs&&_ttCache.refs.rooms)||[]).fi
 function _ttMaxCap(rooms){return rooms.reduce((m,r)=>Math.max(m,r.cap||0),0);}
 // ── 备注解析(§5.5):捞 教室号 / 单一周几;模糊语气 → 待人工 ──
 function _ttRoomSpecial(code){return /[A-Za-z\u4e00-\u9fff]/.test(String(code));}   // 代码里带文字的=专用教室(电脑室等)
+// ── 排课要求(结构化备注,Aj. Tsai 2026-11-17)──
+// 排课的新增／编辑表单有四个栏位(教室、星期、连续两天、合班),存成备注开头一段固定写法:【排课要求：教室 426 Computer Lab；周三；连续两天；合班】其余文字
+//   · 有这一段 → 课表制作只照它,后面的文字只给人看;「【排课要求：无】」= 明确没有要求(后面文字里就算写了电脑室也不照办)。
+//   · 没有这一段(旧备注)→ 照旧从文字里判断(_ttParseNote 的后半)。不用改数据库:还是存在排课表的备注栏。
+const RQ_RE=/^\s*【排课要求[：:]([^】]*)】\s*/;
+function _rqParse(nt){
+  const raw=String(nt||''),m=raw.match(RQ_RE),o={has:false,room:'',day:'',consec:false,merge:false,rest:raw.trim()};
+  if(!m)return o;
+  o.has=true;o.rest=raw.slice(m[0].length).trim();
+  m[1].split(/[；;]/).forEach(function(t){t=t.trim();if(!t||t==='无')return;if(/^教室\s*/.test(t))o.room=t.replace(/^教室\s*/,'').trim();else if(/^周[一二三四五六日]$/.test(t))o.day=t;else if(t==='连续两天')o.consec=true;else if(t==='合班')o.merge=true;});
+  return o;
+}
+function _rqCompose(o,rest){
+  const p=[];if(o.room)p.push('教室 '+o.room);if(o.day)p.push(o.day);if(o.consec)p.push('连续两天');if(o.merge)p.push('合班');
+  rest=String(rest||'').trim();
+  if(!p.length)return o.forceNone?('【排课要求：无】'+(rest?' '+rest:'')):rest;
+  return '【排课要求：'+p.join('；')+'】'+(rest?' '+rest:'');
+}
+function _rqMerge(nt){const q=_rqParse(nt);return q.has?q.merge:/合班/.test(String(nt||''));}
+function _rqRooms(){try{return _ttRoomsByNo((_ttCache&&_ttCache.refs&&_ttCache.refs.rooms)||[]).map(function(r){return String(r.code);});}catch(e){return [];}}   // 教室库只在开过课表制作才有 → 没有就回空(读之前先判)
+async function _rqEnsureRooms(){if(_ttCache.refs)return;try{const r=await gasGet({action:'ttRefs'});if(r&&r.success&&!_ttCache.refs)_ttCache.refs={rooms:r.rooms||[],cat:r.cat||{}};}catch(e){}}
+function _rqFromLegacy(text){   // 旧备注(没有【排课要求】)里系统读得出的要求
+  const t=String(text||'');if(!t.trim()||_rqParse(t).has)return {};
+  let n={};try{n=_ttParseNote(t,_ttRoomsByNo((_ttCache.refs&&_ttCache.refs.rooms)||[]));}catch(e){}
+  return {room:n.room||'',day:(n.days&&n.days.length===1&&/^周[一二三四五]$/.test(n.days[0]))?n.days[0]:'',consec:!!n.consec,merge:/合班/.test(t)};
+}
+function _rqEl(pre,k){return document.getElementById(pre+'-rq-'+k);}
+function _rqRoomOpts(pre){   // 教室下拉:填教室库;现在选的那间就算不在库也保留
+  const sel=_rqEl(pre,'room');if(!sel)return;
+  const fill=function(){const cur=sel.value,rs=_rqRooms();if(!rs.length&&sel.options.length>1)return;const opts=rs.slice();if(cur&&opts.indexOf(cur)<0)opts.unshift(cur);
+    sel.innerHTML='<option value="">教室：不指定</option>'+opts.map(function(c){return '<option value="'+eh(c)+'">'+eh(c)+(rs.indexOf(c)<0&&rs.length?'（不在教室库）':'')+'</option>';}).join('');sel.value=cur;};
+  fill();if(!_ttCache.refs)_rqEnsureRooms().then(fill);
+}
+function _rqSet(pre,o){
+  const sel=_rqEl(pre,'room');if(!sel)return;
+  if(o.room&&![].some.call(sel.options,function(x){return x.value===o.room;})){const op=document.createElement('option');op.value=o.room;op.textContent=o.room;sel.appendChild(op);}
+  sel.value=o.room||'';_rqEl(pre,'day').value=o.day||'';_rqEl(pre,'consec').checked=!!o.consec;_rqEl(pre,'merge').checked=!!o.merge;
+}
+function _rqTouch(pre){const r=_rqEl(pre,'room');if(r)r.dataset.touched='1';const h=_rqEl(pre,'hint');if(h)h.style.display='none';}
+function _rqFill(pre,nt){
+  const inp=document.getElementById(pre+'-nt'),sel=_rqEl(pre,'room');if(!inp)return;
+  const q=_rqParse(nt);inp.value=q.rest;if(!sel)return;
+  sel.dataset.touched='';sel.dataset.tok=String(Date.now())+Math.random();const tok=sel.dataset.tok,h=_rqEl(pre,'hint');if(h)h.style.display='none';
+  _rqRoomOpts(pre);_rqSet(pre,q.has?q:{});
+  if(q.has||!q.rest)return;
+  const legacy=function(){   // 旧备注:把系统从文字读到的要求先带进栏位,让人看得到、改得了;储存后就固定成【排课要求】
+    if(sel.dataset.tok!==tok||sel.dataset.touched)return;
+    const lg=_rqFromLegacy(q.rest);if(!(lg.room||lg.day||lg.consec||lg.merge))return;
+    _rqRoomOpts(pre);_rqSet(pre,lg);
+    if(h){h.textContent='↑ 这是系统从备注文字读到的要求。对的话直接储存就会固定下来；不对请改，或全部清掉。';h.style.display='';}
+  };
+  if(_ttCache.refs)legacy();else _rqEnsureRooms().then(legacy);
+}
+function _rqNote(pre){   // 表单 → 要存的备注
+  const inp=document.getElementById(pre+'-nt'),rest=inp?inp.value:'',sel=_rqEl(pre,'room');
+  if(!sel)return rest;
+  const o={room:sel.value,day:_rqEl(pre,'day').value,consec:_rqEl(pre,'consec').checked,merge:_rqEl(pre,'merge').checked};
+  if(!(o.room||o.day||o.consec||o.merge)){const lg=_rqFromLegacy(rest);if(lg.room||lg.day||lg.consec||lg.merge)o.forceNone=true;}   // 栏位都清空、但文字里读得出要求 → 写「无」,否则清了等于没清
+  return _rqCompose(o,rest);
+}
 function _ttParseNote(nt,rooms){
   const raw=String(nt||'').trim();
   const out={raw:raw,room:'',roomMissing:'',numHint:false,days:[],fuzzy:false,manual:false};
   if(!raw)return out;
   const codes=rooms.map(r=>String(r.code)).sort((a,b)=>b.length-a.length);
+  // 排课要求(结构化,2026-11-17):备注开头有【排课要求：…】就只照它,后面的文字只给人看、不再猜(见 _rqParse)
+  const rq=_rqParse(raw);
+  if(rq.has){
+    out.struct=true;
+    if(rq.room){const hit=codes.filter(function(c){return c===rq.room||c.indexOf(rq.room+' ')===0;})[0];if(hit)out.room=hit;else out.roomMissing=rq.room;}
+    if(rq.day)out.days=[rq.day];
+    out.consec=rq.consec;
+    out.manual=!!out.roomMissing||out.consec;   // 连续两天照旧列出「✓ 已照办／✗ 没排到」;教室不在库要人看
+    return out;
+  }
   // 2026-11-15 修:课码里的数字(LA161=LA131)与日期(1113、0624)不再被当成教室号
   const kw=raw.match(/(?:lab|实验室|教室|room)\s*#?\s*(\d{3,5})/i);          // 明写「教室/lab NNN」
   const bare=raw.replace(/[A-Za-z]+\d+/g,' ');                              // 去掉课码/届别码里的数字
@@ -5125,7 +5197,7 @@ function _ttName(p){return _ttCodes(p)+(p.cls?'-'+p.cls:'');}   // 纯文字名�
 function _ttMergeGroups(list,rooms){
   const by={};
   // ① 备注写「合班」的一般课:同老师 + 同上下半 → 一组
-  list.forEach(function(c){c._gk=(c.tc&&!c.isCap&&/合班/.test(c.nt||''))?('H|'+c.tc+'|'+(c.rawHalf||'')):'';});
+  list.forEach(function(c){c._gk=(c.tc&&!c.isCap&&_rqMerge(c.nt))?('H|'+c.tc+'|'+(c.rawHalf||'')):'';});
   // ② Capstone 不整组合班(2026-11-15 Aj. Tsai 取消:各门分开时段上);只有 2 人以下的小课「跟班」——
   //    跟同一位老师的另一门 Capstone(同班级编号优先、人数最少的)同时间同教室上
   const caps=list.filter(function(c){return c.isCap&&c.tc;});
@@ -5651,9 +5723,9 @@ function _ttSuggestFor(u,sol){
   if(best&&best.bl.length&&!sol.whole&&u.half!=='both'){
     const oh=(u.half==='dn')?'up':'dn',odays=(oh==='dn'?TT_DN_DAYS:TT_UP_DAYS).filter(function(d){return d!=='周六';});let ob=null;
     odays.forEach(function(d){['am','pm'].forEach(function(s){cand.forEach(function(r){if(ob)return;const o=_ttHit(occ,oh+'|'+r.code,d,u,s);const t=u.tc&&_ttHit(tb,oh+'|'+u.tc,d,u,s);let coc=false;_ttCoToks(u).r.forEach(function(co){if(_ttHit(cb,oh+'|'+co,d,u,s))coc=true;});if(!o&&!t&&!coc)ob={d:d,s:s,room:r.code};});});});
-    if(ob)return '本'+(u.half==='dn'?'下':'上')+'半没空位；改到'+(oh==='dn'?'下':'上')+'半的 '+ob.d+' '+_ttSlotName(ob.s)+' · 教室 '+ob.room+' 是空的（改半即可）。或在本半先挪走 '+best.bl.slice(0,2).join('、')+'。';
+    if(ob)return '建议调整：本'+(u.half==='dn'?'下':'上')+'半没空位；建议改到'+(oh==='dn'?'下':'上')+'半或在本半先挪走 '+best.bl.slice(0,2).join('、')+'。';
   }
-  if(best)return '最接近 '+best.d+' '+_ttSlotName(best.s)+' · 教室 '+best.room+'——要先解决 '+best.bl.slice(0,2).join('、')+'（把其中一门挪到别的时段）。';
+  if(best)return '建议调整：'+best.d+_ttSlotName(best.s)+'，教室 '+best.room+'。但要先解决 '+best.bl.slice(0,2).join('、')+'（把其中一门挪到别的时段）。';
   return '容量够的教室在每个时段都满了。建议：挪动其他课腾一个时段，或加教室。';
 }
 // #5#7:未排的课做成「胶囊」放网格下方,room view 可直接拖进网格
@@ -6085,7 +6157,7 @@ function _ttDriftBanner(drift){
   if(drift.add.length){   // 不在课表上的课:看存档时每门是一个胶囊(鼠标移上去浮出原因与建议、点了跳到未排区),完整的原因与建议在下方「待处理一览」
     const mu=drift.miss||[],byId={};mu.forEach(function(u){byId[String(u.id)]=u;});
     const names=drift.add.map(function(r){const u=byId[String(r.id)];return u?_ttIssuePill(u,'un'):'<b>'+eh(r.course)+'</b>';}).join(mu.length?' ':'、');
-    items+='<div class="tt-side-item" style="background:#eef2ff;color:#1e3a8a"><b>不在课表上 '+drift.add.length+' 门</b>（存档时没排上，或存档后排课表才新增）<div style="margin:4px 0;display:flex;flex-wrap:wrap;gap:4px;align-items:center">'+names+'</div>'+(mu.length?'<span style="font-size:11.5px">👇 每门<b>为什么没排上、可以怎么调</b>，列在下方「<b>待处理一览</b>」（鼠标移到课码上也会浮出）。</span> ':'')+(canEdit?'<span style="font-size:11.5px;color:#555">按「🧩 只补排」自动排进来，或从未排区拖进课表。</span>':'')+'</div>';
+    items+='<div class="tt-side-item" style="background:#eef2ff;color:#1e3a8a"><b>不在课表上 '+drift.add.length+' 门</b>（存档时没排上，或存档后排课表才新增）<div style="margin:4px 0;display:flex;flex-wrap:wrap;gap:4px;align-items:center">'+names+'</div>'+(mu.length?'<span style="font-size:11.5px"><b>未排上原因</b>：列在下方「<b>待处理一览</b>」（鼠标移到课码上也会浮出）。</span> ':'')+(canEdit?'<span style="font-size:11.5px;color:#555">按「🧩 只补排」自动排进来，或从未排区拖进课表。</span>':'')+'</div>';
   }
   const act=canEdit
     ? '<div style="margin:6px 0 2px">'+(struct?'<button class="btn btn-p btn-sm" onclick="ttKeepSolve()" title="已排好的课留在原位（含手动调过的），只排新增的、改动后原位放不下的；老师／上下半不一样的不动">🧩 只补排改动的课</button> ':'')+'<button class="btn btn-sm" onclick="ttAutoSolve()" title="整张重排，全部照排课表，不保留手动调过的教室/时段">⚡ 整张重排</button>'+(both?' <span style="font-size:11px;color:#6b5114">老师／上下半不一样的 '+both+' 门：两边都能改，请逐门选「← 照排课表」或「写回排课表 →」</span>':'')+'</div>'
@@ -6867,7 +6939,7 @@ async function addSch(){
   const course=document.getElementById('s-co').value.trim().toUpperCase(),en=document.getElementById('s-en').value;
   const sem=document.getElementById('s-sem').value,half=document.getElementById('s-half').value;
   const type=document.getElementById('s-tp').value,cls=document.getElementById('s-cls').value;
-  const tc=document.getElementById('s-tc').value,nt=document.getElementById('s-nt').value,cc=getEG();
+  const tc=document.getElementById('s-tc').value,nt=_rqNote('s'),cc=getEG();
   const btec=document.getElementById('s-btec')?document.getElementById('s-btec').checked:false;
   if(!course||!cls||!cc.length){alert('请填写：课程代码、班级，并至少勾选一个届别');return;}
   // v8.5 ①：新增时去重 3 选项（合并 / 取消 / 强制新增）
@@ -6953,7 +7025,7 @@ function startES(id){
   document.getElementById('m-sem').value=r.sem;
   document.getElementById('m-half').value=r.half||'';
   document.getElementById('m-cls').value=r.cls;
-  document.getElementById('m-nt').value=r.nt||'';
+  _rqFill('m',r.nt||'');   // 备注开头的【排课要求：…】拆到下面的栏位,备注框只留给人看的文字
   document.getElementById('m-btec').checked=!!(r.btec===true||r.btec==='TRUE'||r.btec==='true');
 
   // 老师下拉
@@ -7405,7 +7477,7 @@ async function mSaveES(){
     half:document.getElementById('m-half').value,
     cls:document.getElementById('m-cls').value,
     tc:document.getElementById('m-tc').value,
-    nt:document.getElementById('m-nt').value,
+    nt:_rqNote('m'),
     btec:document.getElementById('m-btec').checked,
     cc:cc
   };
@@ -7846,7 +7918,7 @@ function clearSchF(){
   document.getElementById('s-co').value='';document.getElementById('s-en').value='';
   document.getElementById('s-tp').value='正常';document.getElementById('s-sem').selectedIndex=0;
   document.getElementById('s-half').value='';document.getElementById('s-cls').value='';
-  document.getElementById('s-tc').value='';document.getElementById('s-nt').value='';
+  document.getElementById('s-tc').value='';_rqFill('s','');
   const btecCb=document.getElementById('s-btec');if(btecCb)btecCb.checked=false;
   selDpts.clear();buildDeptChips();buildEG('s-eg',null);
 }
