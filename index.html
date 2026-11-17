@@ -1645,7 +1645,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 <div id="panel-ops" class="panel">
   <div class="card">
     <div class="sechdr"><span class="ct" style="margin:0">⚙️ 后台操作 · 参考数据管理</span></div>
-    <div style="background:#FDECEC;border:0.5px solid #F5C2C2;color:#9B2C2C;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:12px">⚠️ 这里直接改<strong>参考数据</strong>，影响全系统、立即生效。删除前会检查是否被排课引用。仅管理员可见可用。</div>
+    <div style="background:#FDECEC;border:0.5px solid #F5C2C2;color:#9B2C2C;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:12px">⚠️ 这里直接改<strong>参考数据</strong>，影响全系统、立即生效。删除前会检查是否被排课引用。<span id="ops-warn-admin">仅管理员可见可用。</span></div>
     <div style="display:flex;gap:16px 20px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-start">
       <div><div class="ops-grp-lbl">基础数据</div><div class="ops-grp-btns">
         <button class="ops-tab active" data-sec="sem" onclick="opsSwitch('sem')">学年学期</button>
@@ -1970,7 +1970,7 @@ function unlockApp(){
 // v8.8：根据 currentRole 隐藏 / 显示某些 tab
 function applyRoleVisibility(){
   const elevated = (currentRole==='director' || currentRole==='admin');   // 教学统计:Director/Admin
-  const canOps   = (currentRole==='admin');   // 后台操作:仅 Admin
+  const canOps   = (currentRole==='admin' || currentRole==='teacher');   // 后台操作:Admin 全部;Head of Administration(teacher) 只有 教室库 + 课表日期(_OPS_HEAD_SECS)
   const staTabBtn = document.getElementById('tab-sta');
   if(staTabBtn){
     staTabBtn.style.display = elevated ? '' : 'none';
@@ -1982,6 +1982,7 @@ function applyRoleVisibility(){
     const opsGrp = document.getElementById('tabgrp-ops'); if(opsGrp) opsGrp.style.display = canOps ? '' : 'none';
     if(!canOps && opsTabBtn.classList.contains('active')) switchTab('sch');
   }
+  _opsApplyRole();   // 后台子分页按角色显示(要在下面 账号权限/编辑记录 两颗之前跑)
   // 账号权限子分页:仅 admin 可见;非 admin 若正停在该子页则退回「学期」
   const _canCoh = (currentRole==='admin'||currentRole==='director');
   const addcohTab = document.getElementById('btn-addcoh');
@@ -1998,12 +1999,12 @@ function applyRoleVisibility(){
   const acctBtn = document.getElementById('ops-tab-acct');
   if(acctBtn){
     acctBtn.style.display = (currentRole==='admin') ? '' : 'none';
-    if(currentRole!=='admin' && typeof opsSec!=='undefined' && opsSec==='acct' && typeof opsSwitch==='function') opsSwitch('sem');
+    if(currentRole!=='admin' && typeof opsSec!=='undefined' && opsSec==='acct' && typeof opsSwitch==='function') opsSwitch(_opsHomeSec());
   }
   const editsBtn = document.getElementById('ops-tab-edits');
   if(editsBtn){
     editsBtn.style.display = (currentRole==='admin') ? '' : 'none';
-    if(currentRole!=='admin' && typeof opsSec!=='undefined' && opsSec==='edits' && typeof opsSwitch==='function') opsSwitch('sem');
+    if(currentRole!=='admin' && typeof opsSec!=='undefined' && opsSec==='edits' && typeof opsSwitch==='function') opsSwitch(_opsHomeSec());
   }
 }
 
@@ -2122,7 +2123,20 @@ async function renderOps(force){
   }
   opsRenderSec();
 }
-function opsSwitch(sec){opsSec=sec;document.querySelectorAll('.ops-tab').forEach(x=>x.classList.toggle('active',x.dataset.sec===sec));opsRenderSec();}
+// 后台子分页的角色权限:admin 全部;Head of Administration(teacher) 只有 教室库 + 课表日期(服务端 migration 015 同步放行这三个 RPC)
+const _OPS_HEAD_SECS=['room','ttdate'];
+function _opsCanSec(sec){return currentRole==='admin'||(currentRole==='teacher'&&_OPS_HEAD_SECS.indexOf(sec)>=0);}
+function _opsHomeSec(){return currentRole==='admin'?'sem':_OPS_HEAD_SECS[0];}
+function _opsApplyRole(){
+  document.querySelectorAll('#panel-ops .ops-tab').forEach(function(x){x.style.display=_opsCanSec(x.dataset.sec)?'':'none';});
+  document.querySelectorAll('#panel-ops .ops-grp-btns').forEach(function(g){   // 整组都看不到 → 连组名一起收
+    const any=Array.prototype.some.call(g.querySelectorAll('.ops-tab'),function(x){return _opsCanSec(x.dataset.sec);});
+    if(g.parentNode)g.parentNode.style.display=any?'':'none';
+  });
+  const w=document.getElementById('ops-warn-admin');if(w)w.style.display=(currentRole==='admin')?'':'none';
+  if(!_opsCanSec(opsSec)){opsSec=_opsHomeSec();document.querySelectorAll('#panel-ops .ops-tab').forEach(function(x){x.classList.toggle('active',x.dataset.sec===opsSec);});if(opsD)opsRenderSec();}
+}
+function opsSwitch(sec){if(!_opsCanSec(sec))sec=_opsHomeSec();opsSec=sec;document.querySelectorAll('.ops-tab').forEach(x=>x.classList.toggle('active',x.dataset.sec===sec));opsRenderSec();}
 function opsRenderSec(){
   const b=document.getElementById('ops-body');if(!b||!opsD)return;
   b.innerHTML= opsSec==='sem'?opsSemView(): opsSec==='dept'?opsDeptView(): opsSec==='coh'?opsCohView(): opsSec==='tch'?opsTchView(): opsSec==='pos'?opsPosView(): opsSec==='room'?opsRoomView(): opsSec==='cat'?opsCatView(): opsSec==='grad'?opsGradView(): opsSec==='school'?opsSchoolView(): opsSec==='notice'?opsNoticeView(): opsSec==='ttdate'?opsTtDateView(): opsSec==='tabsvis'?opsTabsVisView(): opsSec==='arch'?opsArchView(): opsSec==='acct'?opsAcctView(): opsSec==='edits'?opsEditsView(): '';
@@ -2316,7 +2330,7 @@ function opsRoomView(){
 }
 async function opsAddRoom(){const code=_opsF('ops-room-code').value.trim();if(!code){alert('请输入教室号');return;}opsAfter(await gasPost('adminUpsertRoom',{code:code,cap:_opsF('ops-room-cap').value,pref_dept:_opsF('ops-room-pref').value}),'已保存教室 '+code);}
 async function opsDelRoom(code){if(!confirm('删除教室「'+code+'」?'))return;opsAfter(await gasPost('adminDelRoom',{code:code}),'已删除教室 '+code);}
-// ── 课表日期(课表制作列印抬头用;仅管理员,Aj. Tsai #7)──
+// ── 课表日期(课表制作列印抬头用;管理员 + Head of Administration,2026-11-17 起;原仅管理员)──
 function _ttIsWholeOps(sem){return /-3\s*$/.test(String(sem||''));}
 function opsTtDateView(){
   const dates=opsD.ttdates||[],sems=(opsD.semesters||[]).slice().sort();
@@ -3021,7 +3035,7 @@ function opsAcctView(){
     +(ed?' <button class="btn" onclick="opsAcctCancel()">取消</button>':'')
     +'</div>';
   return '<div style="color:#666;font-size:12px;margin-bottom:10px;line-height:1.9">每个账号 = 一个登录 PIN + 角色（改了谁的 PIN，对方下次用新 PIN 登录）。权限由低到高：<br>'
-    +'<span style="background:#eee;color:#555;font-weight:700;border-radius:4px;padding:1px 7px;font-size:11px">Head of Administration</span> 只读（登录 + 看 排课表/课表/BTEC/课程结构）　'
+    +'<span style="background:#eee;color:#555;font-weight:700;border-radius:4px;padding:1px 7px;font-size:11px">Head of Administration</span> 只读（登录 + 看 排课表/课表/BTEC/课程结构）＋ 课表制作 ＋ 后台的 教室库/课表日期　'
     +'<span style="background:#E3F7EF;color:#1b7a5a;font-weight:700;border-radius:4px;padding:1px 7px;font-size:11px">Program-in Charge</span> ＋ 期末考特例 改/删　'
     +'<span style="background:#E3F2FD;color:#1565c0;font-weight:700;border-radius:4px;padding:1px 7px;font-size:11px">Director</span> ＋ 教学统计　'
     +'<span style="background:#FDECEC;color:#8a1d1d;font-weight:700;border-radius:4px;padding:1px 7px;font-size:11px">Admin</span> 全权（后台操作 + BTEC 格子 + 公告 + 账号）</div>'
@@ -4055,7 +4069,7 @@ function ttDatesSort(m){_ttDatesSort=m;const sol=_ttCache.sol||(_ttCache.tt?_ttS
 window.ttDatesSort=ttDatesSort;
 function _ttDatesReportHtml(sol){
   let rows=_ttCourseDateRows(sol);
-  if(rows===null)return '<div style="background:#FEF9ED;border-radius:8px;padding:14px;color:#7a5b16;font-size:12.5px">还没设定上下半日期 —— 请管理员到「后台操作 › 课表日期」设定，才能算出每门课的上课日期。</div>';
+  if(rows===null)return '<div style="background:#FEF9ED;border-radius:8px;padding:14px;color:#7a5b16;font-size:12.5px">还没设定上下半日期 —— 请 Head of Administration 或管理员到「后台操作 › 课表日期」设定，才能算出每门课的上课日期。</div>';
   if(!rows.length)return '<div style="color:#888;padding:10px">这学期还没有排好的课。</div>';
   const sort=_ttDatesSort||'name',rk={up:0,dn:1,both:2};
   rows=rows.slice().sort(function(a,b){if(sort==='half'){const d=(rk[a.halfKey]==null?9:rk[a.halfKey])-(rk[b.halfKey]==null?9:rk[b.halfKey]);if(d)return d;}return a.name.localeCompare(b.name);});
@@ -6156,10 +6170,10 @@ async function ttDeleteSaved(){
 // ── 上/下半日期(⑤ 列印抬头;后台设定,存 tt_sem_dates(010))──
 function _ttFmtD(s){if(!s)return '—';const m=String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);return m?(m[1]+'/'+m[2]+'/'+m[3]):String(s);}
 function _ttDateRange(s,e){return (s||e)?(_ttFmtD(s)+' ~ '+_ttFmtD(e)):'未设定';}
-// 列印抬头日期:分页内只「唯读显示」;设定移到「后台操作 › 课表日期」(仅管理员,Aj. Tsai #7)
+// 列印抬头日期:分页内只「唯读显示」;设定移到「后台操作 › 课表日期」(管理员 + Head of Administration)
 function _ttDatesHtml(sem){
   const d=_ttCache.dates||{},whole=_ttWholeSem(sem);
-  if(!d.up_start&&!d.dn_start&&!d.up_end&&!d.dn_end)return (currentRole==='admin'?'<div style="font-size:11px;color:#999;margin-top:6px;padding:0 2px">📅 列印抬头日期未设定 —— 到「后台操作 › 课表日期」设定。</div>':'');
+  if(!d.up_start&&!d.dn_start&&!d.up_end&&!d.dn_end)return (_opsCanSec('ttdate')?'<div style="font-size:11px;color:#999;margin-top:6px;padding:0 2px">📅 列印抬头日期未设定 —— 到「后台操作 › 课表日期」设定。</div>':'');
   return '<div style="font-size:11.5px;color:#666;margin-top:6px;padding:0 2px">📅 '+(whole?('全学期 '+_ttDateRange(d.up_start,d.up_end)):('上半 '+_ttDateRange(d.up_start,d.up_end)+' · 下半 '+_ttDateRange(d.dn_start,d.dn_end)))+'</div>';
 }
 // ── 列印(⑤):上/下半各一张 A4(横向),抬头带半学期日期 ──
@@ -6362,7 +6376,7 @@ async function renderTtPanel(force){
   if(nn)nn.textContent=n?('· '+n+' 门课'):'';
   const sol=_ttCache.sol||(tt?_ttSolutionFromSaved(sem,tt):null);
   if((_ttCache.refs.rooms||[]).length===0){
-    st.innerHTML='<div style="padding:14px;background:#FEF9ED;border-radius:8px;color:#7a5b16">教室库是空的。请管理员先到「后台操作 › 教室库」加教室（或先在 Supabase 跑 migration 008）。</div>';bd.innerHTML='';return;
+    st.innerHTML='<div style="padding:14px;background:#FEF9ED;border-radius:8px;color:#7a5b16">教室库是空的。请 Head of Administration 或管理员先到「后台操作 › 教室库」加教室（或先在 Supabase 跑 migration 008）。</div>';bd.innerHTML='';return;
   }
   let tools='';
   // 主操作
