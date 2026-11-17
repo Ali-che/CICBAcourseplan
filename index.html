@@ -1503,7 +1503,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
       <div>
         <h3 style="margin:0;font-size:16px;color:#333;font-weight:600">🔧 瓶颈报告</h3>
-        <div style="font-size:12px;color:#888;margin-top:3px">这学期还差什么才能全排上 · 从哪几条下手</div>
+        <div style="font-size:12px;color:#888;margin-top:3px">没排上的课 · 从哪下手</div>
       </div>
       <button onclick="ttBneckClose()" style="background:transparent;border:0;font-size:20px;color:#888;cursor:pointer;line-height:1;padding:4px 8px;font-family:inherit">×</button>
     </div>
@@ -4067,14 +4067,15 @@ function _ttBneckHtml(sol){
   const un=sol.unplaced||[],part=(sol.placements||[]).filter(function(p){return (p.cells||[]).length===1;});
   if(!un.length&&!part.length)return '<div style="background:#EAF6F0;border-radius:8px;padding:14px;color:#1b6b4a;font-size:13px">✅ <b>'+eh(sem)+' 全部排上，没有瓶颈。</b></div>';
   const caps=_ttCapWarn(sol),needSplit=un.filter(function(u){return /超过最大教室|指定教室|不在教室库/.test(u.reason||'');});
-  let dirs='<li><b>调上下半</b>：按工具栏「🔀 改半方案」自动找「最少改哪几门课的上下半就能全排上」（常常改 1 门就好；只有能排课的人能用）。</li>';
-  if(caps.length)dirs+='<li><b>减负荷</b>：'+caps.map(function(w){return eh(w.who+' '+w.half+'（'+w.txt+'）');}).join('；')+' —— 把其中一门挪到别学期，或改到另一半。</li>';
-  if(needSplit.length)dirs+='<li><b>拆班 / 换大教室</b>：'+needSplit.map(function(u){return eh(_ttCC(u));}).join('、')+' 人数超过教室 —— 见下方逐门建议的拆班数字，或在后台教室库加大教室。</li>';
-  function row(p,kind){return '<div style="padding:8px 0;border-bottom:0.5px solid #eee"><b>'+eh(_ttCC(p))+'</b> <span style="color:#888;font-size:11px">· '+(p.count!=null?p.count+' 人':'')+((p.cohorts||[]).length?' · '+(p.cohorts||[]).length+' 届别':'')+(kind==='part'?' · <span style="color:#b45309">只排到 1 节</span>':'')+'</span>'+(kind==='un'?'<div style="color:#b42318;font-size:11.5px;margin-top:2px">'+eh(p.reason||'')+'</div>':'')+'<div style="color:#1a6b2f;font-size:11.5px;margin-top:2px">💡 '+eh(_ttSugText(p,sol,kind))+'</div></div>';}
-  return '<div style="background:#FDECEC;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12.5px;color:#b42318"><b>'+eh(sem)+' 还有 '+un.length+' 门排不上'+(part.length?('、'+part.length+' 门只排到 1 节'):'')+'。</b></div>'
-    +'<div style="font-size:12px;color:#333;font-weight:600;margin-bottom:6px">要全排上，从下面任一个方向下手（都不用改程序）：</div>'
+  let dirs='<li><b>调上下半</b>：用「🔀 改半方案」</li>';
+  caps.forEach(function(w){dirs+='<li><b>格子不够</b>：'+eh(w.who+' '+w.half+'（'+w.txt+'）')+' → 挪一门到另一半或别学期</li>';});
+  if(needSplit.length)dirs+='<li><b>拆班／换大教室</b>：'+needSplit.map(function(u){return eh(_ttCC(u));}).join('、')+'</li>';
+  function row(p,kind){const meta=[];if(p.count!=null)meta.push(p.count+' 人');if((p.cohorts||[]).length)meta.push((p.cohorts||[]).length+' 届别');if(kind==='part')meta.push('<span style="color:#b45309">只排到 1 节</span>');
+    return '<div style="padding:8px 0;border-bottom:0.5px solid #eee"><b>'+eh(_ttCC(p))+'</b>'+(meta.length?' <span style="color:#888;font-size:11px">· '+meta.join(' · ')+'</span>':'')+'<ul style="margin:3px 0 0;padding-left:16px;font-size:11.5px;line-height:1.7">'+(kind==='un'&&p.reason?'<li style="color:#b42318"><b>原因</b>：'+eh(p.reason)+'</li>':'')+'<li style="color:#1a6b2f"><b>建议</b>：'+eh(String(_ttSugText(p,sol,kind)||'').replace(/^建议调整：/,''))+'</li></ul></div>';}
+  return '<div style="background:#FDECEC;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12.5px;color:#b42318"><b>'+eh(sem)+'：未排 '+un.length+' 门'+(part.length?('、只排 1 节 '+part.length+' 门'):'')+'</b></div>'
+    +'<div style="font-size:12px;color:#333;font-weight:600;margin-bottom:6px">从哪下手</div>'
     +'<ul style="margin:0 0 14px;padding-left:18px;font-size:12px;color:#444;line-height:1.9">'+dirs+'</ul>'
-    +'<div style="font-size:12px;color:#333;font-weight:600;margin-bottom:2px">逐门 · 原因与建议</div>'
+    +'<div style="font-size:12px;color:#333;font-weight:600;margin-bottom:2px">逐门</div>'
     +un.map(function(u){return row(u,'un');}).join('')+part.map(function(p){return row(p,'part');}).join('');
 }
 function ttBneckOpen(){const sol=_ttCache.sol||(_ttCache.tt?_ttSolutionFromSaved(_ttCache.sem,_ttCache.tt):null);const b=document.getElementById('ttbneck-body');if(b)b.innerHTML=_ttBneckHtml(sol);const m=document.getElementById('ttbneck-modal');if(m){m.style.display='flex';document.body.style.overflow='hidden';}}
