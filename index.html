@@ -388,7 +388,10 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 .tt-chip.tt-flash{outline:3px solid #534AB7;outline-offset:-1px;box-shadow:0 0 0 4px rgba(83,74,183,.28)}
 .tt-chip.tt-drag{cursor:pointer;user-select:none;-webkit-user-select:none}
 .tt-chip.tt-drag:hover{outline:2px solid #AFA9EC;outline-offset:-1px}
-.tt-chip.tt-drift{outline:2px dashed #ea580c;outline-offset:-1px}
+.tt-chip.tt-drift{outline:2px dashed #ea580c;outline-offset:-1px;position:relative}
+.tt-chip.tt-drift::after{content:'排课表已改';position:absolute;top:0;right:0;font-size:9px;font-weight:700;line-height:1.5;color:#fff;background:#ea580c;border-radius:0 6px 0 6px;padding:0 5px;pointer-events:none}   /* 虚线框的原因写在课片上;改了什么在浮出卡 */
+.tt-chip.tt-drift.tt-drift-del::after{content:'排课表已删'}
+#tt-print .tt-chip.tt-drift::after{display:none}
 /* 教室网格:表头 + 教室栏「冻结」(锁左上),滚动时抬头与教室都在(Aj. Tsai #2) */
 .tt-grid-up thead th,.tt-grid-dn thead th,.tt-grid-all thead th{position:sticky;top:0;z-index:4}
 .tt-grid-up thead tr:nth-child(2) th,.tt-grid-dn thead tr:nth-child(2) th,.tt-grid-all thead tr:nth-child(2) th{top:32px}
@@ -5551,7 +5554,7 @@ function _ttChipStyle(p){const col=_ttChipColor(p);return 'background:'+col.bg+'
 function _ttChipHtml(p,bad,src){
   const bd=bad[p.id]?' bad':'',edit=_ttCanEdit(),rm=src?_ttCR(p,src):(p.room||'?');
   const note=(p.note&&p.note.raw)||p.nt,cl=_ttCohLabel(p.cohorts);
-  const dr=(_ttCache.driftIds&&_ttCache.driftIds[String(p.id)])?' tt-drift':'';
+  const dr=(_ttCache.driftIds&&_ttCache.driftIds[String(p.id)])?(' tt-drift'+(/删掉/.test(_ttCache.driftIds[String(p.id)])?' tt-drift-del':'')):'';
   const title=p.course+(p.cls?' '+p.cls:'')+' @'+rm+(p.tc?' · '+p.tc:'')+(p.dept?' · 专业'+p.dept:'')+(cl.full?' · 届别:'+cl.full:'')+(note?' · 备注:'+note:'')+(dr?' · ⚠存档后被改动':'')+((bad[p.id]&&_ttBadWhy[p.id])?' ｜ ⚠ 为什么红：'+_ttBadWhy[p.id].join('；'):'')+(edit?' · 可单独拖这一节':'');
   const dragStart=edit?(' draggable="true" ondragstart="_ttDragStart(event,\''+jsq(String(p.id))+'\','+(src?'\''+jsq(src[0])+'\',\''+src[1]+'\'':'null,null')+')"'):'';
   const clickEdit=edit?(' onmousedown="_ttChipDown(event)" onmouseup="_ttChipUp(event,\''+jsq(String(p.id))+'\','+(src?'\''+jsq(src[0])+'\',\''+src[1]+'\'':'null,null')+')"'):'';
@@ -5719,7 +5722,7 @@ function _ttMiniChip(p,mode,bad,src){
   const ct=_ttCapTm(p,src);   // Capstone 标上实际时间
   if(mode==='cohort'){z1='@'+eh(rm)+ct;z2=_ttCC(p);z3=eh(p.tc||'待定');}
   else{z1=_ttCC(p);z2=p.count+'人 · '+eh(cl.label);z3='@'+eh(rm)+ct;}   // 人数放前面:届别多被截掉时人数还在
-  const dr=(_ttCache.driftIds&&_ttCache.driftIds[String(p.id)])?' tt-drift':'';
+  const dr=(_ttCache.driftIds&&_ttCache.driftIds[String(p.id)])?(' tt-drift'+(/删掉/.test(_ttCache.driftIds[String(p.id)])?' tt-drift-del':'')):'';
   const title=p.course+(p.cls?' '+p.cls:'')+' @'+rm+(p.tc?' · '+p.tc:'')+(p.dept?' · 专业'+p.dept:'')+(cl.full?' · '+cl.full:'')+((bad&&bad[p.id]&&_ttBadWhy[p.id])?' ｜ ⚠ 为什么红：'+_ttBadWhy[p.id].join('；'):'')+(edit?' · 可单独拖这一节':'');
   const dragStart=edit?(' draggable="true" ondragstart="_ttDragStart(event,\''+jsq(String(p.id))+'\','+(src?'\''+jsq(src[0])+'\',\''+src[1]+'\'':'null,null')+')"'):'';
   const clickEdit=edit?(' onmousedown="_ttChipDown(event)" onmouseup="_ttChipUp(event,\''+jsq(String(p.id))+'\','+(src?'\''+jsq(src[0])+'\',\''+src[1]+'\'':'null,null')+')"'):'';
@@ -5869,6 +5872,7 @@ function _ttTipShow(chip){
   const t=_ttTipEl();
   t.innerHTML='<div style="font-weight:700;color:#3C3489;font-size:12.5px">'+_ttCC(p)+' <span style="font-weight:400;color:#888">· 共 '+p.count+' 人'+(rm?' · @'+eh(rm):'')+(un?' · <b style="color:#b42318">未排（'+({up:'上半',dn:'下半',both:'全学期'}[un.half]||'待定')+'）</b>':'')+'</span></div>'+
     '<div style="color:#555">'+eh(p.tc||'老师待定')+(p.dept?' · 专业 '+eh(p.dept):'')+(p.isCap?' · 🎓 Capstone':'')+'</div>'+
+    ((_ttCache.driftIds&&typeof _ttCache.driftIds[String(p.id)]==='string')?'<div class="tt-tip-sec" style="color:#9a3412"><div class="tt-tip-lab" style="color:#ea580c">⚠ 橘色虚线框：排课表跟这份课表不一样</div><div>'+eh(_ttCache.driftIds[String(p.id)])+'</div><div style="color:#888;margin-top:2px">要更新课表：秘书处按「只补排」或逐门「← 照排课表」。</div></div>':'')+
     (mem?'<div style="margin-top:5px;color:#3C3489"><b>一起上 '+mem.length+' 门</b>（这是旧存档里并在一起的课；重排后会各自排）：'+mem.map(function(m){return eh(m.course)+(m.cls?'-'+eh(m.cls):'')+' '+m.count+'人';}).join('、')+'</div>':'')+
     (cohs?'<div class="tt-tip-sec"><div class="tt-tip-lab">届别（'+cc.length+'）</div><div>'+cohs+'</div></div>':'')+
     (note?'<div class="tt-tip-sec note"><div class="tt-tip-lab">📝 备注</div><div>'+eh(note)+'</div></div>':'')+
@@ -6490,7 +6494,13 @@ function _ttBodyHtml(sol){
   _ttLangRefresh(sol.sem||_ttCache.sem);(sol.placements||[]).concat(sol.unplaced||[]).forEach(function(p){delete p._tok;delete p._tokA;delete p._solo;});_ttCache.solo=_ttSoloClashes(sol.placements);   // KE/KH 放行名单依现在的排课表重算
   const view=_ttCache.view||'room';
   const drift=_ttDrift(sol.sem,sol);   // 随时比对(不只看存档时):课表上改了老师／上下半还没写回,也会提示
-  _ttCache.driftIds={};if(drift){drift.del.forEach(function(p){_ttCache.driftIds[String(p.id)]=1;});drift.chg.forEach(function(it){_ttCache.driftIds[String(it.p.id)]=1;});}
+  _ttCache.driftIds={};   // 值=原因文字(浮出卡用):排课表上这门课跟课表上的不一样
+  if(drift){
+    drift.del.forEach(function(p){_ttCache.driftIds[String(p.id)]='排课表已经删掉这门课';});
+    drift.chg.forEach(function(it){const k=String(it.p.id),t=it.fields.map(function(f){const cut=function(x){x=String(x);return x.length>40?x.slice(0,40)+'…':x;};
+      if(f.t==='届别'){const A=String(f.a).split('、'),B=String(f.b).split('、'),add=B.filter(function(x){return x&&x!=='—'&&A.indexOf(x)<0;}),del=A.filter(function(x){return x&&x!=='—'&&B.indexOf(x)<0;});return '届别：'+(add.length?'＋'+add.join('、'):'')+(add.length&&del.length?'，':'')+(del.length?'－'+del.join('、'):'');}   /* 届别只写加了谁、少了谁 */
+      return f.t+'：'+cut(f.a)+' → '+cut(f.b);}).join('；');_ttCache.driftIds[k]=(typeof _ttCache.driftIds[k]==='string'&&_ttCache.driftIds[k]?_ttCache.driftIds[k]+'；':'')+t;});
+  }
   const main=((view==='room'&&_ttCanEdit())?'<div style="font-size:11px;color:#888;margin:0 2px 6px">💡 拖动课片微调；也可把下方未排的胶囊拖进网格。撞堂／超容量即时标红，改完按 💾 存档。'+(sol.tries?' · 🧠 自动排试了 '+sol.tries+' 种先后顺序，取未排最少的一版':'')+'</div>':'')+_ttMainHtml(sol,view);
   return _ttDriftBanner(drift)+_ttKeepBar(sol)+_ttCheckBar(sol)+_ttFootDetails(sol)+_ttCapBar(sol)+_ttInternsBar(sol)+main+_ttPillsBar(sol,view);   // 视图切换已移到 #tt-status(sticky)
 }
