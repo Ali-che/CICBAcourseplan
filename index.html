@@ -625,6 +625,11 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 #tt-print .tt-grid-up .tt-rm,#tt-print .tt-grid-dn .tt-rm,#tt-print .tt-grid-all .tt-rm{width:40pt;white-space:normal!important;padding:2pt 3pt;font-size:8pt}
 #tt-print .tt-etable .tt-rm{width:36pt;font-size:8pt;padding:2pt 4pt}
 #tt-print .tt-grid thead .tt-tm{font-size:6.5pt;line-height:1.15}
+#tt-print.cols16 .tt-grid thead th{padding:3pt 0}                     /* 排到周日 → 依教室号有 16 栏以上,每栏变窄:表头收边距、时间小一号,不印届别时列高一点 */
+#tt-print.cols16 .tt-grid thead .tt-tm{font-size:5.5pt;letter-spacing:-.2pt}
+#tt-print.cols16.noco{--tt-rowh:50px}
+#tt-print.cols16.noco .tt-c3 .z1,#tt-print.cols16.noco .tt-c3 .z3{font-size:5pt;line-height:1.05}
+#tt-print.cols16.noco .tt-c3 .z2{font-size:6pt;line-height:1.05}
 #tt-print .tt-grid thead{display:table-header-group}
 #tt-print .tt-grid thead th{font-size:8pt;padding:3pt 2pt;white-space:normal}
 #tt-print .tt-grid tbody tr{break-inside:avoid;page-break-inside:avoid}
@@ -1464,28 +1469,30 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
       <div>
         <h3 style="margin:0;font-size:16px;color:#333;font-weight:600">🧭 课表制作 · 使用引导</h3>
-        <div style="font-size:12px;color:#888;margin-top:3px">从选学期到存档、定版、列印，一步步怎么做</div>
+        <div style="font-size:12px;color:#888;margin-top:3px">先看自己是哪一种身份，照那一块做</div>
       </div>
       <button onclick="ttGuideClose()" style="background:transparent;border:0;font-size:20px;color:#888;cursor:pointer;line-height:1;padding:4px 8px;font-family:inherit">×</button>
     </div>
     <div style="font-size:12px;color:#444;line-height:1.5">
-      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">1</span><div><b>选学年学期</b><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>上方「学年学期」下拉选学期</li><li>标「（已归档）」的也能排</li></ul></div></div>
-      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">2</span><div><b>⚡ 一键自动排</b>　<span style="color:#999;font-size:11px">（秘书处／管理员）</span><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>自动排进「周几 · 时段 · 教室」</li><li>旁边的 ▾：「🏅 前三名」自己挑、「🧩 只补排」只排没排上的</li><li>规则见「ℹ️ 排课规则」</li></ul></div></div>
-      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">3</span><div><b>看「待处理一览」</b><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>列出：没排上、只排 1 节、备注待看、个别学生撞课</li><li>每门未排课下面有 💡 建议</li><li>撞堂、超容量的课片<b style="color:#b42318">标红</b></li></ul></div></div>
-      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">4</span><div><b>手动微调</b>　<span style="color:#999;font-size:11px">（秘书处／管理员）</span><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>拖课片：换时段／教室</li><li>点课片：改老师／时段，或移回未排</li><li>排不满：用「更多 › 🔀 改半方案」</li><li>按错：「↶ 还原」（⌘Z）</li></ul></div></div>
-      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">5</span><div><b>💾 存档 → ✅ 定版</b>　<span style="color:#999;font-size:11px">（秘书处／管理员）</span><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>存档＝<b>草稿</b>（同事看到会标「草稿」）</li><li>全部排好后按「<b>✅ 定版</b>」＝正式课表</li><li>定版后再存档 → 变回草稿，要重新定版</li><li>被盖掉的旧版留最近 5 个：「⚙️ 选项 › 🕘 旧版」</li></ul></div></div>
-      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">6</span><div><b>📤 导出／列印</b><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>选检视：依教室号／届别／授课老师</li><li>导出 Excel，或列印／存 PDF（A4 横向）</li><li>还没定版的，抬头会印「草稿，未定版」</li><li>每门课哪几天上课：「更多 › 📅 上课日期」</li></ul></div></div>
-      <div style="display:flex;gap:10px;padding:10px 0"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#B45309;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">7</span><div><b>排课表之后又改了？</b><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>课表<b>不会自动更新</b>，顶部出橘色提示</li><li><b>🅰 只补排</b>：已排好的留原位，只排新增／放不下的课</li><li><b>🅱 整张重排</b>：不保留手动调整</li><li>老师／上下半不一样：逐门选「← 照排课表」或「写回排课表 →」；全部照排课表按「← 全部照排课表」</li><li>细节见「ℹ️ 排课规则」</li></ul></div></div>
-    </div>
-    <div style="background:#F5F4FE;border-radius:8px;padding:10px 12px;margin-top:12px;font-size:11.5px;color:#3C3489;line-height:1.7">
-      <b>谁能做什么</b>
-      <ul style="margin:3px 0 0;padding-left:16px">
-        <li><b>秘书处（Head of Administration）、管理员</b>：排、存、定版、列印</li>
-        <li><b>其他人（含主任）</b>：只读、列印</li>
-        <li><b>主任改排课</b>：用撞课清单的「✎ 改 课码」</li>
-        <li><b>主任改课三步</b>：① 排课表表单的「🗓 照现在的课表试排」逐门看排不排得进 → ② 课表制作橘色框「🔍 试排预览」看整张（不存档） → ③「✉ 通知秘书处」</li>
-        <li><b>几个人同时用</b>：别人存了新版或定版，上方会出「🔔 …载入最新」；存档前系统会先看有没有人存过；还没存档的改动只有自己看得到</li>
-      </ul>
+      <div id="ttguide-edit" style="margin-bottom:14px">
+        <div style="background:#EEEDFE;color:#534AB7;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:700">秘书处（Head of Administration）、管理员<span style="font-weight:400;font-size:12px">　排、存、定版、列印</span></div>
+        <div style="display:flex;gap:10px;padding:8px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">1</span><div><b>选学年学期</b><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>上方「学年学期」下拉</li><li>标「（已归档）」的也能排</li></ul></div></div>
+        <div style="display:flex;gap:10px;padding:8px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">2</span><div><b>⚡ 一键自动排</b><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>自动排进「周几 · 时段 · 教室」</li><li>旁边的 ▾：「🏅 前三名」自己挑、「🧩 只补排」只排没排上的</li><li>规则见「ℹ️ 排课规则」</li></ul></div></div>
+        <div style="display:flex;gap:10px;padding:8px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">3</span><div><b>看「待处理一览」</b><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>列出：没排上、只排 1 节、备注待看、个别学生撞课</li><li>每门未排课下面有 💡 建议</li><li>撞堂、超容量的课片<b style="color:#b42318">标红</b></li></ul></div></div>
+        <div style="display:flex;gap:10px;padding:8px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">4</span><div><b>手动微调</b><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>拖课片：换时段／教室</li><li>点课片：改老师／时段，或移回未排</li><li>排不满：「更多 › 🔀 改半方案」</li><li>按错：「↶ 还原」（⌘Z）</li></ul></div></div>
+        <div style="display:flex;gap:10px;padding:8px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">5</span><div><b>💾 存档 → ✅ 定版</b><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>存档＝<b>草稿</b>（同事看到会标「草稿」）</li><li>全部排好后按「<b>✅ 定版</b>」＝正式课表</li><li>定版后再存档 → 变回草稿，要重新定版</li><li>旧版留最近 5 个：「⚙️ 选项 › 🕘 旧版」</li><li>还没存档的改动只有自己看得到</li></ul></div></div>
+        <div style="display:flex;gap:10px;padding:8px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">6</span><div><b>📤 导出／列印</b><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>选检视：依教室号／届别／授课老师</li><li>导出 Excel，或列印／存 PDF（A4 横向）</li><li>还没定版：抬头印「草稿，未定版」</li><li>每门课哪几天上课：「更多 › 📅 上课日期」</li></ul></div></div>
+        <div style="display:flex;gap:10px;padding:8px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">7</span><div><b>排课表之后又改了</b><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>课表<b>不会自动更新</b>，顶部出橘色提示</li><li><b>只补排</b>：已排好的留原位，只排新增／放不下的课</li><li><b>整张重排</b>：不保留手动调整</li><li>老师／上下半不一样：逐门「← 照排课表」或「写回排课表 →」；全部照排课表按「← 全部照排课表」</li><li>更新后要 💾 存档 → ✅ 定版</li></ul></div></div>
+        <div style="display:flex;gap:10px;padding:8px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#534AB7;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">8</span><div><b>别人也在用</b><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>别人存了新版或定版：上方出「🔔 …载入最新」</li><li>存档、定版前系统先看有没有人存过，有就提醒</li></ul></div></div>
+      </div>
+      <div id="ttguide-read" style="margin-bottom:14px">
+        <div style="background:#FFF4E5;color:#B45309;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:700">其他人（含主任）<span style="font-weight:400;font-size:12px">　只读、列印</span></div>
+        <div style="display:flex;gap:10px;padding:8px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#B45309;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">1</span><div><b>选学年学期，看课表</b><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>状态列标「草稿」或「定版」</li><li>三种检视：依教室号／届别／授课老师</li><li>不能拖、不能存</li></ul></div></div>
+        <div style="display:flex;gap:10px;padding:8px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#B45309;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">2</span><div><b>看「待处理一览」</b><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>没排上的课：原因与 💡 建议</li><li>个别学生撞课清单</li></ul></div></div>
+        <div style="display:flex;gap:10px;padding:8px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#B45309;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">3</span><div><b>📤 导出／列印</b><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>导出 Excel，或列印／存 PDF（A4 横向）</li><li>草稿会在抬头印「草稿，未定版」</li></ul></div></div>
+        <div style="display:flex;gap:10px;padding:8px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#B45309;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">4</span><div><b>主任要改课</b><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>① 到「排课表」改；表单里「🗓 照现在的课表试排」看这门排不排得进</li><li>② 回课表制作，橘色框按「🔍 试排预览」看整张（不存档）</li><li>③ 按「✉ 通知秘书处」，由秘书处更新课表并定版</li><li>撞课清单的「✎ 改 课码」可直接开排课编辑</li></ul></div></div>
+        <div style="display:flex;gap:10px;padding:8px 0;border-bottom:0.5px solid #eee"><span style="flex:0 0 22px;height:22px;border-radius:50%;background:#B45309;color:#fff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center">5</span><div><b>课表有新版本</b><ul style="margin:3px 0 0;padding-left:16px;color:#666;line-height:1.75"><li>上方出「🔔 …载入最新」，按了才换</li></ul></div></div>
+      </div>
     </div>
     <div style="text-align:right;margin-top:14px">
       <button onclick="ttGuideClose()" class="btn">知道了</button>
@@ -4050,7 +4057,13 @@ window.ttRulesClose=ttRulesClose;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.getElementById('ttrules-modal');if(m&&m.style.display==='flex')ttRulesClose();}});
 
 // ── 🧭 课表制作 · 使用引导 modal ──────────
-function ttGuideOpen(){const m=document.getElementById('ttguide-modal');if(m){m.style.display='flex';document.body.style.overflow='hidden';}}
+function ttGuideOpen(){const m=document.getElementById('ttguide-modal');if(!m)return;
+  /* 两块内容人人一样;只把「自己这种身份」那块排在前面,标「你的身份」 */
+  try{const E=document.getElementById('ttguide-edit'),R=document.getElementById('ttguide-read');
+    if(E&&R){const mine=_ttCanEdit()?E:R,other=mine===E?R:E;mine.parentNode.insertBefore(mine,other);
+      m.querySelectorAll('.ttguide-me').forEach(function(x){x.remove();});
+      const b=document.createElement('span');b.className='ttguide-me';b.textContent='你的身份';b.style.cssText='float:right;font-size:11px;font-weight:600;background:#fff;border-radius:10px;padding:1px 8px';mine.firstElementChild.insertBefore(b,mine.firstElementChild.firstChild);}}catch(e){}
+  m.style.display='flex';document.body.style.overflow='hidden';}
 function ttGuideClose(){const m=document.getElementById('ttguide-modal');if(m){m.style.display='none';document.body.style.overflow='';}}
 window.ttGuideOpen=ttGuideOpen;
 window.ttGuideClose=ttGuideClose;
@@ -4385,7 +4398,6 @@ const TT_WEEKDAYS=['周一','周二','周三','周四','周五'];
 //    占用以时间块算:一般课的下午(13:30–16:30)横跨 Capstone 的 12–15 与 15–18 → 一般课 pm 同时占 pm、ev 两块;其余各占自己那块。
 const TT_SLOTS=['am','pm'],TT_CAP_SLOTS=['am','pm','ev'],TT_CAP_TIME={am:'09–12',pm:'12–15',ev:'15–18'};
 const TT_CAP_ROOMS=['233','234','235','236'];   // Capstone 优先用这一排(同栋同层);同一位老师固定一间
-const TT_CAP_RIDE_MAX=2;                        // Capstone 2 人以下的小课「跟班」:跟同老师另一门 Capstone 同时间、同教室上
 const TT_TIME={am:'09:00–12:00',pm:'13:30–16:30'},TT_CAP_TIME_FULL={am:'09:00–12:00',pm:'12:00–15:00',ev:'15:00–18:00'};   // 表头用的完整时间(Aj. Tsai 2026-11-17)
 // 课表表头一格:时段名 + 小字时间。表头只写一般上课时间;Capstone 的时间写在课片上(_ttCapTm),学生不用认符号(Aj. Tsai 2026-11-17 方案 A)
 function _ttSlotHead(s){return _ttSlotName(s)+'<span class="tt-tm">'+(TT_TIME[s]||TT_CAP_TIME_FULL[s])+'</span>';}
@@ -4520,7 +4532,7 @@ function _capFormVals(pre){
   let cc=[];try{cc=pre==='m'?mCollectCoh():getEG();}catch(e){}
   return {id:pre==='m'?String(_mId||''):'__new__',course:String(v('co')||'').trim().toUpperCase(),sem:v('sem'),half:v('half'),type:v('tp')||'正常',cls:v('cls'),tc:v('tc'),cc:cc||[],nt:(function(){try{return _rqNote(pre);}catch(e){return v('nt');}})()};
 }
-// 把表单上这门课(还没存)放进这学期的排课里,照 _ttSolve 的做法建清单(Capstone 小课跟班 → 分上下半)。回传 {list,me,whole};用完要 _ttLangRefresh(sem) 还原
+// 把表单上这门课(还没存)放进这学期的排课里,照 _ttSolve 的做法建清单(→ 分上下半)。回传 {list,me,whole};用完要 _ttLangRefresh(sem) 还原
 function _capBuild(f){
   const sem=f.sem,rooms=_ttRoomsSorted(),cat=(_ttCache.refs&&_ttCache.refs.cat)||{},whole=_ttWholeSem(sem);
   const rows=[];let found=false;
@@ -5271,7 +5283,7 @@ function _ttSolve(sem,opts){
     const note=_ttParseNote(r.nt,rooms);
     raw.push({id:String(r.id),course:String(r.course||''),cls:r.cls||'',tc:r.tc||'',cohorts:_ttCohorts(r),count:_ttCount(r),dept:_ttDept(r,cat),credit:_ttCredit(r,cat),isCap:_ttIsCap(r),nt:r.nt||'',note:note,rawHalf:r.half||'',_cc:r.cc||[]});
   });
-  const list=_ttMergeGroups(raw,rooms);   // Capstone 小课跟班:并成一门来排
+  const list=_ttMergeGroups(raw,rooms);   // 现在不并任何课(原样回传)
   list.forEach(function(c){if(c.note.manual&&c.note.raw)manualNotes.push(c);});
   const whole=_ttWholeSem(sem);   // 全学期(第三学期):无上下半,单一时间线
   list.forEach(function(c){
@@ -5416,7 +5428,7 @@ function _ttNotOnSaved(sem,sol){
 function _ttCohLabel(cohorts){const cs=cohorts||[];const full=cs.join('、');return {label:full,full:full};}
 // 课程名称-班级(统一用连字号,例 KH354-601 — Aj. Tsai)
 function _ttCC(p){return eh(_ttCodes(p))+(p.cls?'-'+eh(p.cls):'');}
-// ── 跟班组:Capstone 只有 2 人以下的小课,跟同一位老师的另一门 Capstone 同时间同教室上(规则见 _ttMergeGroups)。──
+// ── 并成一组(members):现在不再产生(见 _ttMergeGroups);旧存档里的仍照这个结构读。──
 // 一般课没有这种合并:「备注写合班就当一门排」已于 2026-11-18 全站拿掉(Aj. Tsai:不同届别一起上同一门课=一笔排课勾多个届别,本来就是一门)。
 // 并成一组后:id/course/cls 用人数最多的那门(代表),members=[各门的 id/课码/班级/人数/届别/学分/备注];
 // 人数 = 各届别取组内最大值再加总(同一批学生修两个课码只算一次)。写回排课表、漂移侦测、学分提醒都逐门算(见各处 members)。
@@ -5424,34 +5436,13 @@ function _ttMem(p){return (p&&p.members&&p.members.length>1)?p.members:null;}
 function _ttCodes(p){const m=_ttMem(p);return m?m.map(function(x){return String(x.course||'');}).filter(function(v,i,a){return a.indexOf(v)===i;}).join('+'):String(p.course||'');}
 function _ttName(p){return _ttCodes(p)+(p.cls?'-'+p.cls:'');}   // 纯文字名称(未转义);_ttCC 是转义后给 HTML 用的
 function _ttMergeGroups(list,rooms){
-  const by={};
+  // 2026-11-18(Aj. Tsai):不再把任何课并成一门。
+  //   · 「备注写合班 → 两笔排课当一门」同日较早已拿掉;
+  //   · Capstone「2 人以下的小课跟同老师另一门 Capstone 一起上」(跟班)也拿掉——她指出 BA103+DI325 不该并在一起。
+  // 每笔排课各自排自己的时段。函数留着只是因为 _ttSolve／_capBuild 都呼叫它;
+  // members(并成一组的成员)只剩「旧存档里还有」这一种来源,显示／写回／比对那些读 members 的代码照旧能读旧存档。
   list.forEach(function(c){c._gk='';});
-  // Capstone 各门分开时段上;只有 2 人以下的小课「跟班」——
-  //    跟同一位老师的另一门 Capstone(同班级编号优先、人数最少的)同时间同教室上
-  const caps=list.filter(function(c){return c.isCap&&c.tc;});
-  caps.forEach(function(t){
-    if(t.count>TT_CAP_RIDE_MAX)return;
-    const hosts=caps.filter(function(h){return h!==t&&h.tc===t.tc&&h.count>TT_CAP_RIDE_MAX;});if(!hosts.length)return;
-    hosts.sort(function(a,b){return ((a.cls===t.cls)?0:1)-((b.cls===t.cls)?0:1)||a.count-b.count||String(a.id).localeCompare(String(b.id));});
-    const k=hosts[0]._gk||('R|'+hosts[0].id);t._gk=k;hosts[0]._gk=k;
-  });
-  list.forEach(function(c){if(c._gk)(by[c._gk]=by[c._gk]||[]).push(c);});
-  const out=[],done={};
-  list.forEach(function(c){
-    const g=c._gk?by[c._gk]:null;
-    if(!g||g.length<2){out.push(c);return;}
-    if(done[c._gk])return;done[c._gk]=1;
-    const ms=g.slice().sort(function(a,b){return b.count-a.count;}),head=ms[0],mx={},od=[],nts=[];
-    ms.forEach(function(m){
-      (m._cc||[]).forEach(function(x){if(!x.cohort)return;if(!(x.cohort in mx)){mx[x.cohort]=0;od.push(x.cohort);}mx[x.cohort]=Math.max(mx[x.cohort],+x.count||0);});
-      const t=String(m.nt||'').trim();if(t&&nts.indexOf(t)<0)nts.push(t);
-    });
-    head.members=ms.map(function(m){return {id:String(m.id),course:m.course,cls:m.cls,count:m.count,cohorts:m.cohorts,credit:m.credit,nt:m.nt||''};});
-    head.cohorts=od;head.count=od.reduce(function(a,co){return a+mx[co];},0);
-    head.nt=nts.join('；');head.note=_ttParseNote(head.nt,rooms);
-    out.push(head);
-  });
-  return out;
+  return list;
 }
 // 课片按「专业」上色(用全站 COHORT_COLOR 配色);Capstone 另加左侧色条 + 🎓
 function _ttDeptColor(dep){const c=(typeof COHORT_COLOR!=='undefined'&&dep)?COHORT_COLOR[dep]:null;return c?{bg:c.bg,fg:c.fg}:{bg:'#EEF2FF',fg:'#312e81'};}
@@ -5799,7 +5790,7 @@ function _ttTipShow(chip){
   const t=_ttTipEl();
   t.innerHTML='<div style="font-weight:700;color:#3C3489;font-size:12.5px">'+_ttCC(p)+' <span style="font-weight:400;color:#888">· 共 '+p.count+' 人'+(rm?' · @'+eh(rm):'')+(un?' · <b style="color:#b42318">未排（'+({up:'上半',dn:'下半',both:'全学期'}[un.half]||'待定')+'）</b>':'')+'</span></div>'+
     '<div style="color:#555">'+eh(p.tc||'老师待定')+(p.dept?' · 专业 '+eh(p.dept):'')+(p.isCap?' · 🎓 Capstone':'')+'</div>'+
-    (mem?'<div style="margin-top:5px;color:#3C3489"><b>一起上 '+mem.length+' 门</b>（Capstone 小课跟班：同时间、同教室）：'+mem.map(function(m){return eh(m.course)+(m.cls?'-'+eh(m.cls):'')+' '+m.count+'人';}).join('、')+'</div>':'')+
+    (mem?'<div style="margin-top:5px;color:#3C3489"><b>一起上 '+mem.length+' 门</b>（这是旧存档里并在一起的课；重排后会各自排）：'+mem.map(function(m){return eh(m.course)+(m.cls?'-'+eh(m.cls):'')+' '+m.count+'人';}).join('、')+'</div>':'')+
     (cohs?'<div class="tt-tip-sec"><div class="tt-tip-lab">届别（'+cc.length+'）</div><div>'+cohs+'</div></div>':'')+
     (note?'<div class="tt-tip-sec note"><div class="tt-tip-lab">📝 备注</div><div>'+eh(note)+'</div></div>':'')+
     ((why&&why.length)?'<div class="tt-tip-sec bad"><div class="tt-tip-lab">⚠ 标红原因</div>'+why.map(function(w){return '<div class="tt-tip-row">'+eh(w)+'</div>';}).join('')+'</div>':'')+
@@ -6716,6 +6707,7 @@ function _ttPrintBuild(sel){
   if(!html)return false;
   box.innerHTML=html;if(sel&&sel.co===false)box.classList.add('noco');   // 不印届别
   if(view!=='room')box.classList.add('ent');if(view==='teacher')box.classList.add('tch');
+  if(view==='room'&&[].some.call(box.querySelectorAll('table'),function(t){const r=t.tHead&&t.tHead.rows[t.tHead.rows.length-1];return !!r&&r.cells.length>=16;}))box.classList.add('cols16');   /* 用到周日,栏多变窄 */
   box.querySelectorAll('[draggable]').forEach(function(e){e.removeAttribute('draggable');});
   document.body.appendChild(box);
   _ttPrintFit(box);
