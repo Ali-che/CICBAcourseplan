@@ -6143,7 +6143,7 @@ function _ttPlanEl(){
   document.body.appendChild(m);return m;
 }
 function ttPlanClose(){_ttPlanBusy=false;const m=document.getElementById('ttplan-modal');if(m)m.style.display='none';}
-function _ttPlanShow(body,foot){const m=_ttPlanEl();document.getElementById('ttplan-body').innerHTML=body;document.getElementById('ttplan-foot').innerHTML=foot;m.style.display='flex';}
+function _ttPlanShow(body,foot){const m=_ttPlanEl();{const t0=m.querySelector('.ttplan-card > .ttplan-title');if(t0)t0.style.display=/class="ttplan-title"/.test(String(body))?'none':'';}document.getElementById('ttplan-body').innerHTML=body;document.getElementById('ttplan-foot').innerHTML=foot;m.style.display='flex';}
 async function ttHalfPlan(){
   if(!_ttCanEdit()||_ttPlanBusy)return;const sem=_ttCache.sem;if(!sem)return;
   if(_ttWholeSem(sem)){alert('第三学期没有上下半，不需要改半。');return;}
@@ -6363,7 +6363,7 @@ async function _schTtRefresh(){
     if(!d){bar.style.display='none';return;}
     const parts=[];if(d.chg.length)parts.push('内容不同 '+d.chg.length+' 门');if(d.add.length)parts.push('不在课表上 '+d.add.length+' 门');if(d.del.length)parts.push('排课表已删 '+d.del.length+' 门');
     const names=d.chg.map(function(it){return it.p.course;}).concat(d.add.map(function(r){return r.course;}),d.del.map(function(p){return p.course;})).filter(function(v,i,a){return v&&a.indexOf(v)===i;});
-    bar.innerHTML='<span style="font-size:12px;color:#92400e"><b>📋 课表制作还没跟上</b>：'+eh(sem)+' 的课表存档'+(tt.version!=null?' v'+eh(String(tt.version)):'')+'跟排课表有 '+d.n+' 处不一样（'+parts.join(' · ')+'）<span style="color:#6b5114"> —— '+names.slice(0,6).map(eh).join('、')+(names.length>6?' 等':'')+'</span></span><button class="btn btn-sm" onclick="gotoTt(\''+jsq(sem)+'\')">前往课表制作 →</button>';
+    bar.innerHTML='<span style="font-size:12px;color:#92400e"><b>📋 课表制作还没跟上</b>：'+eh(sem)+' 的课表存档'+(tt.version!=null?' v'+eh(String(tt.version)):'')+'跟排课表有 '+d.n+' 处不一样（'+parts.join(' · ')+'）<span style="color:#6b5114"> —— '+names.slice(0,6).map(eh).join('、')+(names.length>6?' 等':'')+'</span></span><span style="white-space:nowrap">'+((!_ttCanEdit()||currentRole==='admin')?'<button class="btn btn-sm" onclick="ttNotifyOpen(\''+jsq(sem)+'\')" title="用站内消息告诉排课表的人：这个学期改了哪几门课，请更新课表">✉ 通知秘书处</button> ':'')+'<button class="btn btn-sm" onclick="gotoTt(\''+jsq(sem)+'\')">前往课表制作 →</button></span>';
     bar.style.display='flex';
   }catch(e){bar.style.display='none';}
 }
@@ -6386,7 +6386,7 @@ function _ttDriftBanner(drift){
   }
   const act=canEdit
     ? '<div style="margin:6px 0 2px">'+(struct?'<button class="btn btn-p btn-sm" onclick="ttKeepSolve()" title="已排好的课留在原位（含手动调过的），只排新增的、改动后原位放不下的；老师／上下半不一样的不动">🧩 只补排改动的课</button> ':'')+'<button class="btn btn-sm" onclick="ttAutoSolve()" title="整张重排，全部照排课表，不保留手动调过的教室/时段">⚡ 整张重排</button>'+(both?' <button class="btn btn-sm" onclick="ttKeepSolve(\'all\')" title="已排好的课留在原位；新增／放不下的重排；老师、上下半不一样的全部改成排课表的（上下半不同会到那一半重新排位）。跟主任「试排预览」看到的结果一样">← 全部照排课表</button>':'')+(both?' <span style="font-size:11px;color:#6b5114">老师／上下半不一样的 '+both+' 门：两边都能改，请逐门选「← 照排课表」或「写回排课表 →」</span>':'')+'</div>'
-    : '<div style="margin:6px 0 2px">'+((_ttCache.tt&&!_ttCache.preview)?'<button class="btn btn-p btn-sm" onclick="ttPreview()" title="照现在的排课表，用「只补排」的方式试排一次，看排不排得下。只是预览，不会存档、同事看不到">🔍 试排预览</button> ':'')+'<span style="font-size:11px;color:#888">'+(_ttCache.preview?'这是试排预览里还剩下的差异。':'先看这样改排不排得下；')+'要真的更新课表，请 Head of Administration 或管理员处理（详见「ℹ️ 说明 › 排课规则」）。</span></div>';
+    : '<div style="margin:6px 0 2px">'+((_ttCache.tt&&!_ttCache.preview)?'<button class="btn btn-p btn-sm" onclick="ttPreview()" title="照现在的排课表，用「只补排」的方式试排一次，看排不排得下。只是预览，不会存档、同事看不到">🔍 试排预览</button> ':'')+'<button class="btn btn-sm" onclick="ttNotifyOpen()" title="用站内消息告诉排课表的人：这个学期改了哪几门课，请更新课表">✉ 通知秘书处</button> '+'<span style="font-size:11px;color:#888">'+(_ttCache.preview?'这是试排预览里还剩下的差异。':'先看这样改排不排得下；')+'要真的更新课表，请 Head of Administration 或管理员处理（详见「ℹ️ 说明 › 排课规则」）。</span></div>';
   const title=drift.version!=null?('⚠ 存档 v'+drift.version+' 后，课表与排课表有 '+drift.n+' 处不一样 —— 这张课表可能过时'):('⚠ 课表与排课表有 '+drift.n+' 处不一样');
   return '<div class="tt-driftbar" style="border:1px solid #F6C667;background:#FEF9ED;border-radius:8px;padding:10px 12px;margin:0 0 10px"><div style="font-size:12.5px;font-weight:700;color:#92400e">'+title+'</div>'+act+'<details style="margin-top:4px"'+(drift.n<=8?' open':'')+'><summary style="cursor:pointer;font-size:12px;color:#92400e">看哪些不一样（排课表已删 '+drift.del.length+' · 内容不同 '+drift.chg.length+' · 不在课表上 '+drift.add.length+'）</summary><div style="max-height:240px;overflow:auto;margin-top:6px">'+items+'</div></details></div>';
 }
@@ -6543,9 +6543,46 @@ function _ttPreviewNote(tt){
   if(!_ttCache.preview)return '';
   const k=(_ttCache.sol&&_ttCache.sol.keep)||{},fail=(k.fail||[]).length;
   return '<div class="tt-prevbar"><span>🔍 <b>这是试排预览，不是正式课表</b> —— 照现在的排课表（老师、上下半也照排课表）试排的结果：'+(fail?'<b style="color:#b42318">还有 '+fail+' 门排不上</b>（看下方「待处理一览」）':'<b style="color:#1a6b2f">全部排得下</b>')+'。没有存档，同事看到的还是'+(tt?' v'+eh(String(tt.version)):'原来的课表')+'；要真的更新，请秘书处在课表制作的橘色框按「← 全部照排课表」→ 存档 → 定版。</span>'
-    +'<span style="white-space:nowrap"><button class="btn btn-sm" onclick="ttPreview0()" title="排课表又改了的话，再试一次">↻ 重新试排</button> <button class="btn btn-sm" onclick="ttPreviewEnd()">结束预览</button></span></div>';
+    +'<span style="white-space:nowrap"><button class="btn btn-sm" onclick="ttPreview0()" title="排课表又改了的话，再试一次">↻ 重新试排</button> <button class="btn btn-sm" onclick="ttNotifyOpen()" title="用站内消息请秘书处更新课表">✉ 通知秘书处</button> <button class="btn btn-sm" onclick="ttPreviewEnd()">结束预览</button></span></div>';
 }
 function ttPreview0(){_ttCache.sol=null;_ttCache.preview=false;ttPreview();}
+// ── 通知秘书处(Aj. Tsai 2026-11-18):主任改完排课表,一键用站内消息请排课表的人更新 ──
+// 收件人默认 = 这学期课表最后定版／存档的人(就是在排这张课表的人);可以改选。内容先帮忙写好(改了哪几门),送出前可以改。
+// 走原本的站内消息(msgSend);没登录、读不到名单就说明,不送。
+function _ttNotifyText(sem,tt){
+  let d=null;try{d=(tt&&Array.isArray(tt.placements)&&tt.placements.length)?_ttDrift(sem,{placements:tt.placements,unplaced:[]}):null;}catch(e){}
+  const L=['【课表制作】'+sem+' 的排课表'+(d?'改了 '+d.n+' 处':'有调整')+'，请更新课表（课表制作 → 橘色框「← 全部照排课表」→ 存档 → 定版）。'];
+  const cut=function(a){return a.slice(0,8).join('、')+(a.length>8?' 等 '+a.length+' 门':'');};
+  if(d){
+    if(d.chg.length)L.push('· 内容不同：'+cut(d.chg.map(function(it){return it.p.course+(it.p.cls?'-'+it.p.cls:'')+'（'+it.fields.map(function(f){return f.t;}).join('／')+'）';})));
+    if(d.add.length)L.push('· 新增／还没排：'+cut(d.add.map(function(r){return r.course+(r.cls?'-'+r.cls:'');})));
+    if(d.del.length)L.push('· 排课表已删：'+cut(d.del.map(function(p){return p.course+(p.cls?'-'+p.cls:'');})));
+  }
+  return L.join('\n');
+}
+async function ttNotifyOpen(sem){
+  sem=sem||_ttCache.sem;if(!sem)return;
+  if(!currentEditor){alert('请先登录，才能发站内消息。');return;}
+  _ttPlanShow('<div class="ttplan-title">✉ 通知秘书处</div><div class="ttplan-wait">⏳ 读取中…</div>','<button class="btn btn-sm" onclick="ttPlanClose()">取消</button>');
+  let tt=null;try{tt=await _capTtGet(sem);}catch(e){}
+  try{const u=await gasPost('msgUsers',{});if(u&&u.success)_msgUsers=u.users||[];}catch(e){}
+  const me=(_msgData&&_msgData.me)||currentEditor,users=(_msgUsers||[]).filter(function(n){return n&&n!==me;});
+  if(!users.length){_ttPlanShow('<div class="ttplan-title">✉ 通知秘书处</div><div class="ttplan-bad">读不到可以发消息的名单。<span>请重新登录再试；或直接用右上角 🔔 发消息。</span></div>','<button class="btn btn-sm" onclick="ttPlanClose()">关闭</button>');return;}
+  const pick=[tt&&tt.final_by,tt&&tt.saved_by,_lsGet('cic_tt_notify_to')].filter(function(n){return n&&users.indexOf(n)>=0;})[0]||'';
+  const who=tt?((tt.final_by&&tt.final_by===pick)?'这学期课表是他定版的':((tt.saved_by&&tt.saved_by===pick)?'这学期课表是他存档的':'')):'';
+  _ttPlanShow('<div class="ttplan-title">✉ 通知秘书处</div>'
+    +'<div class="fg" style="margin-bottom:8px"><label>发给</label><select id="ttnotify-to" style="width:100%"><option value="">请选择</option>'+users.map(function(n){return '<option value="'+eh(n)+'"'+(n===pick?' selected':'')+'>'+eh(n)+'</option>';}).join('')+'</select>'+(who?'<div style="font-size:11px;color:#888;margin-top:2px">默认选 '+eh(pick)+'：'+who+'。</div>':'')+'</div>'
+    +'<div class="fg"><label>内容（可以改）</label><textarea id="ttnotify-body" rows="6" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:12px;padding:6px;border:0.5px solid #cbd5e1;border-radius:6px;resize:vertical">'+eh(_ttNotifyText(sem,tt))+'</textarea></div>'
+    +'<div style="font-size:11px;color:#888;margin-top:4px">用站内消息送出，对方在右上角 🔔 看得到。</div>',
+    '<button class="btn btn-sm" onclick="ttPlanClose()">取消</button> <button class="btn btn-p btn-sm" onclick="ttNotifySend()">发送</button>');
+}
+async function ttNotifySend(){
+  const to=(document.getElementById('ttnotify-to')||{}).value||'',b=((document.getElementById('ttnotify-body')||{}).value||'').trim();
+  if(!to){alert('请选择要发给谁');return;}if(!b){alert('请输入内容');return;}
+  const r=await gasPost('msgSend',{to:to,body:b});
+  if(r&&r.success){_lsSet('cic_tt_notify_to',to);ttPlanClose();if(typeof showToast==='function')showToast('已通知 '+to,{kind:'success'});try{if(typeof refreshMsg==='function')refreshMsg();}catch(e){}}
+  else alert('发送失败：'+_errText(r));
+}
 // 删除某学期的课表存档(仅管理员;RPC timetable_delete = migration 013)。排课表不受影响;数据库不留旧版。
 async function ttDeleteSaved(){
   if(currentRole!=='admin')return;const sem=_ttCache.sem,tt=_ttCache.tt;
