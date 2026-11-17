@@ -333,8 +333,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 .tt-grid thead th{background:#F5F4FE;color:#3C3489;font-weight:700;white-space:nowrap;padding:6px 6px;font-size:13.5px}
 .tt-grid thead tr:nth-child(2) th{font-weight:600;font-size:11.5px;color:#6E67B8;padding:3px 6px}
 .tt-grid thead .tt-tm{display:block;font-weight:500;font-size:10px;line-height:1.3;font-variant-numeric:tabular-nums;white-space:nowrap}   /* 表头时段名下面的小字时间 */
-.tt-grid thead .tt-tm-cap{font-weight:600}
-.tt-grid thead .tt-tm-s{display:none}
+.tt-chip .tt-ct{font-weight:700;color:#374151;white-space:nowrap}   /* Capstone 课片上的上课时间 */
 .tt-grid .tt-rm{background:#faf9ff;font-family:ui-monospace,monospace;font-weight:700;white-space:nowrap;text-align:left;padding:4px 9px;color:#3C3489;font-size:12px;position:sticky;left:0;z-index:5;border-right:1.5px solid #ddd9f3}
 .tt-grid thead .tt-rm{z-index:6}
 .tt-grid .tt-rm small{color:#aaa;font-weight:400;font-size:9.5px}
@@ -622,8 +621,6 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 #tt-print .tt-grid-up .tt-rm,#tt-print .tt-grid-dn .tt-rm,#tt-print .tt-grid-all .tt-rm{width:40pt;white-space:normal!important;padding:2pt 3pt;font-size:8pt}
 #tt-print .tt-etable .tt-rm{width:36pt;font-size:8pt;padding:2pt 4pt}
 #tt-print .tt-grid thead .tt-tm{font-size:6.5pt;line-height:1.15}
-#tt-print .tt-grid thead .tt-tm-l{display:none}
-#tt-print .tt-grid thead .tt-tm-s{display:inline}
 #tt-print .tt-grid thead{display:table-header-group}
 #tt-print .tt-grid thead th{font-size:8pt;padding:3pt 2pt;white-space:normal}
 #tt-print .tt-grid tbody tr{break-inside:avoid;page-break-inside:avoid}
@@ -4365,12 +4362,9 @@ const TT_SLOTS=['am','pm'],TT_CAP_SLOTS=['am','pm','ev'],TT_CAP_TIME={am:'09–1
 const TT_CAP_ROOMS=['233','234','235','236'];   // Capstone 优先用这一排(同栋同层);同一位老师固定一间
 const TT_CAP_RIDE_MAX=2;                        // Capstone 2 人以下的小课「跟班」:跟同老师另一门 Capstone 同时间、同教室上
 const TT_TIME={am:'09:00–12:00',pm:'13:30–16:30'},TT_CAP_TIME_FULL={am:'09:00–12:00',pm:'12:00–15:00',ev:'15:00–18:00'};   // 表头用的完整时间(Aj. Tsai 2026-11-17)
-// 课表表头一格:时段名 + 小字时间。cap=这一天(或这一半)有 Capstone 三段 → 下午栏多一行 🎓 12:00–15:00,傍晚栏是 🎓 15:00–18:00
-function _ttSlotHead(s,cap){
-  const capL=function(k){return '<span class="tt-tm tt-tm-cap"><span class="tt-tm-l">🎓 '+TT_CAP_TIME_FULL[k]+'</span><span class="tt-tm-s">🎓 '+TT_CAP_TIME[k]+'</span></span>';};   // 萤幕出完整时间;列印栏窄,出短写(同课片上的 12–15)
-  const t=s==='ev'?capL('ev'):('<span class="tt-tm">'+TT_TIME[s]+'</span>'+((cap&&s==='pm')?capL('pm'):''));
-  return _ttSlotName(s)+t;
-}
+// 课表表头一格:时段名 + 小字时间。表头只写一般上课时间;Capstone 的时间写在课片上(_ttCapTm),学生不用认符号(Aj. Tsai 2026-11-17 方案 A)
+function _ttSlotHead(s){return _ttSlotName(s)+'<span class="tt-tm">'+(TT_TIME[s]||TT_CAP_TIME_FULL[s])+'</span>';}
+function _ttCapTm(p,src){return (p.isCap&&src&&TT_CAP_TIME_FULL[src[1]])?' · <b class="tt-ct">'+TT_CAP_TIME_FULL[src[1]]+'</b>':'';}   // Capstone 课片上的完整时间
 function _ttSlotsFor(c){return (c&&c.isCap)?TT_CAP_SLOTS:TT_SLOTS;}
 function _ttAtoms(c,slot){return (slot==='pm'&&!(c&&c.isCap))?['pm','ev']:[slot];}
 function _ttSlotName(slot,isCap){return slot==='am'?'上午':(slot==='ev'?'傍晚':(isCap?'中午':'下午'));}
@@ -5268,7 +5262,7 @@ function _ttChipHtml(p,bad,src){
   const dragStart=edit?(' draggable="true" ondragstart="_ttDragStart(event,\''+jsq(String(p.id))+'\','+(src?'\''+jsq(src[0])+'\',\''+src[1]+'\'':'null,null')+')"'):'';
   const clickEdit=edit?(' onmousedown="_ttChipDown(event)" onmouseup="_ttChipUp(event,\''+jsq(String(p.id))+'\','+(src?'\''+jsq(src[0])+'\',\''+src[1]+'\'':'null,null')+')"'):'';
   return '<span class="tt-chip'+bd+dr+(edit?' tt-drag':'')+'" style="'+_ttChipStyle(p)+'" data-tt-id="'+eh(String(p.id))+'"'+dragStart+clickEdit+' data-rm="'+eh(String(rm))+'">'+
-    '<span class="tt-c3"><span class="z1">'+p.count+'人'+((p.isCap&&src&&TT_CAP_TIME[src[1]])?' · '+TT_CAP_TIME[src[1]]:'')+'</span>'+
+    '<span class="tt-c3"><span class="z1">'+p.count+'人'+_ttCapTm(p,src)+'</span>'+
     '<span class="z2">'+_ttCC(p)+'</span>'+
     '<span class="z3">'+eh(p.tc||'待定')+'</span><span class="z4 zl" data-short="'+eh(_ttCohText(p,true))+'" data-n="'+(p.cohorts||[]).length+'">'+eh(_ttCohText(p))+'</span></span></span>';   // z4=届别+人数,萤幕上不显示(看浮出卡),列印才出来
 }
@@ -5285,7 +5279,7 @@ function _ttGridHtml(h,sol,only){   // only={教室分组:1}=只出这些教室(
   const cols=[];days.forEach(function(d){(evDay[d]?TT_CAP_SLOTS:TT_SLOTS).forEach(function(s,i){cols.push([d,s,i===0]);});});
   const gcls=sol.whole?'tt-grid-all':(h==='dn'?'tt-grid-dn':'tt-grid-up');
   let th1='<th class="tt-rm">教室</th>',th2='<th class="tt-rm"></th>';
-  days.forEach(function(d){th1+='<th class="ds" colspan="'+(evDay[d]?3:2)+'">'+eh(d)+'</th>';th2+='<th class="ds">'+_ttSlotHead('am',evDay[d])+'</th><th'+(evDay[d]?' title="一般课 13:30–16:30；Capstone 12:00–15:00"':'')+'>'+_ttSlotHead('pm',evDay[d])+'</th>'+(evDay[d]?'<th title="Capstone 15:00–18:00">'+_ttSlotHead('ev',1)+'</th>':'');});
+  days.forEach(function(d){th1+='<th class="ds" colspan="'+(evDay[d]?3:2)+'">'+eh(d)+'</th>';th2+='<th class="ds">'+_ttSlotHead('am')+'</th><th'+(evDay[d]?' title="一般课 13:30–16:30；Capstone 12:00–15:00"':'')+'>'+_ttSlotHead('pm')+'</th>'+(evDay[d]?'<th title="Capstone 15:00–18:00">'+_ttSlotHead('ev')+'</th>':'');});
   let body='';
   const grpOf={},grpCodes={};rooms.forEach(function(rm){const g=_ttRoomGroup(rm.code);grpOf[rm.code]=g;(grpCodes[g]=grpCodes[g]||[]).push(String(rm.code).match(/^\d+/)?String(rm.code).match(/^\d+/)[0]:String(rm.code));});
   const seenGrp={},ogName=sol.whole?'':(h==='dn'?'下半学期':'上半学期');
@@ -5428,7 +5422,7 @@ function _ttTeacherDept(tc,sol){const tt0=(typeof T!=='undefined'?T:[]).find(fun
 function _ttMiniChip(p,mode,bad,src){
   const bd=(bad&&bad[p.id])?' bad':'',cl=_ttCohLabel(p.cohorts),edit=_ttCanEdit(),rm=src?_ttCR(p,src):(p.room||'?');
   let z1,z2,z3;
-  const ct=(p.isCap&&src&&TT_CAP_TIME[src[1]])?' · '+TT_CAP_TIME[src[1]]:'';   // Capstone 标上实际时间
+  const ct=_ttCapTm(p,src);   // Capstone 标上实际时间
   if(mode==='cohort'){z1='@'+eh(rm)+ct;z2=_ttCC(p);z3=eh(p.tc||'待定');}
   else{z1=_ttCC(p);z2=p.count+'人 · '+eh(cl.label);z3='@'+eh(rm)+ct;}   // 人数放前面:届别多被截掉时人数还在
   const dr=(_ttCache.driftIds&&_ttCache.driftIds[String(p.id)])?' tt-drift':'';
@@ -5443,7 +5437,7 @@ function _ttEntityTable(cellMap,hasSat,hasSun,whole,ev,flag,sdm){   // sdm[格]=
     // flag[格]='bad'=同时段多门、要人工确认 → 红框;'ok'=KE/KH 放行
   const days=['周一','周二','周三','周四','周五'].concat(hasSat?['周六']:[]).concat(hasSun?['周日']:[]);
   ev=ev||{};const su=ev['上']?TT_CAP_SLOTS:TT_SLOTS,sd=ev['下']?TT_CAP_SLOTS:TT_SLOTS;   // 有 Capstone 傍晚段的那一半才多一栏
-  const ths=function(sl,cls){return sl.map(function(s){return '<th class="'+cls+'">'+_ttSlotHead(s,sl.length>2)+'</th>';}).join('');};
+  const ths=function(sl,cls){return sl.map(function(s){return '<th class="'+cls+'">'+_ttSlotHead(s)+'</th>';}).join('');};
   let head,cols;
   if(whole){   // 全学期:无上下半
     cols=su.map(function(s){return ['上',s];});
@@ -6402,8 +6396,8 @@ function ttExpExcel(){
   const sol=_ttExpSol();if(!sol)return;const sel=_ttExpSel(),view=sel.view,keys=sel.keys,sem=_ttCache.sem,d=_ttCache.dates||{};
   const X=function(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
   const BR='<br style="mso-data-placement:same-cell;">',TH='background:#534AB7;color:#fff;font-weight:bold;padding:5px 7px;text-align:center;white-space:nowrap',TD='padding:4px 6px;vertical-align:top;text-align:left',RM='background:#F5F4FE;font-weight:bold;padding:4px 7px;white-space:nowrap';
-  const capT=function(p,cs){return (p.isCap&&TT_CAP_TIME[cs[1]])?' '+TT_CAP_TIME[cs[1]]:'';};
-  const hT=function(s,cap){return BR+(s==='ev'?'Capstone '+TT_CAP_TIME_FULL.ev:TT_TIME[s]+((cap&&s==='pm')?BR+'Capstone '+TT_CAP_TIME_FULL.pm:''));};   // 表头时段名下面的时间(同画面表头;Excel 里 Capstone 用文字不用图示)
+  const capT=function(p,cs){return (p.isCap&&TT_CAP_TIME_FULL[cs[1]])?' '+TT_CAP_TIME_FULL[cs[1]]:'';};
+  const hT=function(s){return BR+(TT_TIME[s]||TT_CAP_TIME_FULL[s]);};   // 表头时段名下面的时间(只写一般时间;Capstone 的时间写在每格那门课上)
   const line=function(p,cs,mode){   // 一格里一门课的文字
     const rm=_ttCR(p,cs)||'';
     if(mode==='room')return _ttName(p)+'｜'+p.count+'人'+capT(p,cs)+'｜'+(p.tc||'待定')+(sel.co===false?'':'｜届别：'+_ttCohText(p));
@@ -6422,7 +6416,7 @@ function ttExpExcel(){
       const cols=[];TT_WEEKDAYS.concat(sat?['周六']:[]).concat(sun?['周日']:[]).forEach(function(dy){(evDay[dy]?TT_CAP_SLOTS:TT_SLOTS).forEach(function(s){cols.push([dy,s]);});});
       ncol=cols.length+1;
       body+=title('CIC 课表 · '+sem+' · '+x[1]+((x[2]||x[3])?'　'+_ttDateRange(x[2],x[3]):''),'依教室号'+(only?'（只含 '+Object.keys(only).sort().join('、')+' 开头的教室）':'')+'　｜　每格：课码-班级｜人数｜老师'+(sel.co===false?'':'｜届别 人数')+'　｜　导出日期：'+dateStr);
-      body+='<tr><td style="'+TH+'">教室（容量）</td>'+cols.map(function(c){return '<td style="'+TH+'">'+c[0]+_ttSlotName(c[1])+hT(c[1],evDay[c[0]])+'</td>';}).join('')+'</tr>';
+      body+='<tr><td style="'+TH+'">教室（容量）</td>'+cols.map(function(c){return '<td style="'+TH+'">'+c[0]+_ttSlotName(c[1])+hT(c[1])+'</td>';}).join('')+'</tr>';
       _ttRoomsByNo(sol.rooms).forEach(function(rm){if(only&&!only[_ttRoomGroup(rm.code)])return;
         body+='<tr><td style="'+RM+'">'+X(rm.code)+'（'+rm.cap+'）</td>'+cols.map(function(c){const a=occ[rm.code+'|'+c[0]+'|'+c[1]]||[];return '<td style="'+TD+'">'+a.map(function(o){return X(line(o.p,o.cs,'room'));}).join(BR)+'</td>';}).join('')+'</tr>';});
       body+='<tr><td colspan="'+ncol+'" style="padding:3px"></td></tr>';
@@ -6431,7 +6425,7 @@ function ttExpExcel(){
     const D=_ttEntityData(sol,view),deps=Object.keys(D.byDept).sort().filter(function(dp){return !keys||keys[dp];});
     const anyEv=deps.some(function(dp){return D.byDept[dp].some(function(k){return D.grp[k].ev;});});
     const sl=anyEv?TT_CAP_SLOTS:TT_SLOTS,halves=sol.whole?[['上','全学期']]:[['上','上半'],['下','下半']];
-    const cols=[];halves.forEach(function(h){sl.forEach(function(s){cols.push([h[0],s,h[1]+_ttSlotName(s)+hT(s,anyEv)]);});});
+    const cols=[];halves.forEach(function(h){sl.forEach(function(s){cols.push([h[0],s,h[1]+_ttSlotName(s)+hT(s)]);});});
     ncol=cols.length+1;
     body+=title('CIC 课表 · '+sem+' · '+(view==='cohort'?'依届别':'依授课老师'),(keys?'只含专业 '+deps.join('、')+'　｜　':'')+'每格：'+(view==='cohort'?'课码-班级｜@教室｜老师':'课码-班级｜届别·人数｜@教室')+'　｜　导出日期：'+dateStr);
     deps.forEach(function(dp){
