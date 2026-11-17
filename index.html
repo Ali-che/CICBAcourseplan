@@ -883,6 +883,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <div class="fg"><label>备注</label><input id="s-nt" placeholder="选填"></div>
       </div>
       <div class="fg rq-row" style="margin:8px 0 2px" onmouseenter="_rqRoomOpts('s')" onfocusin="_rqRoomOpts('s')"><label>排课要求 <span style="font-weight:400;color:#888">（课表制作自动排会照办；没有就都留空）</span></label><div style="display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center"><select id="s-rq-room" style="max-width:190px" onchange="_rqTouch('s')"><option value="">教室：不指定</option></select><select id="s-rq-day" style="max-width:130px" onchange="_rqTouch('s')"><option value="">星期：不限</option><option>周一</option><option>周二</option><option>周三</option><option>周四</option><option>周五</option></select><label style="display:inline-flex;align-items:center;gap:4px;font-weight:400;cursor:pointer"><input type="checkbox" id="s-rq-consec" onchange="_rqTouch('s')"> 两节排连续两天</label></div><div id="s-rq-hint" style="display:none;font-size:11px;color:#92400e;margin-top:3px"></div></div>
+      <div id="s-try-hint" class="try-hint" style="display:none;margin:6px 0 2px;padding:8px 10px;background:#F7F7FB;border:1px solid #E5E3F8;border-radius:8px;font-size:11.5px;color:#333;line-height:1.6"></div>
       <div id="s-half-hint" class="half-hint" style="display:none;margin:6px 0 2px;padding:8px 10px;background:#F7F7FB;border:1px solid #E5E3F8;border-radius:8px;font-size:11.5px;color:#333;line-height:1.6"></div>
       <div id="s-cap-hint" class="cap-hint" style="display:none;margin:6px 0 2px;padding:8px 10px;background:#FEF9ED;border:1px solid #F6C667;border-radius:8px;font-size:11.5px;color:#7a4b06;line-height:1.6"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -1755,6 +1756,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       </div>
       <div class="fg" style="margin-bottom:12px"><label>备注</label><input id="m-nt" placeholder="选填（给人看的说明；排课要求请用下面的栏位）"></div>
       <div class="fg rq-row" style="margin-bottom:12px" onmouseenter="_rqRoomOpts('m')" onfocusin="_rqRoomOpts('m')"><label>排课要求 <span style="font-weight:400;color:#888">（课表制作自动排会照办；没有就都留空）</span></label><div style="display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center"><select id="m-rq-room" style="max-width:190px" onchange="_rqTouch('m')"><option value="">教室：不指定</option></select><select id="m-rq-day" style="max-width:130px" onchange="_rqTouch('m')"><option value="">星期：不限</option><option>周一</option><option>周二</option><option>周三</option><option>周四</option><option>周五</option></select><label style="display:inline-flex;align-items:center;gap:4px;font-weight:400;cursor:pointer"><input type="checkbox" id="m-rq-consec" onchange="_rqTouch('m')"> 两节排连续两天</label></div><div id="m-rq-hint" style="display:none;font-size:11px;color:#92400e;margin-top:3px"></div></div>
+      <div id="m-try-hint" class="try-hint" style="display:none;margin:-4px 0 12px;padding:8px 10px;background:#F7F7FB;border:1px solid #E5E3F8;border-radius:8px;font-size:11.5px;color:#333;line-height:1.6"></div>
       <div id="m-half-hint" class="half-hint" style="display:none;margin:-4px 0 12px;padding:8px 10px;background:#F7F7FB;border:1px solid #E5E3F8;border-radius:8px;font-size:11.5px;color:#333;line-height:1.6"></div>
       <div id="m-cap-hint" class="cap-hint" style="display:none;margin:-4px 0 12px;padding:8px 10px;background:#FEF9ED;border:1px solid #F6C667;border-radius:8px;font-size:11.5px;color:#7a4b06;line-height:1.6"></div>
       <div class="modal-sec">届别 · 各届人数</div>
@@ -4588,9 +4590,108 @@ function _capHalvesHtml(H){
     +(H.up.lv>=2&&H.dn.lv>=2?'<div style="margin-top:4px;color:#b42318">两边都很满：要减课、把别的课改半，或排到别的学期。</div>':'')
     +'<div style="margin-top:4px;color:#999;font-size:10.5px">按门数估算（一个届别每半最多 5 门，已有 4 门就很难排），不是实际试排；多届别的大课就算门数够，也可能凑不到共同空档。'+(H.soloN?'只有 1 人的届别（'+H.soloN+' 个）不算。':'')+'</div>';
 }
+// ── 照现在的课表试排(Aj. Tsai 2026-11-18:主任改课的当下就知道课表排不排得进)──
+// 拿这学期「存档的课表」当基准(这门课自己原来的位置先拿掉),用表单上的值真的找一次 2 节的位置:
+//   keep=原来的位置还放得下;fit=排得进(列出位置);other=这一半排不进、另一半排得进;no=排不进(附原因)。
+// 跟「放哪一半」不同:那是按门数估,这是拿课表实际试。只是试,不会改课表——秘书处按「只补排」才真的排进去。
+// 没有存档的学期、实习课:不显示。任何错误都只是不显示。
+let _capTtC={};   // 学期 → {tt,at}:排课表这边读课表存档,2 分钟内不重读
+async function _capTtGet(sem){
+  if(_ttCache.sem===sem&&_ttCache.tt)return _ttCache.tt;   // 这次开过课表制作的同一学期:用它手上的(刚存档／定版的是最新的)
+  const c=_capTtC[sem];if(c&&Date.now()-c.at<120000)return c.tt;
+  let tt=null;try{const r=await gasGet({action:'timetable',sem:sem});if(r&&r.success){tt=r.tt||null;if(r.finalOK)_ttCache.finalOK=true;}}catch(e){}
+  _capTtC[sem]={tt:tt,at:Date.now()};return tt;
+}
+function _capTry(f,tt){
+  if(!f||!f.sem||!f.cc.length||!tt||!Array.isArray(tt.placements)||!tt.placements.length)return null;
+  const sem=f.sem,whole=_ttWholeSem(sem),cat=(_ttCache.refs&&_ttCache.refs.cat)||{};
+  try{
+    const sol=_ttSolutionFromSaved(sem,tt),rooms=sol.rooms||[];if(!rooms.length)return null;
+    const row=Object.assign({},(_ttCourses(sem).filter(function(r){return String(r.id)===f.id;})[0]||{en:''}),f);
+    if(_ttIsIntern(row))return null;
+    _ttLangRefresh(sem);_ttRows[f.id]=row;
+    const mine=function(p){return (_ttMem(p)||[p]).some(function(m){return String(m.id)===f.id;});};
+    const old=sol.placements.filter(mine)[0]||null;
+    sol.placements=sol.placements.filter(function(p){return !mine(p);});sol.unplaced=(sol.unplaced||[]).filter(function(p){return !mine(p);});
+    const cap=_ttIsCap(row),rh=f.half||'';
+    const u={id:f.id,course:String(row.course||'（这门课）'),cls:row.cls||'',tc:row.tc||'',cohorts:_ttCohorts(row),count:_ttCount(row),dept:_ttDept(row,cat),credit:_ttCredit(row,cat),isCap:cap,nt:row.nt||'',note:_ttParseNote(row.nt,rooms),_cc:row.cc||[]};
+    const st=_ttStateFromSol(sol),capTc=_ttCapTcOf(sol),cand=_ttCandRooms(u,rooms);
+    const tryHalf=function(h){u.half=h;delete u._tok;delete u._tokA;const f2=_ttFindSlots(st,u,cand,_ttDaysFor(u,capTc),false);return (f2&&f2.cells.length===2)?f2.cells:null;};
+    const fixed=whole?'up':(cap?'dn':(rh==='上半学期'?'up':(rh==='下半学期'?'dn':(rh==='全学期'?'both':''))));
+    const HN={up:'上半',dn:'下半',both:'全学期'},R={ver:tt.version,fin:_ttFinalState(tt),whole:whole,cap:cap};
+    const txt=function(cells){return cells.map(function(cs){return cs[0]+_ttSlotName(cs[1],cap);}).join('、')+' · 教室 '+cells.map(function(cs){return cs[2];}).filter(function(v,i,a){return a.indexOf(v)===i;}).join('／');};
+    // 1) 原来的位置(老师、届别、人数、指定教室照表单上的)还放不放得下
+    if(old&&(old.cells||[]).length===2&&(!fixed||fixed===old.half||whole||cap)){
+      u.half=old.half;delete u._tok;delete u._tokA;
+      const cells=old.cells.map(function(cs){return [cs[0],cs[1],String(_ttCR(old,cs)||'')];}),om={};
+      _ttSlotOpts(st,u,cand,_ttDaysFor(u,capTc),cells).forEach(function(o){om[o.d+'|'+o.s]=o;});
+      if(cells.every(function(cs){const o=om[cs[0]+'|'+cs[1]];return o&&o.rs.indexOf(cs[2])>=0;})){R.kind='keep';R.half=HN[old.half];R.where=txt(cells);return R;}
+      R.oldWhere=txt(cells);
+    }
+    // 2) 表单上选的那一半(没选:先上半、再下半)
+    const order=fixed?[fixed]:['up','dn'];
+    for(let i=0;i<order.length;i++){const c=tryHalf(order[i]);if(c){R.kind='fit';R.half=HN[order[i]];R.where=txt(c);R.auto=!fixed;R.sameDay=!cap&&c[0][0]===c[1][0];return R;}}
+    // 3) 排不进:原因;写死上/下半的再看另一半
+    u.half=fixed||'up';delete u._tok;delete u._tokA;
+    R.why=_capWhy(st,u,cand,_ttDaysFor(u,capTc),rooms);R.half=HN[fixed||'up'];
+    if(fixed==='up'||fixed==='dn'){const oh=fixed==='up'?'dn':'up',c=tryHalf(oh);if(c){R.kind='other';R.otherHalf=HN[oh];R.where=txt(c);return R;}}
+    R.kind='no';return R;
+  }catch(e){return null;}
+  finally{try{_ttLangRefresh(sem);}catch(e){}}
+}
+// 排不进的原因:这一半每个时段被谁挡住(老师那时有课／哪个届别那时有课／装得下的教室都满了),数一数告诉主任卡在哪
+function _capWhy(st,u,cand,days,rooms){
+  try{
+    if(!cand.length)return (u.note&&u.note.room)?('指定的教室 '+u.note.room+' 装不下 '+u.count+' 人'):('没有装得下 '+u.count+' 人的教室');
+    const hs=_ttHs(u),sl=_ttSlotsFor(u),toks=_ttTok(u).r;let total=0,free=0,nT=0,nR=0;const co={};
+    days.forEach(function(d){sl.forEach(function(sn){
+      total++;const ks=_ttAtoms(u,sn).map(function(a){return d+'|'+a;});let t=false,r=true;const cs={};
+      hs.forEach(function(h){ks.forEach(function(k){
+        if(u.tc&&st.tb[h][u.tc+'|'+k])t=true;
+        toks.forEach(function(tk){if(st.cb[h][tk+'|'+k])cs[tk.replace(/#[EH]$/,'')]=1;});
+      });});
+      r=cand.some(function(rm){const code=String(rm.code);return hs.every(function(h){return ks.every(function(k){return !st.occ[h][code+'|'+k];});});});
+      const cn=Object.keys(cs);
+      if(!t&&!cn.length&&r){free++;return;}
+      if(t)nT++;cn.forEach(function(c){co[c]=(co[c]||0)+1;});if(!t&&!cn.length&&!r)nR++;
+    });});
+    const parts=[];
+    if(nT)parts.push('老师'+(u.tc?' '+u.tc:'')+' 那时有课 '+nT+' 个时段');
+    const cl=Object.keys(co).sort(function(a,b){return co[b]-co[a]||a.localeCompare(b);});
+    if(cl.length)parts.push('届别 '+cl.slice(0,3).map(function(c){return c+' 有课 '+co[c]+' 个';}).join('、')+(cl.length>3?' 等':''));
+    if(nR)parts.push('装得下的教室都满了 '+nR+' 个时段');
+    return '这一半 '+total+' 个时段里只有 '+free+' 个排得进（要 2 个）'+(parts.length?'。挡住的：'+parts.join('；'):'');
+  }catch(e){return '';}
+}
+function _capTryHtml(R){
+  const base='<div style="margin-top:4px;color:#999;font-size:10.5px">拿课表存档 v'+eh(String(R.ver))+(R.fin==='final'?'（已定版）':(R.fin==='draft'?'（草稿）':''))+' 实际试的（这门课自己原来的位置不算）。只是试，不会改课表；储存后请秘书处在课表制作按「只补排」。</div>';
+  const head='<b>🗓 照现在的课表试排</b>　';
+  if(R.kind==='keep')return head+'<span style="color:#1a6b2f;font-weight:600">🟢 不用动</span>：原来的位置还放得下（'+eh(R.half)+' · '+eh(R.where)+'）。'+base;
+  if(R.kind==='fit')return head+'<span style="color:#1a6b2f;font-weight:600">🟢 排得进</span>：'+eh(R.half)+' · '+eh(R.where)+(R.auto?'<span style="color:#888">（没选上下半，试到的是'+eh(R.half)+'）</span>':'')+'。'
+    +(R.oldWhere?'<br><span style="color:#92400e">原来的位置（'+eh(R.oldWhere)+'）照这样改就放不下了，要换到上面这个位置。</span>':'')
+    +(R.sameDay?'<br><span style="color:#b45309">两节只能排在同一天。</span>':'')+base;
+  if(R.kind==='other')return head+'<span style="color:#b45309;font-weight:600">🟠 '+eh(R.half)+'排不进</span>'+(R.why?'：'+eh(R.why):'。')+'<br><b style="color:#1a6b2f">改到'+eh(R.otherHalf)+'就排得进</b>：'+eh(R.where)+'。'+base;
+  return head+'<span style="color:#b42318;font-weight:600">🔴 排不进</span>'+(R.why?'：'+eh(R.why):'。')+(R.oldWhere?'<br><span style="color:#92400e">原来的位置（'+eh(R.oldWhere)+'）照这样改也放不下。</span>':'')+base;
+}
+let _capTryTok={};
+async function _capTryHint(pre){
+  const box=document.getElementById(pre+'-try-hint');if(!box)return;
+  const tok=_capTryTok[pre]=(_capTryTok[pre]||0)+1,hide=function(){box.style.display='none';box.innerHTML='';};
+  let f=null;try{f=_capFormVals(pre);}catch(e){}
+  if(!f||!f.sem||!f.cc.length){hide();return;}
+  try{
+    const tt=await _capTtGet(f.sem);if(_capTryTok[pre]!==tok)return;
+    if(!tt){hide();return;}
+    if(!_ttCache.refs){await _rqEnsureRooms();if(_capTryTok[pre]!==tok)return;}
+    const R=_capTry(_capFormVals(pre),tt);
+    if(!R||!R.kind){hide();return;}
+    box.innerHTML=_capTryHtml(R);box.style.display='';
+  }catch(e){hide();}
+}
 let _capT={};
 function _capHintLater(pre,ms){clearTimeout(_capT[pre]);_capT[pre]=setTimeout(function(){_capHint(pre);},ms||200);}
 function _capHint(pre){
+  _capTryHint(pre);   // 照现在的课表存档实际试排(要读存档,非同步)
   const hb=document.getElementById(pre+'-half-hint');   // 放哪一半比较排得上(格子够也显示)
   if(hb){let H=null;try{H=_capHalves(_capFormVals(pre));}catch(e){H=null;}if(H){hb.innerHTML=_capHalvesHtml(H);hb.style.display='';}else{hb.style.display='none';hb.innerHTML='';}}
   const box=document.getElementById(pre+'-cap-hint');if(!box)return;
