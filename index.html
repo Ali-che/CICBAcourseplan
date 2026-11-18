@@ -6203,7 +6203,7 @@ function _ttCheckBar(sol){
   const num=function(n,cls,t){return n?'<b class="'+cls+'">'+t+'</b>':'<span class="z">'+t+'</span>';};
   let h='<div class="tt-chk"><div class="tt-chk-h"><b>🔎 课表检查</b>：不符合排课要求的地方 —— '+num(nH,'r','撞堂／超容量 '+nH+' 门')+' · '+num(nM,'r','同时段多门 '+nM+' 格')+' · '+num(nS,'o','两节同一天 '+nS+' 门')+'<span class="hint"> · 点名称跳到课表</span></div>';
   const half=function(p){return sol.whole?'':(p.half==='up'?'上半 ':(p.half==='dn'?'下半 ':''));};
-  if(nH)h+='<div class="tt-chk-r"><span class="lab">撞堂／超容量</span>'+D.hard.map(function(p){return '<span class="tt-chk-p" title="'+eh((D.why[p.id]||[]).join('；'))+'" onclick="_ttJumpTo(\''+jsq(String(p.id))+'\')">'+_ttCC(p)+'</span>';}).join('')+'<span class="sub">课片有红框</span></div>';
+  if(nH)h+='<div class="tt-chk-r"><span class="lab">撞堂／超容量</span>'+D.hard.map(function(p){return '<span class="tt-chk-p" title="'+eh((D.why[p.id]||[]).join('；'))+'" onclick="_ttJumpTo(\''+jsq(String(p.id))+'\')">'+_ttCC(p)+'</span><span class="tt-chk-p tt-sdadv" title="看这门课的调整建议" onclick="ttHardAdvise(\''+jsq(String(p.id))+'\')">💡 建议</span>';}).join('')+'<span class="sub">课片有红框</span></div>';
   if(nM){
     const ent=function(mode,a,name){return a.length?'<span class="sub">'+name+' '+a.reduce(function(t,x){return t+x.n;},0)+' 格：</span>'+a.map(function(x){return '<span class="tt-chk-p" title="切到「'+(mode==='cohort'?'依届别':'依授课老师')+'」看这张课表" onclick="ttCheckGo(\''+mode+'\',\''+jsq(x.key)+'\')">'+eh(x.key)+(x.n>1?' <small>×'+x.n+'</small>':'')+'</span>';}).join(''):'';};
     h+='<div class="tt-chk-r"><span class="lab">同时段多门</span>'+ent('cohort',D.multi.cohort,'届别')+ent('teacher',D.multi.teacher,'老师')+
@@ -6352,15 +6352,15 @@ function _ttPlanShow(body,foot){const m=_ttPlanEl();{const t0=m.querySelector('.
 // ── 排不好的课的调整建议(Aj. Tsai 2026-11-19):「两节同一天」「没排到连续两天」 ──
 // 列出这门课可以改去的时段,每个时段被谁挡住(老师或届别已经有课),挑差最少的几个;只挡一门的再试那一门有没有别处可去;再试「改到另一半学期」。只给建议,不动课表。
 // kind='sd':两节要分开不同天;kind='consec':要连续两天(或周一＋周五)——留一节不动、挪另一节。
-function _ttAdvSlots(sol,p,kind){
+function _ttAdvSlots(sol,p,kind,idx){
   const st=_ttStateFromSol(sol,p.id),h=_ttHs(p)[0],cand=_ttCandRooms(p,sol.rooms),toks=_ttTok(p).r,P=sol.placements||[],rows=[],seen={};
   const nm=function(id){const q=P.find(function(x){return String(x.id)===String(id);});return q?_ttName(q):String(id);};
   const lab=function(c){return c[0]+(c[1]==='am'?'上午':'下午');};
-  const ok=function(kd,d){const a=_TT_DAYIDX[kd]||0,b=_TT_DAYIDX[d]||0,df=Math.abs(a-b);return kind==='consec'?(df===1||df===4):d!==kd;};
-  (kind==='consec'?[0,1]:[0]).forEach(function(keep){
+  const ok=function(kd,d){const a=_TT_DAYIDX[kd]||0,b=_TT_DAYIDX[d]||0,df=Math.abs(a-b);return kind==='consec'?(df===1||df===4):(kind==='hard'?true:d!==kd);};
+  (kind==='consec'?[0,1]:(kind==='hard'?[1-(idx||0)]:[0])).forEach(function(keep){
     const kept=p.cells[keep],other=p.cells[1-keep];
     TT_WEEKDAYS.forEach(function(d){TT_SLOTS.forEach(function(sl){
-      if(!ok(kept[0],d)||(d===other[0]&&sl===other[1])||(d===kept[0]&&sl===kept[1]))return;
+      if(!ok(kept[0],d)||(d===other[0]&&sl===other[1])||(d===kept[0]&&sl===kept[1]))return;   /* 挪的那一节(other)原来的位置不算候选 */
       const key=kept[0]+kept[1]+'|'+d+sl;if(seen[key])return;seen[key]=1;
       const ks=_ttAtoms(p,sl,d).map(function(a){return d+'|'+a;}),bl={};
       ks.forEach(function(k){
@@ -6418,6 +6418,66 @@ async function ttSdAdvise(id,kind){
       const good=q&&(q.cells||[]).length===2&&(kind==='consec'?_ttConsecOk(q):!_ttIsSameDay(q)),worse=un1>un0,on=other==='up'?'上半':'下半',what=kind==='consec'?'没排到连续两天':'两节同一天';
       if(li())li().innerHTML=good?('<b>改到'+on+'学期</b>（在排课表改上下半）：试排的结果 <b>'+eh(_ttCC(p))+' 排好了</b>（'+eh(cellTxt(q.cells))+'），未排 '+un0+' → '+un1+' 门，'+what+' '+n0+' → '+n1+' 门'+(worse?'<span style="color:#b42318">（但会多 '+(un1-un0)+' 门排不上，不建议）</span>':'，<span style="color:#1a6b2f">其他课没有变差，可以改</span>')+'。'):('<b>改到'+on+'学期</b>：试排过，这门课还是排不好'+(q&&(q.cells||[]).length<2?'（只排得上 1 节）':'')+'，改半帮不上。');
     }else if(li())li().innerHTML='这门课的上下半没有写明（或是全学期），没有「改到另一半」可试。';
+  }catch(e){_ttPlanShow('<div class="ttplan-wait">查不出建议：'+eh(String(e&&e.message||e))+'</div>',foot);}
+}
+// ── 个别学生撞课、撞堂／超容量 的调整建议:用排课同一套找位置的做法(_ttSlotOpts),列出这一节可以挪去的时段 ──
+function _ttGapTxt(kd,d){const df=Math.abs((_TT_DAYIDX[kd]||0)-(_TT_DAYIDX[d]||0));return df===0?'同一天':(df===1?'连续两天':(df===2?'隔一天':(df===4&&((kd==='周一'&&d==='周五')||(kd==='周五'&&d==='周一'))?'周一＋周五':'隔 '+(df-1)+' 天')));}
+function _ttAdvOpts(sol,X,idx){   // X 的第 idx 节可以挪去哪些时段:老师、届别、教室都没冲突的(个别学生撞课另算 pen);照「撞课少 → 两节间隔好」排
+  const st=_ttStateFromSol(sol,X.id),cand=_ttCandRooms(X,sol.rooms),days=_ttDaysFor(X,_ttCapTcOf(sol)),kept=X.cells[1-idx],cur=X.cells[idx];
+  const all=_ttSlotOpts(st,X,cand,days);
+  const opts=all.filter(function(o){return !(o.d===cur[0]&&o.s===cur[1])&&!(o.d===kept[0]&&o.s===kept[1]);});
+  opts.forEach(function(o){o.sc=_ttCellScore(X,[kept[0],kept[1]],[o.d,o.s]);o.gap=_ttGapTxt(kept[0],o.d);});
+  opts.sort(function(a,b){return (a.pen-b.pen)||(a.sc-b.sc);});
+  return {all:all,opts:opts,kept:kept,cur:cur};
+}
+function _ttAdvOptTable(o,showPen){
+  const th='padding:3px 8px;text-align:left;color:#3C3489;background:#F5F4FE',td='padding:3px 8px;border-top:0.5px solid #eee';
+  if(!o.opts.length)return '<div style="color:#b42318;margin:2px 0 4px">这一节在其他时段都放不进去（老师、届别、教室至少有一样没有空）。</div>';
+  return '<table data-gsort="off" style="border-collapse:collapse;margin:2px 0 4px;font-size:12px;width:100%"><tr><th style="'+th+'">挪到</th><th style="'+th+'">教室</th>'+(showPen?'<th style="'+th+'">个别学生撞课</th>':'')+'<th style="'+th+'">跟另一节</th></tr>'
+    +o.opts.slice(0,4).map(function(x){return '<tr><td style="'+td+';white-space:nowrap"><b>'+eh(x.d+(x.s==='am'?'上午':'下午'))+'</b></td><td style="'+td+'">'+eh(x.rs.slice(0,3).join('、'))+'</td>'+(showPen?'<td style="'+td+'">'+(x.pen?'<span style="color:#b45309">'+x.pen+' 组</span>':'<span style="color:#1a6b2f">没有</span>')+'</td>':'')+'<td style="'+td+'">'+eh(x.gap)+'</td></tr>';}).join('')+'</table>';
+}
+function _ttAdvShell(title,inner){return '<div class="ttplan-title" style="font-size:15px;font-weight:600;color:#3C3489;margin-bottom:6px">💡 '+eh(title)+'</div><div style="font-size:12px;line-height:1.75;color:#333">'+inner+'</div>';}
+function ttSoloAdvise(aId,bId,co,dsJson){   // 个别学生撞课:挪哪一门的哪一节
+  const sol=_ttCache.sol||(_ttCache.tt?_ttSolutionFromSaved(_ttCache.sem,_ttCache.tt):null);if(!sol)return;
+  const foot='<button class="btn btn-sm" onclick="ttPlanClose()">关闭</button>',P=sol.placements||[];
+  try{
+    const A=P.find(function(x){return String(x.id)===String(aId);}),B=P.find(function(x){return String(x.id)===String(bId);});if(!A||!B)return;
+    const ds=JSON.parse(dsJson||'[]'),cellName=function(c){return c[0]+(c[1]==='am'?'上午':'下午');};
+    let h='<div><b>现在</b>：届别 <b>'+eh(co)+'</b>（在这两门课里各只有 1 位学生）同一时间要上 <b>'+eh(_ttCC(A))+'</b> 和 <b>'+eh(_ttCC(B))+'</b>：'+eh(ds.map(function(x){return cellName(x);}).join('、'))+'。</div><div style="margin-top:6px"><b>建议</b>：挪开其中一门的那一节就不撞了。</div>';
+    let n=0;
+    [A,B].forEach(function(X){
+      h+='<div style="margin-top:6px"><b>'+(++n)+'. 挪 '+eh(_ttCC(X))+'</b>（'+eh(X.tc||'老师待定')+' · 全班 '+X.count+' 人）';
+      if(X.isCap||(X.cells||[]).length!==2){h+='：这门课不是一周两节的一般课（Capstone 或只排了 1 节），请在课表上手动处理。</div>';return;}
+      const idxs=[];X.cells.forEach(function(c,i){if(ds.some(function(x){return x[0]===c[0]&&x[1]===c[1];}))idxs.push(i);});if(!idxs.length)idxs.push(0);
+      h+='</div>';
+      idxs.slice(0,2).forEach(function(i){const o=_ttAdvOpts(sol,X,i);h+='<div style="margin:2px 0 0">把 <b>'+eh(cellName(o.cur))+'</b> 这一节挪到：'+(o.opts.length&&o.opts[0].pen===0?'<span style="color:#1a6b2f">（有时段完全不撞）</span>':'')+'</div>'+_ttAdvOptTable(o,true);});
+    });
+    h+='<div style="margin-top:6px"><b>'+(++n)+'. 或在排课表确认</b>：这位学生是不是真的要同时修这两门；如果不是，把他从其中一门的届别人数里拿掉，撞课就消失了（「改」钮可直接开排课编辑窗）。</div>';
+    _ttPlanShow(_ttAdvShell('调整建议 · 个别学生撞课 · '+co,h),foot);
+  }catch(e){_ttPlanShow('<div class="ttplan-wait">查不出建议：'+eh(String(e&&e.message||e))+'</div>',foot);}
+}
+function ttHardAdvise(id){   // 撞堂／超容量:哪一节有问题、挪到哪里或换哪间教室
+  const sol=_ttCache.sol||(_ttCache.tt?_ttSolutionFromSaved(_ttCache.sem,_ttCache.tt):null);if(!sol)return;
+  const foot='<button class="btn btn-sm" onclick="ttPlanClose()">关闭</button>';
+  try{
+    const p=(sol.placements||[]).find(function(x){return String(x.id)===String(id);});if(!p||p.isCap||(p.cells||[]).length<1)return;
+    _ttConflicts(sol.placements);const why=(_ttBadWhy[p.id]||[]).slice();
+    const cellName=function(c){return c[0]+(c[1]==='am'?'上午':'下午');};
+    let h='<div><b>现在</b>：'+eh((sol.whole?'':(({up:'上半',dn:'下半',both:'全学期'})[p.half]||'')+' ')+p.cells.map(function(c){return cellName(c)+' @'+_ttCR(p,c);}).join('＋'))+'（'+p.count+' 人 · '+eh(p.tc||'待定')+'）</div>'
+      +'<div style="margin-top:4px"><b>为什么红</b>：'+(why.length?why.map(eh).join('；'):'这门课和别的课有冲突')+'</div>';
+    if(p.cells.length!==2){h+='<div style="margin-top:6px">这门课只排了 1 节，先按「⚡ 一键自动排」或把它补成 2 节再看。</div>';_ttPlanShow(_ttAdvShell('调整建议 · '+_ttCC(p),h),foot);return;}
+    let n=0;
+    p.cells.forEach(function(c,i){
+      const o=_ttAdvOpts(sol,p,i),here=o.all.filter(function(x){return x.d===c[0]&&x.s===c[1];})[0],rm=String(_ttCR(p,c));
+      const timeOk=!!here,roomOk=!!here&&here.rs.indexOf(rm)>=0;
+      if(timeOk&&roomOk)return;
+      h+='<div style="margin-top:6px"><b>'+(++n)+'. '+eh(cellName(c))+' 这一节</b>：';
+      if(timeOk&&!roomOk){h+='时段没问题，问题在教室。<b>换教室</b>：'+eh(here.rs.slice(0,4).join('、'))+'（这几间在这个时段有空、也坐得下 '+p.count+' 人）。</div>';return;}
+      h+='这个时段老师、届别或教室已经被占，<b>挪到</b>：</div>'+_ttAdvOptTable(o,false);
+      if(!o.opts.length){const rows=_ttAdvSlots(sol,p,'hard',i).slice(0,3);if(rows.length)h+='<div style="color:#777">差最少的时段：'+rows.map(function(r){return eh(r.d+(r.s==='am'?'上午':'下午'))+'（被 '+r.blk.map(function(b){return eh(b.name);}).join('、')+' 挡住）';}).join('；')+'</div>';}
+    });
+    if(!n)h+='<div style="margin-top:6px">两节各自看都没有冲突：问题可能出在别的课身上（这门课是被它撞到的），请看同一个格子里的另一门。</div>';
+    _ttPlanShow(_ttAdvShell('调整建议 · 撞堂／超容量 · '+_ttCC(p),h),foot);
   }catch(e){_ttPlanShow('<div class="ttplan-wait">查不出建议：'+eh(String(e&&e.message||e))+'</div>',foot);}
 }
 async function ttHalfPlan(){
@@ -6537,7 +6597,7 @@ function _ttFootDetails(sol){
   if(todo.length)rTodo='<div class="tt-iss-h note">📝 备注待看 '+todo.length+' 门<span> · 点一下跳到课表</span></div>'+todo.map(function(o){const c=o.c;return '<div class="tt-side-item note jump" onclick="_ttJumpTo(\''+jsq(String(c.id))+'\')">'+_ttDepTag(nDep(o))+'<b>'+_ttCC(c)+'</b>'+(c.room?' · 暂排 '+eh(c.room):'')+'<br><span class="t">'+eh(o.n.raw||c.nt||'')+'</span>'+_ttNoteApplied(c,o.n)+'</div>';}).join('');
   if(other.length)rOther='<details class="tt-iss-fold"'+_ttFoldAttr('notes')+'><summary>其他备注 '+other.length+' 条（已照办／变更记录，不用处理）</summary>'+other.map(function(o){const c=o.c;return '<div class="tt-side-item log jump" onclick="_ttJumpTo(\''+jsq(String(c.id))+'\')">'+_ttDepTag(nDep(o))+'<b>'+_ttCC(c)+'</b>：'+eh(o.n.raw||c.nt||'')+(o.kind==='done'?' <span class="ok">✓ 已照办</span>':'')+'</div>';}).join('')+'</details>';
   // 个别学生撞课:同一届别、同两门课的几个时段并成一条
-  const soloG=[],soloK={};(_ttCache.solo||[]).forEach(function(x){const k=x.co+'\u0001'+[String(x.a.id),String(x.b.id)].sort().join('\u0001');if(!soloK[k]){soloK[k]={co:x.co,a:x.a,b:x.b,when:[]};soloG.push(soloK[k]);}soloK[k].when.push(_ttSoloWhen(x,sol.whole));});
+  const soloG=[],soloK={};(_ttCache.solo||[]).forEach(function(x){const k=x.co+'\u0001'+[String(x.a.id),String(x.b.id)].sort().join('\u0001');if(!soloK[k]){soloK[k]={co:x.co,a:x.a,b:x.b,when:[],ds:[]};soloG.push(soloK[k]);}soloK[k].when.push(_ttSoloWhen(x,sol.whole));if(!soloK[k].ds.some(function(q){return q[0]===x.d&&q[1]===x.s;}))soloK[k].ds.push([x.d,x.s]);});
   // 照专业排序(专业 → 届别名),并可用专业筛选(Aj. Tsai 2026-11-16);专业的判法同全站(cohortDept)
   soloG.forEach(function(x){x.dep=(typeof cohortDept==='function'&&cohortDept(x.co))||'其他';});
   soloG.sort(function(a,b){return a.dep.localeCompare(b.dep)||a.co.localeCompare(b.co);});
@@ -6550,7 +6610,7 @@ function _ttFootDetails(sol){
       (dl.length>1?'<div class="tt-solo-f"><span class="lab">专业</span>'+fchip('','全部 '+solo.length)+dl.map(function(d){return fchip(d,d+' '+dc[d]);}).join('')+'</div>':'')+
       shown.map(function(x){
       const row=_ttSoloRow(x),rc=row&&_ttRows[row]?String(_ttRows[row].course||''):'',col=_ttDeptColor(x.dep);   // 该届别只占 1 人的那笔排课 → 「改排课」直接开它的编辑窗
-      return '<div class="tt-side-item note tt-solo-row" data-dep="'+eh(x.dep)+'"><div class="tt-solo-main"><div class="tt-solo-h"><span class="tt-solo-dep" style="background:'+col.bg+';color:'+col.fg+'">'+eh(x.dep)+'</span><b>'+eh(x.co)+'</b><span class="when">'+eh(_ttSoloWhenTxt(x.when))+'</span><span class="what">同时要上两门课</span></div>'+[x.a,x.b].sort(function(m,n){return (n.count||0)-(m.count||0);}).map(function(c,i){return '<div class="tt-solo-c"><span class="no">'+(i?'②':'①')+'</span><b>'+_ttCC(c)+'</b><span>教室 '+eh(_ttRoomsOf(c))+'</span><span>'+eh(c.tc||'老师待定')+'</span><span>全班 '+c.count+' 人</span></div>';}).join('')+'</div><span class="tt-solo-btns"><button class="btn btn-sm" onclick="_ttJumpTo(\''+jsq(String(x.a.id))+'\')" title="跳到课表里这门课">看课表</button>'+(rc?'<button class="btn btn-sm" onclick="startES(\''+jsq(row)+'\')" title="打开 '+eh(rc)+' 的排课编辑窗：把这位同学拿掉，或改到别的班">'+_ICO.edit+' 改 '+eh(rc)+'</button>':'')+'</span></div>';
+      return '<div class="tt-side-item note tt-solo-row" data-dep="'+eh(x.dep)+'"><div class="tt-solo-main"><div class="tt-solo-h"><span class="tt-solo-dep" style="background:'+col.bg+';color:'+col.fg+'">'+eh(x.dep)+'</span><b>'+eh(x.co)+'</b><span class="when">'+eh(_ttSoloWhenTxt(x.when))+'</span><span class="what">同时要上两门课</span></div>'+[x.a,x.b].sort(function(m,n){return (n.count||0)-(m.count||0);}).map(function(c,i){return '<div class="tt-solo-c"><span class="no">'+(i?'②':'①')+'</span><b>'+_ttCC(c)+'</b><span>教室 '+eh(_ttRoomsOf(c))+'</span><span>'+eh(c.tc||'老师待定')+'</span><span>全班 '+c.count+' 人</span></div>';}).join('')+'</div><span class="tt-solo-btns"><button class="btn btn-sm" onclick="ttSoloAdvise(\''+jsq(String(x.a.id))+'\',\''+jsq(String(x.b.id))+'\',\''+jsq(x.co)+'\',\''+eh(JSON.stringify(x.ds))+'\')" title="看怎么调才不撞">💡 建议</button><button class="btn btn-sm" onclick="_ttJumpTo(\''+jsq(String(x.a.id))+'\')" title="跳到课表里这门课">看课表</button>'+(rc?'<button class="btn btn-sm" onclick="startES(\''+jsq(row)+'\')" title="打开 '+eh(rc)+' 的排课编辑窗：把这位同学拿掉，或改到别的班">'+_ICO.edit+' 改 '+eh(rc)+'</button>':'')+'</span></div>';
     }).join('')+'<div class="tt-iss-tip">'+(_ttCanEdit()?'在排课编辑窗存好之后，回来按「⚡ 一键自动排」重排，这份清单才会更新。':'在排课编辑窗存好之后，要请 Head of Administration 或管理员重排并存档，这份清单才会更新（你这个账号不能重排课表）。')+'</div></details>';}
   const coDep=function(co){return (typeof cohortDept==='function'&&cohortDept(co))||'其他';};
   const lg=_ttLang,lgCo=Object.keys(lg.ke||{}).filter(function(co){return lg.kh&&lg.kh[co];}).sort(function(a,b){return coDep(a).localeCompare(coDep(b))||a.localeCompare(b);});
