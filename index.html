@@ -611,7 +611,8 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 /* ── 课表列印版面(A4 横向)。#tt-print 只在列印时存在;规则不包在 @media print 里,送印前才能先在画面外照同样版面量字、缩字 ──
    原则(Aj. Tsai 2026-11-16):每个课片同样宽高、每一列同样高;字放不下由 _ttPrintFitText 统一缩小,再不行才精简 */
 #tt-print{--tt-rowh:96px}            /* 依教室号·印届别:一页 6 间教室(届别多,要留高度) */
-#tt-print.noco{--tt-rowh:37px}       /* 依教室号·不印届别:一页放得下 17 间 */
+#tt-print.noco{--tt-rowh:37px}
+#tt-print.noco.hascapgrp{--tt-rowh:52px}   /* 有「合班」课片(同一位老师的 Capstone 并成一个)时,不印届别的列高多留一点 */       /* 依教室号·不印届别:一页放得下 17 间 */
 #tt-print.ent{--tt-rowh:42px}        /* 依届别 */
 #tt-print.ent.tch{--tt-rowh:48px}    /* 依授课老师:每片要列出届别,留高一点;一页放 2 位老师 */
 #tt-print.tch .tt-c3 .z1{font-size:7.5pt;font-weight:700;font-family:inherit;color:inherit}   /* 课码当主标题 */
@@ -659,6 +660,9 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 #tt-print .tt-grid-up .z2,#tt-print .tt-grid-dn .z2,#tt-print .tt-grid-all .z2{order:3;flex:0 0 100%}
 #tt-print .tt-c3 .z4{order:4;flex:0 0 100%;display:block;font-size:6pt;color:#333;text-align:left;line-height:1.2;margin-top:1px;padding-top:1px;border-top:0.5pt dotted rgba(0,0,0,.25);white-space:normal;overflow-wrap:anywhere}
 #tt-print.noco .tt-c3 .z4{display:none!important}
+#tt-print.noco .tt-chip.capgrp .z3{display:none!important}
+#tt-print.noco .tt-chip.capgrp .z1{font-size:5pt;line-height:1.05}
+#tt-print.noco .tt-chip.capgrp .z2{font-size:4.8pt;line-height:1.05}   /* 合班课片(同一位老师的 Capstone 并成一个):不印届别时太矮,老师那行拿掉(课码已写全) */
 #tt-print .tt-ecard{padding:4pt 6pt;margin-bottom:6pt;border:0.5pt solid #cfcbe8;break-inside:avoid;page-break-inside:avoid}
 #tt-print .tt-ehdr{font-size:10pt;margin-bottom:3pt}
 #tt-print .tt-pillbar{margin:3pt 0 0!important;padding:3pt 5pt;font-size:7.5pt}
@@ -1414,7 +1418,8 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <div style="font-size:12.5px;font-weight:600;color:#3C3489;margin-bottom:8px">⚙️ 特殊规则</div>
       <ul style="margin:0;padding-left:18px;font-size:12px;color:#534AB7;line-height:1.95">
         <li><b>时段</b>：周一~周五，上午 09:00–12:00、下午 13:30–16:30；每门课一周 2 节</li>
-        <li><b>Capstone</b>：每门各排 2 节；先排周五 → 周五放不下的排周一～周四 → 再不行才周日；不排周六</li>
+        <li><b>Capstone（周五 Capstone 日，预设）</b>：全部排周五上午＋下午；同一位老师的 Capstone 同时间同教室（合班）；Capstone 之间的届别重叠不算撞课（学生周五会被打乱分给各老师）；平日 0 节</li>
+        <li>「⚙️ 选项」关掉周五 Capstone 日：Capstone 逐门排，先周五 → 周一～周四 → 周日；不排周六</li>
         <li>Capstone 时间：每天都是 09:00–12:00 或 13:30–16:30（不排傍晚）；全部 Capstone 先排，一般课再绕着排</li>
         <li>Capstone 的学生：只有 1 位的届别也算，不能撞</li>
         <li>修 Capstone 的届别、教 Capstone 的老师：周五不排一般课</li>
@@ -5062,9 +5067,27 @@ function _ttCapPlanFull(caps,list,quick){
   if(Object.keys(_ttCapFMemo).length>12)_ttCapFMemo={};
   _ttCapFMemo[sig]=plan;return plan;
 }
+// ── 周五 Capstone 日(Aj. Tsai 2026-11-19) ──
+// 课表只是让学生(届别)注册;真正周五那天,所有届别的学生打乱、分给各位 Capstone 老师,每位老师整天(上午＋下午)带一个班。
+// → 同一位老师的 Capstone 排在周五上午＋下午、同一间教室(合班);Capstone 之间的届别重叠不算撞课;平日 0 节。
+// 教室:233～236 为主,每个班一间;人数用「全部学生(每个届别只算一次)÷ 班数」检查,不用各门人数相加。
+// 排不下(教室不够)回 null,交给原本的排法。
+function _ttCapPlanFriday(caps,rooms){
+  if(!caps.length)return null;
+  const groups={};caps.forEach(function(c){const k=c.tc?('T:'+c.tc):('I:'+c.id);(groups[k]=groups[k]||[]).push(c);});
+  const keys=Object.keys(groups).sort(function(a,b){return groups[b].length-groups[a].length;});
+  const per={};caps.forEach(function(c){const r=_ttRows[String(c.id)];((r&&r.cc)||[]).forEach(function(x){if(x.cohort)per[x.cohort]=Math.max(per[x.cohort]||0,+x.count||0);});});
+  const total=Object.keys(per).reduce(function(a,k){return a+per[k];},0),size=Math.max(1,Math.ceil(total/keys.length));
+  const fit=(rooms||[]).filter(function(r){return _ttRoomFits(r.cap,size);}).sort(function(a,b){return (+a.cap||0)-(+b.cap||0);});
+  const pool=fit.filter(function(r){return TT_CAP_ROOMS.indexOf(String(r.code))>=0;}).concat(fit.filter(function(r){return TT_CAP_ROOMS.indexOf(String(r.code))<0&&!_ttRoomSpecial(r.code);}));
+  if(pool.length<keys.length)return null;
+  const plan={__late:{},__half:{},__fri:{size:size,total:total,groups:keys.length}};
+  keys.forEach(function(k,i){const rm=String(pool[i].code);groups[k].forEach(function(c){plan[String(c.id)]=[[TT_CAP_MAIN[0],'am',rm],[TT_CAP_MAIN[0],'pm',rm]];});});
+  return [plan];
+}
 function _ttCapPlan(caps,list,quick){
   if(!caps.length)return null;
-  return (list&&_ttCapPlanFull(caps,list,quick))||_ttCapPlanStaged(caps);
+  return (list&&_ttCapPlanFull(caps,list,quick))||_ttCapPlanStaged(caps);   // (周五 Capstone 日在 _ttSolveCore 里先试)
 }
 // 排一遍:依 _k 由大到小(约束紧的先)→ 排不满的试「挪一门」→ 还不行才退而排 1 节
 function _ttRunOnce(list,capPlan){
@@ -5367,6 +5390,13 @@ function ttTop3Use(i){
   if(typeof showToast==='function')showToast('已换成方案 '+(i+1)+'；要回到刚才的课表按「↶ 还原」',{kind:'success'});
 }
 function _ttTierOn(){return _lsGet('cic_tt_tier')!=='0';}
+function _ttCapFriOn(){return _lsGet('cic_tt_capfri')!=='0';}   // 「周五 Capstone 日」:预设打开(Aj. Tsai 2026-11-19)
+function ttCapFriToggle(on){
+  _lsSet('cic_tt_capfri',on?'1':'0');
+  if(_ttCanEdit()&&_ttCache.sol&&_ttCache.sem){ttAutoSolve();if(typeof showToast==='function')showToast((on?'已打开':'已关掉')+'「周五 Capstone 日」并重排；要回到刚才的课表按「↶ 还原」',{kind:'success'});}
+  else renderTtPanel();
+}
+function _ttAllCapSameTc(a){return !!a.length&&a.every(function(p){return p.isCap&&p.tc&&p.tc===a[0].tc;});}   // 一格里全是同一位老师的 Capstone = 同一个班(合班)
 function ttTierToggle(on){
   _lsSet('cic_tt_tier',on?'1':'0');
   if(_ttCanEdit()&&_ttCache.sol&&_ttCache.sem){ttAutoSolve();if(typeof showToast==='function')showToast((on?'已打开':'已关掉')+'「课排满优先」并重排；要回到刚才的课表按「↶ 还原」',{kind:'success'});}
@@ -5431,7 +5461,8 @@ function _ttSolveCore(sem,opts){
   let seed=20261115;const rnd=function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};
   let capPlan=null;
   if(!opts.keep){   // 只补排时不用(它不知道哪些时段已被锁住的课占着)
-    const plans=_ttCapPlan(list.filter(function(c){return c.isCap;}),list,!!opts.tries)||[];
+    const capsL=list.filter(function(c){return c.isCap;});
+    const plans=(_ttCapFriOn()&&_ttCapPlanFriday(capsL,rooms))||_ttCapPlan(capsL,list,!!opts.tries)||[];
     if(plans.length>1){   // 周五六排不下:「留一节」「整门移出」各照原本的排序试排一遍。比 没排上 → 只排 1 节 → 用到周日的节数;都一样就用「留一节」(Aj. Tsai:一节留周五或周六)
       let bk=null;plans.forEach(function(pl){
         list.forEach(function(c){c._k=c._pr;});const r=_ttRunOnce(list,pl);
@@ -5508,12 +5539,14 @@ function _ttConflicts(pls){
     (p.half==='both'?['up','dn']:[p.half]).forEach(function(h){
       (p.cells||[]).forEach(function(cs){
         const rm=_ttCR(p,cs),dd=cs[0]+_ttSlotName(cs[1],p.isCap);
-        if(p.count>_ttRoomCap(rm)+TT_CAP_SLACK){bad[p.id]=true;addWhy(p.id,'超容量：'+p.count+'人 > 教室'+rm+'容'+_ttRoomCap(rm));}
+        const fri=_ttCapFriOn()&&p.isCap;   // 周五 Capstone 日:同一位老师的 Capstone 同时间同教室＝一个班,人数是打乱后的,不拿各门人数比教室
+        const capMulti=fri&&pls.some(function(o){return o!==p&&o.isCap&&o.tc===p.tc&&(o.half===p.half||o.half==='both'||p.half==='both')&&(o.cells||[]).some(function(c){return c[0]===cs[0]&&c[1]===cs[1]&&_ttCR(o,c)===rm;});});
+        if(!capMulti&&p.count>_ttRoomCap(rm)+TT_CAP_SLACK){bad[p.id]=true;addWhy(p.id,'超容量：'+p.count+'人 > 教室'+rm+'容'+_ttRoomCap(rm));}
         _ttAtoms(p,cs[1],cs[0]).forEach(function(at){   // 一般课的下午占两个时间块,和 Capstone 的 12–15、15–18 都会撞
-          const ck=h+'|'+rm+'|'+cs[0]+'|'+at;if(cell[ck]){bad[p.id]=true;bad[cell[ck]]=true;const o=idmap[cell[ck]];addWhy(p.id,'同教室撞堂：'+dd+'·教室'+rm+' 与 '+((o&&o.course)||''));addWhy(cell[ck],'同教室撞堂：'+dd+'·教室'+rm+' 与 '+p.course);}else cell[ck]=p.id;
-          if(p.tc){const tk=h+'|'+p.tc+'|'+cs[0]+'|'+at;if(tb[tk]){bad[p.id]=true;bad[tb[tk]]=true;const o=idmap[tb[tk]];addWhy(p.id,'老师撞堂：'+p.tc+'·'+dd+' 与 '+((o&&o.course)||''));addWhy(tb[tk],'老师撞堂：'+p.tc+'·'+dd+' 与 '+p.course);}else tb[tk]=p.id;}
+          const ck=h+'|'+rm+'|'+cs[0]+'|'+at;if(cell[ck]&&!(fri&&idmap[cell[ck]]&&idmap[cell[ck]].isCap&&idmap[cell[ck]].tc===p.tc)){bad[p.id]=true;bad[cell[ck]]=true;const o=idmap[cell[ck]];addWhy(p.id,'同教室撞堂：'+dd+'·教室'+rm+' 与 '+((o&&o.course)||''));addWhy(cell[ck],'同教室撞堂：'+dd+'·教室'+rm+' 与 '+p.course);}else cell[ck]=p.id;
+          if(p.tc){const tk=h+'|'+p.tc+'|'+cs[0]+'|'+at;if(tb[tk]&&!(fri&&idmap[tb[tk]]&&idmap[tb[tk]].isCap)){bad[p.id]=true;bad[tb[tk]]=true;const o=idmap[tb[tk]];addWhy(p.id,'老师撞堂：'+p.tc+'·'+dd+' 与 '+((o&&o.course)||''));addWhy(tb[tk],'老师撞堂：'+p.tc+'·'+dd+' 与 '+p.course);}else tb[tk]=p.id;}
           const ctk=_ttCoToks(p);   // KE/KH 放行的届别不算撞
-          ctk.r.forEach(function(tok){const bk=h+'|'+tok+'|'+cs[0]+'|'+at;if(cb[bk]&&cb[bk]!==p.id){const co=tok.replace(/#[EH]$/,'');bad[p.id]=true;bad[cb[bk]]=true;const o=idmap[cb[bk]];addWhy(p.id,'届别撞堂：'+co+'·'+dd+' 与 '+((o&&o.course)||''));addWhy(cb[bk],'届别撞堂：'+co+'·'+dd+' 与 '+p.course);}});
+          ctk.r.forEach(function(tok){const bk=h+'|'+tok+'|'+cs[0]+'|'+at;if(cb[bk]&&cb[bk]!==p.id&&!(fri&&idmap[cb[bk]]&&idmap[cb[bk]].isCap)){const co=tok.replace(/#[EH]$/,'');bad[p.id]=true;bad[cb[bk]]=true;const o=idmap[cb[bk]];addWhy(p.id,'届别撞堂：'+co+'·'+dd+' 与 '+((o&&o.course)||''));addWhy(cb[bk],'届别撞堂：'+co+'·'+dd+' 与 '+p.course);}});
           ctk.w.forEach(function(tok){const bk=h+'|'+tok+'|'+cs[0]+'|'+at;if(!cb[bk])cb[bk]=p.id;});
         });
       });
@@ -5603,7 +5636,7 @@ function _ttChipHtml(p,bad,src){
   const title=p.course+(p.cls?' '+p.cls:'')+' @'+rm+(p.tc?' · '+p.tc:'')+(p.dept?' · 专业'+p.dept:'')+(cl.full?' · 届别:'+cl.full:'')+(note?' · 备注:'+note:'')+(dr?' · ⚠存档后被改动':'')+((bad[p.id]&&_ttBadWhy[p.id])?' ｜ ⚠ 为什么红：'+_ttBadWhy[p.id].join('；'):'')+(edit?' · 可单独拖这一节':'');
   const dragStart=edit?(' draggable="true" ondragstart="_ttDragStart(event,\''+jsq(String(p.id))+'\','+(src?'\''+jsq(src[0])+'\',\''+src[1]+'\'':'null,null')+')"'):'';
   const clickEdit=edit?(' onmousedown="_ttChipDown(event)" onmouseup="_ttChipUp(event,\''+jsq(String(p.id))+'\','+(src?'\''+jsq(src[0])+'\',\''+src[1]+'\'':'null,null')+')"'):'';
-  return '<span class="tt-chip'+bd+dr+(edit?' tt-drag':'')+'" style="'+_ttChipStyle(p)+'" data-tt-id="'+eh(String(p.id))+'"'+dragStart+clickEdit+' data-rm="'+eh(String(rm))+'">'+
+  return '<span class="tt-chip'+bd+dr+(edit?' tt-drag':'')+'" style="'+_ttChipStyle(p)+'" data-tt-id="'+eh(String(p.id))+'"'+(p.isCap?' data-cap="1" data-tc="'+eh(p.tc||'')+'" data-code="'+eh(_ttCC(p))+'"':'')+dragStart+clickEdit+' data-rm="'+eh(String(rm))+'">'+
     '<span class="tt-c3"><span class="z1">'+p.count+'人'+_ttCapTm(p,src)+'</span>'+
     '<span class="z2">'+_ttCC(p)+'</span>'+
     '<span class="z3">'+eh(p.tc||'待定')+'</span><span class="z4 zl" data-short="'+eh(_ttCohText(p,true))+'" data-n="'+(p.cohorts||[]).length+'">'+eh(_ttCohText(p))+'</span></span></span>';   // z4=届别+人数,萤幕上不显示(看浮出卡),列印才出来
@@ -5634,8 +5667,8 @@ function _ttGridHtml(h,sol,only){   // only={教室分组:1}=只出这些教室(
       const drop=_ttCanEdit()?(' ondragover="_ttAllowDrop(event)" ondrop="_ttDrop(event,\''+jsq(rm.code)+'\',\''+jsq(d)+'\',\''+s+'\',\''+h+'\')"'):'';
       // Capstone 照常一格一格显示(周五/周六 的 上午/下午),不合并整天(Aj. Tsai #3)
       const inner=arr.map(function(o){return _ttChipHtml(o.p,bad,o.cs);}).join('');
-      const mu=arr.length>1,sdc=arr.some(function(o){return _ttIsSameDay(o.p);});   // 橙框:这格的课两节排同一天
-      row+='<td class="tt-cell'+sat+(c[2]?' ds':'')+(mu?' multi bad':'')+(sdc?' sd':'')+'"'+(mu?' data-n="'+arr.length+'"':'')+((mu||sdc)?' title="'+(mu?'这间教室这个时段同时排了 '+arr.length+' 门课，请人工确认':'')+(mu&&sdc?'；':'')+(sdc?TT_SD_TIP:'')+'"':'')+drop+'>'+inner+'</td>';
+      const mu=arr.length>1&&!(_ttCapFriOn()&&_ttAllCapSameTc(arr.map(function(o){return o.p;}))),sdc=arr.some(function(o){return _ttIsSameDay(o.p);});   // 橙框:这格的课两节排同一天
+      row+='<td class="tt-cell'+sat+(c[2]?' ds':'')+(arr.length>1?' multi':'')+(mu?' bad':'')+(sdc?' sd':'')+'"'+(mu?' data-n="'+arr.length+'"':'')+((mu||sdc)?' title="'+(mu?'这间教室这个时段同时排了 '+arr.length+' 门课，请人工确认':'')+(mu&&sdc?'；':'')+(sdc?TT_SD_TIP:'')+'"':'')+drop+'>'+inner+'</td>';
     });
     body+='<tr>'+row+'</tr>';
   });
@@ -5771,7 +5804,7 @@ function _ttMiniChip(p,mode,bad,src){
   const title=p.course+(p.cls?' '+p.cls:'')+' @'+rm+(p.tc?' · '+p.tc:'')+(p.dept?' · 专业'+p.dept:'')+(cl.full?' · '+cl.full:'')+((bad&&bad[p.id]&&_ttBadWhy[p.id])?' ｜ ⚠ 为什么红：'+_ttBadWhy[p.id].join('；'):'')+(edit?' · 可单独拖这一节':'');
   const dragStart=edit?(' draggable="true" ondragstart="_ttDragStart(event,\''+jsq(String(p.id))+'\','+(src?'\''+jsq(src[0])+'\',\''+src[1]+'\'':'null,null')+')"'):'';
   const clickEdit=edit?(' onmousedown="_ttChipDown(event)" onmouseup="_ttChipUp(event,\''+jsq(String(p.id))+'\','+(src?'\''+jsq(src[0])+'\',\''+src[1]+'\'':'null,null')+')"'):'';
-  return '<span class="tt-chip'+bd+dr+(edit?' tt-drag':'')+'" style="'+_ttChipStyle(p)+'" data-tt-id="'+eh(String(p.id))+'"'+dragStart+clickEdit+' data-rm="'+eh(String(rm))+'"><span class="tt-c3"><span class="z1">'+z1+'</span><span class="z2'+(mode==='cohort'?'':' zl" data-short="'+eh(p.count+'人 · '+_ttCohText(p,true))+'" data-n="'+(p.cohorts||[]).length)+'">'+z2+'</span><span class="z3">'+z3+'</span></span></span>';
+  return '<span class="tt-chip'+bd+dr+(edit?' tt-drag':'')+'" style="'+_ttChipStyle(p)+'" data-tt-id="'+eh(String(p.id))+'"'+(p.isCap?' data-cap="1" data-tc="'+eh(p.tc||'')+'" data-code="'+eh(_ttCC(p))+'"':'')+dragStart+clickEdit+' data-rm="'+eh(String(rm))+'"><span class="tt-c3"><span class="z1">'+z1+'</span><span class="z2'+(mode==='cohort'?'':' zl" data-short="'+eh(p.count+'人 · '+_ttCohText(p,true))+'" data-n="'+(p.cohorts||[]).length)+'">'+z2+'</span><span class="z3">'+z3+'</span></span></span>';
 }
 // 单一届别/老师的紧凑课表:行=星期(周一~周五,+周六若有 Capstone),列=上半上午/上半下午/下半上午/下半下午
 // (照 Aj. Tsai 给的 aSc 参考:行=星期;上半蓝、下半橙两组上色)
@@ -5825,6 +5858,7 @@ function _ttEntityData(sol,mode){
   Object.keys(grp).forEach(function(key){const e=grp[key];e.flag={};Object.keys(e.raw).forEach(function(k){const a=e.raw[k];if(a.length<2)return;
     let ok=(mode==='cohort'&&!!_ttLang.ok[key]);
     if(ok)for(var i=0;i<a.length&&ok;i++)for(var j=i+1;j<a.length;j++){const ta=_ttTrack(a[i].p),tb=_ttTrack(a[j].p);if(!(ta&&tb&&ta!==tb)){ok=false;break;}}
+    if(!ok&&_ttCapFriOn()&&a.every(function(o){return o.p.isCap;}))ok=true;   // 周五 Capstone 日:全是 Capstone 的格子不算同时段多门
     e.flag[k]=ok?'ok':'bad';});
     e.sd={};Object.keys(e.raw).forEach(function(k){if(e.raw[k].some(function(o){return _ttIsSameDay(o.p);}))e.sd[k]=1;});});
   const byDept={};Object.keys(grp).forEach(function(k){(byDept[grp[k].dept]=byDept[grp[k].dept]||[]).push(k);});
@@ -6109,7 +6143,7 @@ function _ttCheckData(sol){
   ['cohort','teacher'].forEach(function(mode){const D=_ttEntityData(sol,mode);
     Object.keys(D.byDept).sort().forEach(function(dep){D.byDept[dep].forEach(function(key){const f=D.grp[key].flag||{},n=Object.keys(f).filter(function(k){return f[k]==='bad';}).length;if(n)multi[mode].push({key:key,n:n,dep:dep});});});});
   const occ={};pls.forEach(function(p){_ttHalfTags(p).forEach(function(ht){(p.cells||[]).forEach(function(cs){const k=ht+'|'+_ttCR(p,cs)+'|'+cs[0]+'|'+cs[1];(occ[k]=occ[k]||[]).push(p);});});});
-  Object.keys(occ).forEach(function(k){if(occ[k].length>1){const a=k.split('|');multi.room.push({key:a[1],n:1,id:String(occ[k][0].id),when:(sol.whole?'':a[0]+'半 ')+a[2]+_ttSlotName(a[3],occ[k][0].isCap)});}});
+  Object.keys(occ).forEach(function(k){if(occ[k].length>1&&!(_ttCapFriOn()&&_ttAllCapSameTc(occ[k]))){const a=k.split('|');multi.room.push({key:a[1],n:1,id:String(occ[k][0].id),when:(sol.whole?'':a[0]+'半 ')+a[2]+_ttSlotName(a[3],occ[k][0].isCap)});}});
   const sum=function(a){return a.reduce(function(t,x){return t+x.n;},0);};
   return {hard:pls.filter(function(p){return hard[p.id];}),why:why,multi:multi,nCo:sum(multi.cohort),nTc:sum(multi.teacher),nRm:sum(multi.room),sd:pls.filter(_ttIsSameDay)};
 }
@@ -6530,7 +6564,7 @@ function _ttCapWarn(sol){
     const i=k.lastIndexOf('|'),name=k.slice(0,i),h=k.slice(i+1),v=map[k];
     const fri=capTc[(isT?'':'@')+name+'|'+h],avail=fri?8:10,share=isT?0:Math.min(v.E||0,v.H||0),need=(v.reg.length-share)*2,needC=v.cap.length*2;   // share:该届 KE 与 KH 可同时段,合占一份
     if(need>avail)out.push({who:kind+' '+name,half:HN[h],txt:v.reg.length+' 门一般课'+(share?'（其中 KE／KH 可同时段，算 '+(v.reg.length-share)+' 门）':'')+'需 '+need+' 格，但周一~周五只有 '+avail+' 格'+(fri?'（周五留给 Capstone）':'')+' → 至少 '+Math.ceil((need-avail)/2)+' 门排不满',list:v.reg});
-    if(needC>12)out.push({who:kind+' '+name,half:HN[h],txt:v.cap.length+' 门 Capstone 需 '+needC+' 格，但周五、周一～周四、周日（每天 2 个时段）只有 12 格 → 至少 '+Math.ceil((needC-12)/2)+' 门排不满',list:v.cap});
+    if(needC>12&&!_ttCapFriOn())out.push({who:kind+' '+name,half:HN[h],txt:v.cap.length+' 门 Capstone 需 '+needC+' 格，但周五、周一～周四、周日（每天 2 个时段）只有 12 格 → 至少 '+Math.ceil((needC-12)/2)+' 门排不满',list:v.cap});
   });}
   chk('届别',coh,false);chk('老师',tch,true);
   return out;
@@ -6846,6 +6880,16 @@ function _ttPrintBuild(sel){
   if(view!=='room')box.classList.add('ent');if(view==='teacher')box.classList.add('tch');
   if(view==='room'&&[].some.call(box.querySelectorAll('table'),function(t){const r=t.tHead&&t.tHead.rows[t.tHead.rows.length-1];return !!r&&r.cells.length>=16;}))box.classList.add('cols16');   /* 用到周日,栏多变窄 */
   box.querySelectorAll('[draggable]').forEach(function(e){e.removeAttribute('draggable');});
+  if(_ttCapFriOn())box.querySelectorAll('td').forEach(function(td){   /* 周五 Capstone 日:同一格里同一位老师的 Capstone 印成一个课片(写出全部课码) */
+    const chips=[].slice.call(td.querySelectorAll('.tt-chip[data-cap="1"]')),by={};
+    chips.forEach(function(c){(by[c.getAttribute('data-tc')||'']=by[c.getAttribute('data-tc')||'']||[]).push(c);});
+    Object.keys(by).forEach(function(k){const a=by[k];if(a.length<2)return;
+      const f=a[0],code=a.map(function(c){return (c.getAttribute('data-code')||'').replace('-Capstone','');}).join('／'),rm=f.getAttribute('data-rm')||'',z1=f.querySelector('.z1');
+      const t=z1?z1.textContent:'';const tm=(t.match(/\d\d:\d\d–\d\d:\d\d/)||[''])[0];
+      f.innerHTML='<span class="tt-c3"><span class="z1">合班 '+a.length+' 门</span><span class="z2">'+eh(code)+'</span><span class="z3">'+eh(k||'待定')+'</span></span>';
+      f.classList.remove('bad');f.classList.add('capgrp');for(var i=1;i<a.length;i++)a[i].parentNode.removeChild(a[i]);
+      td.classList.remove('multi');box.classList.add('hascapgrp');});
+  });
   document.body.appendChild(box);
   _ttPrintFit(box);
   box._fit=_ttPrintFitText(box);   // 课片固定大小,字放不下就缩
@@ -7036,6 +7080,7 @@ async function renderTtPanel(force){
   if(canEdit)tools+=' <details class="tt-menu"><summary class="btn btn-sm no-print">⚙️ 选项 ▾</summary><div class="tt-menu-pop">'
     +'<label><input type="checkbox"'+(_ttSoloOn()?' checked':'')+' onchange="ttSoloToggle(this.checked)"><span>个别学生不挡排课<span class="mi-sub">某届别在一门课只有 1 人 → 不挡排课，撞到的列「待处理一览」；存档会记住这个设定，大家看存档时都照它</span></span></label>'
     +'<label><input type="checkbox"'+(_ttDeepOn()?' checked':'')+' onchange="ttDeepToggle(this.checked)"><span>拆开两节同天<span class="mi-sub">同一门课两节同天时，多试把它拆到不同天（最多约 6 秒）</span></span></label>'
+    +'<label><input type="checkbox"'+(_ttCapFriOn()?' checked':'')+' onchange="ttCapFriToggle(this.checked)"><span>周五 Capstone 日<span class="mi-sub">打勾：Capstone 全部排周五上午＋下午，同一位老师的课同时间同教室（合班）；Capstone 之间的届别重叠不算撞课（学生周五会被打乱分给各老师）。不打勾：照一般规则逐门排。</span></span></label>'
     +'<label><input type="checkbox"'+(_ttTierOn()?' checked':'')+' onchange="ttTierToggle(this.checked)"><span>课排满优先<span class="mi-sub">打勾：宁可多几门两节同天／多几位学生撞课，也要把每门课的两节排进去。不打勾：把所有缺点加总比较，可能留一门课只排到 1 节</span></span></label>'
     +(_ttCache.finalOK?'<button onclick="this.closest(\'details\').open=false;ttHistOpen()"><span>🕘 旧版<span class="mi-sub">最近 5 次被盖掉（或删掉）的存档，可以载入回来</span></span></button>':'')
     +(_ttFinalState(tt)==='final'?'<button onclick="this.closest(\'details\').open=false;ttFinalize(false)"><span>取消定版<span class="mi-sub">把这一版改回草稿</span></span></button>':'')
