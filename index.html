@@ -6842,7 +6842,7 @@ function _ttBodyHtml(sol){
   return _ttDriftBanner(drift)+_ttKeepBar(sol)+_ttCheckBar(sol)+_ttFootDetails(sol)+_ttCapBar(sol)+_ttInternsBar(sol)+main+_ttPillsBar(sol,view);   // 视图切换已移到 #tt-status(sticky)
 }
 /* 一键自动排:有存档就以存档为底(尽量不动已排好的课);fresh=整张重排,不看存档 */
-function _ttBaseOf(sem){return null;}   /* 「以存档为底」还在测试(合成测试里 2569-2 反而多动课),先关着;要开时改回读 _ttCache.tt.placements */
+function _ttBaseOf(sem){const tt=_ttCache.tt;return (tt&&tt.placements&&tt.placements.length&&_ttCache.sem===sem)?tt.placements:null;}   /* 以存档为底:没存档回 null */
 let _ttSolving=false;
 async function ttAutoSolve(fresh){
   if(!_ttCanEdit()||_ttSolving)return;const sem=_ttCache.sem;if(!sem)return;
@@ -7337,7 +7337,7 @@ async function renderTtPanel(force){
   let tools='';
   // 主操作
   if(canEdit){const nKeep=_ttKeepTodo(sol);const shut="this.closest('details').open=false;";   // 「⚡ 一键自动排 ▾」:三种排法收在 ▾ 里;有课可以只补排时 ▾ 上亮一个橘点
-    tools+='<span class="tt-split"><button class="btn btn-p btn-sm" onclick="ttAutoSolve()" title="自动把本学期的课排进时段+教室">⚡ 一键自动排</button>'
+    tools+='<span class="tt-split"><button class="btn btn-p btn-sm" onclick="ttAutoSolve()" title="自动把本学期的课排进时段+教室；已有存档时，尽量照存档上的位置排（改过的课才会动）。要完全重排请用右边 ▾ 的「整张重排」">⚡ 一键自动排</button>'
       +'<details class="tt-menu"><summary class="btn btn-p btn-sm no-print" aria-label="其他排法" title="'+(nKeep?'有 '+nKeep+' 门课可以只补排 · ':'')+'其他排法：整张重排／前三名／只补排">▾'+(nKeep?'<span class="tt-dot"></span>':'')+'</summary><div class="tt-menu-pop">'
       +'<button onclick="'+shut+'ttAutoSolve(1)"><span>⚡ 整张重排<span class="mi-sub">照排课表全部重新排（手动调过的位置不保留）</span></span></button>'
       +'<button onclick="'+shut+'ttTop3()"><span>🏅 前三名<span class="mi-sub">列出前三名的数字（没排上／只排 1 节／两节同一天／个别学生撞课），自己挑一个</span></span></button>'
