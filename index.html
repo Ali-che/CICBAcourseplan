@@ -5406,13 +5406,16 @@ function ttCapFriToggle(on){
   else renderTtPanel();
 }
 let _ttPrinting=false;   // 列印时关掉「整天一张卡」,照原本一格一格(列印版另有「合班 N 门」课片)
-let _ttCapInfoMemo={sol:null,n:-1,v:null};
-function _ttCapInfo(){   // 全部 Capstone 学生数(每个届别只算一次)÷ 老师数 = 打乱后每班人数
-  const sol=_ttCache.sol||{placements:[]},n=(sol.placements||[]).length;
+let _ttCurSol=null,_ttCapInfoMemo={sol:null,n:-1,v:null};
+function _ttCapInfo(){   // 全部 Capstone 学生数(每个届别只算一次)÷ 老师数 = 打乱后每班人数。人数直接读排课表(不靠求解暂存,载入存档时也算得出来)
+  const sol=_ttCurSol||_ttCache.sol||{placements:[]},n=(sol.placements||[]).length,sem=sol.sem||_ttCache.sem;
   if(_ttCapInfoMemo.sol===sol&&_ttCapInfoMemo.n===n&&_ttCapInfoMemo.v)return _ttCapInfoMemo.v;
-  const per={},tcs={};(sol.placements||[]).forEach(function(p){if(!p.isCap)return;if(p.tc)tcs[p.tc]=1;const r=_ttRows[String(p.id)];((r&&r.cc)||[]).forEach(function(x){if(x.cohort)per[x.cohort]=Math.max(per[x.cohort]||0,+x.count||0);});});
+  const rowOf={};(typeof schD!=='undefined'?schD:[]).forEach(function(r){if(r.sem===sem)rowOf[String(r.id)]=r;});
+  const per={},tcs={};(sol.placements||[]).forEach(function(p){if(!p.isCap)return;if(p.tc)tcs[p.tc]=1;const r=rowOf[String(p.id)];((r&&r.cc)||[]).forEach(function(x){if(x.cohort)per[x.cohort]=Math.max(per[x.cohort]||0,+x.count||0);});});
   const total=Object.keys(per).reduce(function(a,k){return a+per[k];},0),g=Math.max(1,Object.keys(tcs).length);
-  _ttCapInfoMemo={sol:sol,n:n,v:{total:total,groups:g,size:Math.ceil(total/g)}};return _ttCapInfoMemo.v;
+  const v={total:total,groups:g,size:Math.ceil(total/g)};
+  if(total>0)_ttCapInfoMemo={sol:sol,n:n,v:v};   // 算不出来(0)不记,下次再试
+  return v;
 }
 function _ttMergeable(a,b){   // 上午、下午两格是同一批 Capstone → 合成「整天一张卡」
   if(!_ttCapFriOn()||_ttPrinting||!a.length||a.length!==b.length)return false;
@@ -6615,6 +6618,7 @@ function _ttCapWarn(sol){
   return out;
 }
 function _ttBodyHtml(sol){
+  _ttCurSol=sol;   // 这次画的课表(看存档时它不是 _ttCache.sol):卡片上的分班人数要用它算
   _ttLangRefresh(sol.sem||_ttCache.sem);(sol.placements||[]).concat(sol.unplaced||[]).forEach(function(p){delete p._tok;delete p._tokA;delete p._solo;});_ttCache.solo=_ttSoloClashes(sol.placements);   // KE/KH 放行名单依现在的排课表重算
   const view=_ttCache.view||'room';
   const drift=_ttDrift(sol.sem,sol);   // 随时比对(不只看存档时):课表上改了老师／上下半还没写回,也会提示
