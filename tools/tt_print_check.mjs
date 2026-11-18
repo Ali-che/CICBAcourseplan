@@ -44,7 +44,7 @@ try {
   for (let i = 0; i < 40; i++) { await sleep(500); if (await evaluate(`(typeof schD!=='undefined'&&schD.length>0)`)) break; }
   await evaluate(`switchTab('tt')`); await sleep(1500);
   await evaluate(`(function(){const s=document.getElementById('tt-sem');s.value='${SEM}';s.dispatchEvent(new Event('change'));return true;})()`); await sleep(2500);
-  await evaluate(`(ttAutoSolve(),true)`); await sleep(800);
+  await evaluate(`(ttAutoSolve(),true)`); for (let i = 0; i < 240; i++) { await sleep(500); if (await evaluate(`(!_ttSolving&&!!_ttCache.sol)`)) break; }   // 一键排现在分段执行(有进度条),要等它算完
   const groups = await evaluate(`JSON.stringify({room:_ttExpGroups(_ttExpSol(),'room').map(g=>g.k),cohort:_ttExpGroups(_ttExpSol(),'cohort').map(g=>g.k),teacher:_ttExpGroups(_ttExpSol(),'teacher').map(g=>g.k)})`);
   const G = JSON.parse(groups);
   const pick = (a, n) => Object.fromEntries(a.slice(0, n).map(k => [k, 1]));

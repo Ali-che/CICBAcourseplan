@@ -5467,13 +5467,14 @@ function _ttLayerScore(list){
   const nSolo=_ttSoloClashes(list).length;soft+=nSolo*TT_SOLO_PEN;
   return nUn*TT_TIER_UN+n1*TT_TIER_ONE+nSD*TT_TIER_SD+nSolo*TT_TIER_SOLO+nCon*TT_TIER_CON+nLang*TT_TIER_LANG+nBase*TT_TIER_BASE+soft;
 }
-function _ttLns(st,list){
+function* _ttLns(st,list){
   const now=function(){return (typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();},t0=now();
   let seed=20261119;const rnd=function(){seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
   const free=list.filter(function(c){return !c.isCap&&!c._pin;});
   const isBad=function(c){const n=(c.cells||[]).length;if(n<2)return true;if(_ttIsSameDay(c))return true;if(c.note&&c.note.consec){const d=Math.abs((_TT_DAYIDX[c.cells[0][0]]||0)-(_TT_DAYIDX[c.cells[1][0]]||0));return d!==1&&d!==4;}return false;};
   let cur=_ttLayerScore(list);const before=cur;let it=0,imp=0;
   for(;it<TT_LNS_ITERS&&now()-t0<TT_LNS_MS;it++){
+    if(it%250===0)yield {txt:'优化排法',pct:it/TT_LNS_ITERS};   /* 每 250 次让出一下,页面才不会停住 */
     let bad=free.filter(isBad);
     if(!bad.length){const sc=_ttSoloClashes(list);if(!sc.length)break;bad=free;}   // 只剩个别学生撞课时,随便挑一门当起点
     const seedC=bad[Math.floor(rnd()*bad.length)];
@@ -5490,18 +5491,20 @@ function _ttLns(st,list){
   }
   return {iters:it,improved:imp,before:before,after:cur,ms:Math.round(now()-t0)};
 }
-function _ttSolve(sem,opts){
+function* _ttSolveG(sem,opts){
   // 231 留给小班:先照「留」排;有课没排上／只排 1 节 → 再照「不留」排一次,比较 没排上 → 只排 1 节,不留比较好才用不留
   opts=opts||{};
   const bad=function(S){return S?[S.unplaced.length,S.placements.filter(function(p){return (p.cells||[]).length===1;}).length]:[1e9,1e9];};
-  _ttKeep231=true;const A=_ttSolveCore(sem,opts);
+  _ttKeep231=true;const A=yield* _ttSolveCore(sem,opts);
   if(!A)return A;
   const a=bad(A);if(!a[0]&&!a[1])return A;
-  _ttKeep231=false;const B=_ttSolveCore(sem,opts),b=bad(B);
+  _ttKeep231=false;yield {txt:'再试一次（231 不留给小班）',pct:0};const B=yield* _ttSolveCore(sem,opts),b=bad(B);
   if(B&&(b[0]<a[0]||(b[0]===a[0]&&b[1]<a[1]))){B.keep231=false;return B;}
-  _ttKeep231=true;return _ttSolveCore(sem,opts);   // 重排一次,让课程物件上的资料回到「留」的那一版
+  _ttKeep231=true;return yield* _ttSolveCore(sem,opts);   // 重排一次,让课程物件上的资料回到「留」的那一版
 }
-function _ttSolveCore(sem,opts){
+/* 同步版:一口气算完(其余地方照旧用这个);要分段+进度条用 _ttSolveG 配 ttAutoSolve */
+function _ttSolve(sem,opts){const g=_ttSolveG(sem,opts);let r;while(!(r=g.next()).done){}return r.value;}
+function* _ttSolveCore(sem,opts){
   opts=opts||{};_ttLangRefresh(sem);
   const refs=_ttCache.refs||{rooms:[],cat:{}};
   const rooms=_ttRoomsSorted(),cat=refs.cat||{};
@@ -5567,6 +5570,7 @@ function _ttSolveCore(sem,opts){
     const coh=run>=TT_SOLVE_TRIES;   // 前 40 种照原本的排序;后 8 种改「届别数最多先排」(第 1 种不加乱数)
     const cw=coh?0:TT_COH_W[run%TT_COH_W.length];   // 前 40 种轮流用 4 种「届别数加重」(每个届别加 0／100／200／300 分):届别多的课要找大家都空的时段,早一点排比较排得进;加多少最好跟资料有关,所以都试、挑最好的(Aj. Tsai 2026-11-18)
     list.forEach(function(c){c._k=coh?(c._pr2+(run>TT_SOLVE_TRIES?rnd()*1500:0)):(c._pr+(c.isCap?0:c.cohorts.length*cw)+(run?rnd()*260:0));});
+    if(run%2===0)yield {txt:'试排各种先后顺序（'+(run+1)+'／'+TRIES+'）',pct:run/TRIES};
     const r=_ttRunOnce(list,capPlan);
     const sc=(opts.flatScore!=null?opts.flatScore:!_ttTierOn())?r.flat:(opts.tierOld?r.scoreOld:r.score);   // 选项「课排满优先」关掉 = 旧的总分制;opts.flatScore 可强制指定(对照测试用)
     if(opts.rank)cands.push({score:sc,run:run,key:r.key,nUn:r.nUn,n1:r.n1,soft:r.soft,asg:list.map(function(c){return c.cells.map(function(cs){return cs.slice();});})});
@@ -5583,7 +5587,7 @@ function _ttSolveCore(sem,opts){
   const st=_ttMkState();
   list.forEach(function(c,i){c.cells=[];c.room='';_ttApply(st,c,best.asg[i]);});
   const deep=(opts.deep!==false&&_ttDeepOn())?_ttDeepFix(st,list):null;   // 还剩两节同一天的课 → 加深搜寻(连挪两门)试着拆开
-  const lns=(opts.deep!==false&&opts.lns!==false&&!opts.tries&&_ttDeepOn())?_ttLns(st,list):null;   // 后处理搜索:跟「拆开两节同天」同一个开关;改半方案找方案(deep:false)、前三名(tries)不跑,省时间
+  const lns=(opts.deep!==false&&opts.lns!==false&&!opts.tries&&_ttDeepOn())?(yield* _ttLns(st,list)):null;   // 后处理搜索:跟「拆开两节同天」同一个开关;改半方案找方案(deep:false)、前三名(tries)不跑,省时间
   // 排课表写死上/下半、却排不满 2 节的课:算「改到另一半能不能排满」→ 只给建议,不擅自改(上下半归排课表管)
   if(!whole)list.forEach(function(c){
     if(c.isCap||c.cells.length>=2||!(c.rawHalf==='上半学期'||c.rawHalf==='下半学期')||(opts.halfOv&&opts.halfOv[String(c.id)]))return;   // 改半方案已经动过的课不再给单门建议
@@ -6839,7 +6843,25 @@ function _ttBodyHtml(sol){
 }
 /* 一键自动排:有存档就以存档为底(尽量不动已排好的课);fresh=整张重排,不看存档 */
 function _ttBaseOf(sem){return null;}   /* 「以存档为底」还在测试(合成测试里 2569-2 反而多动课),先关着;要开时改回读 _ttCache.tt.placements */
-function ttAutoSolve(fresh){if(!_ttCanEdit())return;const sem=_ttCache.sem;if(!sem)return;_ttUndoPush();_ttCache.sol=_ttSolve(sem,fresh?{}:{base:_ttBaseOf(sem)});_ttCache.dirty=true;renderTtPanel();}
+let _ttSolving=false;
+async function ttAutoSolve(fresh){
+  if(!_ttCanEdit()||_ttSolving)return;const sem=_ttCache.sem;if(!sem)return;
+  _ttSolving=true;let cancelled=false;window._ttSolveCancel=function(){cancelled=true;};
+  const tick=function(){return new Promise(function(r){try{const ch=new MessageChannel();ch.port1.onmessage=function(){r();};ch.port2.postMessage(0);}catch(e){setTimeout(r,0);}});};
+  const bar=function(m){_ttPlanShow('<div class="ttplan-title">⚡ 一键自动排</div><div class="ttplan-wait">⏳ '+eh(m.txt)+'<div style="height:6px;background:#E5E3F8;border-radius:3px;margin:8px 0 4px;overflow:hidden"><div style="height:100%;width:'+Math.round((m.pct||0)*100)+'%;background:#4F46E5"></div></div><span>算好前请先不要操作，大约十几秒。</span></div>','<button class="btn btn-sm" onclick="_ttSolveCancel()">取消</button>');};
+  try{
+    bar({txt:'准备中',pct:0});await tick();
+    const g=_ttSolveG(sem,fresh?{}:{base:_ttBaseOf(sem)});let r,last=0;
+    while(true){
+      r=g.next();if(r.done)break;
+      const nw=Date.now();if(nw-last>120){last=nw;bar(r.value);await tick();}
+      if(cancelled){ttPlanClose();typeof showToast==="function"&&showToast('已取消，课表没有变动',{kind:'info'});return;}
+    }
+    if(_ttCache.sem!==sem)return;
+    _ttUndoPush();_ttCache.sol=r.value;_ttCache.dirty=true;ttPlanClose();renderTtPanel();
+  }catch(e){ttPlanClose();if(typeof showToast==='function')showToast('一键自动排出错：'+(e&&e.message||e),{kind:'error'});}
+  finally{_ttSolving=false;}
+}
 // #8:把课表里排定的上/下半写回排课表 schD(Head/Admin,需确认;改写官方排课)
 async function ttWriteHalfBack(onlyId){
   if(!_ttCanEdit())return;
