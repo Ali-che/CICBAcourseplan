@@ -6439,6 +6439,12 @@ function _ttAdvMove(sol,p,row){   // 只挡一门时:把它挪走、这门课的
     return {known:true,found:f?f.cells.map(function(c){return c[0]+(c[1]==='am'?'上午':'下午');}).join('＋'):null};
   }catch(e){return {known:false};}
 }
+function _ttAdvFirst(best,mv,keepNote,dayN,p){   // 只被一门课挡住时的建议:先写要改什么,再写结果
+  const nm=best.blk[0].name,lk=_ttLkSch(nm,_ttCache.sem,best.blk[0].id,best.blk[0].course,'','到排课表看这门课'),to=(keepNote?'留 '+eh(best.keepTxt)+'，另一节排 ':'排到 ')+'<b>'+eh(dayN(best))+'</b>';
+  if(mv&&mv.known&&mv.found)return '<b>改 '+lk+'</b>：挪到 <b>'+eh(mv.found)+'</b>（手动拖，或在排课表改它的上下半）→ 这门课就能'+to;
+  if(mv&&mv.known)return '<b>要排到 '+eh(dayN(best))+'，得先让 '+lk+' 让位</b>，但它没有别的时段可去 → 在排课表改它的<b>届别、老师或上下半</b>（见下面的试算）';
+  return '<b>改 '+lk+'</b>：挪到别的时段 → 这门课就能'+to;
+}
 async function ttSdAdvise(id,kind){
   kind=kind==='consec'?'consec':'sd';
   const sol=_ttCache.sol||(_ttCache.tt?_ttSolutionFromSaved(_ttCache.sem,_ttCache.tt):null);if(!sol)return;
@@ -6455,12 +6461,12 @@ async function ttSdAdvise(id,kind){
     const mv=(best&&best.blk.length===1)?_ttAdvMove(sol,p,best):null;
     const body='<div class="ttplan-title" style="font-size:15px;font-weight:600;color:#3C3489;margin-bottom:6px">💡 调整建议 · '+_ttCC(p)+'</div><div style="font-size:12px;line-height:1.75;color:#333">'
       +'<div><b>现在</b>：'+(sol.whole?'':(HN[p.half]||'')+' ')+goal+'（'+p.count+' 人 · '+eh(p.tc||'待定')+' · '+(p.cohorts||[]).length+' 个届别）</div>'
-      +'<div style="margin-top:6px"><b>为什么排不好</b>：'+(kind==='consec'?'要和留下的那一节连成连续两天，可以去的时段':'其他每个时段')+'，这门课的老师或届别都已经有别的课。差最少的几个：</div>'
+      +'<div style="margin-top:6px"><b>其他时段都被占：</b>（差最少的几个）</div>'
       +'<table data-gsort="off" style="border-collapse:collapse;margin:4px 0;font-size:12px;width:100%"><tr><th style="'+th+'">'+(keepNote?'留下 → 挪到':'挪到')+'</th><th style="'+th+'">被挡住的课</th><th style="'+th+';white-space:nowrap">教室</th></tr>'
       +top.map(function(r){return '<tr><td style="'+td+';white-space:nowrap">'+(keepNote?eh(r.keepTxt)+' → ':'')+'<b>'+eh(dayN(r))+'</b></td><td style="'+td+'">'+(r.blk.length?r.blk.map(function(b){return _ttLkBlk(b,_ttCache.sem,p.tc);}).join('<br>'):'没有课挡住')+'</td><td style="'+td+';white-space:nowrap">'+(r.room?'有空':'<span style="color:#b42318">没有空教室</span>')+'</td></tr>';}).join('')+'</table>'
-      +'<div style="margin-top:6px"><b>建议</b></div><ol style="margin:2px 0 6px;padding-left:20px">'
-      +(best?'<li>'+(keepNote?'留 '+eh(best.keepTxt)+'，把另一节挪到 ':'挪到 ')+'<b>'+eh(dayN(best))+'</b>：'+(best.blk.length===1?'只被 <b>'+_ttLkSch(best.blk[0].name,_ttCache.sem,best.blk[0].id,best.blk[0].course,'','到排课表看这门课')+'</b> 挡住。'+(mv&&mv.known?(mv.found?'试算：把它挪到 <b>'+eh(mv.found)+'</b> 就行（手动拖，或在排课表改它的上下半）。':'但它自己也找不到别的时段可去（它的老师、届别和教室在其他时段都被占了），所以挪不开。要排好，得先在排课表改它（上下半、老师或届别），或接受现在的排法。'):'把它挪到别的时段（或在排课表改到另一半学期）就行。')+(_ttDeepOn()?'':'（「⚙️ 选项」的「拆开两节同天」没打开，打开后系统会先自动试着挪。）'):'最少也被 '+best.blk.length+' 门课挡住：要同时挪开这几门（或让其中一个届别不同时上）才行。'):'<li>其他时段都排不进去（老师、届别、教室至少有一样没有空）。')+'</li>'
-      +'<li id="ttsd-half"><span style="color:#777">⏳ 正在试「改到另一半学期」…</span></li></ol>'+_ttLkRow([p],(p.cohorts||[]).slice(0,4))+'</div>';
+      +'<div style="margin-top:6px"><b>要改什么</b></div><ol style="margin:2px 0 6px;padding-left:20px">'
+      +(best?'<li>'+(best.blk.length===1?_ttAdvFirst(best,mv,keepNote,dayN,p):'<b>先挪开这 '+best.blk.length+' 门</b>，才能排到 <b>'+eh(dayN(best))+'</b>：'+best.blk.map(function(b){return eh(b.name);}).join('、'))+'</li>':'<li><b>没有可挪的时段</b>：其他时段老师、届别、教室至少有一样被占。</li>')
+      +'<li id="ttsd-half"><span style="color:#777">⏳ 正在试「改上下半」…</span></li><li id="ttsd-coh"><span style="color:#777">⏳ 稍后试「改届别」…</span></li></ol>'+_ttLkRow([p],(p.cohorts||[]).slice(0,4))+'</div>';
     _ttPlanShow(body,foot);
     const li=function(){return document.getElementById('ttsd-half');};
     if(!sol.whole&&(p.half==='up'||p.half==='dn')){
@@ -6469,8 +6475,28 @@ async function ttSdAdvise(id,kind){
       const base=_ttSolve(sem,{tries:TT_PLAN_QUICK,deep:false}),alt=_ttSolve(sem,{halfOv:ov,tries:TT_PLAN_QUICK,deep:false});
       const q=(alt.placements||[]).find(function(x){return String(x.id)===String(p.id);}),bad=function(S){return S.placements.filter(function(x){return kind==='consec'?(x.note&&x.note.consec&&(x.cells||[]).length===2&&!_ttConsecOk(x)):_ttIsSameDay(x);}).length;},n0=bad(base),n1=bad(alt),un0=base.unplaced.length,un1=alt.unplaced.length;
       const good=q&&(q.cells||[]).length===2&&(kind==='consec'?_ttConsecOk(q):!_ttIsSameDay(q)),worse=un1>un0,on=other==='up'?'上半':'下半',what=kind==='consec'?'没排到连续两天':'两节同一天';
-      if(li())li().innerHTML=good?('<b>改到'+on+'学期</b>（在排课表改上下半）：试排的结果 <b>'+eh(_ttCC(p))+' 排好了</b>（'+eh(cellTxt(q.cells))+'），未排 '+un0+' → '+un1+' 门，'+what+' '+n0+' → '+n1+' 门'+(worse?'<span style="color:#b42318">（但会多 '+(un1-un0)+' 门排不上，不建议）</span>':'，<span style="color:#1a6b2f">其他课没有变差，可以改</span>')+'。'):('<b>改到'+on+'学期</b>：试排过，这门课还是排不好'+(q&&(q.cells||[]).length<2?'（只排得上 1 节）':'')+'，改半帮不上。');
-    }else if(li())li().innerHTML='这门课的上下半没有写明（或是全学期），没有「改到另一半」可试。';
+      if(li())li().innerHTML=good?('<b>改 '+eh(_ttCC(p))+' 的上下半 → '+on+'学期</b>（在排课表改）：排到 '+eh(cellTxt(q.cells))+'；未排 '+un0+' → '+un1+'，'+what+' '+n0+' → '+n1+(worse?'<span style="color:#b42318">。但会多 '+(un1-un0)+' 门排不上，不建议</span>':'<span style="color:#1a6b2f">。其他课没有变差，可以改</span>')):('<b>改上下半 → '+on+'学期</b>：没用'+(q&&(q.cells||[]).length<2?'（只排得上 1 节）':'')+'。');
+    }else if(li())li().innerHTML='<b>改上下半</b>：这门课没写明上下半（或是全学期），没得试。';
+    /* 试「拿掉某个届别」:一个一个拿掉(只在内存里,试完放回),看这门课能不能排好、别的课有没有变差 */
+    {const lc=function(){return document.getElementById('ttsd-coh');},sem=_ttCache.sem,tick=function(){return new Promise(function(r){setTimeout(r,20);});};
+    const rowsOf=(_ttMem(p)||[p]).map(function(m){return (typeof schD!=='undefined'?schD:[]).find(function(r){return String(r.id)===String(m.id);});}).filter(Boolean);
+    const cohs=[];rowsOf.forEach(function(r){(r.cc||[]).forEach(function(x){if(x.cohort&&!cohs.some(function(y){return y.n===x.cohort;}))cohs.push({n:x.cohort,c:+x.count||0});});});
+    if(!rowsOf.length||cohs.length<2){if(lc())lc().innerHTML='这门课只有 '+cohs.length+' 个届别，没有「拿掉某个届别」可试。';}
+    else{
+      const okF=function(S){const q=(S.placements||[]).find(function(x){return String(x.id)===String(p.id);});return q&&(q.cells||[]).length===2&&(kind==='consec'?_ttConsecOk(q):!_ttIsSameDay(q))?q:null;},cnt=function(S){return [S.unplaced.length,S.placements.filter(function(x){return !x.isCap&&(x.cells||[]).length===1;}).length,S.placements.filter(function(x){return kind==='consec'?(x.note&&x.note.consec&&(x.cells||[]).length===2&&!_ttConsecOk(x)):_ttIsSameDay(x);}).length];};
+      const found=[];let base0;
+      try{base0=cnt(_ttSolve(sem,{tries:TT_PLAN_QUICK,deep:false,lns:false}));
+        for(var ci=0;ci<cohs.length;ci++){
+          if(lc())lc().innerHTML='<span style="color:#777">⏳ 正在试「改届别」…（'+(ci+1)+'／'+cohs.length+'）</span>';await tick();
+          const save=rowsOf.map(function(r){return r.cc;});
+          try{rowsOf.forEach(function(r){r.cc=(r.cc||[]).filter(function(x){return x.cohort!==cohs[ci].n;});});
+            const S=_ttSolve(sem,{tries:TT_PLAN_QUICK,deep:false,lns:false}),q=okF(S),c1=cnt(S);
+            if(q&&c1[0]<=base0[0]&&c1[1]<=base0[1]&&c1[2]<base0[2])found.push({n:cohs[ci].n,c:cohs[ci].c,cells:q.cells});
+          }finally{rowsOf.forEach(function(r,i){r.cc=save[i];});}
+        }
+      }finally{try{_ttLangRefresh(sem);}catch(e2){}}
+      if(lc())lc().innerHTML=found.length?('<b>改 '+eh(_ttCC(p))+' 的届别</b>（在排课表改；该届别的学生要不必修这门课才行）：<ul style="margin:2px 0;padding-left:18px">'+found.slice(0,4).map(function(f){return '<li>拿掉 <b>'+eh(f.n)+'</b>'+(f.c?'（'+f.c+' 人）':'')+' → 排到 <b>'+eh(cellTxt(f.cells))+'</b>，其他课没有变差</li>';}).join('')+'</ul>'):'<b>改届别</b>：试过把 '+cohs.length+' 个届别逐个拿掉，单靠这样排不好。';
+    }}
   }catch(e){_ttPlanShow('<div class="ttplan-wait">查不出建议：'+eh(String(e&&e.message||e))+'</div>',foot);}
 }
 function gotoSch(sem,id,q,tc){   // 从课表制作的建议跳到「排课表」:选好学期、搜索课码／届别、或筛老师;有 id 就闪一下那一行
