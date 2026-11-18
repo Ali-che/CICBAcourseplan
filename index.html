@@ -4893,7 +4893,7 @@ function _ttSoloAdopt(){const s=_ttSavedSolo();if(s!=null)_lsSet('cic_tt_solo',s
 function _ttSoloOn(){if(!_ttCanEdit()){const s=_ttSavedSolo();return s==null?true:s;}return _lsGet('cic_tt_solo')!=='0';}
 function ttSoloToggle(on){
   _lsSet('cic_tt_solo',on?'1':'0');
-  if(_ttCanEdit()&&_ttCache.sol&&_ttCache.sem){ttAutoSolve();if(typeof showToast==='function')showToast((on?'已打开':'已关掉')+'「个别学生不挡排课」并重排；要回到刚才的课表按「↶ 还原」',{kind:'success'});}
+  if(_ttCanEdit()&&_ttCache.sol&&_ttCache.sem){ttAutoSolve(1);if(typeof showToast==='function')showToast((on?'已打开':'已关掉')+'「个别学生不挡排课」并重排；要回到刚才的课表按「↶ 还原」',{kind:'success'});}
   else renderTtPanel();
 }
 function _ttSolo(c){
@@ -4983,6 +4983,7 @@ function _ttPairOf(c,A,B){
   let sc=_ttCellScore(c,[A.d,A.s],[B.d,B.s])+(A.pen+B.pen)*TT_SOLO_PEN,common=null;
   for(var x=0;x<A.rs.length;x++)if(B.rs.indexOf(A.rs[x])>=0){common=A.rs[x];break;}
   if(!common)sc+=30;   // 两节不同教室:可以,但同一间优先
+  sc+=_ttBasePen({_base:c._base,cells:[[A.d,A.s],[B.d,B.s]]})+_ttLangMis(c,[[A.d,A.s],[B.d,B.s]])*TT_LANG_PEN;   // 跟上一版存档不同的时段小扣分
   return {cells:common?[[A.d,A.s,common],[B.d,B.s,common]]:[[A.d,A.s,A.rs[0]],[B.d,B.s,B.rs[0]]],score:sc};
 }
 // 找落位(不改状态):回传 {cells:[[周几,时段,教室]×2]};allowOne 时凑不到 2 节可回 1 节;都没有回 null
@@ -5195,9 +5196,9 @@ function _ttRunOnce(list,capPlan){
   let nUn=0,n1=0,soft=0,flat=0;
   list.forEach(function(c){const n=(c.cells||[]).length,k=+c.count||0;if(!n){nUn++;soft+=k*20;flat+=10000+k*20;}else if(n===1){n1++;soft+=k*2;flat+=1000+k*2;}else{const a=_ttAsgScore(c);soft+=a;flat+=a;}});
   const nSolo=_ttSoloClashes(list).length,solo=nSolo*TT_SOLO_PEN;soft+=solo;flat+=solo;   // 个别学生撞课越少越好
-  let nSD=0,nCon=0;list.forEach(function(c){if(c.isCap||(c.cells||[]).length!==2)return;if(_ttIsSameDay(c))nSD++;else if(c.note&&c.note.consec){const d=Math.abs((_TT_DAYIDX[c.cells[0][0]]||0)-(_TT_DAYIDX[c.cells[1][0]]||0));if(d!==1&&d!==4)nCon++;}});   // 两节同一天几门、备注要连续两天却没照办几门
-  /* 分层(2026-11-19):没排上 → 只排 1 节 → 两节同一天 → 个别学生撞课 → 连续两天没照办 → 其余扣分加总;上一层少一个,下面扣再多也赢。tierOld=只分前两层(旧版,对照用) */
-  return {st:st,score:nUn*TT_TIER_UN+n1*TT_TIER_ONE+nSD*TT_TIER_SD+nSolo*TT_TIER_SOLO+nCon*TT_TIER_CON+soft,scoreOld:nUn*1e10+n1*1e7+soft,flat:flat,nSD:nSD,nSolo:nSolo,nCon:nCon,nUn:nUn,n1:n1,soft:soft,key:nUn+'|'+n1+'|'+(solo/TT_SOLO_PEN)+'|'+list.filter(_ttIsSameDay).length+'|'+list.filter(function(c){return (c.cells||[]).length<2;}).map(function(c){return c.id;}).join(',')};   // key:人看得出差别的几个数字(前三名用它去掉「看起来一样」的)
+  let nSD=0,nCon=0,nBase=0,nLang=0;list.forEach(function(c){nBase+=_ttBaseCells(c);nLang+=_ttLangMis(c);if(c.isCap||(c.cells||[]).length!==2)return;if(_ttIsSameDay(c))nSD++;else if(c.note&&c.note.consec){const d=Math.abs((_TT_DAYIDX[c.cells[0][0]]||0)-(_TT_DAYIDX[c.cells[1][0]]||0));if(d!==1&&d!==4)nCon++;}});   // 两节同一天几门、备注要连续两天却没照办几门
+  /* 分层(2026-11-19):没排上 → 只排 1 节 → 两节同一天 → 个别学生撞课 → 连续两天没照办 → 跟上一版存档不同的节数(没有存档为底时恒为 0) → 其余扣分加总;上一层少一个,下面扣再多也赢。tierOld=只分前两层(旧版,对照用) */
+  return {st:st,score:nUn*TT_TIER_UN+n1*TT_TIER_ONE+nSD*TT_TIER_SD+nSolo*TT_TIER_SOLO+nCon*TT_TIER_CON+nLang*TT_TIER_LANG+nBase*TT_TIER_BASE+soft,scoreOld:nUn*1e10+n1*1e7+soft,flat:flat,nSD:nSD,nSolo:nSolo,nCon:nCon,nUn:nUn,n1:n1,soft:soft,key:nUn+'|'+n1+'|'+(solo/TT_SOLO_PEN)+'|'+list.filter(_ttIsSameDay).length+'|'+list.filter(function(c){return (c.cells||[]).length<2;}).map(function(c){return c.id;}).join(',')};   // key:人看得出差别的几个数字(前三名用它去掉「看起来一样」的)
 }
 // 两节同一天:一般课的两节排在同一天(上午+下午)。Capstone 不算(一天三段,同一天连两段本来就可以)
 function _ttIsSameDay(p){return !p.isCap&&(p.cells||[]).length===2&&p.cells[0][0]===p.cells[1][0];}
@@ -5210,7 +5211,7 @@ const TT_DEEP_MS=6000;   // 一次求解最多花这么久(毫秒)在加深搜�
 function _ttDeepOn(){return _lsGet('cic_tt_deep')!=='0';}
 function ttDeepToggle(on){
   _lsSet('cic_tt_deep',on?'1':'0');
-  if(_ttCanEdit()&&_ttCache.sol&&_ttCache.sem){ttAutoSolve();if(typeof showToast==='function')showToast((on?'已打开':'已关掉')+'「拆开两节同天」并重排；要回到刚才的课表按「↶ 还原」',{kind:'success'});}
+  if(_ttCanEdit()&&_ttCache.sol&&_ttCache.sem){ttAutoSolve(1);if(typeof showToast==='function')showToast((on?'已打开':'已关掉')+'「拆开两节同天」并重排；要回到刚才的课表按「↶ 还原」',{kind:'success'});}
   else renderTtPanel();
 }
 function _ttDeepOne(st,list,c,dl){
@@ -5352,7 +5353,7 @@ function _ttKeepTodo(sol){
 function ttKeepSolve(follow){
   if(!_ttCanEdit())return;const sem=_ttCache.sem;if(!sem)return;
   const cur=_ttCache.sol||(_ttCache.tt?_ttSolutionFromSaved(sem,_ttCache.tt):null);
-  if(!cur||!(cur.placements||[]).length){ttAutoSolve();return;}
+  if(!cur||!(cur.placements||[]).length){ttAutoSolve(1);return;}
   _ttUndoPush();_ttCache.sol=_ttSolve(sem,{keep:cur,follow:follow||null});_ttCache.dirty=true;renderTtPanel();
   const k=_ttCache.sol.keep||{};
   if(typeof showToast==='function')showToast('只补排：'+k.kept+' 门留在原位 · 新排进 '+(k.added||[]).length+' 门'+((k.moved||[]).length?' · 换位 '+k.moved.length+' 门':'')+((k.fail||[]).length?' · 仍没排上 '+k.fail.length+' 门':'')+'；要回到刚才的课表按「↶ 还原」',{kind:(k.fail||[]).length?'':'success'});
@@ -5378,7 +5379,7 @@ async function ttTop3(){
   const out=[],sigs={};
   for(let k=0;k<3;k++){
     await tick();if(!_ttPlanBusy)return;
-    const S=k?_ttSolve(sem,{rank:k}):_ttSolve(sem);if(!S)break;
+    const S=k?_ttSolve(sem,{rank:k,base:_ttBaseOf(sem)}):_ttSolve(sem,{base:_ttBaseOf(sem)});if(!S)break;
     const st=_ttTopStat(S),sg=JSON.stringify([st.un,st.one,st.sd,st.solo]);if(sigs[sg])continue;sigs[sg]=1;   // 排完后数字跟前面某一种一样的不重复列
     out.push({sol:S,st:st});
   }
@@ -5408,7 +5409,7 @@ function _ttTierOn(){return _lsGet('cic_tt_tier')!=='0';}
 function _ttCapFriOn(){return _lsGet('cic_tt_capfri')!=='0';}   // 「周五 Capstone 日」:预设打开(Aj. Tsai 2026-11-19)
 function ttCapFriToggle(on){
   _lsSet('cic_tt_capfri',on?'1':'0');
-  if(_ttCanEdit()&&_ttCache.sol&&_ttCache.sem){ttAutoSolve();if(typeof showToast==='function')showToast((on?'已打开':'已关掉')+'「周五 Capstone 日」并重排；要回到刚才的课表按「↶ 还原」',{kind:'success'});}
+  if(_ttCanEdit()&&_ttCache.sol&&_ttCache.sem){ttAutoSolve(1);if(typeof showToast==='function')showToast((on?'已打开':'已关掉')+'「周五 Capstone 日」并重排；要回到刚才的课表按「↶ 还原」',{kind:'success'});}
   else renderTtPanel();
 }
 let _ttPrinting=false;   // 列印时关掉「整天一张卡」,照原本一格一格(列印版另有「合班 N 门」课片)
@@ -5445,20 +5446,26 @@ function _ttCapCard(ps,mode,d){   // 整天一张卡:课码一颗一颗(鼠标�
 function _ttAllCapSameTc(a){return !!a.length&&a.every(function(p){return p.isCap&&p.tc&&p.tc===a[0].tc;});}   // 一格里全是同一位老师的 Capstone = 同一个班(合班)
 function ttTierToggle(on){
   _lsSet('cic_tt_tier',on?'1':'0');
-  if(_ttCanEdit()&&_ttCache.sol&&_ttCache.sem){ttAutoSolve();if(typeof showToast==='function')showToast((on?'已打开':'已关掉')+'「课排满优先」并重排；要回到刚才的课表按「↶ 还原」',{kind:'success'});}
+  if(_ttCanEdit()&&_ttCache.sol&&_ttCache.sem){ttAutoSolve(1);if(typeof showToast==='function')showToast((on?'已打开':'已关掉')+'「课排满优先」并重排；要回到刚才的课表按「↶ 还原」',{kind:'success'});}
   else renderTtPanel();
 }
-const TT_TIER_UN=1e13,TT_TIER_ONE=1e11,TT_TIER_SD=1e9,TT_TIER_SOLO=1e7,TT_TIER_CON=1e5;   // 分层评分:没排上＞只排1节＞两节同一天＞个别学生撞课＞连续两天没照办＞其余加总(各层件数 <100、其余加总 <1e5,下层盖不过上层)。   // 分层评分的层距:其余扣分全部加起来远小于 1e7(一门课最多几百分),所以下层永远盖不过上层
+const TT_TIER_UN=1e16,TT_TIER_ONE=1e14,TT_TIER_SD=1e12,TT_TIER_SOLO=1e10,TT_TIER_CON=1e8,TT_TIER_BASE=1e5;   // 分层评分:没排上＞只排1节＞两节同一天＞个别学生撞课＞连续两天没照办＞其余加总(各层件数 <100、其余加总 <1e5,下层盖不过上层)。   // 分层评分的层距:其余扣分全部加起来远小于 1e7(一门课最多几百分),所以下层永远盖不过上层
 const TT_SOLVE_TRIES=40;   // 试几种先后顺序(依「抢人程度」:届别各有多忙+老师多忙+可用教室少)
 const TT_SOLVE_TRIES_COH=8; // 另外再试几种「届别数最多的先排」(Aj. Tsai 2026-11-15 提议;取最好的一版,加了不会变差)
 /* 排完之后的后处理搜索(2026-11-19):从有问题的课(没排上/只排 1 节/两节同一天/连续两天没照办/个别学生撞课)出发,
    拿掉它和几门相关的课,照随机顺序重新找位置,分层评分更好就留下、否则原样放回。次数固定(不看时钟),同样的排课每次结果一样。 */
+const TT_LANG_PEN=0,TT_TIER_LANG=1e7;   /* KE 与 KH(学生二选一,届别放行)尽量排同一时段:找位置时不同的每一节扣 40;挑版时「没排到一起的节数」自成一层 */
+function _ttLangPartners(list){list.forEach(function(c){c._lp=null;});list.forEach(function(c){if(c.isCap)return;const t=_ttTrack(c);if(!t)return;const hs=_ttHs(c);const ps=list.filter(function(q){return q!==c&&!q.isCap&&_ttTrack(q)&&_ttTrack(q)!==t&&_ttHs(q).some(function(h){return hs.indexOf(h)>=0;})&&(c.cohorts||[]).some(function(co){return _ttLang.ok[co]&&(q.cohorts||[]).indexOf(co)>=0;});});if(ps.length)c._lp=ps;});}
+function _ttLangMis(c,cells){if(!c._lp)return 0;const cs=cells||c.cells||[];const placed=c._lp.filter(function(q){return (q.cells||[]).length;});if(!placed.length)return 0;let n=0;cs.forEach(function(x){if(!placed.some(function(q){return q.cells.some(function(y){return y[0]===x[0]&&y[1]===x[1];});}))n++;});return n;}
+const TT_BASE_PEN=30;   /* 找位置时:跟上一版存档不同的每一节扣 30,引导尽量排回原位 */
+function _ttBaseCells(c){if(!c._base)return 0;let n=0;(c.cells||[]).forEach(function(cs){if(!c._base[cs[0]+'|'+cs[1]])n++;});return n;}   /* 这门课有几节跟上一版存档不同 */
+function _ttBasePen(c){return _ttBaseCells(c)*TT_BASE_PEN;}
 const TT_LNS_ITERS=8000,TT_LNS_MS=15000;
 function _ttLayerScore(list){
-  let nUn=0,n1=0,nSD=0,nCon=0,soft=0;
-  list.forEach(function(c){const n=(c.cells||[]).length,k=+c.count||0;if(!n){nUn++;soft+=k*20;}else if(n===1){n1++;soft+=k*2;}else{soft+=_ttAsgScore(c);if(c.isCap)return;if(_ttIsSameDay(c))nSD++;else if(c.note&&c.note.consec){const d=Math.abs((_TT_DAYIDX[c.cells[0][0]]||0)-(_TT_DAYIDX[c.cells[1][0]]||0));if(d!==1&&d!==4)nCon++;}}});
+  let nUn=0,n1=0,nSD=0,nCon=0,nBase=0,nLang=0,soft=0;
+  list.forEach(function(c){nBase+=_ttBaseCells(c);nLang+=_ttLangMis(c);const n=(c.cells||[]).length,k=+c.count||0;if(!n){nUn++;soft+=k*20;}else if(n===1){n1++;soft+=k*2;}else{soft+=_ttAsgScore(c);if(c.isCap)return;if(_ttIsSameDay(c))nSD++;else if(c.note&&c.note.consec){const d=Math.abs((_TT_DAYIDX[c.cells[0][0]]||0)-(_TT_DAYIDX[c.cells[1][0]]||0));if(d!==1&&d!==4)nCon++;}}});
   const nSolo=_ttSoloClashes(list).length;soft+=nSolo*TT_SOLO_PEN;
-  return nUn*TT_TIER_UN+n1*TT_TIER_ONE+nSD*TT_TIER_SD+nSolo*TT_TIER_SOLO+nCon*TT_TIER_CON+soft;
+  return nUn*TT_TIER_UN+n1*TT_TIER_ONE+nSD*TT_TIER_SD+nSolo*TT_TIER_SOLO+nCon*TT_TIER_CON+nLang*TT_TIER_LANG+nBase*TT_TIER_BASE+soft;
 }
 function _ttLns(st,list){
   const now=function(){return (typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();},t0=now();
@@ -5517,6 +5524,9 @@ function _ttSolveCore(sem,opts){
     const ovh=opts.halfOv&&opts.halfOv[String(c.id)];   // 改半方案:这门课试排在另一半
     if(ovh&&!whole&&!c.isCap&&c.half!=='both'&&(ovh==='up'||ovh==='dn')){c.half=ovh;c.hFix=true;}
   });
+  _ttLangPartners(list);
+  list.forEach(function(c){c._base=null;});
+  if(opts.base&&!opts.keep){const bm={};opts.base.forEach(function(p){if(p.isCap||(p.cells||[]).length!==2)return;const o={};p.cells.forEach(function(cs){o[cs[0]+'|'+cs[1]]=1;});(_ttMem(p)||[p]).forEach(function(m){bm[String(m.id)]=o;});});list.forEach(function(c){if(!c.isCap&&bm[String(c.id)])c._base=bm[String(c.id)];});}   // 以存档为底:这门课上一版排在哪两个时段(上下半、老师变了也照比,只是小扣分)
   const capTc=_ttCapMap(list);   // 有 Capstone 的那一半,Capstone 老师与修 Capstone 的届别:周五留给 Capstone、一般课不排周五
   const keepInfo=opts.keep?_ttPinFromSol(list,opts.keep,rooms,capTc,opts.follow):null;   // 只补排:已排好的课锁在原位(见 _ttPinFromSol)
   if(!whole)_ttAutoHalf(list);
@@ -6827,7 +6837,9 @@ function _ttBodyHtml(sol){
   const main=((view==='room'&&_ttCanEdit())?'<div style="font-size:11px;color:#888;margin:0 2px 6px">💡 拖动课片微调；也可把下方未排的胶囊拖进网格。撞堂／超容量即时标红，改完按 💾 存档。'+(sol.tries?' · 🧠 自动排试了 '+sol.tries+' 种先后顺序，取未排最少的一版':'')+'</div>':'')+_ttMainHtml(sol,view);
   return _ttDriftBanner(drift)+_ttKeepBar(sol)+_ttCheckBar(sol)+_ttFootDetails(sol)+_ttCapBar(sol)+_ttInternsBar(sol)+main+_ttPillsBar(sol,view);   // 视图切换已移到 #tt-status(sticky)
 }
-function ttAutoSolve(){if(!_ttCanEdit())return;const sem=_ttCache.sem;if(!sem)return;_ttUndoPush();_ttCache.sol=_ttSolve(sem);_ttCache.dirty=true;renderTtPanel();}
+/* 一键自动排:有存档就以存档为底(尽量不动已排好的课);fresh=整张重排,不看存档 */
+function _ttBaseOf(sem){return null;}   /* 「以存档为底」还在测试(合成测试里 2569-2 反而多动课),先关着;要开时改回读 _ttCache.tt.placements */
+function ttAutoSolve(fresh){if(!_ttCanEdit())return;const sem=_ttCache.sem;if(!sem)return;_ttUndoPush();_ttCache.sol=_ttSolve(sem,fresh?{}:{base:_ttBaseOf(sem)});_ttCache.dirty=true;renderTtPanel();}
 // #8:把课表里排定的上/下半写回排课表 schD(Head/Admin,需确认;改写官方排课)
 async function ttWriteHalfBack(onlyId){
   if(!_ttCanEdit())return;
@@ -7305,7 +7317,7 @@ async function renderTtPanel(force){
   if(canEdit){const nKeep=_ttKeepTodo(sol);const shut="this.closest('details').open=false;";   // 「⚡ 一键自动排 ▾」:三种排法收在 ▾ 里;有课可以只补排时 ▾ 上亮一个橘点
     tools+='<span class="tt-split"><button class="btn btn-p btn-sm" onclick="ttAutoSolve()" title="自动把本学期的课排进时段+教室">⚡ 一键自动排</button>'
       +'<details class="tt-menu"><summary class="btn btn-p btn-sm no-print" aria-label="其他排法" title="'+(nKeep?'有 '+nKeep+' 门课可以只补排 · ':'')+'其他排法：整张重排／前三名／只补排">▾'+(nKeep?'<span class="tt-dot"></span>':'')+'</summary><div class="tt-menu-pop">'
-      +'<button onclick="'+shut+'ttAutoSolve()"><span>⚡ 整张重排<span class="mi-sub">照排课表全部重新排（手动调过的位置不保留）</span></span></button>'
+      +'<button onclick="'+shut+'ttAutoSolve(1)"><span>⚡ 整张重排<span class="mi-sub">照排课表全部重新排（手动调过的位置不保留）</span></span></button>'
       +'<button onclick="'+shut+'ttTop3()"><span>🏅 前三名<span class="mi-sub">列出前三名的数字（没排上／只排 1 节／两节同一天／个别学生撞课），自己挑一个</span></span></button>'
       +'<button onclick="'+shut+'ttKeepSolve()"'+(nKeep?'':' disabled')+'><span>🧩 只补排<span class="mi-sub">'+(nKeep?'已排好的课留在原位（含手动调过的），只把没排上的、新增的 '+nKeep+' 门排进空位':'目前没有要补的课')+'</span></span></button>'
       +'</div></details></span>';
