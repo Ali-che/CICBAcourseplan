@@ -5382,7 +5382,7 @@ async function ttTop3(){
   if(!_ttPlanBusy||_ttCache.sem!==sem)return;
   _ttPlanBusy=false;_ttTop=out;
   const best=function(f){return Math.min.apply(null,out.map(f));};
-  const cols=[['没排上',function(o){return o.st.un.length;}],['只排 1 节',function(o){return o.st.one.length;}],['两节同一天',function(o){return o.st.sd.length;}],['个别学生撞课',function(o){return o.st.solo;}],['两节不同教室',function(o){return o.st.dr;}]];
+  const cols=[['没排上',function(o){return o.st.un.length;}],['只排 1 节',function(o){return o.st.one.length;}],['两节同一天',function(o){return o.st.sd.length;}],['个别学生撞课',function(o){return o.st.solo;}]];   /* 「两节不同教室」不当比较项:它只是最轻的扣分(30),不是首要的排序要求(Aj. Tsai 2026-11-19) */
   const mins=cols.map(function(c){return best(c[1]);});
   let h='<div class="ttplan-title">🏅 前三名课表</div>';
   if(out.length<2)h+='<div class="ttplan-ok">这学期试出来的课表，在「没排上／只排 1 节／两节同一天／个别学生撞课」这几项上都一样，没有别的可选。</div>';
