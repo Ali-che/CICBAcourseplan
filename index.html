@@ -5194,8 +5194,10 @@ function _ttRunOnce(list,capPlan){
   // flat = 旧算法(全部加成一个总分:只排 1 节约 1000、同一天 600、个别学生撞课每组 80 → 撞课多 13 组会输给少排一节),留着做对照。
   let nUn=0,n1=0,soft=0,flat=0;
   list.forEach(function(c){const n=(c.cells||[]).length,k=+c.count||0;if(!n){nUn++;soft+=k*20;flat+=10000+k*20;}else if(n===1){n1++;soft+=k*2;flat+=1000+k*2;}else{const a=_ttAsgScore(c);soft+=a;flat+=a;}});
-  const solo=_ttSoloClashes(list).length*TT_SOLO_PEN;soft+=solo;flat+=solo;   // 个别学生撞课越少越好
-  return {st:st,score:nUn*TT_TIER_UN+n1*TT_TIER_ONE+soft,flat:flat,nUn:nUn,n1:n1,soft:soft,key:nUn+'|'+n1+'|'+(solo/TT_SOLO_PEN)+'|'+list.filter(_ttIsSameDay).length+'|'+list.filter(function(c){return (c.cells||[]).length<2;}).map(function(c){return c.id;}).join(',')};   // key:人看得出差别的几个数字(前三名用它去掉「看起来一样」的)
+  const nSolo=_ttSoloClashes(list).length,solo=nSolo*TT_SOLO_PEN;soft+=solo;flat+=solo;   // 个别学生撞课越少越好
+  let nSD=0,nCon=0;list.forEach(function(c){if(c.isCap||(c.cells||[]).length!==2)return;if(_ttIsSameDay(c))nSD++;else if(c.note&&c.note.consec){const d=Math.abs((_TT_DAYIDX[c.cells[0][0]]||0)-(_TT_DAYIDX[c.cells[1][0]]||0));if(d!==1&&d!==4)nCon++;}});   // 两节同一天几门、备注要连续两天却没照办几门
+  /* 分层(2026-11-19):没排上 → 只排 1 节 → 两节同一天 → 个别学生撞课 → 连续两天没照办 → 其余扣分加总;上一层少一个,下面扣再多也赢。tierOld=只分前两层(旧版,对照用) */
+  return {st:st,score:nUn*TT_TIER_UN+n1*TT_TIER_ONE+nSD*TT_TIER_SD+nSolo*TT_TIER_SOLO+nCon*TT_TIER_CON+soft,scoreOld:nUn*1e10+n1*1e7+soft,flat:flat,nSD:nSD,nSolo:nSolo,nCon:nCon,nUn:nUn,n1:n1,soft:soft,key:nUn+'|'+n1+'|'+(solo/TT_SOLO_PEN)+'|'+list.filter(_ttIsSameDay).length+'|'+list.filter(function(c){return (c.cells||[]).length<2;}).map(function(c){return c.id;}).join(',')};   // key:人看得出差别的几个数字(前三名用它去掉「看起来一样」的)
 }
 // 两节同一天:一般课的两节排在同一天(上午+下午)。Capstone 不算(一天三段,同一天连两段本来就可以)
 function _ttIsSameDay(p){return !p.isCap&&(p.cells||[]).length===2&&p.cells[0][0]===p.cells[1][0];}
@@ -5446,7 +5448,7 @@ function ttTierToggle(on){
   if(_ttCanEdit()&&_ttCache.sol&&_ttCache.sem){ttAutoSolve();if(typeof showToast==='function')showToast((on?'已打开':'已关掉')+'「课排满优先」并重排；要回到刚才的课表按「↶ 还原」',{kind:'success'});}
   else renderTtPanel();
 }
-const TT_TIER_UN=1e10,TT_TIER_ONE=1e7;   // 分层评分的层距:其余扣分全部加起来远小于 1e7(一门课最多几百分),所以下层永远盖不过上层
+const TT_TIER_UN=1e13,TT_TIER_ONE=1e11,TT_TIER_SD=1e9,TT_TIER_SOLO=1e7,TT_TIER_CON=1e5;   // 分层评分:没排上＞只排1节＞两节同一天＞个别学生撞课＞连续两天没照办＞其余加总(各层件数 <100、其余加总 <1e5,下层盖不过上层)。   // 分层评分的层距:其余扣分全部加起来远小于 1e7(一门课最多几百分),所以下层永远盖不过上层
 const TT_SOLVE_TRIES=40;   // 试几种先后顺序(依「抢人程度」:届别各有多忙+老师多忙+可用教室少)
 const TT_SOLVE_TRIES_COH=8; // 另外再试几种「届别数最多的先排」(Aj. Tsai 2026-11-15 提议;取最好的一版,加了不会变差)
 function _ttSolve(sem,opts){
@@ -5524,7 +5526,7 @@ function _ttSolveCore(sem,opts){
     const cw=coh?0:TT_COH_W[run%TT_COH_W.length];   // 前 40 种轮流用 4 种「届别数加重」(每个届别加 0／100／200／300 分):届别多的课要找大家都空的时段,早一点排比较排得进;加多少最好跟资料有关,所以都试、挑最好的(Aj. Tsai 2026-11-18)
     list.forEach(function(c){c._k=coh?(c._pr2+(run>TT_SOLVE_TRIES?rnd()*1500:0)):(c._pr+(c.isCap?0:c.cohorts.length*cw)+(run?rnd()*260:0));});
     const r=_ttRunOnce(list,capPlan);
-    const sc=(opts.flatScore!=null?opts.flatScore:!_ttTierOn())?r.flat:r.score;   // 选项「课排满优先」关掉 = 旧的总分制;opts.flatScore 可强制指定(对照测试用)
+    const sc=(opts.flatScore!=null?opts.flatScore:!_ttTierOn())?r.flat:(opts.tierOld?r.scoreOld:r.score);   // 选项「课排满优先」关掉 = 旧的总分制;opts.flatScore 可强制指定(对照测试用)
     if(opts.rank)cands.push({score:sc,run:run,key:r.key,nUn:r.nUn,n1:r.n1,soft:r.soft,asg:list.map(function(c){return c.cells.map(function(cs){return cs.slice();});})});
     if(!best||sc<best.score)best={score:sc,run:run,nUn:r.nUn,n1:r.n1,soft:r.soft,asg:list.map(function(c){return c.cells.map(function(cs){return cs.slice();});})};
     if(!opts.rank&&best.score<10)break;   // 已经全部排满且间隔理想,不用再试
