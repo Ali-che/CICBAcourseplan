@@ -351,6 +351,9 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 .tt-chip .c{font-weight:700}
 .tt-chip .m{color:#b45309}
 .tt-c3{display:flex;flex-direction:column;min-width:0}
+.tt-lnk{color:#534AB7;text-decoration:underline;cursor:pointer}
+.tt-lnk:hover{color:#3C3489}
+#sch-tb tr.sch-flash td{background:#FFF3C4!important;transition:background .3s}
 .tt-capcard{display:block;white-space:normal;overflow-wrap:anywhere;border-radius:7px;padding:6px 9px;margin:1px;background:#EEEDFE;border:0.5px solid #AFA9EC;border-left:3px solid #534AB7;color:#3C3489;font-size:11px;line-height:1.4;text-align:left}   /* 周五 Capstone 日:整天一张卡 */
 .tt-capcard .cc-h{display:block;font-size:10px;color:#6b7280;font-family:ui-monospace,monospace}
 .tt-capcard .cc-t{display:block;font-weight:700;font-size:12px;margin-top:1px}
@@ -946,7 +949,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <label>学年学期</label><select id="sch-sem-f" onchange="renderSch()"><option value="">全部</option></select>
       <label>课程代码</label><select id="sch-dept-f" onchange="renderSch()"><option value="">全部</option></select>
       <label>老师</label><select id="sch-tc-f" onchange="renderSch()"><option value="">全部</option></select>
-      <input id="sch-search" type="text" oninput="renderSch()" placeholder="🔍 搜索：课程代码 / 英文名 / 班级" style="width:220px">
+      <input id="sch-search" type="text" oninput="renderSch()" placeholder="🔍 搜索：课程代码 / 英文名 / 班级 / 届别" style="width:220px">
       <label style="font-size:11px;color:#888;cursor:pointer;white-space:nowrap" title="勾选后在各视图临时显示已归档学期(全局)"><input type="checkbox" id="sch-showarch" onchange="toggleShowArch(this.checked)" style="width:auto;vertical-align:middle"> 显示已归档</label>
     </div>
     <div class="tbl-wrap">
@@ -1168,7 +1171,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <label>老师</label><select id="f-tc" onchange="renderTchr()"><option value="">请选择</option></select>
       <label>课程类型</label>
       <select id="f-tc-t" onchange="renderTchr()"><option value="">全部</option><option>正常</option><option>英文</option><option>CD-实习</option><option>实习</option><option>SG</option><option>Capstone</option></select>
-      <input id="f-tc-q" oninput="renderTchr()" placeholder="🔍 搜索：课程代码 / 英文名 / 班级" style="width:200px">
+      <input id="f-tc-q" oninput="renderTchr()" placeholder="🔍 搜索：课程代码 / 英文名 / 班级 / 届别" style="width:200px">
     </div>
     <div class="card">
       <div class="ct" id="tc-ttl">任课老师课程总表</div>
@@ -1186,7 +1189,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       <label>专业</label>
       <select id="f-co-d" onchange="filterCohByDept()"><option value="">全部</option></select>
       <label>届别</label><select id="f-co" onchange="renderCoh()"><option value="">请选择</option></select>
-      <input id="f-co-q" oninput="renderCoh()" placeholder="🔍 搜索：课程代码 / 英文名 / 班级" style="width:200px">
+      <input id="f-co-q" oninput="renderCoh()" placeholder="🔍 搜索：课程代码 / 英文名 / 班级 / 届别" style="width:200px">
       <label style="font-size:12px;color:#555;cursor:pointer;white-space:nowrap" title="届别下拉只列排课表里出现过的;已毕业届别默认隐藏,勾此显示"><input type="checkbox" id="f-co-grad" onchange="toggleCoShowGrad(this.checked)" style="width:auto;vertical-align:middle"> 显示已毕业</label>
     </div>
     <div class="card">
@@ -6354,7 +6357,7 @@ function _ttPlanShow(body,foot){const m=_ttPlanEl();{const t0=m.querySelector('.
 // kind='sd':两节要分开不同天;kind='consec':要连续两天(或周一＋周五)——留一节不动、挪另一节。
 function _ttAdvSlots(sol,p,kind,idx){
   const st=_ttStateFromSol(sol,p.id),h=_ttHs(p)[0],cand=_ttCandRooms(p,sol.rooms),toks=_ttTok(p).r,P=sol.placements||[],rows=[],seen={};
-  const nm=function(id){const q=P.find(function(x){return String(x.id)===String(id);});return q?_ttName(q):String(id);};
+  const nm=function(id){const q=P.find(function(x){return String(x.id)===String(id);});return q?_ttName(q):String(id);},crs=function(id){const q=P.find(function(x){return String(x.id)===String(id);});return q?q.course:'';};
   const lab=function(c){return c[0]+(c[1]==='am'?'上午':'下午');};
   const ok=function(kd,d){const a=_TT_DAYIDX[kd]||0,b=_TT_DAYIDX[d]||0,df=Math.abs(a-b);return kind==='consec'?(df===1||df===4):(kind==='hard'?true:d!==kd);};
   (kind==='consec'?[0,1]:(kind==='hard'?[1-(idx||0)]:[0])).forEach(function(keep){
@@ -6368,7 +6371,7 @@ function _ttAdvSlots(sol,p,kind,idx){
         toks.forEach(function(co){const id=st.cb[h][co+'|'+k];if(id)(bl[id]=bl[id]||{t:0,c:{}}).c[co.replace(/#[EH]$/,'')]=1;});
       });
       const roomFree=cand.some(function(r){return !ks.some(function(k){return st.occ[h][r.code+'|'+k];});});
-      rows.push({keep:kept,d:d,s:sl,room:roomFree,keepTxt:lab(kept),blk:Object.keys(bl).map(function(id){const cs=Object.keys(bl[id].c);return {name:nm(id),why:(bl[id].t?'老师有课':'')+(bl[id].t&&cs.length?'；':'')+(cs.length?'届别 '+cs.slice(0,3).join('、')+(cs.length>3?'…共 '+cs.length+' 个':''):'')};})});
+      rows.push({keep:kept,d:d,s:sl,room:roomFree,keepTxt:lab(kept),blk:Object.keys(bl).map(function(id){const cs=Object.keys(bl[id].c);return {name:nm(id),id:id,course:crs(id),t:!!bl[id].t,cs:cs,why:(bl[id].t?'老师有课':'')+(bl[id].t&&cs.length?'；':'')+(cs.length?'届别 '+cs.slice(0,3).join('、')+(cs.length>3?'…共 '+cs.length+' 个':''):'')};})});
     });});
   });
   rows.sort(function(a,b){return (a.blk.length-b.blk.length)||((b.room?1:0)-(a.room?1:0));});
@@ -6404,10 +6407,10 @@ async function ttSdAdvise(id,kind){
       +'<div><b>现在</b>：'+(sol.whole?'':(HN[p.half]||'')+' ')+goal+'（'+p.count+' 人 · '+eh(p.tc||'待定')+' · '+(p.cohorts||[]).length+' 个届别）</div>'
       +'<div style="margin-top:6px"><b>为什么排不好</b>：'+(kind==='consec'?'要和留下的那一节连成连续两天，可以去的时段':'其他每个时段')+'，这门课的老师或届别都已经有别的课。差最少的几个：</div>'
       +'<table data-gsort="off" style="border-collapse:collapse;margin:4px 0;font-size:12px;width:100%"><tr><th style="'+th+'">'+(keepNote?'留下 → 挪到':'挪到')+'</th><th style="'+th+'">被挡住的课</th><th style="'+th+';white-space:nowrap">教室</th></tr>'
-      +top.map(function(r){return '<tr><td style="'+td+';white-space:nowrap">'+(keepNote?eh(r.keepTxt)+' → ':'')+'<b>'+eh(dayN(r))+'</b></td><td style="'+td+'">'+(r.blk.length?r.blk.map(function(b){return '<b>'+eh(b.name)+'</b> <span style="color:#777">（'+eh(b.why)+'）</span>';}).join('<br>'):'没有课挡住')+'</td><td style="'+td+';white-space:nowrap">'+(r.room?'有空':'<span style="color:#b42318">没有空教室</span>')+'</td></tr>';}).join('')+'</table>'
+      +top.map(function(r){return '<tr><td style="'+td+';white-space:nowrap">'+(keepNote?eh(r.keepTxt)+' → ':'')+'<b>'+eh(dayN(r))+'</b></td><td style="'+td+'">'+(r.blk.length?r.blk.map(function(b){return _ttLkBlk(b,_ttCache.sem,p.tc);}).join('<br>'):'没有课挡住')+'</td><td style="'+td+';white-space:nowrap">'+(r.room?'有空':'<span style="color:#b42318">没有空教室</span>')+'</td></tr>';}).join('')+'</table>'
       +'<div style="margin-top:6px"><b>建议</b></div><ol style="margin:2px 0 6px;padding-left:20px">'
-      +(best?'<li>'+(keepNote?'留 '+eh(best.keepTxt)+'，把另一节挪到 ':'挪到 ')+'<b>'+eh(dayN(best))+'</b>：'+(best.blk.length===1?'只被 <b>'+eh(best.blk[0].name)+'</b> 挡住。'+(mv&&mv.known?(mv.found?'试算：把它挪到 <b>'+eh(mv.found)+'</b> 就行（手动拖，或在排课表改它的上下半）。':'但它自己也找不到别的时段可去（它的老师、届别和教室在其他时段都被占了），所以挪不开。要排好，得先在排课表改它（上下半、老师或届别），或接受现在的排法。'):'把它挪到别的时段（或在排课表改到另一半学期）就行。')+(_ttDeepOn()?'':'（「⚙️ 选项」的「拆开两节同天」没打开，打开后系统会先自动试着挪。）'):'最少也被 '+best.blk.length+' 门课挡住：要同时挪开这几门（或让其中一个届别不同时上）才行。'):'<li>其他时段都排不进去（老师、届别、教室至少有一样没有空）。')+'</li>'
-      +'<li id="ttsd-half"><span style="color:#777">⏳ 正在试「改到另一半学期」…</span></li></ol></div>';
+      +(best?'<li>'+(keepNote?'留 '+eh(best.keepTxt)+'，把另一节挪到 ':'挪到 ')+'<b>'+eh(dayN(best))+'</b>：'+(best.blk.length===1?'只被 <b>'+_ttLkSch(best.blk[0].name,_ttCache.sem,best.blk[0].id,best.blk[0].course,'','到排课表看这门课')+'</b> 挡住。'+(mv&&mv.known?(mv.found?'试算：把它挪到 <b>'+eh(mv.found)+'</b> 就行（手动拖，或在排课表改它的上下半）。':'但它自己也找不到别的时段可去（它的老师、届别和教室在其他时段都被占了），所以挪不开。要排好，得先在排课表改它（上下半、老师或届别），或接受现在的排法。'):'把它挪到别的时段（或在排课表改到另一半学期）就行。')+(_ttDeepOn()?'':'（「⚙️ 选项」的「拆开两节同天」没打开，打开后系统会先自动试着挪。）'):'最少也被 '+best.blk.length+' 门课挡住：要同时挪开这几门（或让其中一个届别不同时上）才行。'):'<li>其他时段都排不进去（老师、届别、教室至少有一样没有空）。')+'</li>'
+      +'<li id="ttsd-half"><span style="color:#777">⏳ 正在试「改到另一半学期」…</span></li></ol>'+_ttLkRow([p],(p.cohorts||[]).slice(0,4))+'</div>';
     _ttPlanShow(body,foot);
     const li=function(){return document.getElementById('ttsd-half');};
     if(!sol.whole&&(p.half==='up'||p.half==='dn')){
@@ -6419,6 +6422,31 @@ async function ttSdAdvise(id,kind){
       if(li())li().innerHTML=good?('<b>改到'+on+'学期</b>（在排课表改上下半）：试排的结果 <b>'+eh(_ttCC(p))+' 排好了</b>（'+eh(cellTxt(q.cells))+'），未排 '+un0+' → '+un1+' 门，'+what+' '+n0+' → '+n1+' 门'+(worse?'<span style="color:#b42318">（但会多 '+(un1-un0)+' 门排不上，不建议）</span>':'，<span style="color:#1a6b2f">其他课没有变差，可以改</span>')+'。'):('<b>改到'+on+'学期</b>：试排过，这门课还是排不好'+(q&&(q.cells||[]).length<2?'（只排得上 1 节）':'')+'，改半帮不上。');
     }else if(li())li().innerHTML='这门课的上下半没有写明（或是全学期），没有「改到另一半」可试。';
   }catch(e){_ttPlanShow('<div class="ttplan-wait">查不出建议：'+eh(String(e&&e.message||e))+'</div>',foot);}
+}
+function gotoSch(sem,id,q,tc){   // 从课表制作的建议跳到「排课表」:选好学期、搜索课码／届别、或筛老师;有 id 就闪一下那一行
+  try{ttPlanClose();}catch(e){}
+  if(typeof switchTab==='function')switchTab('sch');
+  try{renderSch();}catch(e){}
+  const semF=document.getElementById('sch-sem-f'),deptF=document.getElementById('sch-dept-f'),tcF=document.getElementById('sch-tc-f'),qF=document.getElementById('sch-search');
+  if(semF&&sem&&[].slice.call(semF.options).some(function(o){return o.value===sem;}))semF.value=sem;
+  if(deptF)deptF.value='';
+  if(tcF){tcF.value='';if(tc&&[].slice.call(tcF.options).some(function(o){return o.value===tc;}))tcF.value=tc;}
+  if(qF)qF.value=q||'';
+  renderSch();
+  if(id)setTimeout(function(){const tr=document.querySelector('#sch-tb tr[data-sch-id="'+String(id).replace(/"/g,'')+'"]');if(tr){tr.scrollIntoView({block:'center'});tr.classList.add('sch-flash');setTimeout(function(){tr.classList.remove('sch-flash');},2200);}},80);
+}
+function _ttLkSch(label,sem,id,q,tc,title){return '<a class="tt-lnk" href="javascript:void(0)" title="'+eh(title||'到排课表看')+'" onclick="gotoSch(\''+jsq(sem||'')+'\',\''+jsq(String(id||''))+'\',\''+jsq(q||'')+'\',\''+jsq(tc||'')+'\')">'+eh(label)+'</a>';}
+function _ttLkBlk(b,sem,tc){   // 挡路的课:课码链接 + (老师有课／届别…各一个链接)
+  const parts=[];
+  if(b.t&&tc)parts.push(_ttLkSch('老师有课',sem,'','',tc,'到排课表看 '+tc+' 的课'));
+  if((b.cs||[]).length)parts.push('届别 '+b.cs.slice(0,3).map(function(co){return _ttLkSch(co,sem,'',co,'','到排课表看有这个届别的课');}).join('、')+(b.cs.length>3?'…共 '+b.cs.length+' 个':''));
+  return '<b>'+_ttLkSch(b.name,sem,b.id,b.course,'','到排课表看这门课')+'</b> <span style="color:#777">（'+parts.join('；')+'）</span>';
+}
+function _ttLkRow(ps,extraCo){   // 建议窗最后一行:这几门课／老师／届别在排课表的链接
+  const sem=_ttCache.sem,a=[],seen={};
+  (ps||[]).forEach(function(p){if(!p)return;a.push(_ttLkSch(_ttCC(p),sem,p.id,p.course,'','到排课表看这门课'));if(p.tc&&!seen[p.tc]){seen[p.tc]=1;a.push(_ttLkSch(p.tc,sem,'','',p.tc,'到排课表看这位老师的课'));}});
+  (extraCo||[]).forEach(function(co){a.push(_ttLkSch(co,sem,'',co,'','到排课表看有这个届别的课'));});
+  return '<div style="margin-top:8px;padding-top:6px;border-top:0.5px solid #eee;color:#777">到排课表：'+a.join(' · ')+'</div>';
 }
 // ── 个别学生撞课、撞堂／超容量 的调整建议:用排课同一套找位置的做法(_ttSlotOpts),列出这一节可以挪去的时段 ──
 function _ttGapTxt(kd,d){const df=Math.abs((_TT_DAYIDX[kd]||0)-(_TT_DAYIDX[d]||0));return df===0?'同一天':(df===1?'连续两天':(df===2?'隔一天':(df===4&&((kd==='周一'&&d==='周五')||(kd==='周五'&&d==='周一'))?'周一＋周五':'隔 '+(df-1)+' 天')));}
@@ -6453,7 +6481,7 @@ function ttSoloAdvise(aId,bId,co,dsJson){   // 个别学生撞课:挪哪一门�
       idxs.slice(0,2).forEach(function(i){const o=_ttAdvOpts(sol,X,i);h+='<div style="margin:2px 0 0">把 <b>'+eh(cellName(o.cur))+'</b> 这一节挪到：'+(o.opts.length&&o.opts[0].pen===0?'<span style="color:#1a6b2f">（有时段完全不撞）</span>':'')+'</div>'+_ttAdvOptTable(o,true);});
     });
     h+='<div style="margin-top:6px"><b>'+(++n)+'. 或在排课表确认</b>：这位学生是不是真的要同时修这两门；如果不是，把他从其中一门的届别人数里拿掉，撞课就消失了（「改」钮可直接开排课编辑窗）。</div>';
-    _ttPlanShow(_ttAdvShell('调整建议 · 个别学生撞课 · '+co,h),foot);
+    h+=_ttLkRow([A,B],[co]);_ttPlanShow(_ttAdvShell('调整建议 · 个别学生撞课 · '+co,h),foot);
   }catch(e){_ttPlanShow('<div class="ttplan-wait">查不出建议：'+eh(String(e&&e.message||e))+'</div>',foot);}
 }
 function ttHardAdvise(id){   // 撞堂／超容量:哪一节有问题、挪到哪里或换哪间教室
@@ -6474,10 +6502,10 @@ function ttHardAdvise(id){   // 撞堂／超容量:哪一节有问题、挪到�
       h+='<div style="margin-top:6px"><b>'+(++n)+'. '+eh(cellName(c))+' 这一节</b>：';
       if(timeOk&&!roomOk){h+='时段没问题，问题在教室。<b>换教室</b>：'+eh(here.rs.slice(0,4).join('、'))+'（这几间在这个时段有空、也坐得下 '+p.count+' 人）。</div>';return;}
       h+='这个时段老师、届别或教室已经被占，<b>挪到</b>：</div>'+_ttAdvOptTable(o,false);
-      if(!o.opts.length){const rows=_ttAdvSlots(sol,p,'hard',i).slice(0,3);if(rows.length)h+='<div style="color:#777">差最少的时段：'+rows.map(function(r){return eh(r.d+(r.s==='am'?'上午':'下午'))+'（被 '+r.blk.map(function(b){return eh(b.name);}).join('、')+' 挡住）';}).join('；')+'</div>';}
+      if(!o.opts.length){const rows=_ttAdvSlots(sol,p,'hard',i).slice(0,3);if(rows.length)h+='<div style="color:#777">差最少的时段：'+rows.map(function(r){return eh(r.d+(r.s==='am'?'上午':'下午'))+'（被 '+r.blk.map(function(b){return _ttLkSch(b.name,_ttCache.sem,b.id,b.course,'','到排课表看这门课');}).join('、')+' 挡住）';}).join('；')+'</div>';}
     });
     if(!n)h+='<div style="margin-top:6px">两节各自看都没有冲突：问题可能出在别的课身上（这门课是被它撞到的），请看同一个格子里的另一门。</div>';
-    _ttPlanShow(_ttAdvShell('调整建议 · 撞堂／超容量 · '+_ttCC(p),h),foot);
+    h+=_ttLkRow([p],(p.cohorts||[]).slice(0,4));_ttPlanShow(_ttAdvShell('调整建议 · 撞堂／超容量 · '+_ttCC(p),h),foot);
   }catch(e){_ttPlanShow('<div class="ttplan-wait">查不出建议：'+eh(String(e&&e.message||e))+'</div>',foot);}
 }
 async function ttHalfPlan(){
@@ -8658,6 +8686,7 @@ function renderSch(){
       (r.en||'').toLowerCase().includes(q)||
       String(r.cls||'').toLowerCase().includes(q)||
       _mapMatch(r.course,q)||
+      (r.cc||[]).some(x=>String((x&&x.cohort)||'').toLowerCase().includes(q))||
       (r.btec&&'btec'.includes(q))
     );
   }
@@ -8691,7 +8720,7 @@ function renderSch(){
     const _cf=C.find(x=>x.c===r.course);
     const _mpv=_cf&&_cf.mapping?String(_cf.mapping).trim():'';
     const _mp=(_mpv&&_mpv!=='待定')?'<div style="font-size:10.5px;color:#185FA5;margin-top:1px;padding-left:9px;line-height:1.3">🔗 对接 '+eh(_mpv)+'</div>':'';
-    return'<tr'+(_chk?' style="background:#FFF8E1"':'')+'><td style="text-align:center"><input type="checkbox" class="row-chk" '+_chk+' onclick="toggleRowSelect(\'sch\',\''+r.id+'\',this.checked)"></td><td>'+(i+1)+'</td>'+
+    return'<tr data-sch-id="'+r.id+'"'+(_chk?' style="background:#FFF8E1"':'')+'><td style="text-align:center"><input type="checkbox" class="row-chk" '+_chk+' onclick="toggleRowSelect(\'sch\',\''+r.id+'\',this.checked)"></td><td>'+(i+1)+'</td>'+
       '<td class="cn-cell" style="min-width:170px;max-width:240px"><div style="display:inline-flex;align-items:center;gap:4px"><span class="badge b0">'+r.course+'</span><span class="badge '+(TB[r.type]||'b4')+'" style="font-size:9.5px;padding:1px 6px;opacity:.85">'+r.type+'</span>'+(r.btec?'<span style="background:#534AB7;color:#fff;font-size:9px;font-weight:700;padding:1px 7px;border-radius:20px;letter-spacing:.3px">BTEC</span>':'')+'</div><div style="font-size:11px;color:#888;margin-top:2px;padding-left:9px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eh(r.en||'—')+'</div>'+_mp+(r.en?'<div class="cn-tip">'+eh(r.en)+'</div>':'')+'</td>'+
       '<td>'+semBadge(r.sem)+'</td><td>'+halfBadge(r.half)+'</td>'+
       '<td>'+r.cls+'</td><td style="white-space:nowrap">'+teacherTag(r.tc)+'</td>'+
@@ -10470,7 +10499,7 @@ function _schExpFilter(sem,dept,tc,q){
   }
   if(q&&q.trim()){const s=q.trim().toLowerCase();data=data.filter(r=>
     (r.course||'').toLowerCase().includes(s)||(r.en||'').toLowerCase().includes(s)||
-    String(r.cls||'').toLowerCase().includes(s)||_mapMatch(r.course,s)||(r.btec&&'btec'.includes(s)));}
+    String(r.cls||'').toLowerCase().includes(s)||_mapMatch(r.course,s)||(r.cc||[]).some(x=>String((x&&x.cohort)||'').toLowerCase().includes(s))||(r.btec&&'btec'.includes(s)));}
   return data;
 }
 function _schExpVals(){return{
