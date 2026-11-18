@@ -4814,6 +4814,7 @@ function _ttAutoHalf(list){
 // 同一门课两节排同一天(上午+下午)= 最后才用(Aj. Tsai 2026-11-16「下下下下下策」):扣 600,
 //   比「撞到几个个别学生」(每个 80)、连续两天(60)、两节不同教室(30)加起来都重,但比「只排到 1 节」(1000 起)轻 → 宁可同一天也不要少排一节
 const TT_SAMEDAY_PEN=600;
+const TT_CONSEC_PEN=200;   // 备注要「连续两天」却没排到的扣分:比一位个别学生撞课(80)重、比两节同一天(600)轻(Aj. Tsai 2026-11-19,原本 40)
 const _TT_DAYIDX={'周一':1,'周二':2,'周三':3,'周四':4,'周五':5,'周六':6,'周日':7};
 function _ttPairScore(c1,c2){
   const a=_TT_DAYIDX[c1[0]]||0,b=_TT_DAYIDX[c2[0]]||0;
@@ -4956,7 +4957,7 @@ function _ttDaysFor(c,capTc){
 function _ttCellScore(c,A,B){
   if(c.isCap)return _ttCapDayPen(A[0])+_ttCapDayPen(B[0])+(A[0]===B[0]?30:0);   // Capstone:周五/周六为主,其次周一~周四,最后周日;同一天连两段可以(扣 30)
   if(c.note&&c.note.consec){   // 备注「连续两天」:相邻两天最好,周一+周五也可以,其余算没照办
-    if(A[0]===B[0])return TT_SAMEDAY_PEN;const d=Math.abs((_TT_DAYIDX[A[0]]||0)-(_TT_DAYIDX[B[0]]||0));return d===1?0:(d===4?5:40);
+    if(A[0]===B[0])return TT_SAMEDAY_PEN;const d=Math.abs((_TT_DAYIDX[A[0]]||0)-(_TT_DAYIDX[B[0]]||0));return d===1?0:(d===4?5:TT_CONSEC_PEN);
   }
   return _ttPairScore(A,B);
 }
