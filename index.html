@@ -5451,6 +5451,38 @@ function ttTierToggle(on){
 const TT_TIER_UN=1e13,TT_TIER_ONE=1e11,TT_TIER_SD=1e9,TT_TIER_SOLO=1e7,TT_TIER_CON=1e5;   // 分层评分:没排上＞只排1节＞两节同一天＞个别学生撞课＞连续两天没照办＞其余加总(各层件数 <100、其余加总 <1e5,下层盖不过上层)。   // 分层评分的层距:其余扣分全部加起来远小于 1e7(一门课最多几百分),所以下层永远盖不过上层
 const TT_SOLVE_TRIES=40;   // 试几种先后顺序(依「抢人程度」:届别各有多忙+老师多忙+可用教室少)
 const TT_SOLVE_TRIES_COH=8; // 另外再试几种「届别数最多的先排」(Aj. Tsai 2026-11-15 提议;取最好的一版,加了不会变差)
+/* 排完之后的后处理搜索(2026-11-19):从有问题的课(没排上/只排 1 节/两节同一天/连续两天没照办/个别学生撞课)出发,
+   拿掉它和几门相关的课,照随机顺序重新找位置,分层评分更好就留下、否则原样放回。次数固定(不看时钟),同样的排课每次结果一样。 */
+const TT_LNS_ITERS=8000,TT_LNS_MS=15000;
+function _ttLayerScore(list){
+  let nUn=0,n1=0,nSD=0,nCon=0,soft=0;
+  list.forEach(function(c){const n=(c.cells||[]).length,k=+c.count||0;if(!n){nUn++;soft+=k*20;}else if(n===1){n1++;soft+=k*2;}else{soft+=_ttAsgScore(c);if(c.isCap)return;if(_ttIsSameDay(c))nSD++;else if(c.note&&c.note.consec){const d=Math.abs((_TT_DAYIDX[c.cells[0][0]]||0)-(_TT_DAYIDX[c.cells[1][0]]||0));if(d!==1&&d!==4)nCon++;}}});
+  const nSolo=_ttSoloClashes(list).length;soft+=nSolo*TT_SOLO_PEN;
+  return nUn*TT_TIER_UN+n1*TT_TIER_ONE+nSD*TT_TIER_SD+nSolo*TT_TIER_SOLO+nCon*TT_TIER_CON+soft;
+}
+function _ttLns(st,list){
+  const now=function(){return (typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();},t0=now();
+  let seed=20261119;const rnd=function(){seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+  const free=list.filter(function(c){return !c.isCap&&!c._pin;});
+  const isBad=function(c){const n=(c.cells||[]).length;if(n<2)return true;if(_ttIsSameDay(c))return true;if(c.note&&c.note.consec){const d=Math.abs((_TT_DAYIDX[c.cells[0][0]]||0)-(_TT_DAYIDX[c.cells[1][0]]||0));return d!==1&&d!==4;}return false;};
+  let cur=_ttLayerScore(list);const before=cur;let it=0,imp=0;
+  for(;it<TT_LNS_ITERS&&now()-t0<TT_LNS_MS;it++){
+    let bad=free.filter(isBad);
+    if(!bad.length){const sc=_ttSoloClashes(list);if(!sc.length)break;bad=free;}   // 只剩个别学生撞课时,随便挑一门当起点
+    const seedC=bad[Math.floor(rnd()*bad.length)];
+    const k=2+Math.floor(rnd()*3);
+    const pool=free.filter(function(q){return q!==seedC&&(q.tc===seedC.tc||(q.cohorts||[]).some(function(co){return (seedC.cohorts||[]).indexOf(co)>=0;})||rnd()<0.08);});
+    const R=[seedC];while(R.length<=k&&pool.length)R.push(pool.splice(Math.floor(rnd()*pool.length),1)[0]);
+    const old=R.map(function(r){return (r.cells||[]).map(function(x){return x.slice();});});
+    R.forEach(function(r){_ttUnapply(st,r);});
+    const order=R.slice().sort(function(){return rnd()-0.5;});
+    order.forEach(function(r){const f=_ttFindSlots(st,r,r._cand,r._days,true);_ttApply(st,r,f?f.cells:[]);});
+    const ns=_ttLayerScore(list);
+    if(ns<cur){cur=ns;imp++;}
+    else{R.forEach(function(r){_ttUnapply(st,r);});R.forEach(function(r,i){_ttApply(st,r,old[i]);});}
+  }
+  return {iters:it,improved:imp,before:before,after:cur,ms:Math.round(now()-t0)};
+}
 function _ttSolve(sem,opts){
   // 231 留给小班:先照「留」排;有课没排上／只排 1 节 → 再照「不留」排一次,比较 没排上 → 只排 1 节,不留比较好才用不留
   opts=opts||{};
@@ -5541,6 +5573,7 @@ function _ttSolveCore(sem,opts){
   const st=_ttMkState();
   list.forEach(function(c,i){c.cells=[];c.room='';_ttApply(st,c,best.asg[i]);});
   const deep=(opts.deep!==false&&_ttDeepOn())?_ttDeepFix(st,list):null;   // 还剩两节同一天的课 → 加深搜寻(连挪两门)试着拆开
+  const lns=(opts.deep!==false&&opts.lns!==false&&!opts.tries&&_ttDeepOn())?_ttLns(st,list):null;   // 后处理搜索:跟「拆开两节同天」同一个开关;改半方案找方案(deep:false)、前三名(tries)不跑,省时间
   // 排课表写死上/下半、却排不满 2 节的课:算「改到另一半能不能排满」→ 只给建议,不擅自改(上下半归排课表管)
   if(!whole)list.forEach(function(c){
     if(c.isCap||c.cells.length>=2||!(c.rawHalf==='上半学期'||c.rawHalf==='下半学期')||(opts.halfOv&&opts.halfOv[String(c.id)]))return;   // 改半方案已经动过的课不再给单门建议
@@ -5565,7 +5598,7 @@ function _ttSolveCore(sem,opts){
       else(c.cells.length===2?keepInfo.added:keepInfo.fail).push(nm+(c.cells.length===1?'（只排到 1 节）':''));
     });
   }
-  return {keep:keepInfo,sem:sem,rooms:rooms,placements:placements,unplaced:unplaced,manualNotes:manualNotes,interns:interns,warns:_ttWarns(placements,whole),whole:whole,tries:Math.min(run+1,TRIES),ms:Math.round(t1-t0),deep:deep,pick:best?{run:best.run,nUn:best.nUn,n1:best.n1,soft:best.soft}:null};
+  return {keep:keepInfo,sem:sem,rooms:rooms,placements:placements,unplaced:unplaced,manualNotes:manualNotes,interns:interns,warns:_ttWarns(placements,whole),whole:whole,tries:Math.min(run+1,TRIES),ms:Math.round(t1-t0),deep:deep,lns:lns,pick:best?{run:best.run,nUn:best.nUn,n1:best.n1,soft:best.soft}:null};
 }
 // 软提醒:2026-11-18 起一条都没有了(Aj. Tsai 定)——
 //   · 届别学期学分 > 21:很多届别本来就 24/27 学分,永远在响;
