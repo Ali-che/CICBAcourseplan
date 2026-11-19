@@ -6012,34 +6012,37 @@ const TT_REG_PLAN={am:['KF412','KT412','KL412','DI404'],pm:['KG133','DI325'],pkg
 function _ttRegHtml(sol){
   const caps=(sol.placements||[]).concat(sol.unplaced||[]).filter(function(p){return p.isCap;});
   if(!caps.length)return '<div style="padding:14px;color:#888">这学期没有 Capstone 课。</div>';
-  const grpOf=function(p){const c=String(p.course||'').toUpperCase();return TT_REG_PLAN.am.indexOf(c)>=0?'am':(TT_REG_PLAN.pm.indexOf(c)>=0?'pm':(TT_REG_PLAN.pkg.indexOf(c)>=0?'pkg':'other'));};
+  const grpOf=function(p){const c=String(p.course||'').toUpperCase();return TT_REG_PLAN.am.indexOf(c)>=0?'b1':(TT_REG_PLAN.pm.indexOf(c)>=0?'b3':(TT_REG_PLAN.pkg.indexOf(c)>=0?'b2':'other'));};
   const short=function(p){return eh(String(p.course||'')+(p.cls?String(p.cls).replace(/^Capstone-?/i,'-'):''));};
-  const G={am:[],pm:[],pkg:[],other:[]};caps.forEach(function(p){G[grpOf(p)].push(p);});
+  const G={b1:[],b3:[],b2:[],other:[]};caps.forEach(function(p){G[grpOf(p)].push(p);});
   const info=function(arr){
     const tcs=[],mx={};arr.forEach(function(p){if(p.tc&&tcs.indexOf(p.tc)<0)tcs.push(p.tc);_ttCohCounts(p).forEach(function(x){if(x.n)mx[x.n]=Math.max(mx[x.n]||0,x.c||0);});});
     return {tc:tcs,n:Object.keys(mx).reduce(function(t,k){return t+mx[k];},0),codes:arr.map(short).join('、')};
   };
-  const A=info(G.am),B=info(G.pm),C=info(G.pkg);
+  const I1=info(G.b1),I3=info(G.b3),I2=info(G.b2);
   const th='padding:5px 9px;background:#F5F4FE;color:#3C3489;text-align:left;border:1px solid #E5E3F8',td='padding:6px 9px;border:1px solid #E5E3F8;vertical-align:top;font-size:12.5px';
-  const blk=function(lab,I,extra){return I.codes?'<b style="color:#3C3489">'+lab+'</b>　'+I.codes+'<div style="color:#666;font-size:11.5px;margin-top:2px">'+eh(I.tc.join('、')||'老师待定')+' · 注册 '+I.n+' 人'+(extra?' · '+extra:'')+'</div>':'<span style="color:#aaa">—</span>';};
+  const blk=function(lab,I){return I.codes?'<b style="color:#3C3489">'+lab+'</b>　'+I.codes+'<div style="color:#666;font-size:11.5px;margin-top:2px">'+eh(I.tc.join('、')||'老师待定')+' · 注册 '+I.n+' 人</div>':'<span style="color:#aaa">—</span>';};
+  const less='<span style="color:#92400e">少一门课</span>';
   let h='<div id="tt-reg" style="margin:4px 2px 12px"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-size:14px;font-weight:700;color:#3C3489">📝 注册用课表 · Capstone（周五）</div><button class="btn btn-sm no-print" onclick="ttRegPrint()">🖨️ 列印</button></div>'
-    +'<div style="font-size:11.5px;color:#888;margin:2px 0 8px">只用来注册和公告：每门课各占一个时段，不会让同一届别看起来冲突。实际上课是三位老师各带一个班、整个周五（见「依教室号」）。</div>';
-  h+='<table data-gsort="off" style="border-collapse:collapse;width:100%;margin-bottom:10px"><tr><th style="'+th+';width:70px">组合</th><th style="'+th+'">周五上午</th><th style="'+th+'">周五下午</th><th style="'+th+';width:110px">周一～周四</th></tr>'
-    +'<tr><td style="'+td+'"><b>1</b></td><td style="'+td+'">'+blk('版块 1',A,'')+'</td><td style="'+td+'">'+blk('版块 3',B,'')+'</td><td style="'+td+';color:#92400e">少一门课</td></tr>'
-    +'<tr><td style="'+td+'"><b>2</b></td><td style="'+td+'" colspan="2">'+blk('版块 2（上午＋下午一整天）',C,'')+'</td><td style="'+td+'"></td></tr></table>'
-    +'<div style="font-size:11.5px;color:#555;margin:-4px 0 10px">配对：412 ＋ KG133、DI404 ＋ DI325（组合 1）。</div>';
+    +'<div style="font-size:11.5px;color:#888;margin:2px 0 8px">只用来注册和公告：学生分 A、B 两组轮流，每门课上午、下午各一节，同一个学生同一时间只上一门，不会冲突。实际上课是三位老师各带一个班、整个周五（见「依教室号」）。</div>';
+  h+='<table data-gsort="off" style="border-collapse:collapse;width:100%;margin-bottom:6px"><tr><th style="'+th+';width:80px">组合</th><th style="'+th+'">周五上午</th><th style="'+th+'">周五下午</th><th style="'+th+';width:100px">周一～周四</th></tr>'
+    +'<tr><td style="'+td+'"><b>1 · A 组</b></td><td style="'+td+'">'+blk('版块 1',I1)+'</td><td style="'+td+'">'+blk('版块 3',I3)+'</td><td style="'+td+'">'+less+'</td></tr>'
+    +'<tr><td style="'+td+'"><b>1 · B 组</b></td><td style="'+td+'">'+blk('版块 3',I3)+'</td><td style="'+td+'">'+blk('版块 1',I1)+'</td><td style="'+td+'">'+less+'</td></tr>'
+    +'<tr><td style="'+td+'"><b>2</b></td><td style="'+td+'" colspan="2">'+blk('版块 2（上午＋下午一整天）',I2)+'</td><td style="'+td+'"></td></tr></table>'
+    +'<div style="font-size:11.5px;color:#555;margin:0 0 10px">配对：412 ＋ KG133、DI404 ＋ DI325（组合 1）。A 组上午上版块 1、下午上版块 3；B 组相反。</div>';
   h+='<div style="font-weight:700;color:#3C3489;margin:6px 0 3px">老师</div><table data-gsort="off" style="border-collapse:collapse;width:100%;margin-bottom:10px"><tr><th style="'+th+'">老师</th><th style="'+th+'">周五上午</th><th style="'+th+'">周五下午</th><th style="'+th+'">周一～周四</th></tr>';
-  const trow=function(I,am,pm,less){return I.tc.map(function(t){return '<tr><td style="'+td+'"><b>'+eh(t)+'</b></td><td style="'+td+'">'+(am?am:'')+'</td><td style="'+td+'">'+(pm?pm:'')+'</td><td style="'+td+';color:#92400e">'+(less?'少一门课':'')+'</td></tr>';}).join('');};
-  h+=trow(A,'版块 1',null,true)+trow(B,null,'版块 3',true)+trow(C,'版块 2','版块 2',false)+'</table>';
-  /* 届别:每个届别注册了哪些 Capstone、落在周五哪个时段 */
+  const trow=function(I,am,pm,ls){return I.tc.map(function(t){return '<tr><td style="'+td+'"><b>'+eh(t)+'</b></td><td style="'+td+'">'+am+'</td><td style="'+td+'">'+pm+'</td><td style="'+td+'">'+(ls?less:'')+'</td></tr>';}).join('');};
+  h+=trow(I1,'版块 1（A 组）','版块 1（B 组）',true)+trow(I3,'版块 3（B 组）','版块 3（A 组）',true)+trow(I2,'版块 2','版块 2',false)+'</table>';
+  /* 届别:A 组／B 组各自的周五上午、下午 */
   const byCo={};
-  caps.forEach(function(p){const g=grpOf(p);(p.cohorts||[]).forEach(function(co){(byCo[co]=byCo[co]||{am:[],pm:[],pkg:[],other:[]})[g].push(p);});});
+  caps.forEach(function(p){const g=grpOf(p);(p.cohorts||[]).forEach(function(co){(byCo[co]=byCo[co]||{b1:[],b3:[],b2:[],other:[]})[g].push(p);});});
   const cos=Object.keys(byCo).sort();
-  h+='<div style="font-weight:700;color:#3C3489;margin:6px 0 3px">各届别注册</div><table data-gsort="off" style="border-collapse:collapse;width:100%"><tr><th style="'+th+'">届别</th><th style="'+th+'">周五上午</th><th style="'+th+'">周五下午</th></tr>';
+  const L=function(arr){return arr.length?arr.map(short).join('、')+(arr.length>1?' <span style="color:#b45309;font-size:11px">⚠ 同一格 '+arr.length+' 门</span>':''):'';};
+  const J=function(x,y){return [x,y].filter(Boolean).join(' ＋ ');};
+  h+='<div style="font-weight:700;color:#3C3489;margin:6px 0 3px">各届别注册</div><table data-gsort="off" style="border-collapse:collapse;width:100%"><tr><th style="'+th+'" rowspan="2">届别</th><th style="'+th+';text-align:center" colspan="2">A 组</th><th style="'+th+';text-align:center" colspan="2">B 组</th></tr><tr><th style="'+th+'">上午</th><th style="'+th+'">下午</th><th style="'+th+'">上午</th><th style="'+th+'">下午</th></tr>';
   cos.forEach(function(co){
-    const o=byCo[co],cell=function(arr){return arr.length?arr.map(short).join('、')+(arr.length>1?' <span style="color:#b45309;font-size:11px">⚠ 同一格 '+arr.length+' 门</span>':''):'';};
-    const pk=o.pkg.length?o.pkg.map(short).join('、'):'';
-    h+='<tr><td style="'+td+'"><b>'+eh(co)+'</b></td><td style="'+td+'">'+[cell(o.am),pk].filter(Boolean).join(' ＋ ')+'</td><td style="'+td+'">'+[cell(o.pm),pk].filter(Boolean).join(' ＋ ')+'</td></tr>';
+    const o=byCo[co],pk=o.b2.length?o.b2.map(short).join('、'):'';
+    h+='<tr><td style="'+td+'"><b>'+eh(co)+'</b></td><td style="'+td+'">'+J(L(o.b1),pk)+'</td><td style="'+td+'">'+J(L(o.b3),pk)+'</td><td style="'+td+'">'+J(L(o.b3),pk)+'</td><td style="'+td+'">'+J(L(o.b1),pk)+'</td></tr>';
   });
   h+='</table>';
   if(G.other.length)h+='<div style="margin-top:8px;padding:6px 9px;background:#FFFBEB;border:1px solid #F3D9A4;border-radius:6px;font-size:12px;color:#7a5b16">⚠ 这几门 Capstone 不在固定配对里，没列进上面：'+G.other.map(short).join('、')+'</div>';
