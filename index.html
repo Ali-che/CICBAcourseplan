@@ -6887,14 +6887,14 @@ function _ttBodyHtml(sol){
 /* 一键自动排:有存档就以存档为底(尽量不动已排好的课);fresh=整张重排,不看存档 */
 function _ttBaseOf(sem){const tt=_ttCache.tt;return (tt&&tt.placements&&tt.placements.length&&_ttCache.sem===sem)?tt.placements:null;}   /* 以存档为底:没存档回 null */
 let _ttSolving=false;
-async function ttAutoSolve(fresh){
+async function ttAutoSolve(fresh,baseOv,baseName){
   if(!_ttCanEdit()||_ttSolving)return;const sem=_ttCache.sem;if(!sem)return;
   _ttSolving=true;let cancelled=false;window._ttSolveCancel=function(){cancelled=true;};
   const tick=function(){return new Promise(function(r){try{const ch=new MessageChannel();ch.port1.onmessage=function(){r();};ch.port2.postMessage(0);}catch(e){setTimeout(r,0);}});};
   const bar=function(m){_ttPlanShow('<div class="ttplan-title">⚡ 一键自动排</div><div class="ttplan-wait">⏳ '+eh(m.txt)+'<div style="height:6px;background:#E5E3F8;border-radius:3px;margin:8px 0 4px;overflow:hidden"><div style="height:100%;width:'+Math.round((m.pct||0)*100)+'%;background:#4F46E5"></div></div><span>算好前请先不要操作，大约十几秒。</span></div>','<button class="btn btn-sm" onclick="_ttSolveCancel()">取消</button>');};
   try{
     bar({txt:'准备中',pct:0});await tick();
-    const g=_ttSolveG(sem,fresh?{}:{base:_ttBaseOf(sem)});let r,last=0;
+    const g=_ttSolveG(sem,fresh?{}:{base:baseOv||_ttBaseOf(sem)});let r,last=0;
     while(true){
       r=g.next();if(r.done)break;
       const nw=Date.now();if(nw-last>120){last=nw;bar(r.value);await tick();}
@@ -6902,6 +6902,7 @@ async function ttAutoSolve(fresh){
     }
     if(_ttCache.sem!==sem)return;
     _ttUndoPush();_ttCache.sol=r.value;_ttCache.dirty=true;ttPlanClose();renderTtPanel();
+    if(baseName&&typeof showToast==='function')showToast('已以 '+baseName+' 为底重排（还没存档）；不要就按「↶ 还原」',{kind:'success'});
   }catch(e){ttPlanClose();if(typeof showToast==='function')showToast('一键自动排出错：'+(e&&e.message||e),{kind:'error'});}
   finally{_ttSolving=false;}
 }
@@ -7010,6 +7011,26 @@ async function ttHistOpen(){
   }
   _ttPlanShow(h,'<button class="btn btn-sm" onclick="ttPlanClose()">关闭</button>');
 }
+let _ttBaseOpts=[];
+async function ttBasePick(){
+  if(!_ttCanEdit()||_ttSolving)return;const sem=_ttCache.sem;if(!sem)return;
+  const foot='<button class="btn btn-sm" onclick="ttPlanClose()">关闭</button>';
+  _ttPlanShow('<div class="ttplan-title">📌 选一版为底重排</div><div class="ttplan-wait">⏳ 读取中…</div>',foot);
+  let rows=[];try{const r=await gasGet({action:'timetableHist',sem:sem});rows=(r&&r.rows)||[];}catch(e){}
+  if(_ttCache.sem!==sem)return;
+  _ttBaseOpts=[];
+  const tt=_ttCache.tt;
+  if(tt&&Array.isArray(tt.placements)&&tt.placements.length)_ttBaseOpts.push({name:'现在的存档 v'+tt.version,sub:(tt.saved_by||'')+' 存于 '+_recoFmtTime(tt.saved_at)+' · '+tt.placements.length+' 门'+(_ttFinalState(tt)==='final'?' · 已定版':''),pl:tt.placements});
+  rows.forEach(function(x){if(Array.isArray(x.placements)&&x.placements.length)_ttBaseOpts.push({name:'旧版 v'+(x.version==null?'?':x.version),sub:(x.saved_by||'')+' 存于 '+_recoFmtTime(x.saved_at)+' · '+x.placements.length+' 门'+(x.was_final?' · 当时已定版':''),pl:x.placements});});
+  let h='<div class="ttplan-title">📌 选一版为底重排</div>';
+  if(!_ttBaseOpts.length)h+='<div class="ttplan-ok" style="background:#F5F4FE;color:#3C3489">这学期还没有存档可以当底。</div>';
+  else{
+    h+='<div class="ttplan-sum">挑一版，系统尽量照它每门课的位置重排，只动排课表改过的、放不下的课。结果先放在画面上，<b>按 💾 存档才算数</b>；不要就按「↶ 还原」。</div>';
+    _ttBaseOpts.forEach(function(o,i){h+='<div style="border:1px solid #E5E3F8;border-radius:8px;padding:8px 10px;margin:6px 0;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span><b style="color:#3C3489">'+eh(o.name)+'</b><br><span style="font-size:11.5px;color:#666">'+eh(o.sub)+'</span></span><button class="btn btn-p btn-sm" onclick="ttBaseSolve('+i+')">以这版为底重排</button></div>';});
+  }
+  _ttPlanShow(h,foot);
+}
+function ttBaseSolve(i){const o=_ttBaseOpts[i];if(!o)return;ttPlanClose();ttAutoSolve(0,o.pl,o.name);}
 function ttHistLoad(i){
   const x=_ttHist[i],sem=_ttCache.sem;if(!x||!_ttCanEdit()||!sem)return;
   _ttEnsureSol();_ttUndoPush();
@@ -7383,6 +7404,7 @@ async function renderTtPanel(force){
     tools+='<span class="tt-split"><button class="btn btn-p btn-sm" onclick="ttAutoSolve()" title="自动把本学期的课排进时段+教室；已有存档时，尽量照存档上的位置排（改过的课才会动）。要完全重排请用右边 ▾ 的「整张重排」">⚡ 一键自动排</button>'
       +'<details class="tt-menu"><summary class="btn btn-p btn-sm no-print" aria-label="其他排法" title="'+(nKeep?'有 '+nKeep+' 门课可以只补排 · ':'')+'其他排法：整张重排／前三名／只补排">▾'+(nKeep?'<span class="tt-dot"></span>':'')+'</summary><div class="tt-menu-pop">'
       +'<button onclick="'+shut+'ttAutoSolve(1)"><span>⚡ 整张重排<span class="mi-sub">照排课表全部重新排（手动调过的位置不保留）</span></span></button>'
+      +'<button onclick="'+shut+'ttBasePick()"><span>📌 选一版为底重排<span class="mi-sub">从现在的存档或最近 5 个旧版里挑一版，尽量照它的位置重排</span></span></button>'
       +'<button onclick="'+shut+'ttTop3()"><span>🏅 前三名<span class="mi-sub">列出前三名的数字（没排上／只排 1 节／两节同一天／个别学生撞课），自己挑一个</span></span></button>'
       +'<button onclick="'+shut+'ttKeepSolve()"'+(nKeep?'':' disabled')+'><span>🧩 只补排<span class="mi-sub">'+(nKeep?'已排好的课留在原位（含手动调过的），只把没排上的、新增的 '+nKeep+' 门排进空位':'目前没有要补的课')+'</span></span></button>'
       +'</div></details></span>';
