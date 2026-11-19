@@ -4940,8 +4940,8 @@ function _ttCandRooms(c,rooms){
   const sp=cand.filter(function(r){return _ttRoomSpecial(r.code);}).sort(fit),gen=cand.filter(function(r){return !_ttRoomSpecial(r.code);});
   const cd=gen.filter(function(r){return r.pref_dept==='CD';}).sort(fit),non=gen.filter(function(r){return r.pref_dept!=='CD';}).sort(fit);
   const out=(c.dept==='CD'?cd.concat(non):non.concat(cd)).concat(sp);   // 专用教室(电脑室等)留给备注指定的课,其他课最后才用
-  const i=out.findIndex(function(r){return String(r.code)===TT_SMALL_ROOM;});   // 231 留给小班(Aj. Tsai 2026-11-18):20 人以下的课先排 231;超过 20 人的课,别间都没空才用 231
-  if(i>=0){const r231=out.splice(i,1)[0];if((+c.count||0)<=TT_SMALL_MAX)out.unshift(r231);else if(_ttKeep231)out.push(r231);else out.splice(i,0,r231);}   // _ttKeep231 关掉时,大班照原本的顺序用 231
+  const i=out.findIndex(function(r){return String(r.code)===TT_SMALL_ROOM;});   // CD 的小班(≤20 人)先排 CD 专属教室(321/322),满了才用 231(Aj. Tsai 2026-11-19);// 231 留给小班(Aj. Tsai 2026-11-18):20 人以下的课先排 231;超过 20 人的课,别间都没空才用 231
+  if(i>=0){const r231=out.splice(i,1)[0];if((+c.count||0)<=TT_SMALL_MAX){if(c.dept==='CD')out.splice(cd.length,0,r231);else out.unshift(r231);}else if(_ttKeep231)out.push(r231);else out.splice(i,0,r231);}   // _ttKeep231 关掉时,大班照原本的顺序用 231
   return out;
 }
 // 这门课能排的星期:Capstone 周五/六/日;一般课周一~五(教 Capstone 的老师周五留给 Capstone);备注指定单一周几则只排那天
