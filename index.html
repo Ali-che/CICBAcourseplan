@@ -327,6 +327,15 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 #sch-reco-bar,#sch-tt-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;background:#FEF9ED;border:0.5px solid #F6C667;border-radius:8px;padding:6px 12px;margin-bottom:.6rem;font-size:12.5px;color:#92400e}
 #reco-print{display:none}
 /* 课表制作:网格 + 课片(aSc 风格,三区:左上/中间/右下,三种字体) */
+.tt-dim{opacity:.16!important}
+.tt-hit{box-shadow:0 0 0 2px #F59E0B!important;position:relative;z-index:2}
+.tt-qhide{display:none!important}
+#tt-q{min-width:230px;max-width:340px;font-size:12px;padding:3px 8px;border:1px solid #d9d5f5;border-radius:7px}
+.tt-q-n{font-size:11.5px;color:#92400e;margin-left:2px}
+#tt-fh{position:fixed;z-index:29;overflow:hidden;display:none;border-radius:10px 10px 0 0;box-shadow:0 3px 8px rgba(60,52,137,.18);background:#fff;pointer-events:none}
+#tt-fh table{border-collapse:collapse;table-layout:fixed;font-size:11px}
+#tt-fh th{position:static!important;border:1px solid #ebe9f6;text-align:center;white-space:nowrap;overflow:hidden}
+@media print{#tt-fh{display:none!important}}
 .tt-wrap{overflow:auto;max-height:74vh;border:1px solid #E5E3F8;border-radius:10px;background:#fff;-webkit-overflow-scrolling:touch}
 .tt-grid{border-collapse:collapse;font-size:11px;width:max-content;min-width:100%}
 .tt-grid th,.tt-grid td{border:1px solid #ebe9f6;text-align:center;vertical-align:middle}
@@ -3283,12 +3292,12 @@ function _auditRender(){
         Object.keys(keys).sort().forEach(function(k){var b=bw[k],a=aw[k];
           if(b===undefined)ad.push(eh(k)+' '+eh(a));
           else if(a===undefined)rm.push(eh(k));
-          else if(b!==a)mv.push('<b style="color:#555">'+eh(k)+'</b> <span style="color:#a32d2d">'+eh(b)+'</span>→<span style="color:#1b7a5a">'+eh(a)+'</span>');});
+          else if(b!==a)mv.push(_ttMoveLine(k,b,a));});
         var out=[];
-        if(mv.length)out.push('挪动 '+mv.length+'：'+mv.join('；'));
-        if(ad.length)out.push('<span style="color:#1b7a5a">＋排入 '+ad.length+'</span>：'+ad.join('、'));
-        if(rm.length)out.push('<span style="color:#a32d2d">－移出 '+rm.length+'</span>：'+rm.join('、'));
-        return out.length?('<span style="line-height:1.7">'+out.join('<span style="color:#bbb"> · </span>')+'</span>'):'<span style="color:#bbb">(位置无变化,仅重存)</span>';
+        if(mv.length)out.push('<div style="font-weight:700;color:#3C3489;margin-top:2px">挪动 '+mv.length+' 门</div>'+mv.join(''));
+        if(ad.length)out.push('<div style="font-weight:700;color:#1b7a5a;margin-top:4px">＋排入 '+ad.length+' 门</div><div style="white-space:normal">'+ad.join('、')+'</div>');
+        if(rm.length)out.push('<div style="font-weight:700;color:#a32d2d;margin-top:4px">－移出 '+rm.length+' 门</div><div style="white-space:normal">'+rm.join('、')+'</div>');
+        return out.length?('<div style="line-height:1.6">'+out.join('')+'</div>'):'<span style="color:#bbb">(位置无变化,仅重存)</span>';
       }
     }
     if(x.op==='UPDATE')return diffOf(x.before,x.after);
@@ -3321,7 +3330,7 @@ function _auditRender(){
       '<td style="padding:4px 9px;border-bottom:1px solid #eee"><span class="badge '+(TBLC[x.tbl]||'b4')+'" style="font-size:10px">'+(TBL[x.tbl]||eh(x.tbl))+'</span></td>'+
       '<td style="padding:4px 9px;white-space:nowrap;border-bottom:1px solid #eee;color:'+(OPC[x.op]||'#555')+';font-weight:600">'+(OP[x.op]||eh(x.op))+'</td>'+
       '<td style="padding:4px 9px;border-bottom:1px solid #eee;white-space:nowrap">'+objOf(x.after||x.before,x.tbl)+'</td>'+
-      '<td style="padding:4px 9px;border-bottom:1px solid #eee;font-size:11px">'+detailOf(x)+'</td></tr>';
+      '<td style="padding:4px 9px;border-bottom:1px solid #eee;font-size:11.5px;white-space:normal;min-width:380px;word-break:break-word">'+detailOf(x)+'</td></tr>';
   });
   box.innerHTML=h+'</tbody></table></div>';
 }
@@ -6002,7 +6011,7 @@ function _ttMainHtml(sol,view){
 function _ttViewToggle(){
   const v=_ttCache.view||'room';
   const b=function(id,label){return '<button class="btn btn-sm'+(v===id?' btn-p':'')+'" onclick="_ttSetView(\''+id+'\')">'+label+'</button>';};
-  return '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:2px 2px 8px"><span style="font-size:11.5px;color:#888">检视／列印方式：</span>'+b('room','依教室号')+b('cohort','依届别')+b('teacher','依授课老师')+'<label class="tt-jump-l" for="tt-jump">'+(v==='room'?'跳到教室区':'跳到专业')+'</label><select id="tt-jump" class="tt-jump" onchange="ttJumpSec(this.value)" title="选了就捲到那一组（不是筛选）"><option value="">请选择</option></select></div>';
+  return '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:2px 2px 8px"><span style="font-size:11.5px;color:#888">检视／列印方式：</span>'+b('room','依教室号')+b('cohort','依届别')+b('teacher','依授课老师')+'<input id="tt-q" type="search" placeholder="🔍 搜索：课码 / 老师 / 届别 / 教室号" value="'+eh(_ttCache.q||'')+'" oninput="ttSearch(this.value)" title="例：KB222、Chen、IB67、321。打字就会把符合的课片框起来、其余变淡，没有符合的教室行／届别／老师卡片会收起来"><span class="tt-q-n" id="tt-q-n"></span>'+'<label class="tt-jump-l" for="tt-jump">'+(v==='room'?'跳到教室区':'跳到专业')+'</label><select id="tt-jump" class="tt-jump" onchange="ttJumpSec(this.value)" title="选了就捲到那一组（不是筛选）"><option value="">请选择</option></select></div>';
 }
 function _ttSetView(v){_ttCache.view=v;renderTtPanel();}
 // ① 点课片 → 弹「编辑这一节」:改 授课老师 / 教室 / 周几·时段(Aj. Tsai 2026-11-15)
@@ -6086,6 +6095,71 @@ function _ttTipShow(chip){
   t.style.left=left+'px';t.style.top=top+'px';
 }
 /* 课表制作工具列的 ▾ 菜单(details.tt-menu):点别处、按 Esc、鼠标移开 0.35 秒后自动收起(2026-11-19) */
+/* 上/下半课表的表头(周几、上午下午、时间)固定在画面上方:页面往下卷、表头被卷出去时,复制一份贴在状态列下面(2026-11-19) */
+/* 三种检视的搜索(2026-11-19):课码／老师／届别／教室号(含课程名、专业)。符合的课片框起来、其余变淡;没有符合的教室行／届别卡／老师卡收起来 */
+function ttSearch(v){_ttCache.q=String(v||'');_ttSearchApply();}
+function _ttSearchApply(){
+  const bd=document.getElementById('tt-body'),n=document.getElementById('tt-q-n');if(!bd)return;
+  const q=String(_ttCache.q||'').trim().toLowerCase();
+  const els=Array.prototype.slice.call(bd.querySelectorAll('[data-tt-id]'));
+  bd.querySelectorAll('.tt-qhide,.tt-dim,.tt-hit').forEach(function(e){e.classList.remove('tt-qhide','tt-dim','tt-hit');});
+  if(!q){if(n)n.textContent='';_ttFloatHeadSoon();return;}
+  const sol=_ttCurSol||_ttCache.sol||{},byId={};
+  (sol.placements||[]).concat(sol.unplaced||[]).forEach(function(p){
+    const rooms=(p.cells||[]).map(function(c){return c[2]||'';}).concat([p.room||'']).filter(Boolean).join(' ');
+    byId[String(p.id)]=[_ttName(p),p.course,p.cls,p.tc,(p.cohorts||[]).join(' '),rooms,p.dept].join(' ').toLowerCase();
+  });
+  const hitIds={};let cnt={};
+  els.forEach(function(e){const id=e.getAttribute('data-tt-id'),h=(byId[id]||'').indexOf(q)>=0;e._hit=h;if(h){e.classList.add('tt-hit');cnt[id]=1;}else e.classList.add('tt-dim');});
+  /* 教室行:行标题(教室号)符合 → 整行留着、课片不变淡;否则没有命中课片的行收起来 */
+  bd.querySelectorAll('.tt-grid tbody tr').forEach(function(tr){
+    const rm=tr.querySelector('.tt-rm'),roomHit=rm&&String(rm.textContent||'').toLowerCase().indexOf(q)>=0,has=tr.querySelector('.tt-hit');
+    if(roomHit){tr.querySelectorAll('.tt-dim').forEach(function(e){e.classList.remove('tt-dim');});cnt['room:'+(rm.textContent||'')]=1;}
+    else if(!has)tr.classList.add('tt-qhide');
+  });
+  /* 届别／老师卡:卡标题符合 → 整张留着;否则没有命中课片的卡收起来 */
+  bd.querySelectorAll('.tt-ecard').forEach(function(c){
+    const ent=String(c.getAttribute('data-tt-ent')||'').toLowerCase(),entHit=ent.indexOf(q)>=0,has=c.querySelector('.tt-hit');
+    if(entHit){c.querySelectorAll('.tt-dim').forEach(function(e){e.classList.remove('tt-dim');});cnt['ent:'+ent]=1;}
+    else if(!has)c.classList.add('tt-qhide');
+  });
+  /* 未排胶囊:不符合的收起来 */
+  bd.querySelectorAll('.tt-pill[data-tt-id]').forEach(function(e){if(!e.classList.contains('tt-hit'))e.classList.add('tt-qhide');e.classList.remove('tt-dim');});
+  const courses=Object.keys(cnt).filter(function(k){return k.indexOf(':')<0;}).length,others=Object.keys(cnt).length-courses;
+  if(n)n.textContent=(courses||others)?('找到 '+courses+' 门课'+(others?'（含 '+others+' 个符合的教室／届别／老师）':'')):'没有符合的';
+  _ttFloatHeadSoon();
+}
+let _ttFhBound=false,_ttFhRaf=0;
+function _ttFloatHead(){
+  _ttFhRaf=0;
+  let fh=document.getElementById('tt-fh');
+  const hide=function(){if(fh)fh.style.display='none';};
+  const bd=document.getElementById('tt-body'),st=document.getElementById('tt-status');
+  if(!bd||bd.offsetParent===null){hide();return;}
+  const off=st?Math.max(0,st.getBoundingClientRect().bottom):0;
+  let hit=null;
+  Array.prototype.forEach.call(bd.querySelectorAll('.tt-wrap'),function(w){
+    const th=w.querySelector('thead');if(!th)return;
+    const r=th.getBoundingClientRect(),wr=w.getBoundingClientRect();
+    if(r.height>0&&r.top<off-1&&wr.bottom>off+r.height+30)hit={w:w,th:th,r:r,wr:wr};
+  });
+  if(!hit){hide();return;}
+  if(!fh){fh=document.createElement('div');fh.id='tt-fh';document.body.appendChild(fh);}
+  const tb=hit.w.querySelector('table'),ths=hit.th.querySelectorAll('th'),key=hit.w.getBoundingClientRect().width+'|'+tb.offsetWidth+'|'+ths.length+'|'+(hit.w._fhId||(hit.w._fhId=Math.random()));
+  if(fh._key!==key){
+    const clone=hit.th.cloneNode(true),cths=clone.querySelectorAll('th');
+    Array.prototype.forEach.call(cths,function(c,i){const rr=ths[i].getBoundingClientRect();c.style.width=rr.width+'px';c.style.minWidth=rr.width+'px';c.style.maxWidth=rr.width+'px';c.style.height=rr.height+'px';c.style.boxSizing='border-box';});
+    const t=document.createElement('table');t.className=tb.className;t.style.width=tb.offsetWidth+'px';t.appendChild(clone);
+    fh.innerHTML='';fh.appendChild(t);fh._key=key;
+  }
+  fh.style.display='block';fh.style.top=off+'px';fh.style.left=hit.wr.left+'px';fh.style.width=hit.w.clientWidth+'px';fh.style.height=hit.r.height+'px';
+  const t=fh.firstChild;if(t)t.style.marginLeft=(-hit.w.scrollLeft)+'px';
+}
+function _ttFloatHeadSoon(){if(!_ttFhRaf)_ttFhRaf=requestAnimationFrame(_ttFloatHead);}
+function _ttFloatBind(){
+  if(_ttFhBound)return;_ttFhBound=true;
+  window.addEventListener('scroll',_ttFloatHeadSoon,true);window.addEventListener('resize',function(){const f=document.getElementById('tt-fh');if(f)f._key='';_ttFloatHeadSoon();});
+}
 let _ttMenuBound=false,_ttMenuTimer=null;
 function _ttMenuBind(){
   if(_ttMenuBound)return;_ttMenuBound=true;
@@ -6961,7 +7035,18 @@ function _ttWhereLabel(p){
   return hs+(rm?rm+' · ':'')+slots;
 }
 function _ttWhereMap(pls){var m={};(pls||[]).forEach(function(p){var k=(p.course||'')+(p.cls?(' '+p.cls):'')+(p.half==='up'?'·上':(p.half==='dn'?'·下':''));m[k]=_ttWhereLabel(p);});return m;}
-function _ttWhereList(m,lim){var ks=Object.keys(m);if(!ks.length)return '';var s=ks.slice(0,lim).map(function(k){return eh(k)+' '+eh(m[k]);}).join('、');return s+(ks.length>lim?(' …等 '+ks.length+' 门'):'');}
+function _ttWhereList(m,lim){var ks=Object.keys(m);if(!ks.length)return '';return '<div style="margin-top:2px">'+ks.slice(0,lim).map(function(k){return '<div style="white-space:normal;margin:1px 0"><b style="color:#555">'+eh(k)+'</b>　'+eh(m[k])+'</div>';}).join('')+(ks.length>lim?('<div style="color:#888">…等 '+ks.length+' 门</div>'):'')+'</div>';}
+/* 编辑记录里「挪动」的每一门:只写变了什么(教室／时间／上下半),一门一行 */
+function _ttWhereParse(l){var m=/^(上半|下半)?\s*(?:(\S+) · )?(.*)$/.exec(String(l||''))||[];return {half:m[1]||'',room:m[2]||'',slots:m[3]||''};}
+function _ttMoveLine(k,b,a){
+  var pb=_ttWhereParse(b),pa=_ttWhereParse(a),ps=[];
+  var arrow=function(lab,x,y){return lab+' <span style="color:#a32d2d">'+eh(x||'—')+'</span> → <span style="color:#1b7a5a">'+eh(y||'—')+'</span>';};
+  if(pb.half!==pa.half)ps.push(arrow('上下半',pb.half,pa.half));
+  if(pb.room!==pa.room)ps.push(arrow('教室',pb.room,pa.room));
+  if(pb.slots!==pa.slots)ps.push(arrow('时间',pb.slots,pa.slots));
+  if(!ps.length)ps.push('<span style="color:#888">位置相同</span>');
+  return '<div style="white-space:normal;margin:2px 0"><b style="color:#3C3489">'+eh(k)+'</b>　'+ps.join('　<span style="color:#ccc">｜</span>　')+'</div>';
+}
 async function ttSave(){
   if(!_ttCanEdit())return;const sem=_ttCache.sem,sol=_ttCache.sol;
   if(!sem||!sol){alert('请先选学期并「一键自动排」');return;}
@@ -7480,6 +7565,7 @@ async function renderTtPanel(force){
   try{document.documentElement.style.setProperty('--cic-stickybar-h',(((document.getElementById('sticky-bar')||{}).offsetHeight)||0)+'px');}catch(e){}   // 工具列 sticky 贴在全站 sticky 头下面(Aj. Tsai 2026-11-15)
   try{if(!_ttDEBound){document.addEventListener('dragend',_ttDragEnd);_ttDEBound=true;}}catch(e){}   // 拖拽结束统一清状态
   try{_ttTipBind();}catch(e){}   // 课片浮出卡(届别明细)
+  try{_ttFloatBind();setTimeout(_ttFloatHeadSoon,300);}catch(e){}   // 上/下半表头固定
   try{_ttKeyBind();}catch(e){}
   if(!_ttVerTimer)_ttVerTimer=setInterval(function(){_ttVerTick();},TT_VER_MS);   // 每 90 秒看一次有没有人存了新版／定版   // Ctrl/⌘+Z 还原、Shift+⌘+Z / Ctrl+Y 重做
   const sem=(document.getElementById('tt-sem')||{}).value||'';
@@ -7549,6 +7635,7 @@ async function renderTtPanel(force){
   }
   bd.innerHTML=_ttBodyHtml(sol);
   _ttEFit(bd);
+  try{_ttSearchApply();}catch(e){}   // 搜索词还在就重新套上
   _ttScrollBack(bd,_keep);
   _ttJumpFill();   // 依现在画面上的分组填「跳到」下拉
 }
