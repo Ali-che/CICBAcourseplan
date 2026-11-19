@@ -6082,7 +6082,23 @@ function _ttTipShow(chip){
   if(top+h>window.innerHeight-8)top=Math.max(8,r.top-h-6);
   t.style.left=left+'px';t.style.top=top+'px';
 }
+/* 课表制作工具列的 ▾ 菜单(details.tt-menu):点别处、按 Esc、鼠标移开 0.35 秒后自动收起(2026-11-19) */
+let _ttMenuBound=false,_ttMenuTimer=null;
+function _ttMenuBind(){
+  if(_ttMenuBound)return;_ttMenuBound=true;
+  const closeAll=function(except){document.querySelectorAll('details.tt-menu[open]').forEach(function(d){if(d!==except)d.open=false;});};
+  document.addEventListener('click',function(e){const d=(e.target&&e.target.closest)?e.target.closest('details.tt-menu'):null;closeAll(d);});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeAll(null);});
+  document.addEventListener('mouseover',function(e){const d=(e.target&&e.target.closest)?e.target.closest('details.tt-menu'):null;if(d&&_ttMenuTimer){clearTimeout(_ttMenuTimer);_ttMenuTimer=null;}});
+  document.addEventListener('mouseout',function(e){
+    const d=(e.target&&e.target.closest)?e.target.closest('details.tt-menu[open]'):null;if(!d)return;
+    const to=e.relatedTarget;if(to&&d.contains(to))return;
+    if(_ttMenuTimer)clearTimeout(_ttMenuTimer);
+    _ttMenuTimer=setTimeout(function(){_ttMenuTimer=null;if(d.open&&!d.matches(':hover'))d.open=false;},350);
+  });
+}
 function _ttTipBind(){
+  _ttMenuBind();
   if(_ttTipBound)return;_ttTipBound=true;
   document.addEventListener('mouseover',function(e){
     const c=(e.target&&e.target.closest)?e.target.closest('#tt-body .tt-chip, #tt-body .tt-pill'):null;
