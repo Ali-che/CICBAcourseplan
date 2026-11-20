@@ -6744,7 +6744,7 @@ const TT_WARN_KINDS=[
 // 面板里的课码胶囊:点=跳到课表,悬停=浮出原因与建议(_ttTipShow);有改半建议的旁边带「↪ 改到X半」钮
 function _ttIssuePill(x,kind){
   const hn=(x.hint&&x.hint.cells)?(x.hint.half==='dn'?'下半':'上半'):'';
-  return '<span class="tt-pill tt-ipill'+(kind==='part'?' part':'')+'" data-tt-id="'+eh(String(x.id))+'" onclick="_ttJumpTo(\''+jsq(String(x.id))+'\')">'+_ttHalfBadge(x.half)+'<b>'+_ttCC(x)+'</b> <span class="n">'+(kind==='part'?(x.count+' 人'):'未排')+'</span></span>'+
+  return '<span class="tt-pill tt-ipill'+(kind==='part'?' part':'')+'" data-tt-id="'+eh(String(x.id))+'" onclick="_ttJumpTo(\''+jsq(String(x.id))+'\')">'+_ttHalfBadge(x.half)+'<b>'+_ttCC(x)+'</b> <span class="n">'+(kind==='part'?'只排 1 节':'未排')+'</span></span>'+
     ((hn&&_ttCanEdit())?'<button class="btn btn-sm tt-ihint" onclick="ttApplyHalfHint(\''+jsq(String(x.id))+'\')">↪ 改到'+hn+'</button>':'');
 }
 // ── 个别学生撞课(Aj. Tsai 2026-11-15 定:1 人以下的届别不挡排课,只提醒) ──
@@ -7165,9 +7165,9 @@ function _ttFootDetails(sol){
   probs.filter(function(q){return q.kind==='un'&&!shown[q.x.id];}).forEach(function(q){const l=lab(q.x);if(!byR[l]){byR[l]=[];ord.push(l);}byR[l].push(q);});
   ord.forEach(function(l){left+='<div class="tt-iss-g"><div class="tt-iss-why"><b>'+eh(l)+'</b></div><div class="tt-iss-pills">'+byR[l].map(function(q){return _ttIssuePill(q.x,'un');}).join('')+'</div>'+_ttSugBlock(byR[l],sol)+'</div>';});
   const pr=probs.filter(function(q){return q.kind==='part'&&!shown[q.x.id];});
-  if(pr.length)left+='<div class="tt-iss-g part">'+pr.map(function(q){return _ttPartCard(q.x,sol);}).join('')+'</div>';
+  if(pr.length)left+='<div class="tt-iss-g part"><div class="tt-iss-why"><b>只排到 1 节</b>：第二节找不到老师、届别、教室都空的时段'+(_ttCanEdit()?'（点课片 →「＋ 加一节」手动补）':'')+'</div><div class="tt-iss-pills">'+pr.map(function(q){return _ttIssuePill(q.x,'part');}).join('')+'</div>'+_ttSugBlock(pr,sol)+'</div>';   /* 胶囊＋💡 一行(Aj. Tsai 2026-11-20 深夜:不喜欢一门一卡的条列,改回;_ttPartCard 留着没用到) */
   if(left){const hp=[];if(un.length)hp.push('未排 '+un.length+' 门');if(partial.length)hp.push('只排到 1 节 '+partial.length+' 门');
-    left='<div class="tt-iss-h bad">'+(hp.join(' · ')||'课太多、时段装不下')+'</div>'+left;}
+    left='<div class="tt-iss-h bad">'+(hp.join(' · ')||'课太多、时段装不下')+'<span> · 按原因分组；每门课下面是原因与建议，点课码跳到课表</span></div>'+left;}
   let rTodo='',rOther='',rLang='',rWarn='';   // 右栏分四块,最后照「备注待看 → 提醒 → 其他备注 → KE／KH」接起来(Aj. Tsai 2026-11-15:提醒放上面,默认收合的两块接在下面)
   const curBy={};(sol.placements||[]).concat(un).forEach(function(c){curBy[String(c.id)]=c;});
   const notes=(sol.manualNotes||[]).map(function(c){c=curBy[String(c.id)]||c;const n=_ttNoteOf(c,sol);return {c:c,n:n,kind:_ttNoteKind(c,n)};}),todo=notes.filter(function(o){return o.kind==='todo';}),other=notes.filter(function(o){return o.kind!=='todo';});
