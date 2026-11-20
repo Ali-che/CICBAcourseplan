@@ -324,7 +324,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 .print-header{display:none}
 #sco-print{display:none}
 /* 秘书处对账:横幅 + 列印小抄 */
-#sch-reco-bar,#sch-tt-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;background:#FEF9ED;border:0.5px solid #F6C667;border-radius:8px;padding:6px 12px;margin-bottom:.6rem;font-size:12.5px;color:#92400e}
+#sch-reco-bar,#sch-tt-bar,#sch-frz-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;background:#FEF9ED;border:0.5px solid #F6C667;border-radius:8px;padding:6px 12px;margin-bottom:.6rem;font-size:12.5px;color:#92400e}
 #reco-print{display:none}
 /* 课表制作:网格 + 课片(aSc 风格,三区:左上/中间/右下,三种字体) */
 .tt-dim{opacity:.16!important}
@@ -956,6 +956,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
         <button class="btn btn-sm no-print" onclick="printPanel('sch')" title="按目前的学期/搜索筛选,列印排课记录(横向 A4);未筛选则印全部">🖨️ 列印</button>
       </div>
     </div>
+    <div id="sch-frz-bar" class="no-print" style="display:none"></div>
     <div id="sch-reco-bar" class="no-print" style="display:none"></div>
     <div id="sch-tt-bar" class="no-print" style="display:none"></div>
     <div class="fbar no-print" style="margin-bottom:.6rem;flex-wrap:wrap">
@@ -4024,6 +4025,7 @@ async function loadRefFromSheets(){
     }
     refSource='sheets';refLoadTime=new Date();
     try{await loadArchTerms();}catch(_){}   // 归档学期集合(供各视图默认隐藏)
+    try{await _frzLoad();}catch(_){}   // 暂停修改的学期(排课表横幅/预检用)
     if(banner)banner.style.display='none';return true;
   }catch(e){
     clearInterval(ticker);
@@ -4291,6 +4293,36 @@ function _recoDiff(sem,snapshot){
 function _recoItemCode(it){return it.kind==='del'?'DEL':_rowCode(it.n);}
 function _recoAcked(it){const code=_recoItemCode(it);return (_recoCache.acks||[]).some(a=>String(a.row_id)===String(it.id)&&a.row_code===code);}
 function _recoDept(it){const r=it.n||it.o;const c=(r&&r.cc||[])[0];return (c&&typeof cohortDept==='function')?(cohortDept(c.cohort)||'其他'):'其他';}
+// ===== 暂停修改排课表(2026-11-20;DB:migrations/017 sched_freeze + 触发器硬挡) =====
+// 课表制作期间,admin / Head(teacher) 可对某学期按「暂停」:其余角色(director/pic)不能新增/修改/删除该学期的排课。
+var _frzMap={};   // sem → {by,at,note}(只存 frozen=true 的)
+function _frzCanToggle(){return currentRole==='admin'||currentRole==='teacher';}
+function _frzIs(sem){return !!(sem&&_frzMap[sem]);}
+async function _frzLoad(){try{const r=await gasGet({action:'schedFreeze'});if(r&&r.success){_frzMap={};(r.rows||[]).forEach(function(x){if(x&&x.sem&&x.frozen)_frzMap[x.sem]={by:x.by_name||'',at:x.at||'',note:x.note||''};});}}catch(e){}}
+function _frzMsg(sem){const f=_frzMap[sem]||{};return '学期 '+sem+' 的排课表目前暂停修改（课表制作中'+(f.by?'，'+f.by+' 设定':'')+'）。请等管理员或秘书处解除暂停后再改。';}
+function _frzRenderBar(){
+  const bar=document.getElementById('sch-frz-bar');if(!bar)return;
+  const semEl=document.getElementById('sch-sem-f');const sem=semEl?semEl.value:'';
+  const list=sem?(_frzIs(sem)?[sem]:[]):Object.keys(_frzMap);   // 选了学期只看那一学期;选「全部」就列出所有暂停中的学期
+  if(!list.length){bar.style.display='none';bar.innerHTML='';return;}
+  bar.style.display='';
+  const can=_frzCanToggle();
+  bar.innerHTML='<span class="rb-t">🔒 <b>'+list.map(eh).join('、')+'</b> 的排课表暂停修改中（课表制作中）'+(can?'':'，现在不能新增／修改／删除')+(_frzMap[list[0]]&&_frzMap[list[0]].by?' · '+eh(_frzMap[list[0]].by)+' 设定':'')+'</span>'+
+    (can?'<span>'+list.map(function(x){return '<button class="btn btn-sm" onclick="frzToggle(\''+jsq(x)+'\',false)">🔓 解除 '+eh(x)+' 的暂停</button>';}).join(' ')+'</span>':'');
+}
+async function _frzRefresh(){await _frzLoad();_frzRenderBar();}
+async function frzToggle(sem,on){
+  if(!_frzCanToggle()){alert('只有管理员或 Head of Administration 能设定');return;}
+  if(!sem){alert('请先选学期');return;}
+  const ok=on?confirm('暂停 '+sem+' 的排课表？\n\n暂停期间，Director／PIC 不能新增、修改、删除这个学期的排课（你和管理员不受影响）。\n课表做完记得回来解除。')
+             :confirm('解除 '+sem+' 的暂停？\n\nDirector／PIC 就能再修改这个学期的排课表了。');
+  if(!ok)return;
+  let r;try{r=await gasPost('schedSetFreeze',{sem:sem,on:!!on,note:on?'课表制作中':''});}catch(e){r={success:false,error:String(e&&e.message||e)};}
+  if(!(r&&r.success)){alert('操作失败：'+((r&&r.error)||'未知错误')+'\n（若提示找不到函数 sched_set_freeze，表示数据库还没跑 migrations/017）');return;}
+  await _frzRefresh();
+  if(typeof showToast==='function')showToast(on?'已暂停 '+sem+' 的排课表修改':'已解除 '+sem+' 的暂停');
+  try{if(typeof renderTtPanel==='function'&&document.getElementById('tt-body'))renderTtPanel();}catch(e){}
+}
 // 刷新排课表上的「待对账」横幅(sem 变才重抓 lock/acks;diff 本地重算)
 async function _recoRefresh(force){
   const bar=document.getElementById('sch-reco-bar');if(!bar)return;
@@ -7678,10 +7710,12 @@ async function renderTtPanel(force){
   if(sol)tools+=' <button class="btn btn-sm" onclick="ttExpOpen()" title="选检视方式与要的分组（教室区／专业），导出 Excel 或列印／存 PDF（A4 横向）">📤 导出／列印</button>';
   // 「更多 ▾」(2026-11-18 简化):不是每天用的收在这里——改半方案／上课日期／写回排课表／删除存档。只读角色只有「上课日期」一项,直接摊开。
   {const shut2="this.closest(\'details\').open=false;",mi=[];
+    if(_frzCanToggle()&&sem)mi.push('<button onclick="'+shut2+'frzToggle(\''+jsq(sem)+'\','+(_frzIs(sem)?'false':'true')+')"><span>'+(_frzIs(sem)?'🔓 解除暂停修改排课表':'🔒 暂停修改排课表')+'<span class="mi-sub">'+(_frzIs(sem)?'现在 Director／PIC 不能改这学期的排课表；按了就恢复':'做课表期间不让 Director／PIC 改这学期的排课表（你和管理员不受影响）；做完记得解除')+'</span></span></button>');
     if(canEdit&&!_ttWholeSem(sem))mi.push('<button onclick="'+shut2+'ttHalfPlan()"><span>🔀 改半方案<span class="mi-sub">有课排不上时，找出最少改哪几门课的上下半就能多排上；按「套用」才改</span></span></button>');
     if(sol)mi.push('<button onclick="'+shut2+'ttDatesOpen()"><span>📅 上课日期<span class="mi-sub">每门课在哪几天上课（假日未扣）</span></span></button>');
     if(canEdit&&sol)mi.push('<button onclick="'+shut2+'ttWriteHalfBack()"><span>↩ 写回排课表<span class="mi-sub">把课表里的上下半与老师更新回排课表（会修改排课表，需确认）</span></span></button>');
     if(currentRole==='admin'&&tt)mi.push('<button onclick="'+shut2+'ttDeleteSaved()"><span style="color:#a32d2d">🗑 删除存档<span class="mi-sub">删除这个学期的课表存档（只有管理员；排课表不受影响）</span></span></button>');
+    if(_frzIs(sem))tools+=' <span class="no-print" style="font-size:12px;color:#92400e;background:#FEF9ED;border:0.5px solid #F6C667;border-radius:6px;padding:2px 8px" title="这学期的排课表暂停修改中，Director／PIC 不能改">🔒 排课表暂停修改中</span>';
     if(canEdit&&mi.length)tools+=' <details class="tt-menu"><summary class="btn btn-sm no-print">更多 ▾</summary><div class="tt-menu-pop">'+mi.join('')+'</div></details>';
     else if(sol)tools+=' <button class="btn btn-sm no-print" onclick="ttDatesOpen()" title="每门课在哪几天上课（周几 × 上/下半日期算出，假日未扣）">📅 上课日期</button>';}
   // ⚙️ 选项菜单(两个勾选收进来)
@@ -9101,6 +9135,7 @@ function renderSch(){
   // 表头计数:有筛选/归档隐藏时,诚实显示「显示 X / 共 Y」,避免和实际行数(及批量删除)对不上
   {var _schN=document.getElementById('sch-n');if(_schN)_schN.innerHTML=((disp.length<schD.length)?('(显示 '+disp.length+' / 共 '+schD.length+' 条)'):('('+schD.length+' 条)'))+_archHint(schD);}
   if(typeof _recoRefresh==='function')_recoRefresh();   // 刷新「待对账」横幅(sem 变才重抓基准线)
+  if(typeof _frzRenderBar==='function')_frzRenderBar();   // 「暂停修改」横幅(状态来自 _frzLoad,登入时已读)
   if(typeof _schTtRefresh==='function')_schTtRefresh();   // 刷新「课表制作还没跟上」横幅
   // v7.9.13: 表头 BTEC 数（届别/总人数 不显示统计）
   let _btecN=0;
@@ -12328,6 +12363,7 @@ function syncTblHeight(){
     }
     if(a==='teachBtec'){const d=await sget('teach_btec?select=teacher,val').catch(function(){return [];});const m={};(d||[]).forEach(function(x){m[x.teacher]=+x.val;});return{success:true,map:m};}
     if(a==='examData'){const r=await srpc('exam_special_list',{p_pin:_pin}).catch(function(){return null;});const sc=await sget('exam_school?select=id,name&order=name').catch(function(){return [];});if(r&&!r.error)return{success:true,rows:r.rows||[],schools:sc||[]};return{success:false,rows:[],schools:sc||[],error:(r&&r.error)||'需要登入'};}
+    if(a==='schedFreeze'){const d=await sget('sched_freeze?select=sem,frozen,by_name,at,note').catch(function(){return [];});return{success:true,rows:d||[]};}
     if(a==='archData'){const d=await sget('archived_terms?select=sem,type').catch(function(){return [];});return{success:true,rows:d||[]};}
     if(a==='cohortYears'){const d=await sget('cohort_years?select=cohort,years').catch(function(){return [];});return{success:true,rows:(d||[]).map(function(x){return {cohort:x.cohort,years:x.years};})};}
     if(a==='cohortOverrides'){const d=await sget('cohorts?select=cohort,grad_override').catch(function(){return [];});return{success:true,rows:(d||[]).map(function(x){return {cohort:x.cohort,ov:x.grad_override||''};})};}
@@ -12373,6 +12409,21 @@ function syncTblHeight(){
   gasPost=async function(action,body){
     body=body||{};const t=body.type||'schedule';
     if(action==='authenticate')return srpc('authenticate',{p_pin:body.pin||''});
+    if(action==='schedSetFreeze')return srpc('sched_set_freeze',{p_pin:_pin,p_sem:body.sem,p_on:!!body.on,p_note:body.note||''});
+    if(t==='schedule'&&(action==='addRecord'||action==='updateRecord'||action==='deleteRecord'||action==='deleteMultiple')&&!_frzCanToggle()){
+      // 暂停修改的前端预检(服务器触发器才是真正的挡;这里只是让提示更友善)。读不到状态就放行,交给服务器。
+      try{
+        await _frzLoad();
+        const sems=new Set();
+        if(action==='addRecord'){if(body.record&&body.record.sem)sems.add(body.record.sem);}
+        else{
+          const ids=action==='deleteMultiple'?(body.ids||[]):[body.id];
+          ids.forEach(function(i){const r=(typeof schD!=='undefined'?schD:[]).find(function(x){return String(x.id)===String(i);});if(r&&r.sem)sems.add(r.sem);});
+          if(action==='updateRecord'&&body.fields&&body.fields.sem)sems.add(body.fields.sem);
+        }
+        for(const sm of sems){if(_frzIs(sm)){_frzRenderBar();return{success:false,error:_frzMsg(sm)};}}
+      }catch(e){}
+    }
     if(action==='addRecord'){const rec=t==='special'?uSp(body.record||{}):uSch(body.record||{});return srpc('add_record',{p_pin:_pin,p_type:t,p_rec:rec});}
     if(action==='updateRecord'){const f=t==='special'?uSpF(body.fields||{}):uSchF(body.fields||{});return srpc('update_record',{p_pin:_pin,p_type:t,p_id:String(body.id),p_fields:f});}
     if(action==='deleteRecord')return srpc('delete_record',{p_pin:_pin,p_type:t,p_id:String(body.id)});
