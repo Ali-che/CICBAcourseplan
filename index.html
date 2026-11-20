@@ -532,6 +532,10 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 .tt-iss-g.part{background:#fffbeb}
 .tt-iss-g.part .tt-iss-why{color:#b45309}
 .tt-iss-pills{display:flex;flex-wrap:wrap;align-items:center;gap:2px;margin-top:3px}
+.tt-iss-it{padding:7px 0;border-top:1px dashed #F3D9A4}.tt-iss-g.part .tt-iss-it:first-child{border-top:0;padding-top:2px}
+.tt-iss-bulb{margin-right:4px}.tt-iss-m{font-size:11.5px;color:#777;margin:0 8px 0 4px}.tt-iss-go{font-size:11.5px}
+.tt-iss-ul{list-style:none;margin:4px 0 0;padding:0 0 0 4px;font-size:12px;line-height:1.7;color:#333}
+.tt-iss-ul li{display:flex;gap:8px}.tt-iss-ul .k{flex:0 0 58px;color:#9a6b1a;font-weight:600}
 .tt-iss-sug{margin-top:4px;font-size:11px;line-height:1.6;color:#1a6b2f;border-left:2px solid #9ed4ae;padding-left:7px}
 .tt-iss-sug b{color:#14532d}
 .tt-iss-rest{color:#8a6d3b;font-size:10.5px;margin-left:4px}
@@ -5833,7 +5837,7 @@ function _ttSavedHints(sol){
   }catch(e){}
 }
 // 只排到 1 节、改另一半也排不满:第二节在本半最接近哪个时段、被谁挡住(照「先写要改什么,再写结果」)。找不到回空字串。
-function _ttPartWhy(p,sol){
+function _ttPartWhy(p,sol,raw){
   try{
     if(!p||p.isCap||(p.cells||[]).length!==1)return '';
     const rooms=sol.rooms||_ttRoomsSorted(),u=Object.assign({},p,{note:_ttParseNote(p.nt,rooms),_tok:null,_tokA:null}),own=p.cells[0];
@@ -5857,7 +5861,8 @@ function _ttPartWhy(p,sol){
         if(!best||bl.length<best.bl.length||(bl.length===best.bl.length&&sd<best.sd))best={d:d,s:s,room:r.code,bl:bl,sd:sd};
       });
     });});
-    if(!best)return '';
+    if(!best)return raw?null:'';
+    if(raw)return {at:best.d+_ttSlotName(best.s),room:best.room,bl:best.bl,sd:best.sd};
     const at=best.d+_ttSlotName(best.s)+'，教室 '+best.room+(best.sd?'（跟第一节同一天）':'');
     if(!best.bl.length)return '第二节可排在 '+at+'（空着）'+(_ttCanEdit()?'：点课片 →「＋ 加一节」':'');
     return '先挪开挡路的课（'+best.bl.slice(0,3).join('、')+'）→ 第二节可排 '+at+'';
@@ -6739,7 +6744,7 @@ const TT_WARN_KINDS=[
 // 面板里的课码胶囊:点=跳到课表,悬停=浮出原因与建议(_ttTipShow);有改半建议的旁边带「↪ 改到X半」钮
 function _ttIssuePill(x,kind){
   const hn=(x.hint&&x.hint.cells)?(x.hint.half==='dn'?'下半':'上半'):'';
-  return '<span class="tt-pill tt-ipill'+(kind==='part'?' part':'')+'" data-tt-id="'+eh(String(x.id))+'" onclick="_ttJumpTo(\''+jsq(String(x.id))+'\')">'+_ttHalfBadge(x.half)+'<b>'+_ttCC(x)+'</b> <span class="n">'+(kind==='part'?'只排 1 节':'未排')+'</span></span>'+
+  return '<span class="tt-pill tt-ipill'+(kind==='part'?' part':'')+'" data-tt-id="'+eh(String(x.id))+'" onclick="_ttJumpTo(\''+jsq(String(x.id))+'\')">'+_ttHalfBadge(x.half)+'<b>'+_ttCC(x)+'</b> <span class="n">'+(kind==='part'?(x.count+' 人'):'未排')+'</span></span>'+
     ((hn&&_ttCanEdit())?'<button class="btn btn-sm tt-ihint" onclick="ttApplyHalfHint(\''+jsq(String(x.id))+'\')">↪ 改到'+hn+'</button>':'');
 }
 // ── 个别学生撞课(Aj. Tsai 2026-11-15 定:1 人以下的届别不挡排课,只提醒) ──
@@ -7107,6 +7112,18 @@ function _ttSugText(x,sol,kind){
   if(x.hint&&x.hint.cells){const hn=x.hint.half==='dn'?'下半':'上半';return '改到'+hn+'就能排满 2 节：'+x.hint.cells.map(_ttCellTxt).join('、')+(_ttCanEdit()?'（按课码旁「↪ 改到'+hn+'」）':'');}
   return _ttSuggestFor(x,sol);
 }
+/* 待处理一览「只排 1 节」每门课一张卡:第一行课码·人数·老师·试算,下面条列 挡路／可排 */
+function _ttPartCard(x,sol){
+  const w=_ttPartWhy(x,sol,true),li=function(k,v){return '<li><span class="k">'+k+'</span>'+v+'</li>';};
+  let h='<div class="tt-iss-it"><span class="tt-iss-bulb">💡</span>'+_ttIssuePill(x,'part')+'<span class="tt-iss-m">'+eh(x.tc||'待定')+'</span><a class="tt-lnk tt-iss-go" href="javascript:void(0)" onclick="ttOneAdvise(\''+jsq(String(x.id))+'\')">试算怎么改 ›</a><ul class="tt-iss-ul">';
+  const hn=(x.hint&&x.hint.cells)?(x.hint.half==='dn'?'下半':'上半'):'';
+  if(hn)h+=li('改到'+hn,'→ '+eh(x.hint.cells.map(_ttCellTxt).join('、')));
+  if(w){
+    if(w.bl.length)h+=li('先挪开',w.bl.slice(0,3).map(function(b){const m=/^(届别|老师)在上 (.+)$/.exec(b),n=/^教室被 (.+) 占用$/.exec(b);return m?eh(m[2])+'（'+m[1]+'）':(n?eh(n[1])+'（教室）':eh(b));}).join('、'));
+    h+=li('再排到',eh(w.at)+' · 教室 '+eh(String(w.room))+(w.sd?'（跟第一节同一天）':'')+(w.bl.length?'':'（空着）'));
+  }else if(!hn)h+=li('再排到','暂时找不到位置');
+  return h+'</ul></div>';
+}
 function _ttSugBlock(items,sol){
   if(!items||!items.length)return '';
   return '<div class="tt-iss-sug">'+items.map(function(q){return '💡 <b>'+eh(_ttCC(q.x))+'</b>：'+eh(_ttSugText(q.x,sol,q.kind))+(q.kind==='part'?'　<a class="tt-lnk" href="javascript:void(0)" onclick="ttOneAdvise(\''+jsq(String(q.x.id))+'\')">试算怎么改 ›</a>':'');}).join('<br>')+'</div>';
@@ -7129,9 +7146,9 @@ function _ttFootDetails(sol){
   probs.filter(function(q){return q.kind==='un'&&!shown[q.x.id];}).forEach(function(q){const l=lab(q.x);if(!byR[l]){byR[l]=[];ord.push(l);}byR[l].push(q);});
   ord.forEach(function(l){left+='<div class="tt-iss-g"><div class="tt-iss-why"><b>'+eh(l)+'</b></div><div class="tt-iss-pills">'+byR[l].map(function(q){return _ttIssuePill(q.x,'un');}).join('')+'</div>'+_ttSugBlock(byR[l],sol)+'</div>';});
   const pr=probs.filter(function(q){return q.kind==='part'&&!shown[q.x.id];});
-  if(pr.length)left+='<div class="tt-iss-g part"><div class="tt-iss-why"><b>只排到 1 节</b>：第二节找不到老师、届别、教室都空的时段'+(_ttCanEdit()?'（点课片 →「＋ 加一节」手动补）':'')+'</div><div class="tt-iss-pills">'+pr.map(function(q){return _ttIssuePill(q.x,'part');}).join('')+'</div>'+_ttSugBlock(pr,sol)+'</div>';
+  if(pr.length)left+='<div class="tt-iss-g part">'+pr.map(function(q){return _ttPartCard(q.x,sol);}).join('')+'</div>';
   if(left){const hp=[];if(un.length)hp.push('未排 '+un.length+' 门');if(partial.length)hp.push('只排到 1 节 '+partial.length+' 门');
-    left='<div class="tt-iss-h bad">'+(hp.join(' · ')||'课太多、时段装不下')+'<span> · 按原因分组；每门课下面是原因与建议，点课码跳到课表</span></div>'+left;}
+    left='<div class="tt-iss-h bad">'+(hp.join(' · ')||'课太多、时段装不下')+'</div>'+left;}
   let rTodo='',rOther='',rLang='',rWarn='';   // 右栏分四块,最后照「备注待看 → 提醒 → 其他备注 → KE／KH」接起来(Aj. Tsai 2026-11-15:提醒放上面,默认收合的两块接在下面)
   const curBy={};(sol.placements||[]).concat(un).forEach(function(c){curBy[String(c.id)]=c;});
   const notes=(sol.manualNotes||[]).map(function(c){c=curBy[String(c.id)]||c;const n=_ttNoteOf(c,sol);return {c:c,n:n,kind:_ttNoteKind(c,n)};}),todo=notes.filter(function(o){return o.kind==='todo';}),other=notes.filter(function(o){return o.kind!=='todo';});
