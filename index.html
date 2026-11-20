@@ -6841,46 +6841,68 @@ async function ttOneAdvise(id){
   const foot='<button class="btn btn-sm" onclick="ttPlanClose()">关闭</button>',sem=_ttCache.sem,HN={up:'上半',dn:'下半',both:'全学期'};
   const tick=function(){return new Promise(function(r){setTimeout(r,20);});};
   const head='<div class="ttplan-title" style="font-size:15px;font-weight:600;color:#3C3489;margin-bottom:6px">💡 调整建议 · '+eh(_ttCC(p))+'</div><div style="font-size:12px;line-height:1.75;color:#333"><div><b>现在</b>：'+(sol.whole?'':(HN[p.half]||'')+' ')+'只排到 1 节（'+p.count+' 人 · '+eh(p.tc||'待定')+' · '+(p.cohorts||[]).length+' 个届别）</div><div style="margin-top:8px"><b>要改什么</b></div>';
-  const show=function(lines){_ttPlanShow(head+'<ul style="margin:2px 0 8px;padding-left:20px">'+lines.map(function(l){return '<li>'+l+'</li>';}).join('')+'</ul><div style="color:#888;font-size:11.5px">只在内存里试排，没有改动任何资料；结果只供参考。</div>'+_ttLkRow([p],(p.cohorts||[]).slice(0,4))+'</div>',foot);};
-  show(['<span style="color:#777">⏳ 试算中…</span>']);await tick();
+  const show=function(lines,wait){_ttPlanShow(head+'<ul style="margin:2px 0 8px;padding-left:20px">'+lines.map(function(l){return '<li>'+l+'</li>';}).join('')+'</ul>'+(wait?'':'<div style="color:#888;font-size:11.5px">只在内存里试排，没有改动任何资料。</div>'+_ttLkRow([p],(p.cohorts||[]).slice(0,4)))+'</div>',foot);};
+  show(['<span style="color:#777">⏳ 试算中…</span>'],true);await tick();
   const rowsOf=(_ttMem(p)||[p]).map(function(m){return (typeof schD!=='undefined'?schD:[]).find(function(r){return String(r.id)===String(m.id);});}).filter(Boolean);
   const cohs=[];rowsOf.forEach(function(r){(r.cc||[]).forEach(function(x){if(x.cohort&&!cohs.some(function(y){return y.n===x.cohort;}))cohs.push({n:x.cohort,c:+x.count||0});});});
-  const solve=function(o){return _ttSolve(sem,Object.assign({tries:TT_PLAN_QUICK,deep:false,lns:false},o||{}));};
+  const quick=function(o){return _ttSolve(sem,Object.assign({tries:TT_PLAN_QUICK,deep:false,lns:false},o||{}));};
+  const full=function(o){return _ttSolve(sem,Object.assign({deep:false,lns:false},o||{}));};   /* 跟一键排同样的 48 种顺序,验证用 */
   const mine=function(S){return (S.placements||[]).find(function(x){return String(x.id)===String(p.id);});};
   const okSelf=function(S){const q=mine(S);return q&&(q.cells||[]).length===2?q:null;};
   const others=function(S){return S.unplaced.filter(function(x){return String(x.id)!==String(p.id);}).length+S.placements.filter(function(x){return !x.isCap&&(x.cells||[]).length===1&&String(x.id)!==String(p.id);}).length;};
   const cellTxt=function(cells){return cells.map(function(c){return c[0]+(c[1]==='am'?'上午':'下午');}).join('＋');};
+  const w=_ttPartWhy(p,sol,true);
+  const moveLines=function(){   // 同待处理一览那张卡:先挪开／再排到(没有试排验证)
+    if(!w)return '';
+    const bl=w.bl.slice(0,3).map(function(b){const m=/^(届别|老师)在上 (.+)$/.exec(b),n=/^教室被 (.+) 占用$/.exec(b);return m?eh(m[2])+'（'+m[1]+'）':(n?eh(n[1])+'（教室）':eh(b));}).join('、');
+    return '<b>挪开挡路的课</b><span style="color:#888">（没试排）</span><div style="padding-left:4px">'+(bl?'先挪开　'+bl+'<br>':'')+'再排到　'+eh(w.at)+' · 教室 '+eh(String(w.room))+'</div>';
+  };
   const L=[];
   try{
-    const base=solve(),b0=others(base);
+    const base=quick();
     if(okSelf(base)){
-      /* 快速试排里这门课已经排得满 → 卡住的是别的课(通常是同一批届别里更大的那门) */
-      const why=_ttPartWhy(p,sol)||'',m=/(?:届别|老师)在上 ([A-Za-z0-9-]+)/.exec(why),blk=m&&base.unplaced.concat(base.placements.filter(function(x){return (x.cells||[]).length===1;})).some(function(x){return _ttName(x)===m[1];});
+      const m=w&&/(?:届别|老师)在上 ([A-Za-z0-9-]+)/.exec((w.bl||[]).join('、')),blk=m&&base.unplaced.concat(base.placements.filter(function(x){return (x.cells||[]).length===1;})).some(function(x){return _ttName(x)===m[1];});
       L.push(blk?'<b>先处理 '+_ttLkSch(m[1],sem,'',m[1],'')+'</b>：它排好后，这门课才排得进去':'<b>按「⚡ 一键自动排 ▾ → 整张重排」</b>：这个排法下这门课可以排满 2 节');
-      if(why)L.push(eh(why));
+      const mv=moveLines();if(mv)L.push(mv);
     }else{
-      const found=[],bad=[];
-      if(cohs.length>=2){
-        for(var ci=0;ci<cohs.length;ci++){
-          show(['<span style="color:#777">⏳ 试「拿掉某个届别」…（'+(ci+1)+'／'+cohs.length+'）</span>']);await tick();
-          const save=rowsOf.map(function(r){return r.cc;});
-          try{rowsOf.forEach(function(r){r.cc=(r.cc||[]).filter(function(x){return x.cohort!==cohs[ci].n;});});
-            const S=solve(),q=okSelf(S);
-            if(q&&others(S)<=b0)found.push({n:cohs[ci].n,c:cohs[ci].c,cells:q.cells});else bad.push(cohs[ci].n);
-          }finally{rowsOf.forEach(function(r,i){r.cc=save[i];});}
+      /* 第 1 段:快速试排筛出候选 */
+      const b0=others(base),cand=[];
+      for(var ci=0;ci<cohs.length&&cohs.length>=2;ci++){
+        show(['<span style="color:#777">⏳ 筛选（'+(ci+1)+'／'+cohs.length+'）</span>'],true);await tick();
+        const save=rowsOf.map(function(r){return r.cc;});
+        try{rowsOf.forEach(function(r){r.cc=(r.cc||[]).filter(function(x){return x.cohort!==cohs[ci].n;});});
+          const S=quick(),q=okSelf(S);if(q&&others(S)<=b0)cand.push({kind:'coh',n:cohs[ci].n,c:cohs[ci].c});
+        }finally{rowsOf.forEach(function(r,i){r.cc=save[i];});}
+      }
+      let other=null;
+      if(!sol.whole&&(p.half==='up'||p.half==='dn')){
+        show(['<span style="color:#777">⏳ 筛选（改上下半）</span>'],true);await tick();
+        other=p.half==='up'?'dn':'up';const ov={};ov[String(p.id)]=other;const S=quick({halfOv:ov}),q=okSelf(S);
+        if(q&&others(S)<=b0)cand.push({kind:'half',other:other});
+      }
+      /* 第 2 段:候选逐个用完整排法验证,确实有效、别的课没变差才列出来 */
+      const ok=[];
+      if(cand.length){
+        show(['<span style="color:#777">⏳ 验证中…</span>'],true);await tick();
+        const fb=full(),f0=others(fb);
+        for(var k=0;k<Math.min(cand.length,6);k++){
+          show(['<span style="color:#777">⏳ 验证（'+(k+1)+'／'+Math.min(cand.length,6)+'）</span>'],true);await tick();
+          const c=cand[k];
+          if(c.kind==='coh'){
+            const save=rowsOf.map(function(r){return r.cc;});
+            try{rowsOf.forEach(function(r){r.cc=(r.cc||[]).filter(function(x){return x.cohort!==c.n;});});
+              const S=full(),q=okSelf(S);if(q&&others(S)<=f0)ok.push({kind:'coh',n:c.n,c:c.c,cells:q.cells});
+            }finally{rowsOf.forEach(function(r,i){r.cc=save[i];});}
+          }else{
+            const ov={};ov[String(p.id)]=c.other;const S=full({halfOv:ov}),q=okSelf(S);if(q&&others(S)<=f0)ok.push({kind:'half',other:c.other,cells:q.cells});
+          }
         }
       }
-      let halfLine='';
-      if(!sol.whole&&(p.half==='up'||p.half==='dn')){
-        show(['<span style="color:#777">⏳ 试「改上下半」…</span>']);await tick();
-        const other=p.half==='up'?'dn':'up',ov={};ov[String(p.id)]=other;const S=solve({halfOv:ov}),q=okSelf(S);
-        if(q&&others(S)<=b0)L.push('<b>改 '+eh(_ttCC(p))+' 的上下半 → '+(other==='up'?'上半':'下半')+'学期</b> → 排到 '+eh(cellTxt(q.cells)));else halfLine='改上下半';
-      }
-      if(found.length)L.unshift('<b>改 '+eh(_ttCC(p))+' 的届别</b>（'+(found.length>1?'任选一个；':'')+'前提：该届别学生不必修这门课）<ul style="margin:2px 0;padding-left:18px">'+found.slice(0,4).map(function(f){return '<li>拿掉 <b>'+eh(f.n)+'</b>（'+f.c+' 人）→ 排到 '+eh(cellTxt(f.cells))+'，别的课没变差</li>';}).join('')+(found.length>4?'<li style="color:#888">…另有 '+(found.length-4)+' 个也可以</li>':'')+'</ul>');
-      const nope=[];if(halfLine)nope.push(halfLine);if(bad.length)nope.push('拿掉其他 '+bad.length+' 个单一届别');
-      {const w=_ttPartWhy(p,sol)||'';if(w)L.push(eh(w));}   /* 跟待处理一览里那一行同一句(挪开挡路的课 → 第二节可排哪里),两边内容一致 */
-      if(!L.length)L.push('<b>这个排法下，试过的改法都没用</b>：可能要拆班、换授课老师，或把挡路的课挪开');
-      if(nope.length)L.push('<span style="color:#888">无效：'+nope.join('、')+'</span>');
+      const cs=ok.filter(function(x){return x.kind==='coh';}),hf=ok.filter(function(x){return x.kind==='half';})[0];
+      if(cs.length)L.push('<b>改 '+eh(_ttCC(p))+' 的届别</b>（'+(cs.length>1?'任选一个；':'')+'前提：该届别学生不必修这门课）<ul style="margin:2px 0;padding-left:18px">'+cs.slice(0,4).map(function(f){return '<li>拿掉 <b>'+eh(f.n)+'</b>（'+f.c+' 人）→ 排到 '+eh(cellTxt(f.cells))+'</li>';}).join('')+'</ul>');
+      if(hf)L.push('<b>改上下半 → '+(hf.other==='up'?'上半':'下半')+'学期</b> → 排到 '+eh(cellTxt(hf.cells)));
+      if(!ok.length){L.push('<b>试过的改法都没用</b>：建议拆班，或换授课老师');const mv=moveLines();if(mv)L.push(mv);}
+      else L.push('<span style="color:#888">以上都用完整排法验证过，别的课没变差</span>');
     }
   }catch(e){L.push('查不出建议：'+eh(String(e&&e.message||e)));}
   finally{try{_ttLangRefresh(sem);}catch(e2){}}
