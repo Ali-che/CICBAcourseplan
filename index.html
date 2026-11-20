@@ -539,6 +539,9 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 .tt-iss-sug{margin-top:4px;font-size:11px;line-height:1.6;color:#1a6b2f;border-left:2px solid #9ed4ae;padding-left:7px}
 .tt-iss-sug b{color:#14532d}
 .tt-iss-rest{color:#8a6d3b;font-size:10.5px;margin-left:4px}
+.tt-iss-acc{display:inline-block;border:1px solid #FCD34D;background:#fff;color:#92400e;border-radius:999px;padding:0 9px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;margin:0 8px 0 2px}
+.tt-iss-acc input{vertical-align:-2px}
+.tt-iss-accd{margin-top:6px;font-size:12px;color:#6b5114;line-height:1.9}
 .tt-iss-rest b{color:#b42318}
 .tt-pill.part{border-color:#fcd34d;color:#b45309}
 .tt-ipill{cursor:pointer}
@@ -5267,7 +5270,7 @@ function _ttAccSig(p){return (p.cells||[]).map(function(c){return c[0]+'|'+c[1];
 function _ttAccOk(p){const a=_ttCache.acc;return !!(a&&p&&a[String(p.id)]&&a[String(p.id)]===_ttAccSig(p));}
 function _ttAccLoad(tt){_ttCache.acc={};((tt&&tt.placements)||[]).forEach(function(p){if(p.ac)_ttCache.acc[String(p.id)]=String(p.ac);});}
 function ttAccept(id,on){
-  if(!_ttCanEdit())return;const sol=_ttCache.sol||(_ttCache.tt?_ttSolutionFromSaved(_ttCache.sem,_ttCache.tt):null);if(!sol)return;
+  if(!_ttCanEdit())return;_ttEnsureSol();const sol=_ttCache.sol;if(!sol)return;   /* 看存档时直接勾:先把存档变成可存的课表,不然按 💾 存档会说「请先一键自动排」(2026-11-21 修) */
   const p=(sol.placements||[]).find(function(x){return String(x.id)===String(id);});if(!p)return;
   _ttCache.acc=_ttCache.acc||{};if(on)_ttCache.acc[String(id)]=_ttAccSig(p);else delete _ttCache.acc[String(id)];
   _ttCache.dirty=true;try{renderTtPanel();}catch(e){}
@@ -6349,7 +6352,7 @@ function _ttTipShow(chip){
   }
   if(!un&&(p.cells||[]).length===1){   // 只排到 1 节:说明 + 建议(面板不再逐门列)
     const hn=(p.hint&&p.hint.cells)?(p.hint.half==='dn'?'下半':'上半'):'';
-    unHtml='<div style="margin-top:6px;color:#b45309"><b>只排到 1 节：</b>第二节找不到老师、届别、教室都空的时段</div><div style="margin-top:4px;color:#1a6b2f"><b>💡 建议：</b>'+eh(hn?('改到'+hn+'就能排满 2 节：'+p.hint.cells.map(_ttCellTxt).join('、')+(_ttCanEdit()?'（按上方「待处理一览」里这门课旁的「↪ 改到'+hn+'」）':'')):_ttPartWhy(p,_ttCurSol||_ttCache.sol||{})||(_ttCanEdit()?'点课片 →「＋ 加一节」手动补第二节':'第二节还没有位置（要挪开别的课，或改上下半）'))+'</div>';
+    unHtml='<div style="margin-top:6px;color:#b45309"><b>只排到 1 节'+(_ttAccOk(p)?'（已接受这样排）':'')+'：</b>第二节找不到老师、届别、教室都空的时段</div><div style="margin-top:4px;color:#1a6b2f"><b>💡 建议：</b>'+eh(hn?('改到'+hn+'就能排满 2 节：'+p.hint.cells.map(_ttCellTxt).join('、')+(_ttCanEdit()?'（按上方「待处理一览」里这门课旁的「↪ 改到'+hn+'」）':'')):_ttPartWhy(p,_ttCurSol||_ttCache.sol||{})||(_ttCanEdit()?'点课片 →「＋ 加一节」手动补第二节':'第二节还没有位置（要挪开别的课，或改上下半）'))+'</div>';
   }
   const rm=chip.getAttribute('data-rm')||'',why=_ttBadWhy&&_ttBadWhy[id],note=(p.note&&p.note.raw)||p.nt||'';
   const mem=_ttMem(p),cc=_ttCohCounts(p);
@@ -7152,7 +7155,7 @@ function _ttSugBlock(items,sol){
 function _ttFootDetails(sol){
   const sem=sol.sem||_ttCache.sem,acked=_ttWarnAcked(sem),canAck=_ttCanAck();
   const key=_ttName;
-  const un=sol.unplaced||[],partial=(sol.placements||[]).filter(function(p){return (p.cells||[]).length===1;});
+  const un=sol.unplaced||[],partAll=(sol.placements||[]).filter(function(p){return (p.cells||[]).length===1;}),partAcc=partAll.filter(function(p){return _ttAccOk(p);}),partial=partAll.filter(function(p){return !_ttAccOk(p);});   /* 只排 1 节也能「接受这样排」(Aj. Tsai 2026-11-21):已接受的不算待处理,另列一行可取消 */
   const probs=un.map(function(u){return {x:u,kind:'un',k:key(u)};}).concat(partial.map(function(p){return {x:p,kind:'part',k:key(p)};})),shown={},isProb={};
   probs.forEach(function(q){isProb[q.k]=1;});
   let left='';
@@ -7167,9 +7170,10 @@ function _ttFootDetails(sol){
   probs.filter(function(q){return q.kind==='un'&&!shown[q.x.id];}).forEach(function(q){const l=lab(q.x);if(!byR[l]){byR[l]=[];ord.push(l);}byR[l].push(q);});
   ord.forEach(function(l){left+='<div class="tt-iss-g"><div class="tt-iss-why"><b>'+eh(l)+'</b></div><div class="tt-iss-pills">'+byR[l].map(function(q){return _ttIssuePill(q.x,'un');}).join('')+'</div>'+_ttSugBlock(byR[l],sol)+'</div>';});
   const pr=probs.filter(function(q){return q.kind==='part'&&!shown[q.x.id];});
-  if(pr.length)left+='<div class="tt-iss-g part"><div class="tt-iss-why"><b>只排到 1 节</b>：第二节找不到老师、届别、教室都空的时段'+(_ttCanEdit()?'（点课片 →「＋ 加一节」手动补）':'')+'</div><div class="tt-iss-pills">'+pr.map(function(q){return _ttIssuePill(q.x,'part');}).join('')+'</div>'+_ttSugBlock(pr,sol)+'</div>';   /* 胶囊＋💡 一行(Aj. Tsai 2026-11-20 深夜:不喜欢一门一卡的条列,改回;_ttPartCard 留着没用到) */
+  if(pr.length)left+='<div class="tt-iss-g part"><div class="tt-iss-why"><b>只排到 1 节</b>：第二节找不到老师、届别、教室都空的时段'+(_ttCanEdit()?'（点课片 →「＋ 加一节」手动补）':'')+'</div><div class="tt-iss-pills">'+pr.map(function(q){return _ttIssuePill(q.x,'part')+(_ttCanEdit()?'<label class="tt-iss-acc" title="打勾＝同意这门课只排 1 节，不再列为待处理（存档时一起存；排法一变就失效）"><input type="checkbox" onchange="ttAccept(\''+jsq(String(q.x.id))+'\',this.checked)"> 接受这样排</label>':'');}).join('')+'</div>'+_ttSugBlock(pr,sol)+'</div>';   /* 胶囊＋💡 一行(Aj. Tsai 2026-11-20 深夜:不喜欢一门一卡的条列,改回;_ttPartCard 留着没用到) */
   if(left){const hp=[];if(un.length)hp.push('未排 '+un.length+' 门');if(partial.length)hp.push('只排到 1 节 '+partial.length+' 门');
     left='<div class="tt-iss-h bad">'+(hp.join(' · ')||'课太多、时段装不下')+'<span> · 按原因分组；每门课下面是原因与建议，点课码跳到课表</span></div>'+left;}
+  const accL=partAcc.length?'<div class="tt-iss-accd">已接受 '+partAcc.length+' 门只排 1 节：'+partAcc.map(function(p){return '<span class="tt-chk-p" style="border-color:#FCD34D;color:#92400e" onclick="_ttJumpTo(\''+jsq(String(p.id))+'\')">'+_ttCC(p)+'</span>'+(_ttCanEdit()?' <span class="tt-chk-p" style="border-color:#FCD34D;color:#92400e;font-weight:400" onclick="ttAccept(\''+jsq(String(p.id))+'\',false)">取消接受</span>':'');}).join('　')+'</div>':'';
   let rTodo='',rOther='',rLang='',rWarn='';   // 右栏分四块,最后照「备注待看 → 提醒 → 其他备注 → KE／KH」接起来(Aj. Tsai 2026-11-15:提醒放上面,默认收合的两块接在下面)
   const curBy={};(sol.placements||[]).concat(un).forEach(function(c){curBy[String(c.id)]=c;});
   const notes=(sol.manualNotes||[]).map(function(c){c=curBy[String(c.id)]||c;const n=_ttNoteOf(c,sol);return {c:c,n:n,kind:_ttNoteKind(c,n)};}),todo=notes.filter(function(o){return o.kind==='todo';}),other=notes.filter(function(o){return o.kind!=='todo';});
@@ -7221,7 +7225,7 @@ function _ttFootDetails(sol){
   }
   const right=rTodo+rWarn+rOther+rLang;
   if(!left&&!right&&!soloHtml)return '';
-  return '<div class="tt-foot"><details'+_ttFoldAttr('foot')+'><summary>'+((un.length+partial.length)?'⚠ ':'')+'待处理一览（未排 '+un.length+' · 只排 1 节 '+partial.length+' · 备注待看 '+todo.length+(solo.length?' · 个别学生撞课 '+solo.length:'')+(warns.length?' · 提醒未核对 '+openW:'')+'）<span class="hint"> · 点一下展开／收合</span></summary><div class="tt-iss-cols"><div>'+(left||'<div class="tt-iss-none ok">✅ 没有未排的课</div>')+soloHtml+'</div><div>'+(right||'<div class="tt-iss-none">无备注／提醒</div>')+'</div></div></details></div>';
+  return '<div class="tt-foot"><details'+_ttFoldAttr('foot')+'><summary>'+((un.length+partial.length)?'⚠ ':'')+'待处理一览（未排 '+un.length+' · 只排 1 节 '+partial.length+' · 备注待看 '+todo.length+(solo.length?' · 个别学生撞课 '+solo.length:'')+(warns.length?' · 提醒未核对 '+openW:'')+'）<span class="hint"> · 点一下展开／收合</span></summary><div class="tt-iss-cols"><div>'+(left||'<div class="tt-iss-none ok">✅ 没有未排的课</div>')+accL+soloHtml+'</div><div>'+(right||'<div class="tt-iss-none">无备注／提醒</div>')+'</div></div></details></div>';
 }
 // ── 漂移侦测:存档后别人改了排课 → 比对存档快照 vs 现在的 schD,标出受影响的课 ──
 function _ttDriftFields(p,r){
@@ -7512,7 +7516,7 @@ function _ttProblemList(sol){
   (sol.unplaced||[]).forEach(function(u){out.push({p:u,kind:'un'});});
   P.forEach(function(p){
     if(p.isCap)return;
-    if((p.cells||[]).length===1)out.push({p:p,kind:'one'});
+    if((p.cells||[]).length===1){if(!_ttAccOk(p))out.push({p:p,kind:'one'});}
     else if((p.cells||[]).length===2){
       if(_ttIsSameDay(p)&&!_ttAccOk(p))out.push({p:p,kind:'sd'});
       else if(p.note&&p.note.consec&&!_ttIsSameDay(p)&&!_ttConsecOk(p))out.push({p:p,kind:'consec'});
