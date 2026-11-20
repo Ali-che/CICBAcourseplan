@@ -5591,7 +5591,7 @@ function* _ttSolveG(sem,opts){
         if(bestSc===null||sc<bestSc){bestSc=sc;bestD=days[di];}
       }
       /* 定了哪一天之后:先当硬规定试(这些届别这天不排一般课);有课排不进去,就自动找「最少放过哪几个届别」(这几个届别这天仍可排一般课) */
-      let hard=false,ex={};
+      let hard=false,ex={},why='';
       if(bestD){
         const cheap=function(E){return Object.assign({},opts,{regDay:bestD,regHard:true,regEx:E,lns:false,deep:false});};
         const failN=function(S){return S?(S.unplaced.length+S.placements.filter(function(x){return !x.isCap&&(x.cells||[]).length===1;}).length):1e9;};
@@ -5600,14 +5600,17 @@ function* _ttSolveG(sem,opts){
         const S0=yield* _ttSolveCore(sem,cheap({}));
         if(S0&&failN(S0)===0){hard=true;}
         else if(S0){
+          why='硬挡'+bestD+'会让 '+failNames(S0).slice(0,4).map(_ttName).join('、')+(failN(S0)>4?' 等 '+failN(S0)+' 门':'')+' 排不进去';
           const co0=Object.assign({},_ttRegCos),cand=[];
           failNames(S0).forEach(function(p){(p.cohorts||[]).forEach(function(co){if(co0[co]&&cand.indexOf(co)<0)cand.push(co);});});
+          if(cand.length>10)why+='；要放过的届别有 '+cand.length+' 个，太多，不再往下算';
           if(cand.length&&cand.length<=10){
             const all={};cand.forEach(function(co){all[co]=1;});
             yield {txt:'找最少要放过的届别（共 '+cand.length+' 个可能）',pct:0};
             const SA=yield* _ttSolveCore(sem,cheap(all));
+            if(SA&&failN(SA)!==0)why+='；就算这 '+cand.length+' 个届别全放过，还是排不进去';
             if(SA&&failN(SA)===0){
-              hard=true;ex=all;
+              hard=true;ex=all;why='';
               for(var ci=0;ci<cand.length;ci++){   /* 倒着拿掉:每次拿掉一个,还排得下就留着拿掉 */
                 yield {txt:'找最少要放过的届别（'+(ci+1)+'／'+cand.length+'）',pct:ci/cand.length};
                 const tryE=Object.assign({},ex);delete tryE[cand[ci]];
@@ -5618,9 +5621,9 @@ function* _ttSolveG(sem,opts){
           }
         }
       }
-      opts=Object.assign({},opts,{regDay:bestD,regHard:hard,regEx:ex});
-      if(_ttCache.sem===sem){_ttCache.regDay=bestD;_ttCache.regHard=hard;_ttCache.regEx=Object.keys(ex);}
-    }else opts=Object.assign({},opts,{regDay:(_ttCache.sem===sem&&_ttCache.regDay)||'',regHard:(_ttCache.sem===sem&&!!_ttCache.regHard),regEx:(function(){const o={};((_ttCache.sem===sem&&_ttCache.regEx)||[]).forEach(function(co){o[co]=1;});return o;})()});
+      opts=Object.assign({},opts,{regDay:bestD,regHard:hard,regEx:ex,regWhy:why});
+      if(_ttCache.sem===sem){_ttCache.regDay=bestD;_ttCache.regHard=hard;_ttCache.regEx=Object.keys(ex);_ttCache.regWhy=why;}
+    }else opts=Object.assign({},opts,{regDay:(_ttCache.sem===sem&&_ttCache.regDay)||'',regHard:(_ttCache.sem===sem&&!!_ttCache.regHard),regWhy:(_ttCache.sem===sem&&_ttCache.regWhy)||'',regEx:(function(){const o={};((_ttCache.sem===sem&&_ttCache.regEx)||[]).forEach(function(co){o[co]=1;});return o;})()});
   }
   const bad=function(S){return S?[S.unplaced.length,S.placements.filter(function(p){return (p.cells||[]).length===1;}).length]:[1e9,1e9];};
   _ttKeep231=true;const A=yield* _ttSolveCore(sem,opts);
@@ -5748,7 +5751,7 @@ function* _ttSolveCore(sem,opts){
       else(c.cells.length===2?keepInfo.added:keepInfo.fail).push(nm+(c.cells.length===1?'（只排到 1 节）':''));
     });
   }
-  return {regDay:_ttRegDay,regHard:_ttRegHard,regEx:Object.keys(_ttRegEx),regCoN:Object.keys(_ttRegCos).length,keep:keepInfo,sem:sem,rooms:rooms,placements:placements,unplaced:unplaced,manualNotes:manualNotes,interns:interns,warns:_ttWarns(placements,whole),whole:whole,tries:Math.min(run+1,TRIES),ms:Math.round(t1-t0),deep:deep,lns:lns,pick:best?{run:best.run,nUn:best.nUn,n1:best.n1,soft:best.soft}:null};
+  return {regDay:_ttRegDay,regHard:_ttRegHard,regWhy:(_ttRegDay&&opts.regWhy)||'',regEx:Object.keys(_ttRegEx),regCoN:Object.keys(_ttRegCos).length,keep:keepInfo,sem:sem,rooms:rooms,placements:placements,unplaced:unplaced,manualNotes:manualNotes,interns:interns,warns:_ttWarns(placements,whole),whole:whole,tries:Math.min(run+1,TRIES),ms:Math.round(t1-t0),deep:deep,lns:lns,pick:best?{run:best.run,nUn:best.nUn,n1:best.n1,soft:best.soft}:null};
 }
 // 软提醒:2026-11-18 起一条都没有了(Aj. Tsai 定)——
 //   · 届别学期学分 > 21:很多届别本来就 24/27 学分,永远在响;
@@ -5789,7 +5792,7 @@ function _ttSolutionFromSaved(sem,tt){
   if(pls.some(function(p){return p.isCap&&(p.cells||[]).some(function(cs){return cs[1]==='ev'||cs[0]==='周六';});}))pls.forEach(function(p){if(p.isCap)p._cv=1;});   // 旧规则存的 Capstone(有傍晚或周六):照旧三段显示,重排后才换新规则
   const whole=_ttWholeSem(sem);
   const sol={sem:sem,rooms:_ttRoomsSorted(),placements:pls,unplaced:[],manualNotes:pls.filter(p=>p.nt),interns:_ttInternList(sem),warns:_ttWarns(pls,whole),whole:whole,fromSaved:true};
-  {const cp=((tt&&tt.placements)||[]).filter(function(x){return x.rd;})[0]||{};sol.regDay=cp.rd||'';sol.regHard=!!cp.rh;sol.regEx=cp.re||[];}
+  {const cp=((tt&&tt.placements)||[]).filter(function(x){return x.rd;})[0]||{};sol.regDay=cp.rd||'';sol.regHard=!!cp.rh;sol.regEx=cp.re||[];sol.regWhy=cp.rw||'';}
   sol.unplaced=_ttNotOnSaved(sem,sol);
   _ttSavedHints(sol);
   return sol;
@@ -6211,6 +6214,8 @@ function _ttRegHtml(sol){
     const hit=(sol.placements||[]).filter(function(p){return !p.isCap&&(p.half==='dn'||p.half==='both')&&(p.cells||[]).some(function(c){return c[0]===D;})&&(p.cohorts||[]).some(function(co){return byCo[co]&&(byCo[co].b1.length||byCo[co].b3.length);});});
     const ex=(sol.regEx&&sol.regEx.length)?sol.regEx:(_ttCache.regEx||[]),hardOn=(sol.regHard!==undefined?sol.regHard:_ttCache.regHard);
     if(hardOn&&!hit.length)h+='<div style="margin-top:10px;padding:7px 10px;background:#ECFDF3;border:1px solid #9ed4ae;border-radius:8px;font-size:12px;color:#1a6b2f;line-height:1.7">✅ '+eh(D)+'对版块 1＋3 的所有届别都是干净的，没有一般课。</div>';
+    const why=(sol.regWhy!==undefined&&sol.regWhy!==''?sol.regWhy:(_ttCache.regWhy||''));
+    if(!hardOn&&why)h+='<div style="margin-top:10px;padding:7px 10px;background:#F3F4F6;border:1px solid #D1D5DB;border-radius:8px;font-size:12px;color:#4b5563;line-height:1.7"><b>这学期放不进「'+eh(D)+'对版块 1＋3 全部干净」的硬规定</b>：'+eh(why)+'。所以'+eh(D)+'只是尽量不排一般课，下面列出哪些课仍在'+eh(D)+'。</div>';
     if(hardOn&&ex.length)h+='<div style="margin-top:10px;padding:7px 10px;background:#FFFBEB;border:1px solid #F3D9A4;border-radius:8px;font-size:12px;color:#7a5b16;line-height:1.7"><b>系统算出：要让所有课都排得下，最少要放过 '+ex.length+' 个届别</b>——这几个届别'+eh(D)+'仍有一般课，注册时'+eh(D)+'会冲突；其余版块 1＋3 的届别'+eh(D)+'都是干净的。<br>'+ex.map(function(c){return '<span style="display:inline-block;background:#fff;border:1px solid #F3D9A4;border-radius:5px;padding:0 7px;margin:2px 4px 2px 0">'+eh(c)+'</span>';}).join('')+'</div>';
     if(hit.length)h+='<div style="margin-top:10px;padding:7px 10px;background:#FFFBEB;border:1px solid #F3D9A4;border-radius:8px;font-size:12px;color:#7a5b16;line-height:1.7"><b>'+eh(D)+'有 '+hit.length+' 门一般课，这些届别'+eh(D)+'要上课：</b>这几门都已经排上了，但它们涉及版块 1＋3 的届别（多届别大课，别的天排不下），所以这些届别在注册时'+eh(D)+'会冲突。<span style="color:#92400e">（鼠标移到课名上，会列出哪些届别）</span><br>'+hit.map(function(p){const co=(p.cohorts||[]).filter(function(c){return byCo[c]&&(byCo[c].b1.length||byCo[c].b3.length);});return '<span class="tt-reghit" data-tt-id="'+eh(String(p.id))+'" data-regco="'+eh(co.join('、'))+'" style="display:inline-block;background:#fff;border:1px solid #F3D9A4;border-radius:5px;padding:0 7px;margin:2px 4px 2px 0;cursor:help;white-space:normal;overflow-wrap:anywhere">'+eh(_ttName(p))+' · '+co.length+' 个届别 ▾</span>';}).join('')+'</div>';
   }
@@ -7270,7 +7275,7 @@ function _ttMoveLine(k,b,a){
 async function ttSave(){
   if(!_ttCanEdit())return;const sem=_ttCache.sem,sol=_ttCache.sol;
   if(!sem||!sol){alert('请先选学期并「一键自动排」');return;}
-  const pls=sol.placements.map(function(p){return {id:p.id,course:p.course,cls:p.cls,tc:p.tc,count:p.count,cohorts:p.cohorts,dept:p.dept,credit:p.credit,isCap:p.isCap,members:p.members,half:p.half,room:p.room,cells:p.cells,nt:(p.note&&p.note.raw)||'',so:_ttSoloOn()?1:0,ac:_ttAccOk(p)?_ttAccSig(p):'',rd:(p.isCap&&sol.regDay)?sol.regDay:'',rh:(p.isCap&&sol.regDay&&sol.regHard)?1:0,re:(p.isCap&&sol.regDay)?(sol.regEx||[]):[]};});
+  const pls=sol.placements.map(function(p){return {id:p.id,course:p.course,cls:p.cls,tc:p.tc,count:p.count,cohorts:p.cohorts,dept:p.dept,credit:p.credit,isCap:p.isCap,members:p.members,half:p.half,room:p.room,cells:p.cells,nt:(p.note&&p.note.raw)||'',so:_ttSoloOn()?1:0,ac:_ttAccOk(p)?_ttAccSig(p):'',rd:(p.isCap&&sol.regDay)?sol.regDay:'',rh:(p.isCap&&sol.regDay&&sol.regHard)?1:0,re:(p.isCap&&sol.regDay)?(sol.regEx||[]):[],rw:(p.isCap&&sol.regDay&&!sol.regHard)?(sol.regWhy||''):''};});
   {let rv;try{rv=await _ttVerCheck();}catch(e){}   // 存档前先看别人有没有存过(读不到就照旧存)
     const dv=rv===undefined?null:_ttVerDiff(_ttCache.tt,rv);
     if(dv&&(dv.kind==='ver'||dv.kind==='new')){
@@ -7816,8 +7821,8 @@ async function renderTtPanel(force){
   if(!_ttCache.refs){try{const r=await gasGet({action:'ttRefs'});if(r&&r.success)_ttCache.refs={rooms:r.rooms||[],cat:r.cat||{}};}catch(e){}if(!_ttCache.refs)_ttCache.refs={rooms:[],cat:{}};}
   if(force||_ttCache.sem!==sem){
     st.innerHTML='<div style="color:#888;padding:10px">⏳ 载入中…</div>';bd.innerHTML='';
-    _ttCache.sem=sem;_ttCache.acc={};_ttCache.regDay='';_ttCache.regHard=false;_ttCache.regEx=[];_ttCache.tt=null;_ttCache.sol=null;_ttCache.dirty=false;_ttCache.preview=false;_ttCache.dates=null;_ttUndoSt=[];_ttRedoSt=[];   // 换学期/重新载入 → 还原记录清空
-    try{const r=await gasGet({action:'timetable',sem:sem});if(r&&r.success){_ttCache.tt=r.tt||null;_ttCache.dates=r.dates||null;_ttCache.finalOK=!!r.finalOK;_ttCache.newver=null;_ttSoloAdopt();_ttAccLoad(r.tt);{const cp=((r.tt&&r.tt.placements)||[]).filter(function(x){return x.rd;})[0]||{};_ttCache.regDay=cp.rd||'';_ttCache.regHard=!!cp.rh;_ttCache.regEx=cp.re||[];}}}catch(e){}
+    _ttCache.sem=sem;_ttCache.acc={};_ttCache.regDay='';_ttCache.regHard=false;_ttCache.regEx=[];_ttCache.regWhy='';_ttCache.tt=null;_ttCache.sol=null;_ttCache.dirty=false;_ttCache.preview=false;_ttCache.dates=null;_ttUndoSt=[];_ttRedoSt=[];   // 换学期/重新载入 → 还原记录清空
+    try{const r=await gasGet({action:'timetable',sem:sem});if(r&&r.success){_ttCache.tt=r.tt||null;_ttCache.dates=r.dates||null;_ttCache.finalOK=!!r.finalOK;_ttCache.newver=null;_ttSoloAdopt();_ttAccLoad(r.tt);{const cp=((r.tt&&r.tt.placements)||[]).filter(function(x){return x.rd;})[0]||{};_ttCache.regDay=cp.rd||'';_ttCache.regHard=!!cp.rh;_ttCache.regEx=cp.re||[];_ttCache.regWhy=cp.rw||'';}}}catch(e){}
   }
   const courses=_ttCourses(sem),n=courses.length,tt=_ttCache.tt,canEdit=_ttCanEdit();
   if(nn)nn.textContent=n?('· '+n+' 门课'):'';
