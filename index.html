@@ -395,6 +395,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
 /* 课表检查色块:课表上不符合排课要求的地方(同时段多门、两节同一天、撞堂) */
 .tt-chk{border:1px solid #FDA4AF;background:#FFF5F6;border-radius:8px;padding:8px 12px;margin:0 0 10px;font-size:12.5px;color:#881337;line-height:1.7}
 .tt-chk.ok{border-color:#86EFAC;background:#F0FDF4;color:#166534}
+.tt-chk.fin{border-color:#FCD34D;background:#FFFBEB;color:#7a4b06}   /* 已定版、只剩两节同一天:不用红底 */
 .tt-chk-h b.r{color:#be123c}.tt-chk-h b.o{color:#B45309}.tt-chk-h .z{color:#6b7280;font-weight:400}
 .tt-chk-h .hint{color:#9f1239;opacity:.7;font-size:11.5px}
 .tt-chk-r{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px}
@@ -6542,7 +6543,8 @@ function _ttCheckBar(sol){
   const can=_ttCanEdit(),accN=(D.sdAcc||[]).length,accH=accN?'<div class="tt-chk-r"><span class="sub">已接受 '+accN+' 门两节同一天：'+D.sdAcc.map(function(p){return '<span class="tt-chk-p" onclick="_ttJumpTo(\''+jsq(String(p.id))+'\')">'+_ttCC(p)+'</span>'+(can?'<span class="tt-chk-p tt-sdadv" onclick="ttAccept(\''+jsq(String(p.id))+'\',false)">取消接受</span>':'');}).join('')+'</span></div>':'';
   if(!nM&&!nS&&!nH)return (dfx||accH)?'<div class="tt-chk ok"><b>✅ 课表检查</b>：没有撞堂、没有同时段多门、没有未接受的两节同一天。'+accH+dfx+'</div>':'';   // 全部正常就不占一行(2026-11-18 简化);「拆开两节同天」这次有拆开东西才说一声
   const num=function(n,cls,t){return n?'<b class="'+cls+'">'+t+'</b>':'<span class="z">'+t+'</span>';};
-  let h='<div class="tt-chk"><div class="tt-chk-h"><b>🔎 课表检查</b>：不符合排课要求的地方 —— '+num(nH,'r','撞堂／超容量 '+nH+' 门')+' · '+num(nM,'r','同时段多门 '+nM+' 格')+' · '+num(nS,'o','两节同一天 '+nS+' 门')+'<span class="hint"> · 点名称跳到课表</span></div>';
+  const fin=!!(sol.fromSaved&&_ttFinalState(_ttCache.tt)==='final');   // 看的是已定版的存档:不催人重排(Aj. Tsai 2026-11-20)
+  let h='<div class="tt-chk'+((fin&&!nH&&!nM)?' fin':'')+'"><div class="tt-chk-h"><b>🔎 课表检查</b>：'+((fin&&!nH&&!nM)?'已定版；还有 —— ':'不符合排课要求的地方 —— ')+num(nH,'r','撞堂／超容量 '+nH+' 门')+' · '+num(nM,'r','同时段多门 '+nM+' 格')+' · '+num(nS,'o','两节同一天 '+nS+' 门')+'<span class="hint"> · 点名称跳到课表</span></div>';
   const half=function(p){return sol.whole?'':(p.half==='up'?'上半 ':(p.half==='dn'?'下半 ':''));};
   if(nH)h+='<div class="tt-chk-r"><span class="lab">撞堂／超容量</span>'+D.hard.map(function(p){return '<span class="tt-chk-p" title="'+eh((D.why[p.id]||[]).join('；'))+'" onclick="_ttJumpTo(\''+jsq(String(p.id))+'\')">'+_ttCC(p)+'</span><span class="tt-chk-p tt-sdadv" title="看这门课的调整建议" onclick="ttHardAdvise(\''+jsq(String(p.id))+'\')">💡 建议</span>';}).join('')+'<span class="sub">课片有红框</span></div>';
   if(nM){
@@ -6551,7 +6553,7 @@ function _ttCheckBar(sol){
       (D.multi.room.length?'<span class="sub">教室 '+D.nRm+' 格：</span>'+D.multi.room.map(function(x){return '<span class="tt-chk-p" title="切到「依教室号」看这一格" onclick="ttCheckGo(\'room\',\''+jsq(x.id)+'\')">'+eh(x.key)+' <small>'+eh(x.when)+'</small></span>';}).join(''):'')+
       '<span class="sub">格子有红框'+((_ttCache.solo||[]).length?'；届别的多半是个别学生撞课，明细在下面「待处理一览」':'')+'</span></div>';
   }
-  if(nS)h+='<div class="tt-chk-r o"><span class="lab">两节同一天</span>'+D.sd.map(function(p){return '<span class="tt-chk-p" title="'+eh(TT_SD_TIP)+'" onclick="_ttJumpTo(\''+jsq(String(p.id))+'\')">'+_ttCC(p)+' <small>'+eh(half(p)+p.cells[0][0])+'</small></span><span class="tt-chk-p tt-sdadv" title="看这门课的调整建议" onclick="ttSdAdvise(\''+jsq(String(p.id))+'\')">💡 建议</span>'+(_ttCanEdit()?'<label class="tt-chk-p tt-sdadv" title="打勾＝同意这样排，橙框和这一行不再显示（存档时一起存）"><input type="checkbox" onchange="ttAccept(\''+jsq(String(p.id))+'\',this.checked)" style="vertical-align:-2px"> 接受这样排</label>':'');}).join('')+'<span class="sub">格子有橙框；'+(sol.fromSaved?'这是存档当时的排法，重排才会套用新规则':(sol.deep?'已试过挪开挡路的课、整个时段对调，仍拆不开':'其他天排不下才会这样'+(_ttCanEdit()&&!_ttDeepOn()?'；可打勾「拆开两节同天」再试':'')))+'</span></div>';
+  if(nS)h+='<div class="tt-chk-r o"><span class="lab">两节同一天</span>'+D.sd.map(function(p){return '<span class="tt-chk-p" title="'+eh(TT_SD_TIP)+'" onclick="_ttJumpTo(\''+jsq(String(p.id))+'\')">'+_ttCC(p)+' <small>'+eh(half(p)+p.cells[0][0])+'</small></span><span class="tt-chk-p tt-sdadv" title="看这门课的调整建议" onclick="ttSdAdvise(\''+jsq(String(p.id))+'\')">💡 建议</span>'+(_ttCanEdit()?'<label class="tt-chk-p tt-sdadv" title="打勾＝同意这样排，橙框和这一行不再显示（存档时一起存）"><input type="checkbox" onchange="ttAccept(\''+jsq(String(p.id))+'\',this.checked)" style="vertical-align:-2px"> 接受这样排</label>':'');}).join('')+'<span class="sub">格子有橙框；'+(fin?('已定版，不用重排'+(_ttCanEdit()?'；就是要这样排可勾「接受这样排」→ 💾 存档 → 再按「✅ 定版」':'')):sol.fromSaved?'这是存档当时的排法，重排才会套用新规则':(sol.deep?'已试过挪开挡路的课、整个时段对调，仍拆不开':'其他天排不下才会这样'+(_ttCanEdit()&&!_ttDeepOn()?'；可打勾「拆开两节同天」再试':'')))+'</span></div>';
   return h+accH+dfx+'</div>';
 }
 // 点课表检查里的届别/老师/教室 → 切到那种检视,捲到那张课表(教室:捲到那门课)
