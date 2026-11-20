@@ -5740,7 +5740,53 @@ function _ttSolutionFromSaved(sem,tt){
   const sol={sem:sem,rooms:_ttRoomsSorted(),placements:pls,unplaced:[],manualNotes:pls.filter(p=>p.nt),interns:_ttInternList(sem),warns:_ttWarns(pls,whole),whole:whole,fromSaved:true};
   sol.regDay=((tt&&tt.placements)||[]).map(function(x){return x.rd;}).filter(Boolean)[0]||'';
   sol.unplaced=_ttNotOnSaved(sem,sol);
+  _ttSavedHints(sol);
   return sol;
+}
+// 看存档时:只排到 1 节的课,「改到另一半能不能排满 2 节」存档里没记 → 拿存档的课表现算(跟自动排完当下同一套找法)。出错就当作没有,不能弄坏课表。(Aj. Tsai 2026-11-20)
+function _ttSavedHints(sol){
+  try{
+    if(sol.whole)return;const rooms=sol.rooms||_ttRoomsSorted(),capTc=_ttCapTcOf(sol);
+    (sol.placements||[]).forEach(function(p){
+      if(p.isCap||(p.cells||[]).length!==1||(p.half!=='up'&&p.half!=='dn'))return;
+      try{
+        const nh=(p.half==='up'?'dn':'up'),c=Object.assign({},p,{half:nh,note:_ttParseNote(p.nt,rooms),_tok:null,_tokA:null});
+        const f=_ttFindSlots(_ttStateFromSol(sol,p.id),c,_ttCandRooms(c,rooms),_ttDaysFor(c,capTc),false);
+        if(f)p.hint={half:nh,cells:f.cells};
+      }catch(e){}
+    });
+  }catch(e){}
+}
+// 只排到 1 节、改另一半也排不满:第二节在本半最接近哪个时段、被谁挡住(照「先写要改什么,再写结果」)。找不到回空字串。
+function _ttPartWhy(p,sol){
+  try{
+    if(!p||p.isCap||(p.cells||[]).length!==1)return '';
+    const rooms=sol.rooms||_ttRoomsSorted(),u=Object.assign({},p,{note:_ttParseNote(p.nt,rooms),_tok:null,_tokA:null}),own=p.cells[0];
+    let cand=_ttCandRooms(u,rooms);if(!cand.length)return '';
+    cand=cand.slice().sort(function(a,b){return (String(b.code)===String(own[2]||p.room))-(String(a.code)===String(own[2]||p.room));});   // 先看现在这一节用的那间
+    const B=_ttBusy(sol,p.id),hs=_ttHs(u),toks=_ttCoToks(u).r;
+    const nm=function(o){return _ttCodes(o)+(o.cls?'-'+o.cls:'');};
+    let days=_ttDaysFor(u,_ttCapTcOf(sol)).filter(function(d){return d!=='周六'&&d!=='周日';});
+    if(u.note&&u.note.days&&u.note.days.length===1)days=days.filter(function(d){return d===u.note.days[0];});
+    let best=null;
+    days.forEach(function(d){['am','pm'].forEach(function(s){
+      if(d===own[0]&&s===own[1])return;
+      cand.forEach(function(r){
+        const bl=[],add=function(t){if(bl.indexOf(t)<0)bl.push(t);};
+        hs.forEach(function(h){
+          const o=_ttHit(B.occ,h+'|'+r.code,d,u,s);if(o)add('教室被 '+nm(o)+' 占用');
+          if(u.tc){const t=_ttHit(B.tb,h+'|'+u.tc,d,u,s);if(t)add('老师在上 '+nm(t));}
+          toks.forEach(function(co){const c2=_ttHit(B.cb,h+'|'+co,d,u,s);if(c2)add('届别在上 '+nm(c2));});
+        });
+        const sd=(d===own[0])?1:0;
+        if(!best||bl.length<best.bl.length||(bl.length===best.bl.length&&sd<best.sd))best={d:d,s:s,room:r.code,bl:bl,sd:sd};
+      });
+    });});
+    if(!best)return '';
+    const at=best.d+_ttSlotName(best.s)+'，教室 '+best.room+(best.sd?'（跟第一节同一天）':'');
+    if(!best.bl.length)return '第二节可排在 '+at+'（空着）'+(_ttCanEdit()?'：点课片 →「＋ 加一节」':'');
+    return '先挪开挡路的课（'+best.bl.slice(0,3).join('、')+'）→ 第二节可排 '+at+'；或在排课表改这门课的上下半、老师或届别';
+  }catch(e){return '';}
 }
 // 看存档时:排课表里有、但存档课表上没有的课(存档当时没排上,或存档后排课表才新增)→ 当成「未排」列出来,
 // 这样只读角色(主任)在「待处理一览」也看得到每门的原因与建议,可编辑角色能从未排区把它拖进课表(Aj. Tsai 2026-11-17)。
@@ -6176,7 +6222,7 @@ function _ttTipShow(chip){
   }
   if(!un&&(p.cells||[]).length===1){   // 只排到 1 节:说明 + 建议(面板不再逐门列)
     const hn=(p.hint&&p.hint.cells)?(p.hint.half==='dn'?'下半':'上半'):'';
-    unHtml='<div style="margin-top:6px;color:#b45309"><b>只排到 1 节：</b>第二节找不到老师、届别、教室都空的时段</div><div style="margin-top:4px;color:#1a6b2f"><b>💡 建议：</b>'+eh(hn?('改到'+hn+'就能排满 2 节：'+p.hint.cells.map(_ttCellTxt).join('、')+(_ttCanEdit()?'（按上方「待处理一览」里这门课旁的「↪ 改到'+hn+'」）':'')):(_ttCanEdit()?'点课片 →「＋ 加一节」手动补第二节':'第二节还没有位置（要挪开别的课，或改上下半）'))+'</div>';
+    unHtml='<div style="margin-top:6px;color:#b45309"><b>只排到 1 节：</b>第二节找不到老师、届别、教室都空的时段</div><div style="margin-top:4px;color:#1a6b2f"><b>💡 建议：</b>'+eh(hn?('改到'+hn+'就能排满 2 节：'+p.hint.cells.map(_ttCellTxt).join('、')+(_ttCanEdit()?'（按上方「待处理一览」里这门课旁的「↪ 改到'+hn+'」）':'')):_ttPartWhy(p,_ttCurSol||_ttCache.sol||{})||(_ttCanEdit()?'点课片 →「＋ 加一节」手动补第二节':'第二节还没有位置（要挪开别的课，或改上下半）'))+'</div>';
   }
   const rm=chip.getAttribute('data-rm')||'',why=_ttBadWhy&&_ttBadWhy[id],note=(p.note&&p.note.raw)||p.nt||'';
   const mem=_ttMem(p),cc=_ttCohCounts(p);
@@ -6881,7 +6927,7 @@ function ttPlanApply(){
 // 右:备注只列要人看的(已照办/变更记录收起)+ KE/KH + 软提醒按类型汇总(点开才列,可勾「已核对」)
 // 未排/只排1节 的一句话建议(与浮出卡同逻辑),直接显示在课码下面,不靠鼠标悬停(Aj. Tsai 2026-11-16:hover 有时接不到)
 function _ttSugText(x,sol,kind){
-  if(kind==='part'){const hn=(x.hint&&x.hint.cells)?(x.hint.half==='dn'?'下半':'上半'):'';return hn?('改到'+hn+'就能排满 2 节'+(_ttCanEdit()?'（按课码旁「↪ 改到'+hn+'」）':'')):(_ttCanEdit()?'点课片 →「＋ 加一节」手动补第二节':'第二节还没有位置（要挪开别的课，或改上下半）');}
+  if(kind==='part'){const hn=(x.hint&&x.hint.cells)?(x.hint.half==='dn'?'下半':'上半'):'';return hn?('改到'+hn+'就能排满 2 节'+(_ttCanEdit()?'（按课码旁「↪ 改到'+hn+'」）':'')):_ttPartWhy(x,sol)||(_ttCanEdit()?'点课片 →「＋ 加一节」手动补第二节':'第二节还没有位置（要挪开别的课，或改上下半）');}
   if(x.hint&&x.hint.cells){const hn=x.hint.half==='dn'?'下半':'上半';return '改到'+hn+'就能排满 2 节：'+x.hint.cells.map(_ttCellTxt).join('、')+(_ttCanEdit()?'（按课码旁「↪ 改到'+hn+'」）':'');}
   return _ttSuggestFor(x,sol);
 }
@@ -9552,7 +9598,7 @@ function renderDeptMatrix(){
       +cells
       +'<td style="text-align:center;background:#EEEDFE;font-weight:700;color:#3C3489;border-top:0.5px solid #eee">'+rowTot+'</td></tr>';
   });
-  h+='<tr style="border-top:2px double #534AB7"><td style="position:sticky;left:0;background:#EEEDFE;font-weight:700;color:#3C3489;padding:5px 10px">各班：课数 / 人次</td><td style="background:#EEEDFE"></td><td style="background:#EEEDFE"></td>'
+  h+='<tr class="gs-fix" style="border-top:2px double #534AB7"><td style="position:sticky;left:0;background:#EEEDFE;font-weight:700;color:#3C3489;padding:5px 10px">各班：课数 / 人次</td><td style="background:#EEEDFE"></td><td style="background:#EEEDFE"></td>'
     +cohs.map(c=>{let nC=0;rows.forEach(r=>{if((r.cc||[]).some(x=>x.cohort===c))nC++;});return '<td style="text-align:center;background:#EEEDFE;color:#3C3489;font-weight:700;padding:4px">'+nC+' 门<div style="font-size:9px;font-weight:400;color:#888">'+colTot[c]+' 人次</div></td>';}).join('')
     +'<td style="background:#EEEDFE"></td></tr>';
   h+='</tbody></table>';
@@ -9632,7 +9678,7 @@ function renderDeptTchMatrix(){
       +(_priv?'<td style="'+td+';text-align:center;background:#EEEDFE;white-space:nowrap;'+(over?'color:#B91C1C;font-weight:700':'color:#3C3489')+'"'+(over?' title="超过学年规定"':'')+'>'+yt+' / '+(t.l||'—')+(over?' ⚠':'')+'</td>':'')+'</tr>';
   });
   if(pend.length){
-    h+='<tr><td style="'+td+';background:#FEF2F2;white-space:nowrap;color:#B91C1C;font-weight:600;padding-left:12px">⏳ 待定老师</td>'
+    h+='<tr class="gs-fix"><td style="'+td+';background:#FEF2F2;white-space:nowrap;color:#B91C1C;font-weight:600;padding-left:12px">⏳ 待定老师</td>'
       +'<td style="'+td+';background:#FEF8F8">'+cellHtml(pend)+'</td>'
       +'<td style="'+td+';text-align:center;background:#FEF2F2;font-weight:700;color:#B91C1C" title="按「教学统计」课时权重合计(未分配老师)">'+_pendWt(pend,sem)+'</td>'+(_priv?'<td style="'+td+';background:#FEF2F2"></td>':'')+'</tr>';
   }
@@ -12188,7 +12234,7 @@ function _gSortApply(tbl,hdr,st){
   var base=tbl._gsOrig;
   // 分组列 / 小计列 = 分隔线(不动);紧跟在资料列后面的整列明细(展开区、隐藏列)= 附属列,跟着上一列一起移动
   var wide=function(r){return r.cells.length===1&&(r.cells[0].colSpan||1)>1;};
-  var isSep=function(r){return r.classList.contains('dh')||r.classList.contains('dt')||(wide(r)&&!isAtt(r));};
+  var isSep=function(r){return r.classList.contains('dh')||r.classList.contains('dt')||r.classList.contains('gs-fix')||(wide(r)&&!isAtt(r));};
   var isAtt=function(r){return /acc|detail|sub|exp/i.test(r.className)||r.style.display==='none';};
   // 依原顺序切段,段内以「资料列 + 附属列」为单位排序
   var segs=[],cur=[];
