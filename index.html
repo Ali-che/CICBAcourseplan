@@ -5532,14 +5532,14 @@ function _ttLayerScore(list){
   const nSolo=_ttSoloClashes(list).length;soft+=nSolo*TT_SOLO_PEN;
   return nUn*TT_TIER_UN+n1*TT_TIER_ONE+(TT_SD_SOLO_SAME?(nSD+nSolo)*TT_TIER_SD:nSD*TT_TIER_SD+nSolo*TT_TIER_SOLO)+nCon*TT_TIER_CON+nLang*TT_TIER_LANG+nReg*TT_TIER_REG+nBase*TT_TIER_BASE+soft;
 }
-function* _ttLns(st,list){
+function* _ttLns1(st,list,seed0,tag){
   const now=function(){return (typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();},t0=now();
-  let seed=20261119;const rnd=function(){seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+  let seed=seed0;const rnd=function(){seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
   const free=list.filter(function(c){return !c.isCap&&!c._pin;});
   const isBad=function(c){const n=(c.cells||[]).length;if(n<2)return true;if(_ttIsSameDay(c)&&!_ttAccS(c))return true;if(c.note&&c.note.consec){const d=Math.abs((_TT_DAYIDX[c.cells[0][0]]||0)-(_TT_DAYIDX[c.cells[1][0]]||0));return d!==1&&d!==4;}return false;};
   let cur=_ttLayerScore(list);const before=cur;let it=0,imp=0;
   for(;it<TT_LNS_ITERS&&now()-t0<TT_LNS_MS;it++){
-    if(it%250===0)yield {txt:'优化排法',pct:it/TT_LNS_ITERS};   /* 每 250 次让出一下,页面才不会停住 */
+    if(it%250===0)yield {txt:'优化排法'+(tag||''),pct:it/TT_LNS_ITERS};   /* 每 250 次让出一下,页面才不会停住 */
     let bad=free.filter(isBad);
     if(!bad.length){const sc=_ttSoloClashes(list);if(!sc.length)break;bad=free;}   // 只剩个别学生撞课时,随便挑一门当起点
     const seedC=bad[Math.floor(rnd()*bad.length)];
@@ -5548,13 +5548,29 @@ function* _ttLns(st,list){
     const R=[seedC];while(R.length<=k&&pool.length)R.push(pool.splice(Math.floor(rnd()*pool.length),1)[0]);
     const old=R.map(function(r){return (r.cells||[]).map(function(x){return x.slice();});});
     R.forEach(function(r){_ttUnapply(st,r);});
-    const order=R.slice().sort(function(){return rnd()-0.5;});
+    const order=R.slice();for(let oi=order.length-1;oi>0;oi--){const oj=Math.floor(rnd()*(oi+1));const ot=order[oi];order[oi]=order[oj];order[oj]=ot;}
     order.forEach(function(r){const f=_ttFindSlots(st,r,r._cand,r._days,true);_ttApply(st,r,f?f.cells:[]);});
     const ns=_ttLayerScore(list);
     if(ns<cur){cur=ns;imp++;}
     else{R.forEach(function(r){_ttUnapply(st,r);});R.forEach(function(r,i){_ttApply(st,r,old[i]);});}
   }
   return {iters:it,improved:imp,before:before,after:cur,ms:Math.round(now()-t0)};
+}
+const TT_LNS_SEEDS=3;   /* 后处理搜索用几组固定乱数各跑一遍、取分层评分最好的(Aj. Tsai 2026-11-20:每次结果要一样,又不靠单一组乱数的运气) */
+function* _ttLns(st,list){
+  const free=list.filter(function(c){return !c.isCap&&!c._pin;});
+  const snap=function(){return free.map(function(c){return (c.cells||[]).map(function(x){return x.slice();});});};
+  const put=function(a){free.forEach(function(c){_ttUnapply(st,c);});free.forEach(function(c,i){_ttApply(st,c,a[i]);});};
+  const start=snap();let best=null,bestA=null,tot=0,ms=0;
+  for(var k=0;k<TT_LNS_SEEDS;k++){
+    if(k)put(start);
+    const r=yield* _ttLns1(st,list,20261119+k,TT_LNS_SEEDS>1?('（第 '+(k+1)+'／'+TT_LNS_SEEDS+' 组）'):'');
+    tot+=r.iters;ms+=r.ms;
+    if(!best||r.after<best.after){best=r;bestA=snap();best.pick=k+1;}
+    if(r.iters<TT_LNS_ITERS)break;   // 已经没有问题课可改,不用再试别组
+  }
+  put(bestA);
+  return {iters:tot,improved:best.improved,before:best.before,after:best.after,ms:ms,seeds:TT_LNS_SEEDS,pick:best.pick};
 }
 function* _ttSolveG(sem,opts){
   // 231 留给小班:先照「留」排;有课没排上／只排 1 节 → 再照「不留」排一次,比较 没排上 → 只排 1 节,不留比较好才用不留
