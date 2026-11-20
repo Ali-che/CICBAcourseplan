@@ -6835,6 +6835,8 @@ function _ttAdvFirst(best,mv,keepNote,dayN,p){   // 只被一门课挡住时:先
   return '<b>改 '+lk+'</b>：挪到别的时段 → 这门课'+to;
 }
 /* 💡 「只排 1 节」的建议(2026-11-20,Aj. Tsai 要求「先写要改什么,再写结果」):真的试排——拿掉某个届别、改上下半,看这门课能不能排满 2 节、别的课有没有变差。只在内存里试,不动数据。 */
+/* 建议里「改哪个届别」的写法(Aj. Tsai 2026-11-20):届别只有 1 人写「更动 1 位个别学生 X」,多人写「更动 N 位学生的届别 X」,一眼看出动到几个人 */
+function _ttChgWho(n,c){c=+c||0;return (c===1?'更动 1 位个别学生 ':(c>1?'更动 '+c+' 位学生的届别 ':'更动届别 '))+'<b>'+eh(n)+'</b>';}
 async function ttOneAdvise(id){
   const sol=_ttCache.sol||(_ttCache.tt?_ttSolutionFromSaved(_ttCache.sem,_ttCache.tt):null);if(!sol)return;
   const p=(sol.placements||[]).find(function(x){return String(x.id)===String(id);});if(!p||p.isCap||(p.cells||[]).length!==1)return;
@@ -6893,7 +6895,7 @@ L.push(blk?'<b>这门课不用改</b>：'+_ttLkSch(m[1],sem,'',m[1],'')+' 排好
         }
       }
       const cs=ok.filter(function(x){return x.kind==='coh';}),hf=ok.filter(function(x){return x.kind==='half';})[0];
-      if(cs.length)L.push('<b>改 '+eh(_ttCC(p))+' 的届别</b>（'+(cs.length>1?'任选一个；':'')+'前提：该届别学生不必修这门课）<ul style="margin:2px 0;padding-left:18px">'+cs.slice(0,4).map(function(f){return '<li>拿掉 <b>'+eh(f.n)+'</b>（'+f.c+' 人）→ 排到 '+eh(cellTxt(f.cells))+'</li>';}).join('')+'</ul>');
+      if(cs.length)L.push('<b>改 '+eh(_ttCC(p))+' 的届别</b>（'+(cs.length>1?'任选一个；':'')+'前提：该届别学生不必修这门课）<ul style="margin:2px 0;padding-left:18px">'+cs.slice(0,4).map(function(f){return '<li>'+_ttChgWho(f.n,f.c)+' → 排到 '+eh(cellTxt(f.cells))+'</li>';}).join('')+'</ul>');
       if(hf)L.push('<b>改上下半 → '+(hf.other==='up'?'上半':'下半')+'学期</b> → 排到 '+eh(cellTxt(hf.cells)));
       if(!ok.length){   /* 只有老师真的是挡路因素(有时段被老师的别的课占着)才提「换授课老师」 */
         let tcBlk=false;try{if(p.tc){const B=_ttBusy(sol,p.id),u=Object.assign({},p,{note:_ttParseNote(p.nt,sol.rooms||_ttRoomsSorted()),_tok:null,_tokA:null});
@@ -6944,7 +6946,7 @@ async function ttSdAdvise(id,kind){
     {const lc=function(){return document.getElementById('ttsd-coh');},sem=_ttCache.sem,tick=function(){return new Promise(function(r){setTimeout(r,20);});};
     const rowsOf=(_ttMem(p)||[p]).map(function(m){return (typeof schD!=='undefined'?schD:[]).find(function(r){return String(r.id)===String(m.id);});}).filter(Boolean);
     const cohs=[];rowsOf.forEach(function(r){(r.cc||[]).forEach(function(x){if(x.cohort&&!cohs.some(function(y){return y.n===x.cohort;}))cohs.push({n:x.cohort,c:+x.count||0});});});
-    if(!rowsOf.length||cohs.length<2){if(lc())lc().innerHTML='这门课只有 '+cohs.length+' 个届别，没有「拿掉某个届别」可试。';}
+    if(!rowsOf.length||cohs.length<2){if(lc())lc().innerHTML='这门课只有 '+cohs.length+' 个届别，没有「更动某个届别」可试。';}
     else{
       const okF=function(S){const q=(S.placements||[]).find(function(x){return String(x.id)===String(p.id);});return q&&(q.cells||[]).length===2&&(kind==='consec'?_ttConsecOk(q):!_ttIsSameDay(q))?q:null;},cnt=function(S){return [S.unplaced.length,S.placements.filter(function(x){return !x.isCap&&(x.cells||[]).length===1;}).length,S.placements.filter(function(x){return kind==='consec'?(x.note&&x.note.consec&&(x.cells||[]).length===2&&!_ttConsecOk(x)):_ttIsSameDay(x);}).length];};
       const found=[];let base0;
@@ -6958,7 +6960,7 @@ async function ttSdAdvise(id,kind){
           }finally{rowsOf.forEach(function(r,i){r.cc=save[i];});}
         }
       }finally{try{_ttLangRefresh(sem);}catch(e2){}}
-      if(lc())lc().innerHTML=found.length?('<b>改 '+eh(_ttCC(p))+' 的届别</b>（'+(found.length>1?'任选一个；':'')+'前提：该届别学生不必修这门课）'+'<ul style="margin:2px 0;padding-left:18px">'+found.slice(0,4).map(function(f){return '<li>拿掉 <b>'+eh(f.n)+'</b>'+(f.c?'（'+f.c+' 人）':'')+' → 排到 <b>'+eh(cellTxt(f.cells))+'</b></li>';}).join('')+'</ul>'):'<span style="color:#888">无效：拿掉任一届别（试了 '+cohs.length+' 个）</span>';
+      if(lc())lc().innerHTML=found.length?('<b>改 '+eh(_ttCC(p))+' 的届别</b>（'+(found.length>1?'任选一个；':'')+'前提：该届别学生不必修这门课）'+'<ul style="margin:2px 0;padding-left:18px">'+found.slice(0,4).map(function(f){return '<li>'+_ttChgWho(f.n,f.c)+' → 排到 <b>'+eh(cellTxt(f.cells))+'</b></li>';}).join('')+'</ul>'):'<span style="color:#888">无效：更动任一届别（试了 '+cohs.length+' 个）</span>';
     }}
   }catch(e){_ttPlanShow('<div class="ttplan-wait">查不出建议：'+eh(String(e&&e.message||e))+'</div>',foot);}
 }
@@ -7566,7 +7568,7 @@ async function ttFixAll(auto){
         const best=rows[0];
         if(rows.length){
           const found=await _ttFixCoh(sol,p,it.kind,rows);
-          found.slice(0,3).forEach(function(f){bul.push('<b>改 '+eh(_ttCC(p))+' 的届别</b>：拿掉 '+eh(f.n)+(f.c?'（'+f.c+' 人）':'')+' → 排到 <b>'+eh(f.cells.map(function(c){return c[0]+(c[1]==='am'?'上午':'下午');}).join('＋'))+'</b>');});
+          found.slice(0,3).forEach(function(f){bul.push('<b>改 '+eh(_ttCC(p))+' 的届别</b>：'+_ttChgWho(f.n,f.c)+' → 排到 <b>'+eh(f.cells.map(function(c){return c[0]+(c[1]==='am'?'上午':'下午');}).join('＋'))+'</b>');});
           if(best&&best.blk.length===1){const mv=_ttAdvMove(sol,p,best);const dayN=function(r){return r.d+(r.s==='am'?'上午':'下午');};bul.push(_ttAdvFirst(best,mv,it.kind==='consec',dayN,p));}
         }
         if(!bul.length)bul.push('没有单靠改一处就能排好的办法；要排好得改排课表的上下半、老师或届别，或勾「接受这样排」');
