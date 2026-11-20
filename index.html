@@ -2069,7 +2069,7 @@ function applyRoleVisibility(){
   }
   _opsApplyRole();   // 后台子分页按角色显示(要在下面 账号权限/编辑记录 两颗之前跑)
   // 账号权限子分页:仅 admin 可见;非 admin 若正停在该子页则退回「学期」
-  const _canCoh = (currentRole==='admin'||currentRole==='director');
+  const _canCoh = (currentRole==='admin'||currentRole==='director'||currentRole==='pic');   // pic 也能新增届别(2026-11-20,migrations/018)
   const addcohTab = document.getElementById('btn-addcoh');
   if(addcohTab) addcohTab.style.display = _canCoh ? '' : 'none';
   // 秘书处对账分页:Head of Administration(teacher)/Director/Admin
@@ -12577,8 +12577,14 @@ function syncTblHeight(){
     if(action==='adminDelSemester')return srpc('admin_del_semester',{p_pin:_pin,p_sem:body.sem});
     if(action==='adminAddDept')return srpc('admin_add_dept',{p_pin:_pin,p_code:body.code,p_name:body.name});
     if(action==='adminDelDept')return srpc('admin_del_dept',{p_pin:_pin,p_code:body.code});
-    if(action==='adminAddCohort')return srpc('admin_add_cohort',{p_pin:_pin,p_dept:body.dept,p_cohort:body.cohort});
-    if(action==='adminSetCohortYears')return srpc('admin_set_cohort_years',{p_pin:_pin,p_cohort:body.cohort,p_years:(body.years==null?null:+body.years)});
+    if(action==='adminAddCohort'){   /* 新函数 cohort_add(admin/director/pic 都行,migrations/018);还没建就退回旧函数 */
+      let r=null;try{r=await srpc('cohort_add',{p_pin:_pin,p_dept:body.dept,p_cohort:body.cohort});}catch(e){r=null;}
+      if(r&&typeof r.success==='boolean')return r;
+      return srpc('admin_add_cohort',{p_pin:_pin,p_dept:body.dept,p_cohort:body.cohort});}
+    if(action==='adminSetCohortYears'){
+      let r=null;try{r=await srpc('cohort_set_years',{p_pin:_pin,p_cohort:body.cohort,p_years:(body.years==null?null:+body.years)});}catch(e){r=null;}
+      if(r&&typeof r.success==='boolean')return r;
+      return srpc('admin_set_cohort_years',{p_pin:_pin,p_cohort:body.cohort,p_years:(body.years==null?null:+body.years)});}
     if(action==='changeOwnPin')return srpc('change_own_pin',{p_pin:_pin,p_new_pin:body.new});
     if(action==='adminDelCohort')return srpc('admin_del_cohort',{p_pin:_pin,p_id:body.id});
     if(action==='adminUpdateCohort')return srpc('admin_update_cohort',{p_pin:_pin,p_id:body.id,p_dept:body.dept,p_cohort:body.cohort,p_grad_override:(body.grad_override||null)});
