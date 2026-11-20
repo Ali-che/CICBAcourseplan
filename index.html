@@ -6166,6 +6166,36 @@ function _ttEntityCards(sol,mode,only){   // mode:'cohort'|'teacher';only={专�
    每门课各占一个时段、别让同一届别看起来冲突。这张图只用来注册／公告,不影响排课。固定配对按课码:
    版块 1(上午)KF412·KT412·KL412·DI404 ＋ 版块 3(下午)KG133·DI325(配对:412＋KG133、DI404＋DI325);版块 2 FA401·FA402·BA103 上午＋下午一起。 */
 const TT_REG_PLAN={am:['KF412','KT412','KL412','DI404'],pm:['KG133','DI325'],pkg:['FA401','FA402','BA103']};
+/* 🔁 重新选第二天(2026-11-20,Aj. Tsai):课表做完后,只重选「注册用」的第二天,不动任何一般课 */
+let _ttRegPick=false;
+function _ttRegDayTable(sol){   // 周一～周四各一天:下半有一般课落在那天、又涉及版块 1＋3 届别的 → 冲突
+  const cos={};(sol.placements||[]).concat(sol.unplaced||[]).forEach(function(p){if(!p.isCap)return;const g=_ttRegGrp(p);if(g==='b1'||g==='b3')(p.cohorts||[]).forEach(function(co){cos[co]=1;});});
+  return ['周一','周二','周三','周四'].map(function(D){
+    const hit=(sol.placements||[]).filter(function(p){return !p.isCap&&(p.half==='dn'||p.half==='both')&&(p.cells||[]).some(function(c){return c[0]===D;})&&(p.cohorts||[]).some(function(co){return cos[co];});});
+    const cs={};hit.forEach(function(p){(p.cohorts||[]).forEach(function(co){if(cos[co])cs[co]=1;});});
+    return {d:D,n:hit.length,cohN:Object.keys(cs).length,names:hit.map(function(p){return String(p.course||'')+(p.cls?'-'+p.cls:'');})};
+  });
+}
+function ttRegPickToggle(){_ttRegPick=!_ttRegPick;renderTtPanel();}
+function ttRegSetDay(D){
+  if(!_ttCanEdit()||_ttCache.preview)return;
+  _ttUndoPush();_ttEnsureSol();const sol=_ttCache.sol;
+  sol.regDay=D;sol.regHard=false;sol.regEx=[];sol.regWhy='';
+  _ttCache.regDay=D;_ttCache.regHard=false;_ttCache.regEx=[];_ttCache.regWhy='';
+  _ttCache.dirty=true;_ttRegPick=false;renderTtPanel();
+  if(typeof showToast==='function')showToast('注册用第二天改成'+D+'（一般课没动）— 按「💾 存档」才算数',{kind:'success'});
+}
+function _ttRegPickHtml(sol,D){
+  if(!_ttCanEdit()||_ttCache.preview)return '';
+  const T=_ttRegDayTable(sol),best=Math.min.apply(null,T.map(function(x){return x.n;}));
+  let h='<div class="no-print" style="margin:8px 0;padding:8px 10px;background:#F5F4FE;border:1px solid #E5E3F8;border-radius:8px;font-size:12px;line-height:1.7"><b style="color:#3C3489">重新选第二天</b><span style="color:#666">　只改注册用画面，不动任何一般课；改完按「💾 存档」才算数，已定版的会变回草稿。</span>';
+  h+='<table data-gsort="off" style="border-collapse:collapse;margin-top:6px;font-size:12px"><tr><th style="text-align:left;padding:2px 10px 2px 0;color:#6E67B8">哪一天</th><th style="text-align:left;padding:2px 10px;color:#6E67B8">一般课冲突</th><th style="text-align:left;padding:2px 10px;color:#6E67B8">涉及届别</th><th></th></tr>';
+  T.forEach(function(x){
+    const cur=(x.d===D);
+    h+='<tr><td style="padding:3px 10px 3px 0"><b>'+eh(x.d)+'</b>'+(cur?' <span style="color:#1a6b2f">· 目前</span>':'')+(x.n===best?' <span style="color:#b45309">· 最少</span>':'')+'</td><td style="padding:3px 10px">'+x.n+' 门'+(x.n?'<span style="color:#888">（'+x.names.slice(0,6).map(eh).join('、')+(x.names.length>6?' 等':'')+'）</span>':'')+'</td><td style="padding:3px 10px">'+x.cohN+' 个</td><td>'+(cur?'':'<button class="btn btn-sm" onclick="ttRegSetDay(\''+x.d+'\')">改用'+eh(x.d)+'</button>')+'</td></tr>';
+  });
+  return h+'</table></div>';
+}
 function _ttRegHtml(sol){
   const caps=(sol.placements||[]).concat(sol.unplaced||[]).filter(function(p){return p.isCap;});
   if(!caps.length)return '<div style="padding:14px;color:#888">这学期没有 Capstone 课。</div>';
@@ -6191,7 +6221,8 @@ function _ttRegHtml(sol){
   const m13={'周五|am':'b1','周五|pm':'b3'};if(D){m13[D+'|am']='b1';m13[D+'|pm']='b3';}
   const m2={'周五|am':'b2','周五|pm':'b2'};
   const sec=function(t,sub){return '<div style="margin:12px 0 4px"><b style="color:#3C3489;font-size:13px">'+t+'</b>'+(sub?'<span style="color:#707070;font-size:11.5px">　'+sub+'</span>':'')+'</div>';};
-  let h='<div id="tt-reg" style="margin:4px 2px 12px"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-size:14px;font-weight:700;color:#3C3489">📝 注册用课表 · Capstone</div><button class="btn btn-sm no-print" onclick="ttRegPrint()">🖨️ 列印</button></div>'
+  let h='<div id="tt-reg" style="margin:4px 2px 12px"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-size:14px;font-weight:700;color:#3C3489">📝 注册用课表 · Capstone</div>'+((_ttCanEdit()&&!_ttCache.preview)?'<button class="btn btn-sm no-print" onclick="ttRegPickToggle()" title="只重选注册用的第二天，不动一般课">🔁 重新选第二天</button> ':'')+'<button class="btn btn-sm no-print" onclick="ttRegPrint()">🖨️ 列印</button></div>'
+    +(_ttRegPick?_ttRegPickHtml(sol,D):'')
     +'<div style="font-size:11.5px;color:#888;margin:2px 0 4px">只用来注册和公告，不是实际上课的安排（实际上课：三位老师各带一个班、整个周五，见「依教室号」）。'+(D?'':'<b style="color:#b45309">　还没选定周一～周四的哪一天，请按「⚡ 一键自动排」。</b>')+'</div>';
   h+=sec('版块 1＋3 的学生','一周 4 格：周五＋'+eh(dl)+'，上午版块 1、下午版块 3；配对 412＋KG133、DI404＋DI325；周一～周四少一门课')+grid(m13);
   h+=sec('版块 2 的学生','一周 2 格：周五上午＋下午')+grid(m2);
