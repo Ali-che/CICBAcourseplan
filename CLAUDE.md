@@ -46,7 +46,7 @@
 ## 进度 / 待办（最后更新 2026-11-19 · 每次有进展就更这里）
 
 ### 目前做到哪
-- **2026-11-20 Program-in Charge(pic)也能新增届别(前端已改已 commit 待部署;⏳ `migrations/018` 待 Aj. Tsai 跑)**:「➕ 新增届别」原只给 admin/director,服务器 `admin_add_cohort` 也只认 admin/director/主任。改:前端 `_canCoh` 加 `pic`;`adminAddCohort`/`adminSetCohortYears` 先走新函数 `cohort_add`/`cohort_set_years`(018,角色 admin/director/主任/pic),新函数还没建时自动退回旧函数,所以先上前端安全。旧函数不动(后台操作届别分页照旧)。跑完 018 请做档尾自检(假 PIN 回「需要…权限」、pic 真 PIN 新增一个测试届别再删)。排课表批量导入的「自动建档新届别」也走同一路径。
+- **2026-11-20 Program-in Charge(pic)也能新增届别(✅ 已上线 main `a19e54e`;`migrations/018` ✅ Aj. Tsai 已跑,pic 实测可新增)**:「➕ 新增届别」原只给 admin/director,服务器 `admin_add_cohort` 也只认 admin/director/主任。改:前端 `_canCoh` 加 `pic`;`adminAddCohort`/`adminSetCohortYears` 先走新函数 `cohort_add`/`cohort_set_years`(018,角色 admin/director/主任/pic),新函数还没建时自动退回旧函数,所以先上前端安全。旧函数不动(后台操作届别分页照旧)。跑完 018 请做档尾自检(假 PIN 回「需要…权限」、pic 真 PIN 新增一个测试届别再删)。排课表批量导入的「自动建档新届别」也走同一路径。
 - **2026-11-20【课表制作】「自动算最少放过哪几个届别」＋「最终版」标记(纯前端,已改未部署,等 Aj. Tsai 说「可以部署」;docs §11.61、§11.62)**:① 注册用第二天当硬规定,程序自动算最少要放过的届别(2569-2:周三、放过 5 个届别,没排上 0、只排 1 节 0,代价两节同一天 3 门,一键排约 30 秒)。② 定版标记:内容版本码 `_ttVerCode`、状态列／列印／Excel 印章 `_ttStamp`、草稿列印水印、定版后排课表有变动提示 `_ttFinalDriftN`。三学期 tt_print_check 11/11、ui_smoke 12/12;没测真 PIN 定版后画面。⚠ 本机 `index.html` 只有这两项我的改动,提交时别带上别的 session 的东西。
 - 系统上线稳定运行,约 8 位同事日常使用;**全站实际操作体检通过,无 JS 崩溃**。
 - **2026-11-18 核对:本机工作档 = `origin/main` = 线上**(`index.html`、`course_structure_online.html` 的 sha256 与线上一致,线上 ui_smoke 12/12);`migrations/008`~`016` 全部已跑。**下面旧条目里写的「已改未部署／已 commit 未部署／未 commit」都是写那一条当时的状态,到这一天为止全部已上线**(含秘书处对账、课程结构列印钮、时间呈现方案 A、列印量字留余量等)。【课表制作】的现况总表 → `docs/课表制作_设计与改版记录.md` §11.19;功能总览 → `docs/课表制作_功能主旨.md`。
