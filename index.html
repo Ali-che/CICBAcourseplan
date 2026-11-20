@@ -6895,7 +6895,10 @@ L.push(blk?'<b>这门课不用改</b>：'+_ttLkSch(m[1],sem,'',m[1],'')+' 排好
       const cs=ok.filter(function(x){return x.kind==='coh';}),hf=ok.filter(function(x){return x.kind==='half';})[0];
       if(cs.length)L.push('<b>改 '+eh(_ttCC(p))+' 的届别</b>（'+(cs.length>1?'任选一个；':'')+'前提：该届别学生不必修这门课）<ul style="margin:2px 0;padding-left:18px">'+cs.slice(0,4).map(function(f){return '<li>拿掉 <b>'+eh(f.n)+'</b>（'+f.c+' 人）→ 排到 '+eh(cellTxt(f.cells))+'</li>';}).join('')+'</ul>');
       if(hf)L.push('<b>改上下半 → '+(hf.other==='up'?'上半':'下半')+'学期</b> → 排到 '+eh(cellTxt(hf.cells)));
-      if(!ok.length)L.push('<b>试过的改法都没用</b>：拆班，或换授课老师');
+      if(!ok.length){   /* 只有老师真的是挡路因素(有时段被老师的别的课占着)才提「换授课老师」 */
+        let tcBlk=false;try{if(p.tc){const B=_ttBusy(sol,p.id),u=Object.assign({},p,{note:_ttParseNote(p.nt,sol.rooms||_ttRoomsSorted()),_tok:null,_tokA:null});
+          _ttDaysFor(u,_ttCapTcOf(sol)).filter(function(d){return d!=='周六'&&d!=='周日';}).forEach(function(d){['am','pm'].forEach(function(sv){_ttHs(u).forEach(function(h){if(_ttHit(B.tb,h+'|'+p.tc,d,u,sv))tcBlk=true;});});});}}catch(e3){}
+        L.push('<b>试过的改法都没用</b>：建议拆班'+(tcBlk?'，或换授课老师':''));}
       else L.push('<span style="color:#888">已用完整排法验证，别的课没变差</span>');
     }
   }catch(e){L.push('查不出建议：'+eh(String(e&&e.message||e)));}
