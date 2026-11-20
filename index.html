@@ -6353,7 +6353,7 @@ function _ttTipShow(chip){
   }
   const rm=chip.getAttribute('data-rm')||'',why=_ttBadWhy&&_ttBadWhy[id],note=(p.note&&p.note.raw)||p.nt||'';
   const mem=_ttMem(p),cc=_ttCohCounts(p);
-  const cohs=cc.filter(function(x){return x.n;}).map(function(x){return '<span style="display:inline-block;background:#F1EFFD;color:#3C3489;border-radius:5px;padding:0 6px;margin:2px 4px 0 0;white-space:nowrap">'+eh(x.n)+(x.c!=null&&x.c!==''?' <b>'+eh(String(x.c))+'</b>人':'')+'</span>';}).join('');
+  const cohs=cc.filter(function(x){return x.n;}).map(function(x){const dc=_ttDeptColor(cohortDept(x.n));return '<span style="display:inline-block;background:'+dc.bg+';color:'+dc.fg+';border-radius:5px;padding:0 6px;margin:2px 4px 0 0;white-space:nowrap">'+eh(x.n)+(x.c!=null&&x.c!==''?' <b>'+eh(String(x.c))+'</b>人':'')+'</span>';}).join('');
   const t=_ttTipEl();
   t.innerHTML='<div style="font-weight:700;color:#3C3489;font-size:12.5px">'+_ttCC(p)+' <span style="font-weight:400;color:#888">· 共 '+p.count+' 人'+(rm?' · @'+eh(rm):'')+(un?' · <b style="color:#b42318">未排（'+({up:'上半',dn:'下半',both:'全学期'}[un.half]||'待定')+'）</b>':'')+'</span></div>'+
     '<div style="color:#555">'+eh(p.tc||'老师待定')+(p.dept?' · 专业 '+eh(p.dept):'')+(p.isCap?' · 🎓 Capstone':'')+'</div>'+
