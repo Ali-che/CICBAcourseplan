@@ -5860,7 +5860,7 @@ function _ttPartWhy(p,sol){
     if(!best)return '';
     const at=best.d+_ttSlotName(best.s)+'，教室 '+best.room+(best.sd?'（跟第一节同一天）':'');
     if(!best.bl.length)return '第二节可排在 '+at+'（空着）'+(_ttCanEdit()?'：点课片 →「＋ 加一节」':'');
-    return '先挪开挡路的课（'+best.bl.slice(0,3).join('、')+'）→ 第二节可排 '+at+'；或在排课表改这门课的上下半、老师或届别';
+    return '先挪开挡路的课（'+best.bl.slice(0,3).join('、')+'）→ 第二节可排 '+at+'';
   }catch(e){return '';}
 }
 // 看存档时:排课表里有、但存档课表上没有的课(存档当时没排上,或存档后排课表才新增)→ 当成「未排」列出来,
@@ -6829,6 +6829,58 @@ function _ttAdvFirst(best,mv,keepNote,dayN,p){   // 只被一门课挡住时:先
   if(mv&&mv.known)return '<b>改 '+lk+' 的届别／老师／上下半</b>（它自己没处可挪，占着 '+eh(dayN(best))+'） → 这门课'+to;
   return '<b>改 '+lk+'</b>：挪到别的时段 → 这门课'+to;
 }
+/* 💡 「只排 1 节」的建议(2026-11-20,Aj. Tsai 要求「先写要改什么,再写结果」):真的试排——拿掉某个届别、改上下半,看这门课能不能排满 2 节、别的课有没有变差。只在内存里试,不动数据。 */
+async function ttOneAdvise(id){
+  const sol=_ttCache.sol||(_ttCache.tt?_ttSolutionFromSaved(_ttCache.sem,_ttCache.tt):null);if(!sol)return;
+  const p=(sol.placements||[]).find(function(x){return String(x.id)===String(id);});if(!p||p.isCap||(p.cells||[]).length!==1)return;
+  const foot='<button class="btn btn-sm" onclick="ttPlanClose()">关闭</button>',sem=_ttCache.sem,HN={up:'上半',dn:'下半',both:'全学期'};
+  const tick=function(){return new Promise(function(r){setTimeout(r,20);});};
+  const head='<div class="ttplan-title" style="font-size:15px;font-weight:600;color:#3C3489;margin-bottom:6px">💡 调整建议 · '+eh(_ttCC(p))+'</div><div style="font-size:12px;line-height:1.75;color:#333"><div><b>现在</b>：'+(sol.whole?'':(HN[p.half]||'')+' ')+'只排到 1 节（'+p.count+' 人 · '+eh(p.tc||'待定')+' · '+(p.cohorts||[]).length+' 个届别）</div><div style="margin-top:8px"><b>要改什么</b></div>';
+  const show=function(lines){_ttPlanShow(head+'<ul style="margin:2px 0 8px;padding-left:20px">'+lines.map(function(l){return '<li>'+l+'</li>';}).join('')+'</ul><div style="color:#888;font-size:11.5px">只在内存里试排，没有改动任何资料；结果只供参考。</div>'+_ttLkRow([p],(p.cohorts||[]).slice(0,4))+'</div>',foot);};
+  show(['<span style="color:#777">⏳ 试算中…</span>']);await tick();
+  const rowsOf=(_ttMem(p)||[p]).map(function(m){return (typeof schD!=='undefined'?schD:[]).find(function(r){return String(r.id)===String(m.id);});}).filter(Boolean);
+  const cohs=[];rowsOf.forEach(function(r){(r.cc||[]).forEach(function(x){if(x.cohort&&!cohs.some(function(y){return y.n===x.cohort;}))cohs.push({n:x.cohort,c:+x.count||0});});});
+  const solve=function(o){return _ttSolve(sem,Object.assign({tries:TT_PLAN_QUICK,deep:false,lns:false},o||{}));};
+  const mine=function(S){return (S.placements||[]).find(function(x){return String(x.id)===String(p.id);});};
+  const okSelf=function(S){const q=mine(S);return q&&(q.cells||[]).length===2?q:null;};
+  const others=function(S){return S.unplaced.filter(function(x){return String(x.id)!==String(p.id);}).length+S.placements.filter(function(x){return !x.isCap&&(x.cells||[]).length===1&&String(x.id)!==String(p.id);}).length;};
+  const cellTxt=function(cells){return cells.map(function(c){return c[0]+(c[1]==='am'?'上午':'下午');}).join('＋');};
+  const L=[];
+  try{
+    const base=solve(),b0=others(base);
+    if(okSelf(base)){
+      /* 快速试排里这门课已经排得满 → 卡住的是别的课(通常是同一批届别里更大的那门) */
+      const why=_ttPartWhy(p,sol)||'',m=/(?:届别|老师)在上 ([A-Za-z0-9-]+)/.exec(why),blk=m&&base.unplaced.concat(base.placements.filter(function(x){return (x.cells||[]).length===1;})).some(function(x){return _ttName(x)===m[1];});
+      L.push(blk?'<b>先处理 '+_ttLkSch(m[1],sem,'',m[1],'')+'</b>：它排好后，这门课才排得进去':'<b>按「⚡ 一键自动排 ▾ → 整张重排」</b>：这个排法下这门课可以排满 2 节');
+      if(why)L.push(eh(why));
+    }else{
+      const found=[],bad=[];
+      if(cohs.length>=2){
+        for(var ci=0;ci<cohs.length;ci++){
+          show(['<span style="color:#777">⏳ 试「拿掉某个届别」…（'+(ci+1)+'／'+cohs.length+'）</span>']);await tick();
+          const save=rowsOf.map(function(r){return r.cc;});
+          try{rowsOf.forEach(function(r){r.cc=(r.cc||[]).filter(function(x){return x.cohort!==cohs[ci].n;});});
+            const S=solve(),q=okSelf(S);
+            if(q&&others(S)<=b0)found.push({n:cohs[ci].n,c:cohs[ci].c,cells:q.cells});else bad.push(cohs[ci].n);
+          }finally{rowsOf.forEach(function(r,i){r.cc=save[i];});}
+        }
+      }
+      let halfLine='';
+      if(!sol.whole&&(p.half==='up'||p.half==='dn')){
+        show(['<span style="color:#777">⏳ 试「改上下半」…</span>']);await tick();
+        const other=p.half==='up'?'dn':'up',ov={};ov[String(p.id)]=other;const S=solve({halfOv:ov}),q=okSelf(S);
+        if(q&&others(S)<=b0)L.push('<b>改 '+eh(_ttCC(p))+' 的上下半 → '+(other==='up'?'上半':'下半')+'学期</b> → 排到 '+eh(cellTxt(q.cells)));else halfLine='改上下半';
+      }
+      if(found.length)L.unshift('<b>改 '+eh(_ttCC(p))+' 的届别</b>（'+(found.length>1?'任选一个；':'')+'前提：该届别学生不必修这门课）<ul style="margin:2px 0;padding-left:18px">'+found.slice(0,4).map(function(f){return '<li>拿掉 <b>'+eh(f.n)+'</b>（'+f.c+' 人）→ 排到 '+eh(cellTxt(f.cells))+'，别的课没变差</li>';}).join('')+(found.length>4?'<li style="color:#888">…另有 '+(found.length-4)+' 个也可以</li>':'')+'</ul>');
+      const nope=[];if(halfLine)nope.push(halfLine);if(bad.length)nope.push('拿掉其他 '+bad.length+' 个单一届别');
+      {const w=_ttPartWhy(p,sol)||'';if(w)L.push(eh(w));}   /* 跟待处理一览里那一行同一句(挪开挡路的课 → 第二节可排哪里),两边内容一致 */
+      if(!L.length)L.push('<b>这个排法下，试过的改法都没用</b>：可能要拆班、换授课老师，或把挡路的课挪开');
+      if(nope.length)L.push('<span style="color:#888">无效：'+nope.join('、')+'</span>');
+    }
+  }catch(e){L.push('查不出建议：'+eh(String(e&&e.message||e)));}
+  finally{try{_ttLangRefresh(sem);}catch(e2){}}
+  show(L);
+}
 async function ttSdAdvise(id,kind){
   kind=kind==='consec'?'consec':'sd';
   const sol=_ttCache.sol||(_ttCache.tt?_ttSolutionFromSaved(_ttCache.sem,_ttCache.tt):null);if(!sol)return;
@@ -7057,7 +7109,7 @@ function _ttSugText(x,sol,kind){
 }
 function _ttSugBlock(items,sol){
   if(!items||!items.length)return '';
-  return '<div class="tt-iss-sug">'+items.map(function(q){return '💡 <b>'+eh(_ttCC(q.x))+'</b>：'+eh(_ttSugText(q.x,sol,q.kind));}).join('<br>')+'</div>';
+  return '<div class="tt-iss-sug">'+items.map(function(q){return '💡 <b>'+eh(_ttCC(q.x))+'</b>：'+eh(_ttSugText(q.x,sol,q.kind))+(q.kind==='part'?'　<a class="tt-lnk" href="javascript:void(0)" onclick="ttOneAdvise(\''+jsq(String(q.x.id))+'\')">试算怎么改 ›</a>':'');}).join('<br>')+'</div>';
 }
 function _ttFootDetails(sol){
   const sem=sol.sem||_ttCache.sem,acked=_ttWarnAcked(sem),canAck=_ttCanAck();
