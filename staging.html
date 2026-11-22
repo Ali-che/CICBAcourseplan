@@ -1116,7 +1116,22 @@ async function checkPin(){
   }
 }
 
+// 2026-11-22(同 index.html 2026-11-10):放掉密码框焦点,避免 macOS Secure Input 占住、第三方输入法变灰
+function _blurPwds(){
+  try{
+    var a=document.activeElement;
+    if(a&&a.tagName==='INPUT'&&(a.type==='password'||a.id==='pin-input')){ a.blur(); }
+  }catch(e){}
+}
+try{
+  window.addEventListener('blur',_blurPwds);
+  document.addEventListener('visibilitychange',function(){if(document.hidden)_blurPwds();});
+}catch(e){}
+
 function unlockApp(){
+  var _pi=document.getElementById('pin-input');
+  if(_pi){_pi.blur();_pi.value='';}
+  _blurPwds();
   document.getElementById('pin-overlay').style.display = 'none';
   document.getElementById('main-app').style.display = 'block';
   applyRoleVisibility();  // v8.8：按当前角色隐藏不该看的 tab
@@ -1425,7 +1440,7 @@ function checkAuth(){
   } else {
     document.getElementById('pin-overlay').style.display = 'flex';
     document.getElementById('main-app').style.display = 'none';
-    setTimeout(()=>document.getElementById('pin-input').focus(), 100);
+    /* 2026-11-22:不自动聚焦 PIN 框(macOS Secure Input 会让第三方输入法整台变灰),让使用者自己点 — 同 index.html 2026-11-10 */
   }
 }
 
@@ -1443,7 +1458,7 @@ function logout(){
   document.getElementById('pin-err').textContent='';
   document.getElementById('pin-overlay').style.display='flex';
   document.getElementById('main-app').style.display='none';
-  setTimeout(()=>document.getElementById('pin-input').focus(),100);
+  /* 2026-11-22:不自动聚焦 PIN 框(macOS Secure Input 会让第三方输入法整台变灰),让使用者自己点 — 同 index.html 2026-11-10 */
 }
 
 // ══════════ 站内消息(私信 + 公告)══════════
@@ -4125,7 +4140,7 @@ function handleTokenExpired(){
   if(err){err.textContent='登入凭证已过期，请重新输入 PIN';err.style.color='#854F0B';}
   setTimeout(()=>{
     const inp=document.getElementById('pin-input');
-    if(inp)inp.focus();
+    /* 2026-11-22:不自动聚焦 PIN 框(macOS Secure Input 会让第三方输入法整台变灰),让使用者自己点 — 同 index.html 2026-11-10 */
     _tokenExpiredAlerted=false;
   },200);
 }
@@ -5959,7 +5974,7 @@ function syncTblHeight(){
     else{
       var ov=document.getElementById('pin-overlay'),ma=document.getElementById('main-app');
       if(ov)ov.style.display='flex'; if(ma)ma.style.display='none';
-      setTimeout(function(){var i=document.getElementById('pin-input');if(i)i.focus();},100);
+      /* 2026-11-22:不自动聚焦 PIN 框(macOS Secure Input 会让第三方输入法整台变灰),让使用者自己点 — 同 index.html 2026-11-10 */
     }
   };
 
