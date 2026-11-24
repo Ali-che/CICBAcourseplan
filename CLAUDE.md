@@ -102,7 +102,7 @@
 - 自动测试:同页面只改 hash 的 navigate 不会重载(要换查询串);背景分页 rAF 会停,用 setTimeout。
 
 ### 最近做了什么(一条一行;完整版在 `docs/进度存档.md`)
-- 2026-11-24【课表制作】教室规则:一般课 20 人以下先 231、CD 先 321(无 322);删 322、51301～51304(`migrations/019` **待 Aj. Tsai 跑**);上课日期 Excel 跟着排序、列印印全部(原只印 5～6 门)。已改、未 commit、**未上线**,分支 `fix/rooms-dates-export-print`;docs §11.76;新测试 `tools/tt_dates_check.mjs`。
+- 2026-11-24【课表制作】教室规则:一般课 20 人以下先 231、CD 先 321(无 322);删 322、51301～51304(`migrations/019` **待 Aj. Tsai 跑**);上课日期 Excel 跟着排序、列印印全部(原只印 5～6 门)。✅ 代码已上线 `bf9f11b`(线上 sha256 一致 5e56e1d3、线上 ui_smoke 12/12);**教室库删除待跑 `migrations/019`**;docs §11.76;新测试 `tools/tt_dates_check.mjs`。
 - 2026-11-23【文档】CLAUDE.md 瘦身:120KB → 约 18KB;旧进度条目原文搬到 `docs/进度存档.md`(只动文档;已合并进 main)。
 - 2026-11-22【测试页】`staging.html`、`index_supa_test.html` 不再自动聚焦 PIN 框(✅ 已上线 `60d7c11`,Aj. Tsai 已验收)。
 - 2026-11-22【课程结构】手机版修溢出,≤560px 改一栏(✅ 已上线 `05d6963`)。
