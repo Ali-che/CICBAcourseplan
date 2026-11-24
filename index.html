@@ -134,6 +134,10 @@ tr.sta-trow:hover{background:#FAFAFF}
 tr.sta-trow.acc-on{background:#EEEDFE}
 .acc-caret{display:inline-block;color:#8b84d8;font-size:10px;margin-right:5px;transition:transform .15s}
 tr.acc-on .acc-caret{transform:rotate(90deg)}
+/* 全表一起排序时(通用排序 data-gsort-flat):分组列、小计列收起,只在这时才出现的东西(如老师旁的部门标签)现身 */
+.gs-flat-only{display:none}
+table.gs-flat .gs-flat-only{display:inline;margin-left:6px}
+table.gs-flat tr.dh,table.gs-flat tr.dt{display:none}
 .acc-wrap{background:#EAE8F7;padding:14px 16px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;border-left:3px solid #7C74D6;border-bottom:1px solid #D8D4EF}
 .acc-sec{min-width:0;background:#fff;border:0.5px solid #E4E1F3;border-radius:10px;padding:10px 12px;box-shadow:0 1px 3px rgba(83,74,183,.06)}
 .acc-sec.empty{background:#F5F4FB;border-style:dashed;border-color:#DAD6F0;display:flex;align-items:center;justify-content:center;min-height:56px}
@@ -1322,7 +1326,7 @@ tr.acc-on .acc-caret{transform:rotate(90deg)}
       </div>
     </div>
     <div class="tbl-wrap">
-      <table>
+      <table data-gsort-flat="1">
         <thead>
           <tr>
             <th rowspan="2">#</th>
@@ -11090,7 +11094,7 @@ function renderSta(){
       const over=t.l>0&&yearTotal>t.l;
       rows+='<tr id="tr-'+k+'" class="sta-trow" style="transition:background .8s;cursor:pointer" onclick="toggleAcc(event,\''+k+'\')">'+
         '<td style="color:#bbb;font-size:11px">'+idx+'</td>'+
-        '<td style="font-size:12px;white-space:nowrap"><span class="acc-caret">▸</span>'+eh(t.n)+'</td>'+
+        '<td style="font-size:12px;white-space:nowrap" data-sort="'+eh(t.n)+'"><span class="acc-caret">▸</span>'+eh(t.n)+'<span class="gs-flat-only">'+deptBadge(dept)+'</span></td>'+
         '<td style="font-size:11px;color:#666;font-family:ui-monospace,monospace;white-space:nowrap">'+(t.eid?eh(t.eid):'<span style="color:#ddd">—</span>')+'</td>'+
         '<td style="font-size:11px;color:#888;white-space:nowrap">'+t.r+'</td>'+
         sdCells(d1,true)+sdCells(d2,true)+sdCells(d3,true)+
@@ -11099,7 +11103,7 @@ function renderSta(){
         '<td style="text-align:center;background:#F5F4FE;padding:2px" onclick="event.stopPropagation()">'+(currentRole==='admin'?'<input type="number" step="0.25" min="0" value="'+((_mb)?_mb:'')+'" style="width:44px;text-align:center;font-size:12px;border:0.5px solid #cbd5e1;border-radius:4px;padding:2px" onchange="saveTeachBtec(\''+jsq(t.n)+'\',this.value)" title="手动 BTEC另,加进学年总数;留空清除">':(_mb?'<span style="font-weight:600;color:#b45309">'+_mb+'</span>':'<span style="color:#ddd">—</span>'))+'</td>'+
         '<td style="text-align:center;color:#888;font-size:11px">'+(t.l>0?t.l:'<span style="color:#ccc">—</span>')+'</td>'+
         '<td style="text-align:center"><strong id="yt-'+k+'">'+yearTotal+'</strong></td>'+
-        '<td>'+(t.l>0?'<span class="badge '+(over?'b3':'b1')+'" id="pct-'+k+'">'+pct+'% / '+t.l+'</span>':'<span class="badge b1" id="pct-'+k+'" style="background:#eee;color:#999" title="外聘·无规定课时">外聘 —</span>')+'</td>'+
+        '<td'+(t.l>0?'':' data-sort=""')+'>'+(t.l>0?'<span class="badge '+(over?'b3':'b1')+'" id="pct-'+k+'">'+pct+'% / '+t.l+'</span>':'<span class="badge b1" id="pct-'+k+'" style="background:#eee;color:#999" title="外聘·无规定课时">外聘 —</span>')+'</td>'+
         '</tr>';
       rows+='<tr class="sta-acc" id="acc-'+k+'"><td colspan="'+(10+activeSems.length)+'" style="padding:0;border:0">'+
         '<div class="acc-wrap">'+accBlock(totalSemDetails)+'</div></td></tr>';
@@ -11432,6 +11436,7 @@ function printPanel(id){
   if(scoActive){const d=gv('f-co-d'),c=gv('f-co');subT='按专业·届别分组 · '+(d?'专业 '+d:'全部专业')+(c?' · 届别 '+c:'');}
   else if(stcActive){const d=gv('f-tc-d'),tc=gv('f-tc');subT='按部门·老师分组 · '+(d?'部门 '+d:'全部部门')+(tc?' · 老师 '+tc:'');}
   else subT=subtitles[id];
+  if(id==='sta'){const _st=document.getElementById('sta-tb'),_sd=_st?_gSortDesc(_st.closest('table')):'';if(_sd)subT='全校老师一起排序 · '+_sd+'（含BTEC）';}  /* 排序中=不分部门,列印表头要照实写 */
   const hdr=document.getElementById('print-header');
   if(hdr){
     // v8.16.2: 所有 tab 统一不压列印日期
@@ -12705,6 +12710,7 @@ function initAddSpState(){
 // 凡是紫色表头、本身没写排序的表格,自动给每个栏位加 ⇅(图示同 siIcon),点一下升序、再点降序、第三下还原。
 // 已有自带排序(th.sort / 表头内有 onclick)的表格不动;tbody 有 rowspan 的表格跳过(会乱)。
 // 跨栏的分组/合计列(colspan≥2 或 tr.dh)当分隔线,只在各段之内排;重新渲染后自动套回上次的排序。
+// 例外:<table data-gsort-flat="1">(教学统计)排序时全表一起排、分组列与小计列收起,第三下还原回分组(2026-11-24)。
 var _gSortState={}, _gSortBusy=false, _gSortMO=null;
 function _gSortKey(tbl,hdr){var p=tbl.closest('[id]');return (tbl.id||(p?p.id:''))+'|'+Array.prototype.map.call(hdr.cells,function(c){return c.textContent.replace(/[⇅▲▼]/g,'').trim();}).join('¦');}
 function _gSortHdr(tbl){
@@ -12753,10 +12759,17 @@ function _gSortApply(tbl,hdr,st){
   if(cur.length)segs.push(cur);
   var hasNum=hdr.cells[0]&&hdr.cells[0].textContent.trim()==='#';
   var numOf=function(r){return r.cells[0]&&/^\d+$/.test(r.cells[0].textContent.trim())?r.cells[0]:null;};
+  // 序号:每一列第一次出现时的号码记在列上(_gsNum),之后一律照「原顺序的号码」发回各位置。
+  // 2026-11-24 修:原本每次都从画面上读号码,排过一次后号码已被改写,再排(或还原)就会错位成 3,2,1 这种。
+  if(hasNum)base.forEach(function(r){if(r._gsNum===undefined){var c=numOf(r);r._gsNum=c?c.textContent.trim():null;}});
+  // data-gsort-flat="1" 的表:排序时不分段,全表资料列一起排(分组列/小计列由 CSS table.gs-flat 藏起来);还原时回到分段
+  var flat=!!st&&tbl.dataset.gsortFlat==='1';
+  tbl.classList.toggle('gs-flat',flat);
+  if(flat){var all=[];segs.forEach(function(s){if(!s.sep)all=all.concat(s);});segs=[all].concat(segs.filter(function(s){return s.sep;}));}
   _gSortBusy=true;
   segs.forEach(function(seg){
     if(seg.sep){seg.sep.parentNode.appendChild(seg.sep);return;}
-    var nums=hasNum?seg.map(function(g){var c=numOf(g[0]);return c?c.textContent.trim():null;}):[];
+    var nums=hasNum?seg.map(function(g,i){return flat?String(i+1):g[0]._gsNum;}):[];
     var sorted=seg;
     if(st){
       sorted=seg.map(function(g,i){return {g:g,i:i,v:_gSortVal(_gSortCell(g[0],st.col))};})
@@ -12787,6 +12800,12 @@ function _gSortDecorate(tbl){
   tbl._gsKey=key;
   var st=_gSortState[key];
   if(st)_gSortApply(tbl,hdr,st);
+}
+/* 目前这张表照哪一栏排(给列印表头用);没排序回传空字串 */
+function _gSortDesc(tbl){
+  var hdr=tbl&&_gSortHdr(tbl),st=tbl&&_gSortState[tbl._gsKey];if(!hdr||!st)return '';
+  var th=Array.prototype.filter.call(hdr.cells,function(c){return _gSortColIdx(hdr,c)===st.col;})[0];
+  return th?'依「'+th.textContent.replace(/[⇅▲▼\s]/g,'')+'」'+(st.dir===1?'由小到大':'由大到小'):'';
 }
 function _gSortScan(){document.querySelectorAll('table').forEach(function(t){try{_gSortDecorate(t);}catch(e){console.warn('gsort',e);}});}
 document.addEventListener('click',function(ev){
