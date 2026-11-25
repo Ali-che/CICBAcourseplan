@@ -104,7 +104,7 @@
 - 自动测试:同页面只改 hash 的 navigate 不会重载(要换查询串);背景分页 rAF 会停,用 setTimeout。
 
 ### 最近做了什么(一条一行;完整版在 `docs/进度存档.md`)
-- 2026-11-25【课表制作】「依授课老师」加注册打卡：版块 3 老师（Aj. Xu）周二、周四下午各一格「注册打卡 @51305」，周五整天（实际带班）照旧。**本机已改、已 commit 在分支 `feat/teacher-reg-clockin`，未上线**；`tools/tt_reg_check.mjs` 加 4 项；docs §11.79。
+- 2026-11-25【课表制作】「依授课老师」加注册打卡：版块 3 老师（Aj. Xu）周二、周四下午各一格「注册打卡 @51305」，周五整天（实际带班）照旧；「上课日期」的 Capstone 也一律按注册打卡的时间列、每次 3 小时 15 次＝45 小时。**本机已改、已 commit 在分支 `feat/teacher-reg-clockin`，未上线**；`tools/tt_reg_check.mjs` 加 7 项；docs §11.79。
 - 2026-11-25【课表制作】修「🧩 只补排改动的课」按了没反应：已排的课全被锁住、又有个别学生撞课时，局部优化取到 undefined 报错（`_ttLns` 循环补一行 `if(!bad.length)break`）。**本机已改、已 commit 在分支 `fix/keepsolve-empty-free`，未上线**；新 `tools/tt_keep_check.mjs`（旧版失败、新版通过）；docs §11.78。
 - 2026-11-25【课表制作】注册用课表改「方案 A」：版块 1、2 周五整天，版块 3 自动挑两个半天（2569-2＝周二下午＋周四下午，只冲突 SC68-2／SC69 共 2 人）；拿掉「重新选第二天」。✅ 已上线 main `f7a9cb3`（线上 sha256 一致 c6bd929c、线上 ui_smoke 12/12、线上 tt_reg_check 通过；一次就中；部署约 48 秒）；tt_print_check 11/11、新 `tools/tt_reg_check.mjs`；docs §11.77。
 - 2026-11-24【课表制作】教室规则:一般课 20 人以下先 231、CD 先 321(无 322);删 322、51301～51304(`migrations/019` **待 Aj. Tsai 跑**);上课日期 Excel 跟着排序、列印印全部(原只印 5～6 门)。✅ 代码已上线 `bf9f11b`(线上 sha256 一致 5e56e1d3、线上 ui_smoke 12/12);`migrations/019` 已跑(2026-11-24 匿名查 rooms 共 10 间,322／5130x 已无);docs §11.76;新测试 `tools/tt_dates_check.mjs`。

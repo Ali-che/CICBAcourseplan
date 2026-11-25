@@ -74,6 +74,16 @@ try {
   }
   ok(!clk.o['Aj. Liu, Feng-Lin'] && !clk.o['Aj. Lu, Peng'], '版块 1、2 的老师(注册时间＝周五)不重复列注册打卡');
   ok(clk.html, '依授课老师画面出现「注册打卡」');
+  // 上课日期:Capstone 一律按注册打卡的时间列,每次 3 小时、15 次＝45 小时
+  const dr = JSON.parse(await evaluate(`JSON.stringify((function(){const sol=${SOLX};const rows=_ttCourseDateRows(sol);if(!rows)return null;return rows.filter(function(r){return r.cap;}).map(function(r){return {n:r.name,tc:r.tc,legs:r.legs.map(function(l){return l.wd+l.slot+'@'+l.room+(l.reg?'*':'')+' '+l.dates.length+'天';}),total:r.total,hrs:r.hrs};});})())`));
+  if (!dr) console.log('  (这学期没设定上下半日期,略过「上课日期」检查)');
+  else {
+    dr.forEach(r => console.log(`  上课日期 ${r.n}｜${r.tc}｜${r.legs.join(' / ')}｜${r.total} 次 ${r.hrs} 小时`));
+    ok(dr.length > 0 && dr.every(r => r.total === 15 && r.hrs === 45), '上课日期:每门 Capstone 都是 15 次、45 小时');
+    const b3 = dr.filter(r => r.legs.some(l => l.includes('*')));
+    if (info.plan.b3 !== '周五整天') ok(b3.length > 0 && b3.every(r => r.legs.every(l => l.includes('@51305'))), '上课日期:版块 3 的 Capstone 按注册打卡的时间列(周二／周四下午 @51305)');
+    ok(dr.filter(r => !r.legs.some(l => l.includes('*'))).every(r => r.legs.every(l => l.startsWith('周五'))), '上课日期:版块 1、2 的 Capstone 仍是周五上午＋下午');
+  }
   if (errors.length) { fail++; console.log('❌ JS 报错: ' + errors.slice(0, 3).join(' | ')); }
 } catch (e) { if (!/no sol/.test(e.message)) { fail++; console.log('❌ 测试本身: ' + e.message); } }
 finally { try { ws.close(); } catch {} chrome.kill(); server.close(); await sleep(300); await rm(profile, { recursive: true, force: true }).catch(() => {}); }
