@@ -6458,10 +6458,41 @@ function _ttRegPickHtml(sol,D){
   });
   return h+'</table></div>';
 }
+/* 注册用课表·方案 A(2026-11-25,Aj. Tsai 定):版块 1、版块 2 占周五整天;版块 3 的两格挑周一～周四里「涉及届别最少」的两个半天(可不同天)。
+   算法:版块 3 的届别在那个半天有一般课＝冲突;依 冲突届别数 → 冲突人数 → 用几天 → 排在前面的 排序取最小。版块 1、2 放周五(周五没有一般课)。只读 sol,不改任何排课。 */
+function _ttRegPlanA(sol){
+  const nm=function(x){return String(x).replace(/\(\d+\)$/,'').trim();};
+  const caps=(sol.placements||[]).concat(sol.unplaced||[]).filter(function(p){return p.isCap;});
+  const bc={b1:{},b2:{},b3:{}};caps.forEach(function(p){const g=_ttRegGrp(p);if(bc[g])(p.cohorts||[]).forEach(function(co){bc[g][nm(co)]=1;});});
+  const gen=(sol.placements||[]).filter(function(p){return !p.isCap&&(p.half==='dn'||p.half==='both');});
+  const cnt={};gen.forEach(function(p){_ttCohCounts(p).forEach(function(x){if(x.n)cnt[nm(x.n)]=Math.max(cnt[nm(x.n)]||0,x.c||0);});});
+  const hitAt=function(g,d,sl){const o=[];gen.forEach(function(p){
+    if(!(p.cells||[]).some(function(c){return c[0]===d&&_ttNormSlot(p,c[1],d)===sl;}))return;
+    const co=(p.cohorts||[]).filter(function(c){return bc[g][nm(c)];});if(co.length)o.push({p:p,co:co});});return o;};
+  const SL=[];['周一','周二','周三','周四'].forEach(function(d){['am','pm'].forEach(function(sl){SL.push([d,sl]);});});
+  const per=SL.map(function(x){const cs={};hitAt('b3',x[0],x[1]).forEach(function(h){h.co.forEach(function(c){cs[nm(c)]=1;});});return cs;});
+  let best=null;
+  const lt=function(x,y){for(let k=0;k<x.length;k++){if(x[k]!==y[k])return x[k]<y[k];}return false;};
+  for(let i=0;i<SL.length;i++)for(let j=i+1;j<SL.length;j++){
+    const u={};Object.keys(per[i]).concat(Object.keys(per[j])).forEach(function(c){u[c]=1;});
+    const key=[Object.keys(u).length,Object.keys(u).reduce(function(t,c){return t+(cnt[c]||0);},0),SL[i][0]===SL[j][0]?1:2,i*10+j];
+    if(!best||lt(key,best.key))best={key:key,s:[SL[i],SL[j]]};
+  }
+  const fri=[['周五','am'],['周五','pm']];
+  const plan={b1:fri,b2:fri,b3:best?best.s:[]};
+  const slotTxt=function(x){return x[0]+(x[1]==='am'?'上午':'下午');};
+  plan.txt=function(g){return plan[g].map(slotTxt).join('＋').replace(/(周五)上午＋周五下午/,'$1整天');};
+  plan.days={};['b1','b2','b3'].forEach(function(g){plan[g].forEach(function(x){plan.days[x[0]]=1;});});
+  const m={};
+  ['b1','b2','b3'].forEach(function(g){plan[g].forEach(function(x){hitAt(g,x[0],x[1]).forEach(function(h){const k=String(h.p.id);const e=m[k]||(m[k]={p:h.p,co:{},wh:{}});h.co.forEach(function(c){e.co[c]=1;});e.wh[slotTxt(x)]=1;});});});
+  plan.hit=Object.keys(m).map(function(k){const e=m[k];return {p:e.p,co:Object.keys(e.co),wh:Object.keys(e.wh)};});
+  plan.cnt=cnt;plan.nm=nm;
+  return plan;
+}
 function _ttRegHtml(sol){
   const caps=(sol.placements||[]).concat(sol.unplaced||[]).filter(function(p){return p.isCap;});
   if(!caps.length)return '<div style="padding:14px;color:#888">这学期没有 Capstone 课。</div>';
-  const D=sol.regDay||_ttCache.regDay||'',dl=D||'第二天';
+  const PL=_ttRegPlanA(sol);
   const short=function(p){return eh(String(p.course||'')+(p.cls?String(p.cls).replace(/^Capstone-?/i,'-'):''));};
   const G={b1:[],b3:[],b2:[],other:[]};caps.forEach(function(p){G[_ttRegGrp(p)].push(p);});
   const info=function(arr){
@@ -6474,23 +6505,26 @@ function _ttRegHtml(sol){
   const chip=function(g,small){const c=COL[g],i=I[g];return '<div style="background:'+c[0]+';color:'+c[1]+';border:1px solid '+c[2]+';border-radius:8px;padding:'+(small?'4px 6px':'6px 8px')+';text-align:left;line-height:1.45;white-space:normal;overflow-wrap:anywhere;word-break:break-word;min-width:0;box-sizing:border-box"><b style="font-size:12.5px">'+NAME[g]+'</b><div style="font-size:11px;word-break:break-word">'+i.codes+'</div><div style="font-size:10.5px;opacity:.85">'+eh(i.tc.join('、')||'老师待定')+' · '+i.n+' 人</div></div>';};
   const DAYS=['周一','周二','周三','周四','周五'];
   const grid=function(map){
-    let t='<table data-gsort="off" style="border-collapse:collapse;width:100%;table-layout:fixed;font-size:12px"><tr><th style="width:46px;background:#F5F4FE;border:1px solid #E5E3F8"></th>'+DAYS.map(function(d){return '<th style="background:'+(d==='周五'||d===D?'#EEF0FF':'#F5F4FE')+';color:#3C3489;border:1px solid #E5E3F8;padding:4px">'+d+(d===D?'<div style="font-size:10px;font-weight:400;color:#92400e">第二天</div>':'')+'</th>';}).join('')+'</tr>';
+    let t='<table data-gsort="off" style="border-collapse:collapse;width:100%;table-layout:fixed;font-size:12px"><tr><th style="width:46px;background:#F5F4FE;border:1px solid #E5E3F8"></th>'+DAYS.map(function(d){return '<th style="background:'+(PL.days[d]?'#EEF0FF':'#F5F4FE')+';color:#3C3489;border:1px solid #E5E3F8;padding:4px">'+d+'</th>';}).join('')+'</tr>';
     ['am','pm'].forEach(function(sl){
-      t+='<tr><th style="background:#F5F4FE;color:#6E67B8;border:1px solid #E5E3F8;font-size:11px">'+(sl==='am'?'上午':'下午')+'</th>'+DAYS.map(function(d){const g=map[d+'|'+sl];return '<td style="border:1px solid #E5E3F8;padding:4px;vertical-align:top;white-space:normal;overflow:hidden;background:'+(g?'#fff':'#FAFAFC')+'">'+(g?chip(g):'<span style="color:#c8c8d0;font-size:11px">一般课</span>')+'</td>';}).join('')+'</tr>';
+      t+='<tr><th style="background:#F5F4FE;color:#6E67B8;border:1px solid #E5E3F8;font-size:11px">'+(sl==='am'?'上午':'下午')+'</th>'+DAYS.map(function(d){const g=map[d+'|'+sl];return '<td style="border:1px solid #E5E3F8;padding:4px;vertical-align:top;white-space:normal;overflow:hidden;background:'+(g?'#fff':'#FAFAFC')+'">'+(g?[].concat(g).map(function(x){return chip(x);}).join('<div style="height:4px"></div>'):'<span style="color:#c8c8d0;font-size:11px">一般课</span>')+'</td>';}).join('')+'</tr>';
     });
     return t+'</table>';
   };
-  const m13={'周五|am':'b1','周五|pm':'b3'};if(D){m13[D+'|am']='b1';m13[D+'|pm']='b3';}
-  const m2={'周五|am':'b2','周五|pm':'b2'};
+  const mk=function(gs){const o={};gs.forEach(function(g){PL[g].forEach(function(x){(o[x[0]+'|'+x[1]]=o[x[0]+'|'+x[1]]||[]).push(g);});});return o;};
+  const mAll=mk(['b1','b2','b3']),m13=mk(['b1','b3']),m2=mk(['b2']);
   const sec=function(t,sub){return '<div style="margin:12px 0 4px"><b style="color:#3C3489;font-size:13px">'+t+'</b>'+(sub?'<span style="color:#707070;font-size:11.5px">　'+sub+'</span>':'')+'</div>';};
-  let h='<div id="tt-reg" style="margin:4px 2px 12px"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-size:14px;font-weight:700;color:#3C3489">📝 注册用课表 · Capstone</div>'+((_ttCanEdit()&&!_ttCache.preview)?'<button class="btn btn-sm no-print" onclick="ttRegPickToggle()" title="只重选注册用的第二天，不动一般课">🔁 重新选第二天</button> ':'')+'<button class="btn btn-sm no-print" onclick="ttRegPrint()">🖨️ 列印</button></div>'
-    +(_ttRegPick?_ttRegPickHtml(sol,D):'')
-    +'<div style="font-size:11.5px;color:#888;margin:2px 0 4px">只用来注册和公告，不是实际上课的安排（实际上课：三位老师各带一个班、整个周五，见「依教室号」）。'+(D?'':'<b style="color:#b45309">　还没选定周一～周四的哪一天，请按「⚡ 一键自动排」。</b>')+'</div>';
-  h+=sec('版块 1＋3 的学生','一周 4 格：周五＋'+eh(dl)+'，上午版块 1、下午版块 3；配对 412＋KG133、DI404＋DI325；周一～周四少一门课')+grid(m13);
-  h+=sec('版块 2 的学生','一周 2 格：周五上午＋下午')+grid(m2);
+  let h='<div id="tt-reg" style="margin:4px 2px 12px"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-size:14px;font-weight:700;color:#3C3489">📝 注册用课表 · Capstone</div>'+'<button class="btn btn-sm no-print" onclick="ttRegPrint()">🖨️ 列印</button></div>'
+    +'<div style="font-size:11.5px;color:#888;margin:2px 0 4px">只用来注册和公告，不是实际上课的安排（实际上课：三位老师各带一个班、整个周五，见「依教室号」）。'+'</div><div style="font-size:11.5px;color:#888;margin:0 0 4px">版块 1、版块 2 排在周五；版块 3 的两格是系统自动挑的：周一～周四里涉及届别最少的两个半天（目前：'+eh(PL.txt('b3')||'—')+'）。</div>';
+  h+=sec('三个版块总览','版块 1：'+PL.txt('b1')+'；版块 2：'+PL.txt('b2')+'；版块 3：'+PL.txt('b3'))+grid(mAll);
+  h+=sec('版块 1＋3 的学生','一周 4 格：'+PL.txt('b1')+'（版块 1）＋'+PL.txt('b3')+'（版块 3）')+grid(m13);
+  h+=sec('版块 2 的学生','一周 2 格：'+PL.txt('b2'))+grid(m2);
+  {const o1=[],o3=[];caps.forEach(function(p){const g=_ttRegGrp(p);(p.cohorts||[]).forEach(function(co){const n=PL.nm(co);if(g==='b1'&&o1.indexOf(n)<0)o1.push(n);if(g==='b3'&&o3.indexOf(n)<0)o3.push(n);});});
+    const only1=o1.filter(function(c){return o3.indexOf(c)<0;}),only3=o3.filter(function(c){return o1.indexOf(c)<0;});
+    h+='<div style="font-size:12px;color:#666;line-height:1.7;margin:2px 0 4px">只上版块 1 的学生（'+only1.length+' 个届别）：'+eh(PL.txt('b1'))+'。只上版块 3 的学生（'+only3.length+' 个届别'+(only3.length&&only3.length<=6?'：'+eh(only3.join('、')):'')+'）：'+eh(PL.txt('b3'))+'。</div>';}
   /* 老师 */
   h+=sec('老师');
-  h+='<div style="display:flex;gap:8px;flex-wrap:wrap">'+['b1','b3','b2'].map(function(g){const i=I[g];if(!i.codes)return '';const c=COL[g];const when=g==='b1'?'周五上午'+(D?'、'+eh(dl)+'上午':''):(g==='b3'?'周五下午'+(D?'、'+eh(dl)+'下午':''):'周五上午、周五下午');return '<div style="flex:1 1 200px;border:1px solid '+c[2]+';background:'+c[0]+';color:'+c[1]+';border-radius:8px;padding:6px 9px;font-size:12px;white-space:normal;overflow-wrap:anywhere;min-width:0"><b>'+eh(i.tc.join('、')||'老师待定')+'</b><div style="font-size:11.5px">'+NAME[g]+'：'+when+'</div></div>';}).join('')+'</div>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap">'+['b1','b3','b2'].map(function(g){const i=I[g];if(!i.codes)return '';const c=COL[g];const when=PL[g].map(function(x){return x[0]+(x[1]==='am'?'上午':'下午');}).join('、');return '<div style="flex:1 1 200px;border:1px solid '+c[2]+';background:'+c[0]+';color:'+c[1]+';border-radius:8px;padding:6px 9px;font-size:12px;white-space:normal;overflow-wrap:anywhere;min-width:0"><b>'+eh(i.tc.join('、')||'老师待定')+'</b><div style="font-size:11.5px">'+NAME[g]+'：'+when+'</div></div>';}).join('')+'</div>';
   /* 各届别:注册内容一样的合并成一张卡 */
   const byCo={};
   caps.forEach(function(p){const g=_ttRegGrp(p);(p.cohorts||[]).forEach(function(co){(byCo[co]=byCo[co]||{b1:[],b3:[],b2:[],other:[]})[g].push(p);});});
@@ -6500,17 +6534,14 @@ function _ttRegHtml(sol){
   h+=sec('各届别注册','注册内容一样的届别放在同一张卡');
   h+='<div style="display:flex;flex-direction:column;gap:6px">'+gl.map(function(x){
     const o=x.o,line=function(g,txt){return o[g].length?'<span style="display:inline-block;background:'+COL[g][0]+';color:'+COL[g][1]+';border-radius:6px;padding:1px 7px;margin:1px 6px 1px 0;font-size:12px">'+txt+o[g].map(short).join('、')+(o[g].length>1&&g!=='b2'?' <b style="color:#b45309">⚠ 同一格 '+o[g].length+' 门</b>':'')+'</span>':'';};
-    return '<div style="border:1px solid #E5E3F8;border-radius:8px;padding:6px 10px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div>'+line('b1','上午 ')+line('b3','下午 ')+line('b2','上午＋下午 ')+'</div><b style="color:#3C3489;font-size:12px">占 '+x.n+' 格</b></div><div style="margin-top:3px;font-size:11.5px;color:#555;line-height:1.7">'+x.cos.map(function(c){return '<span style="display:inline-block;background:#F5F4FE;border-radius:5px;padding:0 6px;margin:1px 3px 1px 0">'+eh(c)+'</span>';}).join('')+'</div></div>';
+    return '<div style="border:1px solid #E5E3F8;border-radius:8px;padding:6px 10px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div>'+line('b1',eh(PL.txt('b1'))+' ')+line('b3',eh(PL.txt('b3'))+' ')+line('b2',eh(PL.txt('b2'))+' ')+'</div><b style="color:#3C3489;font-size:12px">占 '+x.n+' 格</b></div><div style="margin-top:3px;font-size:11.5px;color:#555;line-height:1.7">'+x.cos.map(function(c){return '<span style="display:inline-block;background:#F5F4FE;border-radius:5px;padding:0 6px;margin:1px 3px 1px 0">'+eh(c)+'</span>';}).join('')+'</div></div>';
   }).join('')+'</div>';
-  /* 第二天还有一般课 */
-  if(D){
-    const hit=(sol.placements||[]).filter(function(p){return !p.isCap&&(p.half==='dn'||p.half==='both')&&(p.cells||[]).some(function(c){return c[0]===D;})&&(p.cohorts||[]).some(function(co){return byCo[co]&&(byCo[co].b1.length||byCo[co].b3.length);});});
-    const ex=(sol.regEx&&sol.regEx.length)?sol.regEx:(_ttCache.regEx||[]),hardOn=(sol.regHard!==undefined?sol.regHard:_ttCache.regHard);
-    if(hardOn&&!hit.length)h+='<div style="margin-top:10px;padding:7px 10px;background:#ECFDF3;border:1px solid #9ed4ae;border-radius:8px;font-size:12px;color:#1a6b2f;line-height:1.7">✅ '+eh(D)+'对版块 1＋3 的所有届别都是干净的，没有一般课。</div>';
-    const why=(sol.regWhy!==undefined&&sol.regWhy!==''?sol.regWhy:(_ttCache.regWhy||''));
-    if(!hardOn&&why)h+='<div style="margin-top:10px;padding:7px 10px;background:#F3F4F6;border:1px solid #D1D5DB;border-radius:8px;font-size:12px;color:#4b5563;line-height:1.7"><b>这学期放不进「'+eh(D)+'对版块 1＋3 全部干净」的硬规定</b>：'+eh(why)+'。所以'+eh(D)+'只是尽量不排一般课，下面列出哪些课仍在'+eh(D)+'。</div>';
-    if(hardOn&&ex.length)h+='<div style="margin-top:10px;padding:7px 10px;background:#FFFBEB;border:1px solid #F3D9A4;border-radius:8px;font-size:12px;color:#7a5b16;line-height:1.7"><b>系统算出：要让所有课都排得下，最少要放过 '+ex.length+' 个届别</b>——这几个届别'+eh(D)+'仍有一般课，注册时'+eh(D)+'会冲突；其余版块 1＋3 的届别'+eh(D)+'都是干净的。<br>'+ex.map(function(c){return '<span style="display:inline-block;background:#fff;border:1px solid #F3D9A4;border-radius:5px;padding:0 7px;margin:2px 4px 2px 0">'+eh(c)+'</span>';}).join('')+'</div>';
-    if(hit.length)h+='<div style="margin-top:10px;padding:7px 10px;background:#FFFBEB;border:1px solid #F3D9A4;border-radius:8px;font-size:12px;color:#7a5b16;line-height:1.7"><b>'+eh(D)+'有 '+hit.length+' 门一般课，这些届别'+eh(D)+'要上课：</b>这几门都已经排上了，但它们涉及版块 1＋3 的届别（多届别大课，别的天排不下），所以这些届别在注册时'+eh(D)+'会冲突。<span style="color:#92400e">（鼠标移到课名上，会列出哪些届别）</span><br>'+hit.map(function(p){const co=(p.cohorts||[]).filter(function(c){return byCo[c]&&(byCo[c].b1.length||byCo[c].b3.length);});return '<span class="tt-reghit" data-tt-id="'+eh(String(p.id))+'" data-regco="'+eh(co.join('、'))+'" style="display:inline-block;background:#fff;border:1px solid #F3D9A4;border-radius:5px;padding:0 7px;margin:2px 4px 2px 0;cursor:help;white-space:normal;overflow-wrap:anywhere">'+eh(_ttName(p))+' · '+co.length+' 个届别 ▾</span>';}).join('')+'</div>';
+  /* 方案 A:注册用的格子里,同一时段还有一般课的 → 那些届别注册会冲突 */
+  {const hits=PL.hit;
+    if(!hits.length)h+='<div style="margin-top:10px;padding:7px 10px;background:#ECFDF3;border:1px solid #9ed4ae;border-radius:8px;font-size:12px;color:#1a6b2f;line-height:1.7">✅ 注册用的所有格子，对所有届别都是干净的，没有一般课。</div>';
+    else{const nco={};hits.forEach(function(x){x.co.forEach(function(c){nco[PL.nm(c)]=1;});});
+      h+='<div style="margin-top:10px;padding:7px 10px;background:#FFFBEB;border:1px solid #F3D9A4;border-radius:8px;font-size:12px;color:#7a5b16;line-height:1.7"><b>注册用的格子里，有 '+hits.length+' 门一般课同时段要上课，涉及 '+Object.keys(nco).length+' 个届别：</b>这几门都已经排上了，所以这些届别在注册时会冲突。<span style="color:#92400e">（鼠标移到课名上，会列出哪些届别）</span><br>'
+      +hits.map(function(x){const p=x.p;const co=x.co.map(function(c){const n=PL.cnt[PL.nm(c)];return c+(n?' '+n+' 人':'');});return '<span class="tt-reghit" data-tt-id="'+eh(String(p.id))+'" data-regco="'+eh(co.join('、'))+'" style="display:inline-block;background:#fff;border:1px solid #F3D9A4;border-radius:5px;padding:0 7px;margin:2px 4px 2px 0;cursor:help;white-space:normal;overflow-wrap:anywhere">'+eh(_ttName(p))+' · '+x.co.length+' 个届别（'+eh(x.wh.join('、'))+'）▾</span>';}).join('')+'</div>';}
   }
   if(G.other.length)h+='<div style="margin-top:8px;padding:6px 9px;background:#FFFBEB;border:1px solid #F3D9A4;border-radius:6px;font-size:12px;color:#7a5b16">⚠ 这几门 Capstone 不在固定配对里，没列进上面：'+G.other.map(short).join('、')+'</div>';
   return h+'</div>';
