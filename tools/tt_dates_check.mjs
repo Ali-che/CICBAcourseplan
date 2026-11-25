@@ -88,6 +88,24 @@ print(json.dumps({"pages":len(r.pages),"missing":miss}))`, file, JSON.stringify(
     if (res.err) ok(pages > 0, `排序「${label}」:列印 PDF ${pages} 页(没装 pypdf,课数没逐笔核对)`);
     else ok(pages > 0 && res.missing.length === 0, `排序「${label}」:列印 PDF ${res.pages} 页,${screen.length} 门课里印出 ${screen.length - res.missing.length} 门${res.missing.length ? '(缺 ' + res.missing.slice(0, 5).join('、') + (res.missing.length > 5 ? '…' : '') + ')' : ''}`);
   }
+  // 搜索(2026-11-25):画面、Excel、列印用同一个筛选
+  await evaluate(`(ttDatesOpen(), ttDatesSort('name'), true)`); await sleep(200);
+  const total = JSON.parse(await evaluate(`JSON.stringify(document.querySelectorAll('#ttdates-body tbody tr').length)`));
+  const cases = [['KG133', n => /KG133/i.test(n)], ['KG133-971', n => /KG133/i.test(n) && /971/.test(n)], ['KG133 DI325', n => /KG133|DI325/i.test(n)], ['不存在的课zzz', () => false]];
+  for (const [q, test] of cases) {
+    await evaluate(`(ttDatesSearch(${JSON.stringify(q)}), true)`); await sleep(150);
+    const names = JSON.parse(await evaluate(`JSON.stringify([...document.querySelectorAll('#ttdates-body tbody tr')].map(tr=>tr.cells[0].innerText.replace(/\\s+/g,' ').trim()))`));
+    await evaluate(`(window.__blob=null,ttDatesExcel(),true)`); await sleep(200);
+    const xn = JSON.parse(await evaluate(`JSON.stringify((window._ttDatesLast&&window._ttDatesLast.rows)||[])`));
+    const pn = JSON.parse(await evaluate(`(function(){const ok=_ttDatesPrintBuild();const n=ok?document.querySelectorAll('#tt-dates-print tbody tr').length:0;_ttDatesPrintClean();return JSON.stringify(n);})()`));
+    const cnt = await evaluate(`document.getElementById('ttdates-cnt').textContent`);
+    const hit = names.length > 0 ? names.every(n => test(n)) : true;
+    const good = q.startsWith('不存在') ? (names.length === 0 && pn === 0) : (names.length > 0 && names.length < total && hit && xn.length === names.length && pn === names.length);
+    ok(good, `搜索「${q}」:画面 ${names.length} 门 / Excel ${xn.length} 门 / 列印 ${pn} 门（全部 ${total} 门；计数「${cnt}」）`);
+  }
+  await evaluate(`(ttDatesSearchClear(), true)`); await sleep(150);
+  const back = JSON.parse(await evaluate(`JSON.stringify(document.querySelectorAll('#ttdates-body tbody tr').length)`));
+  ok(back === total, `清除搜索后回到全部 ${total} 门（现在 ${back} 门）`);
   if (errors.length) { fail++; console.log('❌ JS 报错: ' + errors.slice(0, 3).join(' | ')); }
 } catch (e) { if (e.message !== 'no rows') { fail++; console.log('❌ 测试本身: ' + e.message); } }
 finally { try { ws.close(); } catch {} chrome.kill(); server.close(); await sleep(300); await rm(profile, { recursive: true, force: true }).catch(() => {}); }

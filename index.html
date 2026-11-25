@@ -4184,11 +4184,22 @@ function _ttCourseDateRows(sol){   // 每门课 → {name,tc,half,legs:[{wd,slot
   });
 }
 let _ttDatesSort='name';   // 上课日期表排序:按课程 / 按上下半
+let _ttDatesQ='';   // 上课日期表搜索(课程代码／届别／老师):空白、逗号、顿号、斜线分隔多个词，任一个中就显示;词里的「-」两边都要有(例 KG133-971)
+function _ttDatesFilter(rows){
+  const terms=String(_ttDatesQ||'').toLowerCase().split(/[\s,，、\/]+/).filter(Boolean);if(!terms.length)return rows;
+  return rows.filter(function(r){const hay=(r.name+' '+(r.cohorts||[]).join(' ')+' '+r.tc).toLowerCase();return terms.some(function(t){return t.split('-').filter(Boolean).every(function(x){return hay.indexOf(x)>=0;});});});
+}
+function _ttDatesNote(){return String(_ttDatesQ||'').trim()?'　筛选：'+String(_ttDatesQ).trim():'';}
+function ttDatesSearch(v){_ttDatesQ=String(v||'');const sol=_ttCache.sol||(_ttCache.tt?_ttSolutionFromSaved(_ttCache.sem,_ttCache.tt):null);const t=document.getElementById('ttdates-tbl');if(t)t.innerHTML=_ttDatesTblBox(sol);const n=document.getElementById('ttdates-cnt');if(n)n.textContent=_ttDatesCntText(sol);}
+function ttDatesSearchClear(){const i=document.getElementById('ttdates-q');if(i)i.value='';ttDatesSearch('');}
+function _ttDatesCntText(sol){const all=_ttDatesRowsSorted(sol,true)||[],rows=_ttDatesRowsSorted(sol)||[];return String(_ttDatesQ||'').trim()?('显示 '+rows.length+' / '+all.length+' 门'):('共 '+all.length+' 门');}
+function _ttDatesTblBox(sol){const rows=_ttDatesRowsSorted(sol)||[];return rows.length?_ttDatesTableHtml(rows):'<div style="color:#888;padding:10px">没有符合「'+eh(String(_ttDatesQ||'').trim())+'」的课。</div>';}
 function ttDatesSort(m){_ttDatesSort=m;const sol=_ttCache.sol||(_ttCache.tt?_ttSolutionFromSaved(_ttCache.sem,_ttCache.tt):null);const b=document.getElementById('ttdates-body');if(b)b.innerHTML=_ttDatesReportHtml(sol);}
 window.ttDatesSort=ttDatesSort;
 // 画面、导出 Excel、列印三边共用同一份「排好序的列」:排序只在这里做一次,三边内容永远一样(2026-11-24:原本只有画面排序,Excel／列印没跟着排)
-function _ttDatesRowsSorted(sol){
-  const rows=_ttCourseDateRows(sol);if(!rows)return rows;
+function _ttDatesRowsSorted(sol,noFilter){
+  let rows=_ttCourseDateRows(sol);if(!rows)return rows;
+  if(!noFilter)rows=_ttDatesFilter(rows);   // 搜索:画面／Excel／列印共用同一个筛选(2026-11-25)
   const sort=_ttDatesSort||'name',rk={up:0,dn:1,both:2};
   return rows.slice().sort(function(a,b){if(sort==='half'){const d=(rk[a.halfKey]==null?9:rk[a.halfKey])-(rk[b.halfKey]==null?9:rk[b.halfKey]);if(d)return d;}return a.name.localeCompare(b.name);});
 }
@@ -4206,14 +4217,15 @@ function _ttDatesTableHtml(rows){
 function _ttDatesReportHtml(sol){
   const rows=_ttDatesRowsSorted(sol);
   if(rows===null)return '<div style="background:#FEF9ED;border-radius:8px;padding:14px;color:#7a5b16;font-size:12.5px">还没设定上下半日期 —— 请 Head of Administration 或管理员到「后台操作 › 课表日期」设定，才能算出每门课的上课日期。</div>';
-  if(!rows.length)return '<div style="color:#888;padding:10px">这学期还没有排好的课。</div>';
+  if(!_ttDatesRowsSorted(sol,true).length)return '<div style="color:#888;padding:10px">这学期还没有排好的课。</div>';
   const sort=_ttDatesSort||'name';
   const sb=function(m,t){return '<button class="btn btn-sm'+(sort===m?' btn-p':'')+'" onclick="ttDatesSort(\''+m+'\')">'+t+'</button>';};
   return '<div style="font-size:11.5px;color:#888;margin-bottom:8px">每门课按「周几 × 上/下半区间」取<b>前 '+TT_SESSIONS+' 个上课日</b>（＝该门上课次数）。<b style="color:#b45309">假日（春节/国定假）尚未扣</b>——若其中某天放假，实际会顺延；之后在后台设「本学期假日」自动处理。</div>'
-    +'<div class="no-print" style="margin-bottom:8px;display:flex;gap:6px;align-items:center;font-size:11.5px;color:#888">排序：'+sb('name','按课程')+sb('half','按上/下半')+'<span style="margin-left:6px">导出 Excel／列印都照这个排序</span></div>'
-    +'<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">'+_ttDatesTableHtml(rows)+'</div>';
+    +'<div class="no-print" style="margin-bottom:8px;display:flex;gap:6px;align-items:center;font-size:11.5px;color:#888">排序：'+sb('name','按课程')+sb('half','按上/下半')+'<span style="margin-left:6px">导出 Excel／列印都照这个排序、这个搜索</span></div>'
+    +'<div class="no-print" style="margin-bottom:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:11.5px;color:#888"><span>🔍 搜索：课程 / 届别 / 老师</span><input id="ttdates-q" type="search" value="'+eh(String(_ttDatesQ||''))+'" oninput="ttDatesSearch(this.value)" placeholder="例：KG133　或　KG133 DI325　或　Aj. Xu" autocomplete="off" style="min-width:220px;flex:0 1 320px;font-size:12.5px;padding:4px 8px;border:1px solid #D9D5F5;border-radius:6px"><button class="btn btn-sm" onclick="ttDatesSearchClear()">清除</button><span id="ttdates-cnt" style="margin-left:4px">'+_ttDatesCntText(sol)+'</span></div>'
+    +'<div id="ttdates-tbl" style="overflow-x:auto;-webkit-overflow-scrolling:touch">'+_ttDatesTblBox(sol)+'</div>';
 }
-function ttDatesOpen(){const sol=_ttCache.sol||(_ttCache.tt?_ttSolutionFromSaved(_ttCache.sem,_ttCache.tt):null);const b=document.getElementById('ttdates-body');if(b)b.innerHTML=_ttDatesReportHtml(sol);const m=document.getElementById('ttdates-modal');if(m){m.style.display='flex';document.body.style.overflow='hidden';}}
+function ttDatesOpen(){_ttDatesQ='';const sol=_ttCache.sol||(_ttCache.tt?_ttSolutionFromSaved(_ttCache.sem,_ttCache.tt):null);const b=document.getElementById('ttdates-body');if(b)b.innerHTML=_ttDatesReportHtml(sol);const m=document.getElementById('ttdates-modal');if(m){m.style.display='flex';document.body.style.overflow='hidden';}}
 function ttDatesClose(){const m=document.getElementById('ttdates-modal');if(m){m.style.display='none';document.body.style.overflow='';}}
 // 列印:另建一个只含「完整表格」的 #tt-dates-print,印的时候把页面其他东西全部 display:none。
 // (原本是把弹窗留在画面上、其他东西 visibility:hidden:弹窗被压在一页高、隐藏的内容还占版面 → 印出来只有一部分、排序也没跟上)
@@ -4223,7 +4235,7 @@ function _ttDatesPrintBuild(){
   if(!rows||!rows.length)return false;
   _ttDatesPrintClean();
   const box=document.createElement('div');box.id='tt-dates-print';
-  box.innerHTML='<h2 class="dp-h">'+eh(_ttCache.sem||'')+' · 上课日期表</h2><div class="dp-s">共 '+rows.length+' 门课 · 排序：'+_ttDatesSortLabel()+' · 每门课取前 '+TT_SESSIONS+' 个上课日 · 假日（春节／国定假）尚未扣 · 列印日期 '+new Date().toISOString().slice(0,10)+'</div>'+_ttDatesTableHtml(rows);
+  box.innerHTML='<h2 class="dp-h">'+eh(_ttCache.sem||'')+' · 上课日期表</h2><div class="dp-s">共 '+rows.length+' 门课'+(_ttDatesNote()?'（全部 '+_ttDatesRowsSorted(sol,true).length+' 门，'+eh(_ttDatesNote().trim())+'）':'')+' · 排序：'+_ttDatesSortLabel()+' · 每门课取前 '+TT_SESSIONS+' 个上课日 · 假日（春节／国定假）尚未扣 · 列印日期 '+new Date().toISOString().slice(0,10)+'</div>'+_ttDatesTableHtml(rows);
   document.body.appendChild(box);
   const st=document.createElement('style');st.id='tt-dates-print-fit';st.textContent='@media print{@page{size:A4 landscape;margin:10mm 12mm 14mm 12mm}}';document.head.appendChild(st);
   document.body.classList.add('print-ttdates');
@@ -4237,7 +4249,7 @@ function ttDatesExcel(){
   const sol=_ttCache.sol||(_ttCache.tt?_ttSolutionFromSaved(_ttCache.sem,_ttCache.tt):null),rows=sol?_ttDatesRowsSorted(sol):null,sem=_ttCache.sem;   // 照画面上的排序
   if(!rows||!rows.length){alert('没有可导出的上课日期（先设定课表日期并排课）。');return;}
   function X(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-  let body='<tr><td colspan="6" style="font-weight:bold;font-size:13pt">'+X(sem)+' · 上课日期表（假日未扣；排序：'+_ttDatesSortLabel()+'）</td></tr><tr style="background:#534AB7;color:#fff;font-weight:bold"><td>课程</td><td>届别</td><td>老师</td><td>时段·教室</td><td>上课日期</td><td>共几天</td></tr>';
+  let body='<tr><td colspan="6" style="font-weight:bold;font-size:13pt">'+X(sem)+' · 上课日期表（假日未扣；排序：'+_ttDatesSortLabel()+X(_ttDatesNote())+'）</td></tr><tr style="background:#534AB7;color:#fff;font-weight:bold"><td>课程</td><td>届别</td><td>老师</td><td>时段·教室</td><td>上课日期</td><td>共几天</td></tr>';
   rows.forEach(function(r){body+='<tr><td>'+X(r.name)+(r.half?'（'+X(r.half)+'）':'')+'</td><td>'+X(r.cohorts.join('、'))+'</td><td>'+X(r.tc)+'</td><td>'+r.legs.map(function(l){return X(l.wd+l.slot+(l.room?'@'+l.room:'')+(l.reg?'（注册打卡）':''));}).join(' / ')+'</td><td>'+r.legs.map(function(l){return X(r.legs.length>1?l.wd+'：':'')+l.dates.map(_ttFmtMD).join('、');}).join('　')+'</td><td>'+(r.cap?r.total+' 次（每次 '+TT_CAP_HOURS+' 小时，共 '+r.hrs+' 小时）':r.total)+'</td></tr>';});
   window._ttDatesLast={name:'上课日期_'+sem+'_'+new Date().toISOString().slice(0,10)+'.xls',rows:rows.map(function(r){return r.name;})};   // 给测试脚本对照用
   const html='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body><table border="1" style="border-collapse:collapse;font-size:10pt;font-family:Arial">'+body+'</table></body></html>';
@@ -4245,7 +4257,7 @@ function ttDatesExcel(){
   window._ttDatesLast.html=html;
   a.href=URL.createObjectURL(blob);a.download=window._ttDatesLast.name;a.click();URL.revokeObjectURL(a.href);
 }
-window.ttDatesOpen=ttDatesOpen;window.ttDatesClose=ttDatesClose;window.ttDatesPrint=ttDatesPrint;window.ttDatesExcel=ttDatesExcel;
+window.ttDatesSearch=ttDatesSearch;window.ttDatesSearchClear=ttDatesSearchClear;window.ttDatesOpen=ttDatesOpen;window.ttDatesClose=ttDatesClose;window.ttDatesPrint=ttDatesPrint;window.ttDatesExcel=ttDatesExcel;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.getElementById('ttdates-modal');if(m&&m.style.display==='flex')ttDatesClose();}});
 
 // v2 权重 — 按课程人数分档（正常/英文）或按人数 ÷ 上限封顶 1.0（CD-实习/实习）
