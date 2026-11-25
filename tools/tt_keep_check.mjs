@@ -56,6 +56,10 @@ try {
   console.log('errors', JSON.stringify(errors.slice(0,5)));
   const kk = await evaluate(`(!!(_ttCache.sol&&_ttCache.sol.keep))`);
   ok(r === 'called' && kk && !errors.length, '「只补排」按下去不报错、有产生 keep 结果');
+  const cap = JSON.parse(await evaluate(`JSON.stringify((function(){const sol=_ttCache.sol;const caps=(sol.placements||[]).filter(function(p){return p.isCap;});return {n:caps.length,notFri:caps.filter(function(p){return (p.cells||[]).some(function(c){return c[0]!=='周五';});}).map(_ttName),solo:(_ttSoloClashes(sol.placements)||[]).length,capFri:_ttCapFriOn()};})())`));
+  console.log('Capstone', JSON.stringify(cap));
+  ok(!cap.capFri || (cap.n > 0 && cap.notFri.length === 0), '「只补排」之后 Capstone 仍全在周五（没被挪去平日）');
+  ok(cap.solo === 0, '「只补排」之后没有个别学生撞课');
 } catch (e) { console.log('测试本身: ' + e.message); }
 finally { try { ws.close(); } catch {} chrome.kill(); server.close(); await sleep(300); await rm(profile, { recursive: true, force: true }).catch(() => {}); }
 console.log(`\n=== 只补排检查:${fail ? fail + ' 项失败' : '全部通过'} ===`);

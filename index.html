@@ -5464,6 +5464,8 @@ function _ttPinFromSol(list,sol,rooms,capTc,follow){
   });
   later.forEach(function(it){   // 排课表改过的课:原位还放得下才锁
     const c=it[0],cells=it[1],h0=c.half,f0=c.hFix;c.half=c._ph;
+    /* 周五 Capstone 日:Capstone 本来就不比各门人数与教室容量(§11.36),人数变了(例:971＋972 并成 73 人)也锁回周五原位;不然会被当一般课挪去平日的大教室、撞到一般课(2026-11-25) */
+    if(c.isCap&&_ttCapFriOn()&&cells.every(function(cs){return cs[0]==='周五';})){c.hFix=true;c._pin=cells;_ttApply(st,c,cells.map(function(x){return x.slice();}));info.kept++;return;}
     const om={};_ttSlotOpts(st,c,_ttCandRooms(c,rooms),_ttDaysFor(c,capTc),cells).forEach(function(o){om[o.d+'|'+o.s]=o;});
     if(cells.every(function(cs){const o=om[cs[0]+'|'+cs[1]];return o&&o.rs.indexOf(cs[2])>=0;})){c.hFix=true;c._pin=cells;_ttApply(st,c,cells.map(function(x){return x.slice();}));info.kept++;}
     else{c.half=h0;c.hFix=f0;}
