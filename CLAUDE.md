@@ -104,7 +104,7 @@
 - 自动测试:同页面只改 hash 的 navigate 不会重载(要换查询串);背景分页 rAF 会停,用 setTimeout。
 
 ### 最近做了什么(一条一行;完整版在 `docs/进度存档.md`)
-- 2026-11-25【课表制作】「只补排」不再把 Capstone 挪去平日：971＋972 并成 73 人后，只补排把 KL412-971 挪到周二／周四上午 @51305、撞 LA161／KL302；改成周五 Capstone 日的 Capstone 一律锁回周五原位（`_ttPinFromSol`）。**本机已改、已 commit 在分支 `fix/keep-capstone-friday`，未上线**；`tools/tt_keep_check.mjs` 加 2 项（旧版失败、新版通过）；docs §11.80。
+- 2026-11-25【课表制作】「只补排」不再把 Capstone 挪去平日：971＋972 并成 73 人后，只补排把 KL412-971 挪到周二／周四上午 @51305、撞 LA161／KL302；改成周五 Capstone 日的 Capstone 一律锁回周五原位（`_ttPinFromSol`）。✅ 已上线 main `cfc49a3`（线上 sha256 一致 22af48f1、线上 ui_smoke 12/12；一次就中，约 17 秒）；`tools/tt_keep_check.mjs` 加 2 项（旧版失败、新版通过）；docs §11.80。
 - 2026-11-25【课表制作】「依授课老师」加注册打卡：版块 3 老师（Aj. Xu）周二、周四下午各一格「注册打卡 @51305」，周五整天（实际带班）照旧；「上课日期」的 Capstone 也一律按注册打卡的时间列、每次 3 小时 15 次＝45 小时。✅ 已上线 main `3b73800`（同上）；`tools/tt_reg_check.mjs` 加 7 项；docs §11.79。
 - 2026-11-25【课表制作】修「🧩 只补排改动的课」按了没反应：已排的课全被锁住、又有个别学生撞课时，局部优化取到 undefined 报错（`_ttLns` 循环补一行 `if(!bad.length)break`）。✅ 已上线 main `3b73800`（线上 sha256 一致 d23a291b、线上 ui_smoke 12/12；中途 GitHub Pages 部署因官方 Actions 故障失败 2 次，重推后第 3 次成功）；新 `tools/tt_keep_check.mjs`（旧版失败、新版通过）；docs §11.78。
 - 2026-11-25【课表制作】注册用课表改「方案 A」：版块 1、2 周五整天，版块 3 自动挑两个半天（2569-2＝周二下午＋周四下午，只冲突 SC68-2／SC69 共 2 人）；拿掉「重新选第二天」。✅ 已上线 main `f7a9cb3`（线上 sha256 一致 c6bd929c、线上 ui_smoke 12/12、线上 tt_reg_check 通过；一次就中；部署约 48 秒）；tt_print_check 11/11、新 `tools/tt_reg_check.mjs`；docs §11.77。
