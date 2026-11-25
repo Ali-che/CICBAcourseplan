@@ -103,6 +103,20 @@ try {
       out.saved=/"rr":"51405"/.test(JSON.stringify(body||{}));
       ttRegSetRoom('');out.back=_ttRegRoom(_ttCache.sol);
       return JSON.stringify(out);})()`));
+    // 依教室号:打卡教室的两个时段也要看得到;被别的课占着会标红
+    const rv = JSON.parse(await evaluate(`(function(){
+      const sol=${SOLX};const out={};const room=_ttRegRoom(sol);
+      const div=document.createElement('div');div.innerHTML=_ttGridHtml('dn',sol);
+      const rows=[...div.querySelectorAll('tbody tr')];const row=rows.filter(function(r){return r.cells[0].innerText.indexOf(room)===0;})[0];
+      out.room=room;out.chips=row?row.querySelectorAll('.tt-regclk').length:-1;out.bad=row?row.querySelectorAll('td.bad').length:-1;
+      out.up=(function(){const d2=document.createElement('div');d2.innerHTML=_ttGridHtml('up',sol);return d2.querySelectorAll('.tt-regclk').length;})();
+      ttRegSetRoom('233');const s2=_ttCache.sol;const d3=document.createElement('div');d3.innerHTML=_ttGridHtml('dn',s2);
+      const r3=[...d3.querySelectorAll('tbody tr')].filter(function(r){return r.cells[0].innerText.indexOf('233')===0;})[0];
+      out.badRoom233=r3?r3.querySelectorAll('td.bad').length:-1;ttRegSetRoom('');
+      return JSON.stringify(out);})()`));
+    console.log('  依教室号:' + JSON.stringify(rv));
+    ok(rv.chips === 2 && rv.up === 0, `依教室号：打卡教室 ${rv.room} 的下半学期有 2 个注册打卡格（上半学期没有）`);
+    ok(rv.bad === 0 && rv.badRoom233 >= 2, '依教室号：打卡教室空着不标红；换成被占用的 233 会标红（同教室同时段多门）');
     console.log('  教室:' + JSON.stringify(rr));
     ok(rr.auto && rr.autoIssues === 0 && rr.bar, `注册打卡教室没有写死：自动挑出 ${rr.auto}、没有警告、画面有「自动挑」选择栏`);
     ok(rr.bad.some(w => /已有/.test(w)) && rr.bad.some(w => /容量/.test(w)) && rr.badChip, '换成 233：警告「已有课占用」「容量不够」，老师卡的打卡格标 ⚠');

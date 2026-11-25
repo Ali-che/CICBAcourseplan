@@ -6215,6 +6215,9 @@ function _ttGridHtml(h,sol,only){   // only={教室分组:1}=只出这些教室(
     if(!inH(p))return;
     (p.cells||[]).forEach(function(cs,idx){if(cs[0]==='周六')anySat=true;if(cs[0]==='周日')anySun=true;if(cs[1]==='ev'||(p.isCap&&p._cv&&cs[0]==='周日'))evDay[cs[0]]=1;const k=_ttCR(p,cs)+'|'+cs[0]+'|'+cs[1];(occ[k]=occ[k]||[]).push({p:p,first:idx===0,cs:cs});});
   });
+  /* 老师注册打卡(2026-11-25,Aj. Tsai):打卡教室在那个时段也算占用,依教室号要看得到;跟一般课同教室同时段会标红 */
+  const rIs=_ttRegRoomIssues(sol);
+  _ttRegClockIns(sol).forEach(function(x){if(!inH(x.p))return;const k=x.cs[2]+'|'+x.cs[0]+'|'+x.cs[1];(occ[k]=occ[k]||[]).push({p:x.p,first:true,cs:x.cs,clk:true,warn:rIs.filter(function(o){return !o.cap&&o.day===x.cs[0]&&o.slot===x.cs[1];}).map(function(o){return o.why;}).join('；')});});
   const days=TT_WEEKDAYS.concat(anySat?['周六']:[]).concat(anySun?['周日']:[]);   // 周一~周五 + 用到才加周六/周日(Aj. Tsai 2026-11-15)
   const cols=[];days.forEach(function(d){(evDay[d]?TT_CAP_SLOTS:TT_SLOTS).forEach(function(s,i){cols.push([d,s,i===0]);});});
   const gcls=sol.whole?'tt-grid-all':(h==='dn'?'tt-grid-dn':'tt-grid-up');
@@ -6235,7 +6238,7 @@ function _ttGridHtml(h,sol,only){   // only={教室分组:1}=只出这些教室(
       if(s==='am'&&nx&&nx[0]===d&&nx[1]==='pm'){const a1=arr.map(function(o){return o.p;}),a2=(occ[rm.code+'|'+d+'|pm']||[]).map(function(o){return o.p;});
         if(_ttMergeable(a1,a2)){row+='<td class="tt-cell capday'+sat+(c[2]?' ds':'')+'" colspan="2"'+drop+'>'+_ttCapCard(a1,'room',d)+'</td>';skipC=1;return;}}
       // Capstone 照常一格一格显示(周五/周六 的 上午/下午),不合并整天(Aj. Tsai #3)
-      const inner=arr.map(function(o){return _ttChipHtml(o.p,bad,o.cs);}).join('');
+      const inner=arr.map(function(o){return o.clk?_ttRegClockChip(o.p,o.cs,o.warn):_ttChipHtml(o.p,bad,o.cs);}).join('');
       const mu=arr.length>1&&!(_ttCapFriOn()&&_ttAllCapSameTc(arr.map(function(o){return o.p;}))),sdc=arr.some(function(o){return _ttIsSameDay(o.p)&&!_ttAccOk(o.p);});   // 橙框:这格的课两节排同一天
       row+='<td class="tt-cell'+sat+(c[2]?' ds':'')+(arr.length>1?' multi':'')+(mu?' bad':'')+(sdc?' sd':'')+'"'+(mu?' data-n="'+arr.length+'"':'')+((mu||sdc)?' title="'+(mu?'这间教室这个时段同时排了 '+arr.length+' 门课，请人工确认':'')+(mu&&sdc?'；':'')+(sdc?TT_SD_TIP:'')+'"':'')+drop+'>'+inner+'</td>';
     });
@@ -8276,6 +8279,7 @@ function ttExpExcel(){
       const inH=function(p){return p.half==='both'||p.half===x[0];},occ={},evDay={};let sat=false,sun=false;
       if(sol.placements.concat(sol.unplaced||[]).some(function(p){return p.isCap&&inH(p);})){sat=true;evDay['周五']=1;evDay['周六']=1;}
       sol.placements.forEach(function(p){if(!inH(p))return;(p.cells||[]).forEach(function(cs){if(cs[0]==='周六')sat=true;if(cs[0]==='周日')sun=true;if(cs[1]==='ev'||(p.isCap&&p._cv&&cs[0]==='周日'))evDay[cs[0]]=1;const k=_ttCR(p,cs)+'|'+cs[0]+'|'+cs[1];(occ[k]=occ[k]||[]).push({p:p,cs:cs});});});
+      _ttRegClockIns(sol).forEach(function(x){if(!inH(x.p))return;const k=x.cs[2]+'|'+x.cs[0]+'|'+x.cs[1];(occ[k]=occ[k]||[]).push({p:x.p,cs:x.cs});});   // 老师注册打卡也占教室
       const cols=[];TT_WEEKDAYS.concat(sat?['周六']:[]).concat(sun?['周日']:[]).forEach(function(dy){(evDay[dy]?TT_CAP_SLOTS:TT_SLOTS).forEach(function(s){cols.push([dy,s]);});});
       ncol=cols.length+1;
       body+=title('CIC 课表 · '+sem+' · '+x[1]+((x[2]||x[3])?'　'+_ttDateRange(x[2],x[3]):'')+(stpX.final?'':'　【草稿，非最终版】'),(stpX.txt?'【'+stpX.txt+'】　｜　':'')+'依教室号'+(only?'（只含 '+Object.keys(only).sort().join('、')+' 开头的教室）':'')+'　｜　每格：课码-班级｜人数｜老师'+(sel.co===false?'':'｜届别 人数')+'　｜　导出日期：'+dateStr);
