@@ -5602,6 +5602,7 @@ function* _ttLns1(st,list,seed0,tag){
     if(it%250===0)yield {txt:'优化排法'+(tag||''),pct:it/TT_LNS_ITERS};   /* 每 250 次让出一下,页面才不会停住 */
     let bad=free.filter(isBad);
     if(!bad.length){const sc=_ttSoloClashes(list);if(!sc.length)break;bad=free;}   // 只剩个别学生撞课时,随便挑一门当起点
+    if(!bad.length)break;   /* 「只补排」时已排的课全被锁住(free 是空的)→ 没有可挪的课,直接收工;以前这里会取到 undefined、报错、按钮没反应(2026-11-25) */
     const seedC=bad[Math.floor(rnd()*bad.length)];
     const k=2+Math.floor(rnd()*3);
     const pool=free.filter(function(q){return q!==seedC&&(q.tc===seedC.tc||(q.cohorts||[]).some(function(co){return (seedC.cohorts||[]).indexOf(co)>=0;})||rnd()<0.08);});
