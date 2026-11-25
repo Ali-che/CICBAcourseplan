@@ -4151,6 +4151,7 @@ window.ttBneckOpen=ttBneckOpen;window.ttBneckClose=ttBneckClose;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.getElementById('ttbneck-modal');if(m&&m.style.display==='flex')ttBneckClose();}});
 
 // ── 📅 上课日期 modal(2026-11-16 v1,纯前端):每门课 周几×上下半区间 → 列出所有上课日。假日先不扣(人工划) ──
+const TT_CAP_HOURS=3;   /* Capstone 每次 3 小时(09:00–12:00／13:30–16:30),15 次＝45 小时 */
 const TT_SESSIONS=15;   // 每门课总上课次数(Aj. Tsai:集满 15 次就好;假日先不扣,之后 v2 用后台「本学期假日」自动扣)
 const _TT_WDIDX={'周日':0,'周一':1,'周二':2,'周三':3,'周四':4,'周五':5,'周六':6};
 function _ttWeekdayDates(wd,start,end){   // 区间 [start,end] 内所有 wd 这个星期几的日期
@@ -4165,14 +4166,21 @@ function _ttCourseDateRows(sol){   // 每门课 → {name,tc,half,legs:[{wd,slot
   const dates=_ttCache.dates||{},whole=_ttWholeSem(sol.sem||_ttCache.sem);
   if(!dates.up_start||(!whole&&!dates.dn_start))return null;   // 日期未设全
   function rng(p){if(whole)return [dates.up_start,dates.up_end];if(p.half==='dn')return [dates.dn_start,dates.dn_end];if(p.half==='both')return [dates.up_start,dates.dn_end];return [dates.up_start,dates.up_end];}
+  /* Capstone(2026-11-25,Aj. Tsai):上课日期一律按「注册打卡」的时间列(版块 1、2＝周五上午＋下午;版块 3＝_ttRegPlanA 挑的两个半天,地点 TT_REG_ROOM);每次 3 小时、15 次＝45 小时 */
+  const PL=(!whole&&_ttCapFriOn())?_ttRegPlanA(sol):null;
+  const cellsOf=function(p){
+    if(!PL||!p.isCap)return (p.cells||[]).map(function(cs){return {cs:cs,reg:false};});
+    const g=_ttRegGrp(p);if(g==='other'||!PL[g])return (p.cells||[]).map(function(cs){return {cs:cs,reg:false};});
+    return PL[g].map(function(sl){const act=(p.cells||[]).filter(function(c){return c[0]===sl[0]&&c[1]===sl[1];})[0];return {cs:[sl[0],sl[1],act?act[2]:TT_REG_ROOM],reg:!act};});
+  };
   return (sol.placements||[]).slice().sort(function(a,b){return _ttName(a).localeCompare(_ttName(b));}).filter(function(p){return (p.cells||[]).length;}).map(function(p){
-    const r=rng(p),legs=(p.cells||[]).map(function(cs){return {wd:cs[0],slot:_ttSlotName(cs[1],p.isCap),room:_ttCR(p,cs)||'',dates:_ttWeekdayDates(cs[0],r[0],r[1])};});
+    const r=rng(p),legs=cellsOf(p).map(function(o){const cs=o.cs;return {wd:cs[0],slot:_ttSlotName(cs[1],p.isCap&&!o.reg),room:_ttCR(p,cs)||'',reg:o.reg,dates:_ttWeekdayDates(cs[0],r[0],r[1])};});
     // 集满 TT_SESSIONS 次就好(Aj. Tsai:每门 15 个上课日;假日先不扣):各周几日期合并按时间排,取前 15,再分回去
     let flat=[];legs.forEach(function(l,li){l.dates.forEach(function(d){flat.push({li:li,d:d});});});
     flat.sort(function(a,b){return a.d-b.d;}).splice(TT_SESSIONS);
     const keep={};flat.forEach(function(x){(keep[x.li]=keep[x.li]||[]).push(x.d);});
     legs.forEach(function(l,li){l.dates=keep[li]||[];});
-    return {name:_ttCodes(p)+(p.cls?'-'+p.cls:''),cohorts:(p.cohorts||[]),tc:p.tc||'待定',half:({up:'上半',dn:'下半',both:'全学期'}[p.half]||''),halfKey:p.half||'',legs:legs,total:flat.length};
+    return {name:_ttCodes(p)+(p.cls?'-'+p.cls:''),cohorts:(p.cohorts||[]),tc:p.tc||'待定',half:({up:'上半',dn:'下半',both:'全学期'}[p.half]||''),halfKey:p.half||'',legs:legs,total:flat.length,cap:!!p.isCap,hrs:p.isCap?flat.length*TT_CAP_HOURS:0};
   });
 }
 let _ttDatesSort='name';   // 上课日期表排序:按课程 / 按上下半
@@ -4191,8 +4199,8 @@ function _ttDatesTableHtml(rows){
       +'<td><b>'+eh(r.name)+'</b>'+(r.half?' <span class="hf">'+eh(r.half)+'</span>':'')+'</td>'
       +'<td class="co">'+(r.cohorts.length?r.cohorts.map(eh).join('、<wbr>'):'<span style="color:#ccc">—</span>')+'</td>'
       +'<td>'+eh(r.tc)+'</td>'
-      +'<td class="ds">'+r.legs.map(function(l){return '<div class="leg"><b>'+eh(l.wd+l.slot+(l.room?' @'+l.room:''))+'</b>　'+(l.dates.length?l.dates.map(_ttFmtMD).join('、<wbr>'):'<span style="color:#ccc">—</span>')+'</div>';}).join('')+'</td>'
-      +'<td class="nd"><b>'+r.total+'</b>天</td></tr>';}).join('')
+      +'<td class="ds">'+r.legs.map(function(l){return '<div class="leg"><b>'+eh(l.wd+l.slot+(l.room?' @'+l.room:''))+'</b>'+(l.reg?' <span class="hf">注册打卡</span>':'')+'　'+(l.dates.length?l.dates.map(_ttFmtMD).join('、<wbr>'):'<span style="color:#ccc">—</span>')+'</div>';}).join('')+'</td>'
+      +'<td class="nd">'+(r.cap?'<b>'+r.total+'</b>次<div style="font-size:10.5px;color:#666;font-weight:400">每次 '+TT_CAP_HOURS+' 小时<br>共 '+r.hrs+' 小时</div>':'<b>'+r.total+'</b>天')+'</td></tr>';}).join('')
     +'</tbody></table>';
 }
 function _ttDatesReportHtml(sol){
@@ -4230,7 +4238,7 @@ function ttDatesExcel(){
   if(!rows||!rows.length){alert('没有可导出的上课日期（先设定课表日期并排课）。');return;}
   function X(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
   let body='<tr><td colspan="6" style="font-weight:bold;font-size:13pt">'+X(sem)+' · 上课日期表（假日未扣；排序：'+_ttDatesSortLabel()+'）</td></tr><tr style="background:#534AB7;color:#fff;font-weight:bold"><td>课程</td><td>届别</td><td>老师</td><td>时段·教室</td><td>上课日期</td><td>共几天</td></tr>';
-  rows.forEach(function(r){body+='<tr><td>'+X(r.name)+(r.half?'（'+X(r.half)+'）':'')+'</td><td>'+X(r.cohorts.join('、'))+'</td><td>'+X(r.tc)+'</td><td>'+r.legs.map(function(l){return X(l.wd+l.slot+(l.room?'@'+l.room:''));}).join(' / ')+'</td><td>'+r.legs.map(function(l){return X(r.legs.length>1?l.wd+'：':'')+l.dates.map(_ttFmtMD).join('、');}).join('　')+'</td><td>'+r.total+'</td></tr>';});
+  rows.forEach(function(r){body+='<tr><td>'+X(r.name)+(r.half?'（'+X(r.half)+'）':'')+'</td><td>'+X(r.cohorts.join('、'))+'</td><td>'+X(r.tc)+'</td><td>'+r.legs.map(function(l){return X(l.wd+l.slot+(l.room?'@'+l.room:'')+(l.reg?'（注册打卡）':''));}).join(' / ')+'</td><td>'+r.legs.map(function(l){return X(r.legs.length>1?l.wd+'：':'')+l.dates.map(_ttFmtMD).join('、');}).join('　')+'</td><td>'+(r.cap?r.total+' 次（每次 '+TT_CAP_HOURS+' 小时，共 '+r.hrs+' 小时）':r.total)+'</td></tr>';});
   window._ttDatesLast={name:'上课日期_'+sem+'_'+new Date().toISOString().slice(0,10)+'.xls',rows:rows.map(function(r){return r.name;})};   // 给测试脚本对照用
   const html='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body><table border="1" style="border-collapse:collapse;font-size:10pt;font-family:Arial">'+body+'</table></body></html>';
   const blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'}),a=document.createElement('a');
@@ -6403,6 +6411,7 @@ function _ttEntityData(sol,mode){
       _ttHalfTags(p).forEach(function(ht){(p.cells||[]).forEach(function(cs){if(cs[0]==='周六')e.hasSat=true;if(cs[0]==='周日')e.hasSun=true;if(cs[1]==='ev')(e.ev=e.ev||{})[ht]=1;const k=ht+'|'+cs[0]+'|'+cs[1];(e.map[k]=e.map[k]||[]).push(_ttMiniChip(p,mode,bad,cs));(e.raw[k]=e.raw[k]||[]).push({p:p,cs:cs});});});
     });
   });
+  if(mode==='teacher')_ttRegClockIns(sol).forEach(function(x){const e=ensure(x.tc,_ttTeacherDept(x.tc,sol));_ttHalfTags(x.p).forEach(function(ht){const k=ht+'|'+x.cs[0]+'|'+x.cs[1];(e.map[k]=e.map[k]||[]).push(_ttRegClockChip(x.p,x.cs));(e.raw[k]=e.raw[k]||[]).push({p:x.p,cs:x.cs});});});   /* 老师按注册时间打卡:周五以外的注册时间也列在老师表上 */
   (sol.unplaced||[]).forEach(function(u){const keys=mode==='cohort'?(u.cohorts||[]):[u.tc||'（待定老师）'];keys.forEach(function(key){const dept=mode==='cohort'?((typeof cohortDept==='function'&&cohortDept(key))||'其他'):(u.dept||'其他');ensure(key,dept).unplaced.push(u);});});
   // 同一时段有 2 门以上:要不要标红(要人工确认)。依届别时,该届 KE 与 KH 放行同时段的那种不算;其余(撞堂、个别学生撞课)都标
   Object.keys(grp).forEach(function(key){const e=grp[key];e.flag={};Object.keys(e.raw).forEach(function(k){const a=e.raw[k];if(a.length<2)return;
@@ -6489,6 +6498,27 @@ function _ttRegPlanA(sol){
   plan.hit=Object.keys(m).map(function(k){const e=m[k];return {p:e.p,co:Object.keys(e.co),wh:Object.keys(e.wh)};});
   plan.cnt=cnt;plan.nm=nm;
   return plan;
+}
+/* 老师「注册打卡」(2026-11-25,Aj. Tsai):学生按实际上课(周五)上课,但老师按「注册用课表」的时间打卡(特别是版块 3),打卡地点在 TT_REG_ROOM。
+   「依授课老师」要同时有:周五整天(实际带班)+ 注册时间(注册打卡)。注册时间若已经是实际上课的那一格(版块 1、2 的周五)就不重复列。只用在依授课老师的画面／列印／Excel。 */
+const TT_REG_ROOM='51305';
+function _ttRegClockIns(sol){
+  if(!sol||sol.whole||!_ttCapFriOn())return [];
+  const PL=_ttRegPlanA(sol),by={},out=[];
+  (sol.placements||[]).forEach(function(p){if(!p.isCap||!p.tc)return;const g=_ttRegGrp(p);if(g==='other')return;const k=p.tc+'|'+g;(by[k]=by[k]||{tc:p.tc,g:g,ps:[]}).ps.push(p);});
+  Object.keys(by).forEach(function(k){const o=by[k],p0=o.ps[0];
+    const mx={};o.ps.forEach(function(p){_ttCohCounts(p).forEach(function(x){if(x.n)mx[x.n]=Math.max(mx[x.n]||0,x.c||0);});});
+    const cohs=Object.keys(mx),n=cohs.reduce(function(t,c){return t+mx[c];},0),codes=[];o.ps.forEach(function(p){if(codes.indexOf(p.course)<0)codes.push(p.course);});
+    (PL[o.g]||[]).forEach(function(sl){
+      if(o.ps.some(function(p){return (p.cells||[]).some(function(c){return c[0]===sl[0]&&c[1]===sl[1];});}))return;   // 就是实际上课的那一格
+      out.push({tc:o.tc,p:{id:'regclk|'+o.tc+'|'+o.g+'|'+sl[0]+sl[1],course:codes.join('、'),cls:'注册打卡',tc:o.tc,count:n,cohorts:cohs,half:p0.half,dept:p0.dept,room:TT_REG_ROOM,isCap:false,_regClk:true,cells:[[sl[0],sl[1],TT_REG_ROOM]]},cs:[sl[0],sl[1],TT_REG_ROOM]});
+    });
+  });
+  return out;
+}
+function _ttRegClockChip(p,cs){
+  const rm=eh(_ttCR(p,cs)||''),tip='注册打卡：学生实际上课在周五，老师按注册用课表的这个时间打卡，地点 '+rm;
+  return '<span class="tt-chip tt-regclk" title="'+tip+'" data-rm="'+rm+'" style="background:#fff;color:#3C3489;border:1px dashed #6E67B8;border-left:3px solid #6E67B8"><span class="tt-c3"><span class="z1">'+_ttCC(p)+'</span><span class="z2">注册打卡 · '+p.count+' 人</span><span class="z3">@'+rm+'</span></span></span>';
 }
 function _ttRegHtml(sol){
   const caps=(sol.placements||[]).concat(sol.unplaced||[]).filter(function(p){return p.isCap;});
