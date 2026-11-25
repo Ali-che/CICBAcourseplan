@@ -6403,6 +6403,7 @@ function _ttEntityData(sol,mode){
       _ttHalfTags(p).forEach(function(ht){(p.cells||[]).forEach(function(cs){if(cs[0]==='周六')e.hasSat=true;if(cs[0]==='周日')e.hasSun=true;if(cs[1]==='ev')(e.ev=e.ev||{})[ht]=1;const k=ht+'|'+cs[0]+'|'+cs[1];(e.map[k]=e.map[k]||[]).push(_ttMiniChip(p,mode,bad,cs));(e.raw[k]=e.raw[k]||[]).push({p:p,cs:cs});});});
     });
   });
+  if(mode==='teacher')_ttRegClockIns(sol).forEach(function(x){const e=ensure(x.tc,_ttTeacherDept(x.tc,sol));_ttHalfTags(x.p).forEach(function(ht){const k=ht+'|'+x.cs[0]+'|'+x.cs[1];(e.map[k]=e.map[k]||[]).push(_ttRegClockChip(x.p,x.cs));(e.raw[k]=e.raw[k]||[]).push({p:x.p,cs:x.cs});});});   /* 老师按注册时间打卡:周五以外的注册时间也列在老师表上 */
   (sol.unplaced||[]).forEach(function(u){const keys=mode==='cohort'?(u.cohorts||[]):[u.tc||'（待定老师）'];keys.forEach(function(key){const dept=mode==='cohort'?((typeof cohortDept==='function'&&cohortDept(key))||'其他'):(u.dept||'其他');ensure(key,dept).unplaced.push(u);});});
   // 同一时段有 2 门以上:要不要标红(要人工确认)。依届别时,该届 KE 与 KH 放行同时段的那种不算;其余(撞堂、个别学生撞课)都标
   Object.keys(grp).forEach(function(key){const e=grp[key];e.flag={};Object.keys(e.raw).forEach(function(k){const a=e.raw[k];if(a.length<2)return;
@@ -6489,6 +6490,27 @@ function _ttRegPlanA(sol){
   plan.hit=Object.keys(m).map(function(k){const e=m[k];return {p:e.p,co:Object.keys(e.co),wh:Object.keys(e.wh)};});
   plan.cnt=cnt;plan.nm=nm;
   return plan;
+}
+/* 老师「注册打卡」(2026-11-25,Aj. Tsai):学生按实际上课(周五)上课,但老师按「注册用课表」的时间打卡(特别是版块 3),打卡地点在 TT_REG_ROOM。
+   「依授课老师」要同时有:周五整天(实际带班)+ 注册时间(注册打卡)。注册时间若已经是实际上课的那一格(版块 1、2 的周五)就不重复列。只用在依授课老师的画面／列印／Excel。 */
+const TT_REG_ROOM='51305';
+function _ttRegClockIns(sol){
+  if(!sol||sol.whole||!_ttCapFriOn())return [];
+  const PL=_ttRegPlanA(sol),by={},out=[];
+  (sol.placements||[]).forEach(function(p){if(!p.isCap||!p.tc)return;const g=_ttRegGrp(p);if(g==='other')return;const k=p.tc+'|'+g;(by[k]=by[k]||{tc:p.tc,g:g,ps:[]}).ps.push(p);});
+  Object.keys(by).forEach(function(k){const o=by[k],p0=o.ps[0];
+    const mx={};o.ps.forEach(function(p){_ttCohCounts(p).forEach(function(x){if(x.n)mx[x.n]=Math.max(mx[x.n]||0,x.c||0);});});
+    const cohs=Object.keys(mx),n=cohs.reduce(function(t,c){return t+mx[c];},0),codes=[];o.ps.forEach(function(p){if(codes.indexOf(p.course)<0)codes.push(p.course);});
+    (PL[o.g]||[]).forEach(function(sl){
+      if(o.ps.some(function(p){return (p.cells||[]).some(function(c){return c[0]===sl[0]&&c[1]===sl[1];});}))return;   // 就是实际上课的那一格
+      out.push({tc:o.tc,p:{id:'regclk|'+o.tc+'|'+o.g+'|'+sl[0]+sl[1],course:codes.join('、'),cls:'注册打卡',tc:o.tc,count:n,cohorts:cohs,half:p0.half,dept:p0.dept,room:TT_REG_ROOM,isCap:false,_regClk:true,cells:[[sl[0],sl[1],TT_REG_ROOM]]},cs:[sl[0],sl[1],TT_REG_ROOM]});
+    });
+  });
+  return out;
+}
+function _ttRegClockChip(p,cs){
+  const rm=eh(_ttCR(p,cs)||''),tip='注册打卡：学生实际上课在周五，老师按注册用课表的这个时间打卡，地点 '+rm;
+  return '<span class="tt-chip tt-regclk" title="'+tip+'" data-rm="'+rm+'" style="background:#fff;color:#3C3489;border:1px dashed #6E67B8;border-left:3px solid #6E67B8"><span class="tt-c3"><span class="z1">'+_ttCC(p)+'</span><span class="z2">注册打卡 · '+p.count+' 人</span><span class="z3">@'+rm+'</span></span></span>';
 }
 function _ttRegHtml(sol){
   const caps=(sol.placements||[]).concat(sol.unplaced||[]).filter(function(p){return p.isCap;});

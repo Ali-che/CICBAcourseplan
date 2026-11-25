@@ -64,6 +64,16 @@ try {
   ok(!/重新选第二天|还没选定/.test(txt), '画面没有旧的「第二天」字样');
   const shot = await send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 0, width: 1024, height: 1500, scale: 1 } });
   if (shot.result && shot.result.data) { await writeFile(join(OUT, `reg-${SEM}.png`), Buffer.from(shot.result.data, 'base64')); console.log(`  截图:${join(OUT, `reg-${SEM}.png`)}`); }
+  // 老师「注册打卡」:依授课老师表要有注册时间(版块 3 在周五以外),地点 51305;版块 1、2 的老师不重复列
+  const clk = JSON.parse(await evaluate(`JSON.stringify((function(){const sol=${SOLX};const D=_ttEntityData(sol,'teacher');const o={};Object.keys(D.grp).forEach(function(t){const r=D.grp[t].raw,ks=Object.keys(r).filter(function(k){return r[k].some(function(x){return x.p._regClk;});});if(ks.length)o[t]=ks.map(function(k){const x=r[k].filter(function(y){return y.p._regClk;})[0];return k+'@'+x.p.room+'|'+x.p.count+'人';});});return {o:o,html:_ttEntityCards(sol,'teacher').indexOf('注册打卡')>=0,fri:(function(){const e=D.grp['Aj. Xu, Yan'];return !!(e&&e.raw['下|周五|am']&&e.raw['下|周五|pm']);})()};})())`));
+  console.log('  注册打卡:' + JSON.stringify(clk.o));
+  if (info.plan.b3 !== '周五整天') {
+    const t3 = clk.o['Aj. Xu, Yan'] || [];
+    ok(t3.length === 2 && t3.every(x => /@51305\|/.test(x)), '版块 3 老师(Aj. Xu)有两格注册打卡,地点 51305');
+    ok(clk.fri, '版块 3 老师同时保留周五整天(实际带班)');
+  }
+  ok(!clk.o['Aj. Liu, Feng-Lin'] && !clk.o['Aj. Lu, Peng'], '版块 1、2 的老师(注册时间＝周五)不重复列注册打卡');
+  ok(clk.html, '依授课老师画面出现「注册打卡」');
   if (errors.length) { fail++; console.log('❌ JS 报错: ' + errors.slice(0, 3).join(' | ')); }
 } catch (e) { if (!/no sol/.test(e.message)) { fail++; console.log('❌ 测试本身: ' + e.message); } }
 finally { try { ws.close(); } catch {} chrome.kill(); server.close(); await sleep(300); await rm(profile, { recursive: true, force: true }).catch(() => {}); }
