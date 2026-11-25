@@ -4166,12 +4166,12 @@ function _ttCourseDateRows(sol){   // 每门课 → {name,tc,half,legs:[{wd,slot
   const dates=_ttCache.dates||{},whole=_ttWholeSem(sol.sem||_ttCache.sem);
   if(!dates.up_start||(!whole&&!dates.dn_start))return null;   // 日期未设全
   function rng(p){if(whole)return [dates.up_start,dates.up_end];if(p.half==='dn')return [dates.dn_start,dates.dn_end];if(p.half==='both')return [dates.up_start,dates.dn_end];return [dates.up_start,dates.up_end];}
-  /* Capstone(2026-11-25,Aj. Tsai):上课日期一律按「注册打卡」的时间列(版块 1、2＝周五上午＋下午;版块 3＝_ttRegPlanA 挑的两个半天,地点 TT_REG_ROOM);每次 3 小时、15 次＝45 小时 */
+  /* Capstone(2026-11-25,Aj. Tsai):上课日期一律按「注册打卡」的时间列(版块 1、2＝周五上午＋下午;版块 3＝_ttRegPlanA 挑的两个半天,地点 _ttRegRoom);每次 3 小时、15 次＝45 小时 */
   const PL=(!whole&&_ttCapFriOn())?_ttRegPlanA(sol):null;
   const cellsOf=function(p){
     if(!PL||!p.isCap)return (p.cells||[]).map(function(cs){return {cs:cs,reg:false};});
     const g=_ttRegGrp(p);if(g==='other'||!PL[g])return (p.cells||[]).map(function(cs){return {cs:cs,reg:false};});
-    return PL[g].map(function(sl){const act=(p.cells||[]).filter(function(c){return c[0]===sl[0]&&c[1]===sl[1];})[0];return {cs:[sl[0],sl[1],act?act[2]:TT_REG_ROOM],reg:!act};});
+    return PL[g].map(function(sl){const act=(p.cells||[]).filter(function(c){return c[0]===sl[0]&&c[1]===sl[1];})[0];return {cs:[sl[0],sl[1],act?act[2]:_ttRegRoom(sol)],reg:!act};});
   };
   return (sol.placements||[]).slice().sort(function(a,b){return _ttName(a).localeCompare(_ttName(b));}).filter(function(p){return (p.cells||[]).length;}).map(function(p){
     const r=rng(p),legs=cellsOf(p).map(function(o){const cs=o.cs;return {wd:cs[0],slot:_ttSlotName(cs[1],p.isCap&&!o.reg),room:_ttCR(p,cs)||'',reg:o.reg,dates:_ttWeekdayDates(cs[0],r[0],r[1])};});
@@ -6077,6 +6077,7 @@ function _ttSolutionFromSaved(sem,tt){
   const whole=_ttWholeSem(sem);
   const sol={sem:sem,rooms:_ttRoomsSorted(),placements:pls,unplaced:[],manualNotes:pls.filter(p=>p.nt),interns:_ttInternList(sem),warns:_ttWarns(pls,whole),whole:whole,fromSaved:true};
   {const cp=((tt&&tt.placements)||[]).filter(function(x){return x.rd;})[0]||{};sol.regDay=cp.rd||'';sol.regHard=!!cp.rh;sol.regEx=cp.re||[];sol.regWhy=cp.rw||'';}
+  {const cr=((tt&&tt.placements)||[]).filter(function(x){return x.rr;})[0]||{};sol.regRoom=cr.rr||'';}
   sol.unplaced=_ttNotOnSaved(sem,sol);
   _ttSavedHints(sol);
   return sol;
@@ -6425,7 +6426,7 @@ function _ttEntityData(sol,mode){
       _ttHalfTags(p).forEach(function(ht){(p.cells||[]).forEach(function(cs){if(cs[0]==='周六')e.hasSat=true;if(cs[0]==='周日')e.hasSun=true;if(cs[1]==='ev')(e.ev=e.ev||{})[ht]=1;const k=ht+'|'+cs[0]+'|'+cs[1];(e.map[k]=e.map[k]||[]).push(_ttMiniChip(p,mode,bad,cs));(e.raw[k]=e.raw[k]||[]).push({p:p,cs:cs});});});
     });
   });
-  if(mode==='teacher')_ttRegClockIns(sol).forEach(function(x){const e=ensure(x.tc,_ttTeacherDept(x.tc,sol));_ttHalfTags(x.p).forEach(function(ht){const k=ht+'|'+x.cs[0]+'|'+x.cs[1];(e.map[k]=e.map[k]||[]).push(_ttRegClockChip(x.p,x.cs));(e.raw[k]=e.raw[k]||[]).push({p:x.p,cs:x.cs});});});   /* 老师按注册时间打卡:周五以外的注册时间也列在老师表上 */
+  if(mode==='teacher')_ttRegClockIns(sol).forEach(function(x){const e=ensure(x.tc,_ttTeacherDept(x.tc,sol)),is=_ttRegRoomIssues(sol).filter(function(o){return o.day===x.cs[0]&&o.slot===x.cs[1];}).map(function(o){return o.why;}).join('；');_ttHalfTags(x.p).forEach(function(ht){const k=ht+'|'+x.cs[0]+'|'+x.cs[1];(e.map[k]=e.map[k]||[]).push(_ttRegClockChip(x.p,x.cs,is));(e.raw[k]=e.raw[k]||[]).push({p:x.p,cs:x.cs});});});   /* 老师按注册时间打卡:周五以外的注册时间也列在老师表上 */
   (sol.unplaced||[]).forEach(function(u){const keys=mode==='cohort'?(u.cohorts||[]):[u.tc||'（待定老师）'];keys.forEach(function(key){const dept=mode==='cohort'?((typeof cohortDept==='function'&&cohortDept(key))||'其他'):(u.dept||'其他');ensure(key,dept).unplaced.push(u);});});
   // 同一时段有 2 门以上:要不要标红(要人工确认)。依届别时,该届 KE 与 KH 放行同时段的那种不算;其余(撞堂、个别学生撞课)都标
   Object.keys(grp).forEach(function(key){const e=grp[key];e.flag={};Object.keys(e.raw).forEach(function(k){const a=e.raw[k];if(a.length<2)return;
@@ -6513,11 +6514,36 @@ function _ttRegPlanA(sol){
   plan.cnt=cnt;plan.nm=nm;
   return plan;
 }
-/* 老师「注册打卡」(2026-11-25,Aj. Tsai):学生按实际上课(周五)上课,但老师按「注册用课表」的时间打卡(特别是版块 3),打卡地点在 TT_REG_ROOM。
+/* 老师「注册打卡」(2026-11-25,Aj. Tsai):学生按实际上课(周五)上课,但老师按「注册用课表」的时间打卡(特别是版块 3),打卡地点见 _ttRegRoom(手动选的优先,没选就自动挑)。
    「依授课老师」要同时有:周五整天(实际带班)+ 注册时间(注册打卡)。注册时间若已经是实际上课的那一格(版块 1、2 的周五)就不重复列。只用在依授课老师的画面／列印／Excel。 */
-const TT_REG_ROOM='51305';
-function _ttRegClockIns(sol){
-  if(!sol||sol.whole||!_ttCapFriOn())return [];
+/* 注册打卡教室不写死(2026-11-25,Aj. Tsai):手动选的(sol.regRoom／_ttCache.regRoom,存在 Capstone 课的 rr,跟着存档走)优先;没选就自动挑——
+   容量够、注册打卡的时段没被别的课占着的教室里,取容量最小的(并列照教室号);都被占就取容量够的最小一间(会警告) */
+function _ttRegRoom(sol){return (sol&&sol.regRoom)||_ttCache.regRoom||_ttRegAutoRoom(sol);}
+function _ttRegAutoRoom(sol){
+  const ci=_ttRegClockIns(sol,'?');if(!ci.length)return '';
+  const n=ci.reduce(function(m,x){return Math.max(m,x.p.count||0);},0),rooms=_ttRoomsByNo(sol.rooms).filter(function(r){return !(+r.cap)||+r.cap>=n;}).sort(function(a,b){return (+a.cap||1e9)-(+b.cap||1e9);});
+  const free=rooms.filter(function(r){return !_ttRegRoomIssues(sol,String(r.code)).some(function(o){return !o.cap;});});
+  const r=(free[0]||rooms[0]);return r?String(r.code):'';
+}
+/* 注册打卡教室有没有问题:① 那个时段已有别的课占着 ② 容量小于人数 → [{day,slot,why}] */
+function _ttRegRoomIssues(sol,room){
+  room=room||_ttRegRoom(sol);const out=[],ci=_ttRegClockIns(sol,room||'?');if(!ci.length)return out;
+  const rm=(sol.rooms||[]).filter(function(r){return String(r.code)===String(room);})[0];
+  ci.forEach(function(x){
+    const d=x.cs[0],sl=x.cs[1],n=x.p.count||0;
+    const busy=(sol.placements||[]).filter(function(p){return !p._regClk&&(p.half===x.p.half||p.half==='both'||x.p.half==='both')&&(p.cells||[]).some(function(c){return c[0]===d&&_ttNormSlot(p,c[1],d)===sl&&String(_ttCR(p,c))===String(room);});});
+    if(busy.length)out.push({day:d,slot:sl,why:d+(sl==='am'?'上午':'下午')+' '+room+' 已有 '+busy.map(_ttName).join('、')+' 占用'});
+    if(rm&&+rm.cap&&+rm.cap<n&&!out.some(function(o){return o.cap;}))out.push({day:d,slot:sl,cap:1,why:room+' 容量 '+rm.cap+' 人，少于注册人数 '+n+' 人'});
+  });
+  return out;
+}
+function ttRegSetRoom(room){room=String(room||'');
+  if(!_ttCanEdit()||_ttCache.preview)return;
+  _ttUndoPush();_ttEnsureSol();const sol=_ttCache.sol;sol.regRoom=room;_ttCache.regRoom=room;_ttCache.dirty=true;renderTtPanel();
+  if(typeof showToast==='function')showToast(room?('注册打卡教室改成 '+room+'（排课没动）— 按「💾 存档」才算数'):'注册打卡教室改回「自动挑」— 按「💾 存档」才算数',{kind:'success'});
+}
+function _ttRegClockIns(sol,room){
+  if(!sol||sol.whole||!_ttCapFriOn())return [];room=room||_ttRegRoom(sol)||'?';
   const PL=_ttRegPlanA(sol),by={},out=[];
   (sol.placements||[]).forEach(function(p){if(!p.isCap||!p.tc)return;const g=_ttRegGrp(p);if(g==='other')return;const k=p.tc+'|'+g;(by[k]=by[k]||{tc:p.tc,g:g,ps:[]}).ps.push(p);});
   Object.keys(by).forEach(function(k){const o=by[k],p0=o.ps[0];
@@ -6525,14 +6551,22 @@ function _ttRegClockIns(sol){
     const cohs=Object.keys(mx),n=cohs.reduce(function(t,c){return t+mx[c];},0),codes=[];o.ps.forEach(function(p){if(codes.indexOf(p.course)<0)codes.push(p.course);});
     (PL[o.g]||[]).forEach(function(sl){
       if(o.ps.some(function(p){return (p.cells||[]).some(function(c){return c[0]===sl[0]&&c[1]===sl[1];});}))return;   // 就是实际上课的那一格
-      out.push({tc:o.tc,p:{id:'regclk|'+o.tc+'|'+o.g+'|'+sl[0]+sl[1],course:codes.join('、'),cls:'注册打卡',tc:o.tc,count:n,cohorts:cohs,half:p0.half,dept:p0.dept,room:TT_REG_ROOM,isCap:false,_regClk:true,cells:[[sl[0],sl[1],TT_REG_ROOM]]},cs:[sl[0],sl[1],TT_REG_ROOM]});
+      out.push({tc:o.tc,p:{id:'regclk|'+o.tc+'|'+o.g+'|'+sl[0]+sl[1],course:codes.join('、'),cls:'注册打卡',tc:o.tc,count:n,cohorts:cohs,half:p0.half,dept:p0.dept,room:room,isCap:false,_regClk:true,cells:[[sl[0],sl[1],room]]},cs:[sl[0],sl[1],room]});
     });
   });
   return out;
 }
-function _ttRegClockChip(p,cs){
-  const rm=eh(_ttCR(p,cs)||''),tip='注册打卡：学生实际上课在周五，老师按注册用课表的这个时间打卡，地点 '+rm;
-  return '<span class="tt-chip tt-regclk" title="'+tip+'" data-rm="'+rm+'" style="background:#fff;color:#3C3489;border:1px dashed #6E67B8;border-left:3px solid #6E67B8"><span class="tt-c3"><span class="z1">'+_ttCC(p)+'</span><span class="z2">注册打卡 · '+p.count+' 人</span><span class="z3">@'+rm+'</span></span></span>';
+function _ttRegClockChip(p,cs,warn){
+  const rm=eh(_ttCR(p,cs)||''),tip='注册打卡：学生实际上课在周五，老师按注册用课表的这个时间打卡，地点 '+rm+(warn?'　⚠ '+eh(warn):'');
+  return '<span class="tt-chip tt-regclk" title="'+tip+'" data-rm="'+rm+'" style="background:#fff;color:#3C3489;border:1px dashed '+(warn?'#b42318':'#6E67B8')+';border-left:3px solid '+(warn?'#b42318':'#6E67B8')+'"><span class="tt-c3"><span class="z1">'+_ttCC(p)+'</span><span class="z2">注册打卡 · '+p.count+' 人</span><span class="z3">@'+rm+(warn?' ⚠':'')+'</span></span></span>';
+}
+function _ttRegRoomBar(sol,PL){   /* 注册打卡教室(只有注册时间不在实际上课格的老师才有,例:版块 3) */
+  const ci=_ttRegClockIns(sol);if(!ci.length)return '';
+  const room=_ttRegRoom(sol),chosen=!!((sol&&sol.regRoom)||_ttCache.regRoom),n=ci.reduce(function(m,x){return Math.max(m,x.p.count||0);},0),is=_ttRegRoomIssues(sol,room);
+  const can=_ttCanEdit()&&!_ttCache.preview;
+  const opts=_ttRoomsByNo(sol.rooms).filter(function(r){return !(+r.cap)||+r.cap>=n||String(r.code)===String(room);}).map(function(r){const bz=_ttRegRoomIssues(sol,String(r.code)).filter(function(o){return !o.cap;}).length;return '<option value="'+eh(String(r.code))+'"'+((chosen&&String(r.code)===String(room))?' selected':'')+'>'+eh(String(r.code))+(r.cap?'（'+r.cap+' 人）':'')+(bz?' · 有课占用':'')+'</option>';}).join('');
+  return '<div class="no-print" style="margin:4px 0 6px;font-size:12px;color:#444;display:flex;gap:8px;align-items:center;flex-wrap:wrap">老师注册打卡教室：'+(can?'<select onchange="ttRegSetRoom(this.value)" style="width:auto!important;min-width:150px;max-width:260px;font-size:12px;padding:2px 6px;border:1px solid #D9D5F5;border-radius:6px"><option value=""'+(chosen?'':' selected')+'>自动挑（目前 '+eh(room)+'）</option>'+opts+'</select>':'<b>'+eh(room)+'</b>')+'<span style="color:#888">（版块 3 的老师在注册打卡时段到这间教室打卡；列出容量够 '+n+' 人的教室；「自动挑」＝空着、够大的最小教室）</span></div>'
+    +(is.length?'<div style="margin:0 0 6px;padding:6px 9px;background:#FEF2F2;border:1px solid #F5C2C0;border-radius:8px;font-size:12px;color:#b42318;line-height:1.7">⚠ 注册打卡教室 '+eh(room)+'：'+is.map(function(o){return eh(o.why);}).join('；')+'。请换一间，或到排课表调整。</div>':'');
 }
 function _ttRegHtml(sol){
   const caps=(sol.placements||[]).concat(sol.unplaced||[]).filter(function(p){return p.isCap;});
@@ -6560,7 +6594,7 @@ function _ttRegHtml(sol){
   const mAll=mk(['b1','b2','b3']),m13=mk(['b1','b3']),m2=mk(['b2']);
   const sec=function(t,sub){return '<div style="margin:12px 0 4px"><b style="color:#3C3489;font-size:13px">'+t+'</b>'+(sub?'<span style="color:#707070;font-size:11.5px">　'+sub+'</span>':'')+'</div>';};
   let h='<div id="tt-reg" style="margin:4px 2px 12px"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-size:14px;font-weight:700;color:#3C3489">📝 注册用课表 · Capstone</div>'+'<button class="btn btn-sm no-print" onclick="ttRegPrint()">🖨️ 列印</button></div>'
-    +'<div style="font-size:11.5px;color:#888;margin:2px 0 4px">只用来注册和公告，不是实际上课的安排（实际上课：三位老师各带一个班、整个周五，见「依教室号」）。'+'</div><div style="font-size:11.5px;color:#888;margin:0 0 4px">版块 1、版块 2 排在周五；版块 3 的两格是系统自动挑的：周一～周四里涉及届别最少的两个半天（目前：'+eh(PL.txt('b3')||'—')+'）。</div>';
+    +'<div style="font-size:11.5px;color:#888;margin:2px 0 4px">只用来注册和公告，不是实际上课的安排（实际上课：三位老师各带一个班、整个周五，见「依教室号」）。'+'</div>'+_ttRegRoomBar(sol,PL)+'<div style="font-size:11.5px;color:#888;margin:0 0 4px">版块 1、版块 2 排在周五；版块 3 的两格是系统自动挑的：周一～周四里涉及届别最少的两个半天（目前：'+eh(PL.txt('b3')||'—')+'）。</div>';
   h+=sec('三个版块总览','版块 1：'+PL.txt('b1')+'；版块 2：'+PL.txt('b2')+'；版块 3：'+PL.txt('b3'))+grid(mAll);
   h+=sec('版块 1＋3 的学生','一周 4 格：'+PL.txt('b1')+'（版块 1）＋'+PL.txt('b3')+'（版块 3）')+grid(m13);
   h+=sec('版块 2 的学生','一周 2 格：'+PL.txt('b2'))+grid(m2);
@@ -7769,7 +7803,7 @@ function _ttMoveLine(k,b,a){
 async function ttSave(){
   if(!_ttCanEdit())return;const sem=_ttCache.sem,sol=_ttCache.sol;
   if(!sem||!sol){alert('请先选学期并「一键自动排」');return;}
-  const pls=sol.placements.map(function(p){return {id:p.id,course:p.course,cls:p.cls,tc:p.tc,count:p.count,cohorts:p.cohorts,dept:p.dept,credit:p.credit,isCap:p.isCap,members:p.members,half:p.half,room:p.room,cells:p.cells,nt:(p.note&&p.note.raw)||'',so:_ttSoloOn()?1:0,ac:_ttAccOk(p)?_ttAccSig(p):'',sa:(p===sol.placements[0])?_ttSoloAccPack():undefined,rd:(p.isCap&&sol.regDay)?sol.regDay:'',rh:(p.isCap&&sol.regDay&&sol.regHard)?1:0,re:(p.isCap&&sol.regDay)?(sol.regEx||[]):[],rw:(p.isCap&&sol.regDay&&!sol.regHard)?(sol.regWhy||''):''};});
+  const pls=sol.placements.map(function(p){return {id:p.id,course:p.course,cls:p.cls,tc:p.tc,count:p.count,cohorts:p.cohorts,dept:p.dept,credit:p.credit,isCap:p.isCap,members:p.members,half:p.half,room:p.room,cells:p.cells,nt:(p.note&&p.note.raw)||'',so:_ttSoloOn()?1:0,ac:_ttAccOk(p)?_ttAccSig(p):'',sa:(p===sol.placements[0])?_ttSoloAccPack():undefined,rd:(p.isCap&&sol.regDay)?sol.regDay:'',rh:(p.isCap&&sol.regDay&&sol.regHard)?1:0,re:(p.isCap&&sol.regDay)?(sol.regEx||[]):[],rw:(p.isCap&&sol.regDay&&!sol.regHard)?(sol.regWhy||''):'',rr:(p.isCap&&sol.regRoom)?sol.regRoom:''};});
   {let rv;try{rv=await _ttVerCheck();}catch(e){}   // 存档前先看别人有没有存过(读不到就照旧存)
     const dv=rv===undefined?null:_ttVerDiff(_ttCache.tt,rv);
     if(dv&&(dv.kind==='ver'||dv.kind==='new')){
@@ -8315,8 +8349,8 @@ async function renderTtPanel(force){
   if(!_ttCache.refs){try{const r=await gasGet({action:'ttRefs'});if(r&&r.success)_ttCache.refs={rooms:r.rooms||[],cat:r.cat||{}};}catch(e){}if(!_ttCache.refs)_ttCache.refs={rooms:[],cat:{}};}
   if(force||_ttCache.sem!==sem){
     st.innerHTML='<div style="color:#888;padding:10px">⏳ 载入中…</div>';bd.innerHTML='';
-    _ttCache.sem=sem;_ttCache.acc={};_ttCache.sacc={};_ttCache.regDay='';_ttCache.regHard=false;_ttCache.regEx=[];_ttCache.regWhy='';_ttCache.tt=null;_ttCache.sol=null;_ttCache.dirty=false;_ttCache.preview=false;_ttCache.dates=null;_ttUndoSt=[];_ttRedoSt=[];   // 换学期/重新载入 → 还原记录清空
-    try{const r=await gasGet({action:'timetable',sem:sem});if(r&&r.success){_ttCache.tt=r.tt||null;_ttCache.dates=r.dates||null;_ttCache.finalOK=!!r.finalOK;_ttCache.newver=null;_ttSoloAdopt();_ttAccLoad(r.tt);{const cp=((r.tt&&r.tt.placements)||[]).filter(function(x){return x.rd;})[0]||{};_ttCache.regDay=cp.rd||'';_ttCache.regHard=!!cp.rh;_ttCache.regEx=cp.re||[];_ttCache.regWhy=cp.rw||'';}}}catch(e){}
+    _ttCache.sem=sem;_ttCache.acc={};_ttCache.sacc={};_ttCache.regRoom='';_ttCache.regDay='';_ttCache.regHard=false;_ttCache.regEx=[];_ttCache.regWhy='';_ttCache.tt=null;_ttCache.sol=null;_ttCache.dirty=false;_ttCache.preview=false;_ttCache.dates=null;_ttUndoSt=[];_ttRedoSt=[];   // 换学期/重新载入 → 还原记录清空
+    try{const r=await gasGet({action:'timetable',sem:sem});if(r&&r.success){_ttCache.tt=r.tt||null;_ttCache.dates=r.dates||null;_ttCache.finalOK=!!r.finalOK;_ttCache.newver=null;_ttSoloAdopt();_ttAccLoad(r.tt);{const cp=((r.tt&&r.tt.placements)||[]).filter(function(x){return x.rd;})[0]||{};_ttCache.regDay=cp.rd||'';_ttCache.regHard=!!cp.rh;_ttCache.regEx=cp.re||[];_ttCache.regWhy=cp.rw||'';}{const cr=((r.tt&&r.tt.placements)||[]).filter(function(x){return x.rr;})[0]||{};_ttCache.regRoom=cr.rr||'';}}}catch(e){}
   }
   const courses=_ttCourses(sem),n=courses.length,tt=_ttCache.tt,canEdit=_ttCanEdit();
   if(nn)nn.textContent=n?('· '+n+' 门课'):'';

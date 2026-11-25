@@ -69,7 +69,7 @@ try {
   console.log('  注册打卡:' + JSON.stringify(clk.o));
   if (info.plan.b3 !== '周五整天') {
     const t3 = clk.o['Aj. Xu, Yan'] || [];
-    ok(t3.length === 2 && t3.every(x => /@51305\|/.test(x)), '版块 3 老师(Aj. Xu)有两格注册打卡,地点 51305');
+    ok(t3.length === 2 && t3.every(x => /@\d+\|/.test(x)), '版块 3 老师(Aj. Xu)有两格注册打卡(有教室)');
     ok(clk.fri, '版块 3 老师同时保留周五整天(实际带班)');
   }
   ok(!clk.o['Aj. Liu, Feng-Lin'] && !clk.o['Aj. Lu, Peng'], '版块 1、2 的老师(注册时间＝周五)不重复列注册打卡');
@@ -81,8 +81,34 @@ try {
     dr.forEach(r => console.log(`  上课日期 ${r.n}｜${r.tc}｜${r.legs.join(' / ')}｜${r.total} 次 ${r.hrs} 小时`));
     ok(dr.length > 0 && dr.every(r => r.total === 15 && r.hrs === 45), '上课日期:每门 Capstone 都是 15 次、45 小时');
     const b3 = dr.filter(r => r.legs.some(l => l.includes('*')));
-    if (info.plan.b3 !== '周五整天') ok(b3.length > 0 && b3.every(r => r.legs.every(l => l.includes('@51305'))), '上课日期:版块 3 的 Capstone 按注册打卡的时间列(周二／周四下午 @51305)');
+    if (info.plan.b3 !== '周五整天') ok(b3.length > 0 && b3.every(r => r.legs.every(l => /@\d+/.test(l))), '上课日期:版块 3 的 Capstone 按注册打卡的时间列(周二／周四下午，教室=自动挑出的那间)');
     ok(dr.filter(r => !r.legs.some(l => l.includes('*'))).every(r => r.legs.every(l => l.startsWith('周五'))), '上课日期:版块 1、2 的 Capstone 仍是周五上午＋下午');
+  }
+  // 注册打卡教室(2026-11-25):预设 51305、可改、跟着存档走;被占用／容量不够会警告
+  if (info.plan.b3 !== '周五整天') {
+    const rr = JSON.parse(await evaluate(`(async function(){
+      const sol=${SOLX};const out={};
+      out.auto=_ttRegRoom(sol);out.autoIssues=_ttRegRoomIssues(sol).length;
+      out.bar=_ttRegHtml(sol).indexOf('老师注册打卡教室')>=0&&_ttRegHtml(sol).indexOf('自动挑')>=0;
+      ttRegSetRoom('233');const s2=_ttCache.sol;
+      out.bad=_ttRegRoomIssues(s2).map(function(o){return o.why;});
+      out.badChip=_ttEntityCards(s2,'teacher').indexOf('⚠')>=0;
+      const dr=_ttCourseDateRows(s2).filter(function(r){return r.cap&&r.legs.some(function(l){return l.reg;});});
+      out.datesRoom=dr.length>0&&dr.every(function(r){return r.legs.every(function(l){return l.room==='233';});});
+      ttRegSetRoom('51405');const s3=_ttCache.sol;out.ok405=_ttRegRoomIssues(s3).length;
+      let body=null;const g=window.gasPost;window.gasPost=async function(a,b){body=b||a;return {success:true,version:99};};
+      const cf=window.confirm;window.confirm=function(){return true;};const al=window.alert;window.alert=function(){};
+      try{window._ttVerCheck=async function(){return undefined;};await ttSave();}catch(e){out.saveErr=String(e.message);}
+      window.gasPost=g;window.confirm=cf;window.alert=al;
+      out.saved=/"rr":"51405"/.test(JSON.stringify(body||{}));
+      ttRegSetRoom('');out.back=_ttRegRoom(_ttCache.sol);
+      return JSON.stringify(out);})()`));
+    console.log('  教室:' + JSON.stringify(rr));
+    ok(rr.auto && rr.autoIssues === 0 && rr.bar, `注册打卡教室没有写死：自动挑出 ${rr.auto}、没有警告、画面有「自动挑」选择栏`);
+    ok(rr.bad.some(w => /已有/.test(w)) && rr.bad.some(w => /容量/.test(w)) && rr.badChip, '换成 233：警告「已有课占用」「容量不够」，老师卡的打卡格标 ⚠');
+    ok(rr.datesRoom, '「上课日期」里版块 3 的注册打卡教室跟着换');
+    ok(rr.ok405 === 0 && rr.back === rr.auto, '换成 51405 没有警告；选回「自动挑」又回到 '+rr.auto);
+    ok(rr.saved, '存档内容里带着注册打卡教室（rr）');
   }
   if (errors.length) { fail++; console.log('❌ JS 报错: ' + errors.slice(0, 3).join(' | ')); }
 } catch (e) { if (!/no sol/.test(e.message)) { fail++; console.log('❌ 测试本身: ' + e.message); } }
